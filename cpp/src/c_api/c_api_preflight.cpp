@@ -3,6 +3,7 @@
 #include "n4m/metrics.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -56,6 +57,28 @@ double at(const n4m_matrix_view_t& v, int64_t i, int64_t j) noexcept {
 }
 void put(const n4m_matrix_view_t& v, int64_t i, int64_t j, double x) noexcept {
     static_cast<double*>(v.data)[i * v.row_stride + j * v.col_stride] = x;
+}
+
+// Unsigned 128-bit helpers for exact pair-count products (portable to MSVC).
+struct U128 {
+    uint64_t hi = 0, lo = 0;
+};
+U128 mul_u64(uint64_t a, uint64_t b) noexcept {
+    const uint64_t a0 = a & 0xffffffffu, a1 = a >> 32, b0 = b & 0xffffffffu, b1 = b >> 32;
+    const uint64_t p00 = a0 * b0, p01 = a0 * b1, p10 = a1 * b0, p11 = a1 * b1;
+    const uint64_t middle = (p00 >> 32) + (p01 & 0xffffffffu) + (p10 & 0xffffffffu);
+    return {p11 + (p01 >> 32) + (p10 >> 32) + (middle >> 32), (middle << 32) | (p00 & 0xffffffffu)};
+}
+U128 add_u128(U128 a, U128 b) noexcept {
+    const uint64_t lo = a.lo + b.lo;
+    return {a.hi + b.hi + (lo < a.lo ? 1u : 0u), lo};
+}
+U128 sub_u128(U128 a, U128 b) noexcept {  // requires a >= b
+    return {a.hi - b.hi - (a.lo < b.lo ? 1u : 0u), a.lo - b.lo};
+}
+bool less_u128(U128 a, U128 b) noexcept { return a.hi < b.hi || (a.hi == b.hi && a.lo < b.lo); }
+long double to_long_double(U128 v) noexcept {
+    return static_cast<long double>(v.hi) * 18446744073709551616.0L + static_cast<long double>(v.lo);
 }
 
 double quantile(const std::vector<double>& sorted, double q) noexcept {
@@ -584,6 +607,9 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
         if (result.error == ::n4m::core::hdbscan::Error::unrepresentable_distance)
             return fail(ctx, N4M_ERR_UNSUPPORTED,
                         "HDBSCAN distance is not representable in double precision");
+        if (result.error == ::n4m::core::hdbscan::Error::unrepresentable_density)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "HDBSCAN density (1/distance) or stability is not representable");
         // Every output has X.rows capacity; check before writing anything.
         const auto rows = static_cast<size_t>(n);
         if (result.error != ::n4m::core::hdbscan::Error::none || result.labels.size() != rows || result.membership.size() != rows ||
@@ -624,35 +650,42 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     if (!ctx) return N4M_ERR_NULL_POINTER;
     if (!labels_a || !labels_b || !ari) return fail(ctx, N4M_ERR_NULL_POINTER, "null ARI buffer");
     if (n < 0) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative ARI length");
+    if (n > (int64_t{1} << 31))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "ARI supports at most 2^31 elements");
     try {
         *ari = nan_value;
         if (n < 2) return N4M_OK;
         std::vector<std::pair<int64_t, int64_t>> pairs(static_cast<size_t>(n));
         std::vector<int64_t> a(labels_a, labels_a + n), b(labels_b, labels_b + n);
         for (int64_t i = 0; i < n; ++i) pairs[static_cast<size_t>(i)] = {labels_a[i], labels_b[i]};
-        // Sum of squared run lengths of a sorted sequence.
+        // Sum of squared run lengths of a sorted sequence (exact: n <= 2^31).
         auto squared_runs = [](auto& values) {
             std::sort(values.begin(), values.end());
-            long double total = 0.0L;
+            uint64_t total = 0;
             for (size_t i = 0; i < values.size();) {
                 size_t j = i;
                 while (j < values.size() && values[j] == values[i]) ++j;
-                total += static_cast<long double>(j - i) * static_cast<long double>(j - i);
+                total += static_cast<uint64_t>(j - i) * static_cast<uint64_t>(j - i);
                 i = j;
             }
             return total;
         };
-        // scikit-learn pair_confusion_matrix / adjusted_rand_score.
-        const long double squares = squared_runs(pairs);
-        const long double rows = squared_runs(a), cols = squared_runs(b);
-        const long double total = static_cast<long double>(n);
-        const long double tp = squares - total;
-        const long double fp = cols - squares;
-        const long double fn = rows - squares;
-        const long double tn = total * total - fp - fn - squares;
-        const long double denominator = (tp + fn) * (fn + tn) + (tp + fp) * (fp + tn);
-        if (denominator == 0.0L) return N4M_OK;
-        *ari = static_cast<double>(2.0L * (tp * tn - fn * fp) / denominator);
+        // scikit-learn pair_confusion_matrix / adjusted_rand_score with exact
+        // integer pair counts and an exact 128-bit numerator and denominator,
+        // so a near-zero ARI never comes from cancelling rounded products.
+        const uint64_t squares = squared_runs(pairs);
+        const uint64_t rows = squared_runs(a), cols = squared_runs(b);
+        const auto total = static_cast<uint64_t>(n);
+        const uint64_t tp = squares - total, fp = cols - squares, fn = rows - squares;
+        const uint64_t tn = total * total - fp - fn - squares;
+        const U128 positive = mul_u64(tp, tn), negative = mul_u64(fn, fp);
+        const U128 denominator = add_u128(mul_u64(tp + fn, fn + tn), mul_u64(tp + fp, fp + tn));
+        if (denominator.hi == 0 && denominator.lo == 0) return N4M_OK;
+        const bool sign = less_u128(positive, negative);
+        const U128 numerator =
+            sign ? sub_u128(negative, positive) : sub_u128(positive, negative);
+        const long double ratio = 2.0L * to_long_double(numerator) / to_long_double(denominator);
+        *ari = static_cast<double>(sign ? -ratio : ratio);
         return N4M_OK;
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "ARI allocation failed");
@@ -665,6 +698,8 @@ N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
     if (!ctx) return N4M_ERR_NULL_POINTER;
     if (n < 0 || n_clusters_a < 0 || n_clusters_b < 0)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative Jaccard dimension");
+    if (n > (int64_t{1} << 53))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "Jaccard counts above 2^53 are not exact doubles");
     if (static_cast<long double>(n_clusters_a) * static_cast<long double>(n_clusters_b) >
         100000000.0L)
         return fail(ctx, N4M_ERR_UNSUPPORTED, "Jaccard matrix exceeds 100 million cells");
@@ -713,6 +748,35 @@ N4M_API n4m_status_t n4m_linear_sum_assignment(
         for (int64_t i = 0; i < rows; ++i) for (int64_t j = 0; j < cols; ++j)
             data[static_cast<size_t>(i) * static_cast<size_t>(cols) + static_cast<size_t>(j)] =
                 at(*cost, i, j);
+        // Every assignment uses min(rows, cols) entries, so subtracting the
+        // smallest finite cost and scaling by a power of two leave the optimum
+        // unchanged. Costs are centred that way, then scaled when the largest
+        // centred cost lies outside [2^-500, 2^500], so neither large offsets
+        // nor huge magnitudes reach the dual sums of the augmenting-path
+        // search. A nonzero centred cost that would leave the normal range is
+        // refused instead of being merged with zero.
+        double lowest = std::numeric_limits<double>::infinity();
+        for (const double v : data)
+            if (std::isfinite(v)) lowest = std::min(lowest, v);
+        double largest = 0.0;
+        if (std::isfinite(lowest)) {
+            for (double& v : data) {
+                if (!std::isfinite(v)) continue;
+                v -= lowest;
+                largest = std::max(largest, v);
+            }
+        }
+        if (largest > std::ldexp(1.0, 500) || (largest > 0.0 && largest < std::ldexp(1.0, -500))) {
+            int exponent = 0;
+            std::frexp(largest, &exponent);
+            for (double& v : data) {
+                if (!std::isfinite(v) || v == 0.0) continue;
+                v = std::ldexp(v, -exponent);
+                if (!(v >= DBL_MIN))
+                    return fail(ctx, N4M_ERR_UNSUPPORTED,
+                                "assignment costs span more than the double exponent range");
+            }
+        }
         *n_assigned = 0;
         const auto status = ::n4m::core::lsap::solve(static_cast<size_t>(rows),
                                                       static_cast<size_t>(cols), data.data(),
@@ -773,10 +837,23 @@ N4M_API n4m_status_t n4m_random_multivariate_normal(
                 if (!std::isfinite(at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(k))))
                     return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite covariance");
         }
+        // The factor is computed on cov / 4^m, with 2^m near the largest
+        // standard deviation, and the draws are rescaled by 2^m. Power-of-two
+        // scaling is exact, so ordinary inputs give bit-identical draws, while
+        // tiny or huge covariances neither underflow nor overflow inside the
+        // factorization. Positive definiteness is tested in the scaled space.
+        double largest_variance = 0.0;
+        for (size_t j = 0; j < p; ++j)
+            largest_variance = std::max(
+                largest_variance, std::fabs(at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(j))));
+        int variance_exponent = 0;
+        std::frexp(largest_variance, &variance_exponent);
+        const int half = variance_exponent / 2;
         // Lower Cholesky factor (Cholesky-Banachiewicz) of the lower triangle.
         for (size_t j = 0; j < p; ++j) {
             for (size_t k = 0; k <= j; ++k) {
-                double sum = at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(k));
+                double sum = std::ldexp(
+                    at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(k)), -2 * half);
                 for (size_t m = 0; m < k; ++m) sum -= L[j * p + m] * L[k * p + m];
                 if (k == j) {
                     if (!(sum > 0.0))
@@ -796,7 +873,9 @@ N4M_API n4m_status_t n4m_random_multivariate_normal(
         for (size_t i = 0; i < rows; ++i) for (size_t j = 0; j < p; ++j) {
             double sum = 0.0;
             for (size_t k = 0; k <= j; ++k) sum += z[i * p + k] * L[j * p + k];
-            out[i * p + j] = sum + mean[j];
+            out[i * p + j] = std::ldexp(sum, half) + mean[j];
+            if (!std::isfinite(out[i * p + j]))
+                return fail(ctx, N4M_ERR_UNSUPPORTED, "multivariate normal draw is not representable");
         }
         return N4M_OK;
     } catch (const std::bad_alloc&) {

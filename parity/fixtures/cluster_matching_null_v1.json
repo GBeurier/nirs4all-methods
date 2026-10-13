@@ -3915,6 +3915,39 @@
     "3ff0000000000000",
     "3fe5ca1ddbda7f32"
    ]
+  },
+  {
+   "kind": "ari",
+   "name": "independent_1024x1024",
+   "n": 1048576,
+   "ka": 1024,
+   "kb": 1024,
+   "shift": 0,
+   "ari_hex": [
+    "bf50000000000000"
+   ]
+  },
+  {
+   "kind": "ari",
+   "name": "nearly_independent_shifted",
+   "n": 1048576,
+   "ka": 1000,
+   "kb": 1009,
+   "shift": 7,
+   "ari_hex": [
+    "bf4ec0d5dc094243"
+   ]
+  },
+  {
+   "kind": "ari",
+   "name": "coarse_vs_fine",
+   "n": 3000000,
+   "ka": 3,
+   "kb": 999983,
+   "shift": 1,
+   "ari_hex": [
+    "beb65e9d0f6c0fb1"
+   ]
   }
  ]
 }

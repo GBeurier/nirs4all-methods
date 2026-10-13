@@ -233,6 +233,34 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
         if (e.current >= n || e.next >= n || e.current == e.next)
             return failure(Error::invalid_tree);
     }
+    // Density scale (not in scikit-learn). Densities lambda = 1/distance and
+    // their excess-of-mass sums are computed on distances divided by 2^e, where
+    // e is the midpoint of the binary exponents of the smallest positive and
+    // the largest MST weight, so every internal density lies near 1 and no
+    // accumulation overflows. Power-of-two scaling is exact: published values
+    // (rescaled by 2^-e) are bit-identical to an unscaled computation whenever
+    // that one is representable. A scaled weight or density outside the
+    // normal range is refused.
+    double smallest = infinity, largest = 0.0;
+    for (const Edge& e : mst) {
+        if (e.distance > 0.0) {
+            smallest = std::min(smallest, e.distance);
+            largest = std::max(largest, e.distance);
+        }
+    }
+    int scale_exponent = 0;
+    if (largest > 0.0) {
+        int low = 0, high = 0;
+        std::frexp(smallest, &low);
+        std::frexp(largest, &high);
+        scale_exponent = (low + high) / 2;
+        for (Edge& e : mst) {
+            if (e.distance == 0.0) continue;
+            e.distance = std::ldexp(e.distance, -scale_exponent);
+            if (!(e.distance >= DBL_MIN) || !(1.0 / e.distance >= DBL_MIN))
+                return failure(Error::unrepresentable_density);
+        }
+    }
     const std::vector<Merge> merges = single_linkage(std::move(mst), n);
     if (merges.size() != n - 1) return failure(Error::invalid_tree);
     std::size_t k = 0;
@@ -262,8 +290,16 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
     }
     for (const Row& r : rows) {
         const std::size_t parent = r.parent - n;
-        stability[parent] += (r.lambda - birth[parent]) * static_cast<double>(r.size);
+        // A node born at zero distance whose points leave at zero distance
+        // carries no excess of mass (scikit-learn would form inf - inf = NaN).
+        const double excess =
+            std::isinf(r.lambda) && std::isinf(birth[parent]) ? 0.0 : r.lambda - birth[parent];
+        stability[parent] += excess * static_cast<double>(r.size);
     }
+    // Infinite stability is legitimate only for nodes reaching zero distance.
+    for (std::size_t node = 0; node < k; ++node)
+        if (!std::isfinite(stability[node]) && std::isfinite(death[node]))
+            return failure(Error::unrepresentable_density);
 
     // Cluster selection (`_get_clusters`). Children have larger node indices
     // than their parent, so a descending sweep visits children first.
@@ -274,7 +310,13 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
         for (std::size_t node = k; node-- > lowest;) selected[node] = 1;
         for (std::size_t node = k; node-- > lowest;) {
             double subtree = 0.0;
-            for (const std::size_t child : children[node]) subtree += mass[child];
+            bool infinite_child = false;
+            for (const std::size_t child : children[node]) {
+                subtree += mass[child];
+                infinite_child = infinite_child || std::isinf(mass[child]);
+            }
+            if (std::isinf(subtree) && !infinite_child)
+                return failure(Error::unrepresentable_density);
             if (subtree > mass[node]) {
                 selected[node] = 0;
                 mass[node] = subtree;
@@ -303,6 +345,14 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
         t.lambda_birth = birth[node];
         t.lambda_death = death[node];
         t.stability = stability[node];
+        // Publish in 1/distance units; refuse a finite positive value that
+        // leaves the normal range once rescaled.
+        for (double* value : {&t.lambda_birth, &t.lambda_death, &t.stability}) {
+            if (!std::isfinite(*value) || *value == 0.0) continue;
+            *value = std::ldexp(*value, -scale_exponent);
+            if (!(std::fabs(*value) >= DBL_MIN) || !std::isfinite(*value))
+                return failure(Error::unrepresentable_density);
+        }
         if (selected[node]) {
             t.label = static_cast<std::int64_t>(label_node.size());
             label_node.push_back(node);
@@ -351,10 +401,13 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
         if (label >= 0) ++members[static_cast<std::size_t>(label)];
     out.persistence.resize(label_node.size());
     for (std::size_t c = 0; c < label_node.size(); ++c) {
+        const double denominator = static_cast<double>(members[c]) * max_lambda;
+        if (std::isfinite(max_lambda) && !std::isfinite(denominator))
+            return failure(Error::unrepresentable_density);
         out.persistence[c] =
             (std::isinf(max_lambda) || max_lambda == 0.0 || members[c] == 0)
                 ? 1.0
-                : stability[label_node[c]] / (static_cast<double>(members[c]) * max_lambda);
+                : stability[label_node[c]] / denominator;
     }
     return out;
 }

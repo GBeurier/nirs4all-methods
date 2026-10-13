@@ -85,13 +85,22 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
  * values, min_cluster_size>=2, 1<=min_samples<=X.rows, selection_method
  * 0=EOM or 1=leaf, allow_single_cluster 0 or 1. Workloads with
  * rows*rows*cols above 2.5e9 return N4M_ERR_UNSUPPORTED.
- * Distance guard (ABI 2.20): a pair whose plain sum of squared differences
- * overflows or falls below 2^-968 is recomputed as
- * max|t| * sqrt(sum((t / max|t|)^2)), so representable distances neither
- * overflow nor underflow; other pairs keep the scikit-learn operation order.
- * A distance above DBL_MAX returns N4M_ERR_UNSUPPORTED, rows*cols above 5e7
- * too, and the result is checked against the output capacities before
- * anything is written.
+ * Domain of validity (ABI 2.20): a pair whose plain sum of squared
+ * differences overflows or falls below 2^-968 is recomputed as
+ * max|t| * sqrt(sum((t / max|t|)^2)); other pairs keep the scikit-learn
+ * operation order. Densities and stabilities are accumulated on MST weights
+ * divided by 2^e (e = midpoint of the binary exponents of the smallest
+ * positive and the largest weight) and published in 1/distance units, so
+ * ordinary results are bit-identical to the reference. Labels, membership,
+ * GLOSH and persistence are invariant to scaling X by 2^k; lambdas and
+ * stabilities scale by 2^-k. N4M_ERR_UNSUPPORTED is returned, with nothing
+ * written, when a distance exceeds DBL_MAX, a published finite lambda or
+ * stability would leave the normal range [DBL_MIN, DBL_MAX], or rows*cols
+ * exceeds 5e7. Documented non-finite values: lambda +inf at distance 0,
+ * stability +inf for a node reaching distance 0 (inf - inf counts as 0
+ * excess, where scikit-learn would give NaN), GLOSH NaN where an infinite-
+ * density subtree makes it undefined. Translation leaves results unchanged
+ * when the shifted coordinates are exact.
  * Tie rule: MST edges of equal mutual-reachability weight are processed in
  * Prim insertion order (stable sort); Prim keeps the lowest row index on
  * equal weights. EOM replaces a node by its children only when their summed
@@ -123,7 +132,11 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
  * confusion counts. Every label value, including -1, is an ordinary class:
  * callers filter noise first. *ari is NaN when n<2 or when both partitions
  * are the same trivial partition (one class or all singletons), where
- * scikit-learn returns 1.0 by convention. */
+ * scikit-learn returns 1.0 by convention. Pair counts and the numerator and
+ * denominator are exact integers (128-bit products, ABI 2.20), so values near
+ * 0 do not come from cancelled rounded products; only the final division
+ * rounds. Invariant to the label values; n > 2^31 returns
+ * N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
     double* ari);
@@ -135,7 +148,9 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
  * = |A_i ∩ B_j| and jaccard[i*n_clusters_b+j] = |A_i ∩ B_j| / |A_i ∪ B_j|
  * (NaN when both clusters are empty); sizes_a[i] = |A_i|, sizes_b[j] = |B_j|.
  * n >= 0, n_clusters_a and n_clusters_b >= 0, and
- * n_clusters_a * n_clusters_b <= 100 million cells. */
+ * n_clusters_a * n_clusters_b <= 100 million cells. Counts are exact integers
+ * and each Jaccard value is one correctly rounded division; n > 2^53 returns
+ * N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
     n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
     int64_t n_clusters_a, int64_t n_clusters_b, double* jaccard, int64_t* intersections,
@@ -152,7 +167,13 @@ N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
  * last to first, an unassigned column wins equal reduced costs; a constant
  * matrix gives the identity). Caller-owned row_ind/col_ind receive
  * min(rows, cols) pairs in increasing row order; *n_assigned their count.
- * rows * cols * min(rows, cols) must not exceed 2.5e9 and rows * cols 5e7. */
+ * rows * cols * min(rows, cols) must not exceed 2.5e9 and rows * cols 5e7.
+ * Domain of validity: the finite costs are centred on their minimum and, when
+ * the largest centred cost is outside [2^-500, 2^500], scaled by an exact
+ * power of two before the search; the optimum is invariant to both, so costs
+ * up to DBL_MAX and large common offsets are handled. A nonzero centred cost
+ * that would leave the normal range in that scale returns
+ * N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_linear_sum_assignment(
     n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind,
     int64_t* col_ind, int64_t* n_assigned);
@@ -176,7 +197,11 @@ N4M_API n4m_status_t n4m_random_permutations(
  * n x d (n >= 0). A covariance that is not numerically positive definite
  * returns N4M_ERR_NUMERICAL_FAILURE; regularization is the caller's choice.
  * Limits (N4M_ERR_UNSUPPORTED, checked before any allocation, also for n = 0):
- * d * d and n * d at most 5e7 values, d^3 / 6 and n * d * d at most 2.5e9. */
+ * d * d and n * d at most 5e7 values, d^3 / 6 and n * d * d at most 2.5e9.
+ * Domain of validity: the factor is computed on cov / 4^m with 2^m near the
+ * largest standard deviation and the draws are rescaled by 2^m, so scaling
+ * cov by 4^k scales the draws by exactly 2^k whenever cov stays normal; a
+ * draw that is not finite returns N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_random_multivariate_normal(
     n4m_context_t* ctx, uint64_t seed, const double* mean, const n4m_matrix_view_t* cov,
     int64_t n, double* out);
