@@ -644,6 +644,7 @@ SYMBOLS = (
     ("n4m_stats_permanova", (c_void_p, POINTER(MatrixView), POINTER(c_int64), POINTER(c_int64), c_int32, c_uint64, POINTER(c_double), POINTER(c_int64)), c_int),
     ("n4m_stats_permanova_freedman_lane", (c_void_p, POINTER(MatrixView), POINTER(c_int64), POINTER(c_int64), c_int32, c_int32, c_uint64, POINTER(c_double), POINTER(c_int64)), c_int),
     ("n4m_stats_permdisp", (c_void_p, POINTER(MatrixView), POINTER(c_int64), c_int32, c_uint64, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_int64)), c_int),
+    ("n4m_stats_regression_scores", (c_void_p, POINTER(c_double), POINTER(c_double), c_int64, POINTER(c_double)), c_int),
     ("n4m_status_to_string", (c_int,), c_void_p),
     ("n4m_transform_airpls_create", (POINTER(c_void_p), c_double, c_int32, c_double), c_int),
     ("n4m_transform_airpls_destroy", (c_void_p,), None),

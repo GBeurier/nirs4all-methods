@@ -857,8 +857,9 @@ export interface GroupMeansResult {
     counts: number[];
 }
 
-/** Equal-weight per-group column means (scaled running means): codes in
- * [0, nGroups), every group nonempty, finite values. */
+/** Equal-weight per-group column means (double-double sums): codes in
+ * [0, nGroups), every group nonempty, values in the declared numerical domain
+ * (nonzero |x| in [2^-256, 2^256], spread <= 2^64), else N4mError. */
 export function statsGroupMeans(X: Matrix, groupCodes: readonly number[],
     nGroups: number): GroupMeansResult {
     validateMatrix(X);
@@ -886,32 +887,33 @@ export function statsGroupMeans(X: Matrix, groupCodes: readonly number[],
     }
 }
 
-export interface RegressionMetricsResult {
+export interface RegressionScoresResult {
     rmse: number;
     mae: number;
-    /** 1 - SSE/SST; the native convention gives 1 or 0 when SST is zero. */
+    /** 1 - SSE/SST; NaN (undefined) when y is constant. */
     r2: number;
 }
 
-/** RMSE, MAE and R² of paired vectors through the native NIRS regression metrics. */
-export function regressionMetrics(yTrue: Float64Array, yPred: Float64Array): RegressionMetricsResult {
+/** RMSE, MAE and R² through n4m_stats_regression_scores (explicit residuals,
+ * double-double sums). Inputs outside the declared numerical domain
+ * (nonzero |x| in [2^-256, 2^256], spread <= 2^64) throw N4mError
+ * ERR_UNSUPPORTED. */
+export function statsRegressionScores(yTrue: Float64Array, yPred: Float64Array): RegressionScoresResult {
     if (yTrue.length < 1 || yTrue.length !== yPred.length) {
-        throw new RangeError("regression metrics need paired nonempty vectors");
+        throw new RangeError("regression scores need paired nonempty vectors");
     }
     const m = getModule(), scope = new NativeScope();
     try {
         const t = scope.alloc(yTrue.length * 8), p = scope.alloc(yPred.length * 8);
         m.HEAPF64.set(yTrue, t / 8);
         m.HEAPF64.set(yPred, p / 8);
-        const out = scope.alloc(8);
-        const metric = (name: string): number => {
-            const st = m.ccall(`n4m_metrics_regression_metrics_${name}`, "number",
-                ["number", "number", "i64", "number"],
-                [t, p, BigInt(yTrue.length), out]) as number;
-            checkStatus(st, scope.ctx.handle);
-            return copyF64(out, 1)[0]!;
-        };
-        return { rmse: metric("rmse"), mae: metric("mae"), r2: metric("r2") };
+        const out = scope.alloc(3 * 8);
+        const st = m.ccall("n4m_stats_regression_scores", "number",
+            ["number", "number", "number", "i64", "number"],
+            [scope.ctx.handle, t, p, BigInt(yTrue.length), out]) as number;
+        checkStatus(st, scope.ctx.handle);
+        const r = copyF64(out, 3);
+        return { rmse: r[0]!, mae: r[1]!, r2: r[2]! };
     } finally {
         scope.close();
     }

@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **233**
+- Curated records: **234**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `1d490f7324e8621657085661bab03c0cf66feae79a898f175edeec8ed75c6eb9`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `6fdba183c91dc9a7713905b96f27bd241f649f4a457d8d30263f94e6701a8f63`
 
 ## References by documentation page
 
@@ -450,9 +450,9 @@ No single canonical paper; exhaustive permutation tests follow Fisher (1935), *T
 
 ### [`diagnostics_group_means`](diagnostics_group_means.md) — Equal-weight per-group column means
 
-Arithmetic mean of replicate measurements; Welford (1962), *Note on a method for calculating corrected sums of squares and products*, Technometrics 4, 419–420, https://doi.org/10.1080/00401706.1962.10490022.
+Arithmetic mean of replicate measurements, summed with the error-free TwoSum transformation of Møller (1965), *Quasi double-precision in floating point addition*, BIT 5, 37–50, https://doi.org/10.1007/BF01975722.
 
-**Provenance:** https://doi.org/10.1080/00401706.1962.10490022; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_group_means.cpp
+**Provenance:** https://doi.org/10.1007/BF01975722; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_group_means.cpp
 
 ### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
 
@@ -495,6 +495,12 @@ This kernel bundle has no single canonical paper. The noise proxy smooths with t
 No single paper defines this API bundle. RPD usage in NIR calibration is reviewed by Williams & Sobering (1993); RPIQ by Bellon-Maurel et al. (2010), https://doi.org/10.1016/j.trac.2010.07.005. RMSE, MAE, bias, SEP, R², and NRMSE use the explicit formulas in the implementation.
 
 **Provenance:** https://doi.org/10.1016/j.trac.2010.07.005; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/nirs_metrics.c
+
+### [`diagnostics_regression_scores`](diagnostics_regression_scores.md) — RMSE, MAE and R² from explicit residuals
+
+Standard regression scores, summed with the error-free TwoSum transformation of Møller (1965), *Quasi double-precision in floating point addition*, BIT 5, 37–50, https://doi.org/10.1007/BF01975722.
+
+**Provenance:** https://doi.org/10.1007/BF01975722; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_group_means.cpp
 
 ### [`ds`](ds.md) — Direct Standardisation
 

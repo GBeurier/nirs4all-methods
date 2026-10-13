@@ -68,6 +68,7 @@ excludes:
     - "diagnostics.factor_association_exact"
     - "diagnostics.group_means"
     - "diagnostics.permanova"
+    - "diagnostics.regression_scores"
     - "diagnostics.permdisp"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"

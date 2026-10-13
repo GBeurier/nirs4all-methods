@@ -1,0 +1,44 @@
+# `regression_scores` — n4m.stats.regression_scores
+
+_Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.regression_scores` · _Catalog id_: `diagnostics.regression_scores`
+
+## API surface
+
+**C ABI (ABI 2):** [`n4m_stats_regression_scores`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L375). Use the linked public header for the exact signature, configuration, and result handles.
+
+**R:** no current source-verified entry point was found for this catalog method.
+
+**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
+## Explanations
+
+### Bibliographic source
+
+Standard regression scores, summed with the error-free TwoSum transformation of Møller (1965), *Quasi double-precision in floating point addition*, BIT 5, 37–50, https://doi.org/10.1007/BF01975722.
+
+### Mathematical principle
+
+With residuals $e_i=y_i-\hat y_i$, $\mathrm{RMSE}=\sqrt{\sum e_i^2/n}$, $\mathrm{MAE}=\sum|e_i|/n$ and $R^2=1-\sum e_i^2/\sum (y_i-\bar y)^2$. The mean $\bar y$ is a double-double value and every deviation is explicit; all sums are double-double, so no large nearly-equal accumulations are subtracted.
+
+### Appropriate uses
+
+Scoring out-of-fold predictions and reference predictors (for example a fold-train mean) on identical rows.
+
+### Limits and validation
+
+Declared numerical domain as `n4m_stats_group_means` for both vectors; outside it the kernel returns `N4M_ERR_UNSUPPORTED`. $R^2$ is NaN (undefined) when $y$ is constant.
+
+### Implementation
+
+The ABI-2 symbol `n4m_stats_regression_scores` in `n4m/metrics.h` is implemented in `cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsRegressionScores`. `cpp/tests/test_group_means.cpp` checks exact dyadic scores, scale sweeps, a $2^{52}$ offset, an exact one-ulp case and the domain boundaries.
+
+### Sources and provenance
+
+https://doi.org/10.1007/BF01975722; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_group_means.cpp
+
+## Catalog note
+
+RMSE, MAE and R2 from explicit residuals and deviations around a double-double mean, summed in double-double. Declared numerical domain D (nonzero |x| in [2^-256, 2^256], spread <= 2^64), refused outside; R2 NaN when y is constant. Exact dyadic, sweep, offset and boundary checks in cpp/tests/test_group_means.cpp.
+
+
+_See also_: [methods index](index.md).
