@@ -228,4 +228,30 @@ assert.throws(() => preflightFactorAssociation([0, 0, 1], new Float64Array([0, 2
     false, 0, 1), status(7));
 const tinyHolm = preflightHolmAdjust(Float64Array.from([0.01, 0.04, 0.03, 0.005], (p) => p * 2 ** -500));
 [0.03, 0.06, 0.06, 0.02].forEach((v, i) => relNear(tinyHolm[i] * 2 ** 500, v));
+// Mixed exponents and near-zero effects (same exact references as the
+// native test): lost within-level spreads are never reported as OK + NaN.
+assert.throws(() => preflightFactorAssociation([0, 0, 1], new Float64Array([0, 1e-100, 1e300]),
+    false, 0, 1), status(7));
+assert.throws(() => preflightFactorAssociation([0, 0, 1], new Float64Array([0, 2 ** -1074, 1]),
+    false, 0, 1), status(7));
+relNear(preflightFactorAssociation([0, 0, 1], new Float64Array([-(2 ** -200), 2 ** -200, 2 ** 300]),
+    false, 0, 1).statistic, (2 / 3) * 2 ** 999);
+const d20 = 2 ** -20;
+const nearZero = preflightFactorAssociation([0, 0, 1, 1], new Float64Array([0, 2, d20, 2 + d20]), false, 0, 1);
+relNear(nearZero.effectSize, d20 * d20 / (4 + d20 * d20));
+relNear(nearZero.statistic, d20 * d20 / 2);
+const independent = preflightFactorAssociation(Array.from({length: 18}, (_, i) => Math.floor(i / 9)),
+    Float64Array.from({length: 18}, (_, i) => i % 9), true, 0, 1);
+assert.equal(independent.effectSize, 0);
+assert.equal(independent.statistic, 0);
+const nearIndependent = [];
+[[0, 0, 50], [0, 1, 51], [1, 0, 51], [1, 1, 50]].forEach(([r, c, k]) => {
+    for (let j = 0; j < k; ++j) nearIndependent.push([r, c]);
+});
+relNear(preflightFactorAssociation(nearIndependent.map(([r]) => r),
+    Float64Array.from(nearIndependent, ([, c]) => c), true, 0, 1).effectSize, 1 / 101);
+relNear(statsCorrelationTest(new Float64Array([1e-300, 2e-300, 1e300]), new Float64Array([1, 2, 3]),
+    "pearson", 0, 1).coefficient, Math.sqrt(3) / 2);
+assert.equal(statsCorrelationTest(new Float64Array([1, 2, 3, 4]), new Float64Array([1, -1, -1, 1]),
+    "pearson", 0, 1).coefficient, 0);
 console.log("JS/WASM Preflight diagnostics passed");

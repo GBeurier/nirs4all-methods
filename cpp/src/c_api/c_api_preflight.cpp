@@ -3,6 +3,7 @@
 #include "n4m/metrics.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -181,7 +182,7 @@ struct FactorProblem {
     bool categorical = false;
     std::vector<int64_t> level, level_n, value, value_n;
     std::vector<double> value_centered;  // centered target per value code
-    std::vector<double> scaled;          // targets * 2^-scale (exact)
+    std::vector<double> raw;             // original targets (-0.0 as +0.0)
     double sst = 0.0;
     int scale = 0, variation = 0;  // true SST = sst * 2^(2 (scale + variation))
     std::vector<double> sums;
@@ -199,18 +200,26 @@ struct FactorProblem {
                 ssb += sums[a] * sums[a] / static_cast<double>(level_n[a]);
             return std::min(1.0, ssb / sst);
         }
+        // Chi-square from exact integer residuals d = O*n - r*c (so that
+        // O - E = d/n), never as sum(O^2/E) - n: every term d^2/(n r c) is
+        // nonnegative, independence gives exactly 0 and the relative error
+        // is O(cells * DBL_EPSILON). |d| <= n^2 < 2^63 (n is capped).
         const size_t c = value_n.size();
         std::fill(table.begin(), table.end(), 0);
         for (size_t i = 0; i < n; ++i)
             ++table[static_cast<size_t>(L[i]) * c + static_cast<size_t>(Y[i])];
-        double sum = 0.0;
+        const auto total = static_cast<int64_t>(n);
+        const double nd = static_cast<double>(n);
+        double chi2 = 0.0;
         for (size_t a = 0; a < g; ++a) for (size_t b = 0; b < c; ++b) {
-            const double cell = static_cast<double>(table[a * c + b]);
-            if (cell > 0.0)
-                sum += cell * cell /
-                       (static_cast<double>(level_n[a]) * static_cast<double>(value_n[b]));
+            const int64_t d = table[a * c + b] * total - level_n[a] * value_n[b];
+            if (d != 0) {
+                const double dd = static_cast<double>(d);
+                chi2 += dd * dd /
+                        (nd * static_cast<double>(level_n[a]) * static_cast<double>(value_n[b]));
+            }
         }
-        return std::max(0.0, (sum - 1.0) / static_cast<double>(std::min(g, c) - 1));
+        return std::min(1.0, chi2 / (nd * static_cast<double>(std::min(g, c) - 1)));
     }
     bool defined() const noexcept {
         return level_n.size() >= 2 && value_n.size() >= 2 && (categorical || sst > 0.0);
@@ -250,11 +259,13 @@ n4m_status_t prepare_factor(n4m_context_t* ctx, const int64_t* factor_codes,
     p.value = dense_codes(exact, p.value_n);
     std::vector<double> centered;
     p.sst = stable_center(exact, centered, &p.scale, &p.variation);
-    p.scaled.resize(exact.size());
-    for (size_t i = 0; i < exact.size(); ++i) p.scaled[i] = std::ldexp(exact[i], -p.scale);
+    p.raw = exact;
     p.value_centered.assign(p.value_n.size(), 0.0);
     for (size_t i = 0; i < exact.size(); ++i)
         p.value_centered[static_cast<size_t>(p.value[i])] = centered[i];
+    // Exact integer chi-square residuals need n^2 < 2^63.
+    if (p.categorical && n > 3000000000LL)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "categorical association limited to 3e9 units");
     // Checked levels x classes product: refused before any table allocation.
     if (p.categorical && p.level_n.size() > max_table_cells / p.value_n.size())
         return fail(ctx, N4M_ERR_UNSUPPORTED,
@@ -1069,31 +1080,46 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
         const double observed = p.statistic(p.level.data(), p.value.data());
         if (!p.categorical) {
             out_eight[0] = observed;
-            // SSW from explicit within-level residuals (never SST - SSB): each
-            // level is centered on its own values (shifted origin), so small
-            // within-level spreads survive a large between-level offset, and
-            // accumulated at the residuals' power-of-two scale.
+            // SSW from explicit within-level residuals (never SST - SSB). Each
+            // level is scaled by its own power of two and centered on its own
+            // values (shifted origin), from the original targets, so no
+            // global scale or centre can erase a within-level spread. Level
+            // sums of squares q_l * 2^(2 e_l) are combined by exponents.
             std::vector<std::vector<double>> by_level(static_cast<size_t>(g));
             for (size_t i = 0; i < p.level.size(); ++i)
-                by_level[static_cast<size_t>(p.level[i])].push_back(p.scaled[i]);
-            std::vector<double> residual;
-            residual.reserve(p.level.size());
+                by_level[static_cast<size_t>(p.level[i])].push_back(p.raw[i]);
+            std::vector<double> q_level;
+            std::vector<int> e_level;
+            bool varies = false;
             for (auto& members : by_level) {
+                const bool distinct = std::any_of(members.begin(), members.end(),
+                                                  [&members](double x) { return x != members[0]; });
+                varies |= distinct;
+                if (!distinct) continue;
+                const int e1 = bounding_exponent(members);
+                for (double& x : members) x = std::ldexp(x, -e1);
                 center_in_place(members);
-                residual.insert(residual.end(), members.begin(), members.end());
+                int e2 = 0;
+                const double q = scaled_sum_squares(members, e2);
+                if (!(q > 0.0))
+                    return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                                "within-level variation lost to rounding");
+                q_level.push_back(q);
+                e_level.push_back(e1 + e2);
             }
-            int ssw_exponent = 0;
-            const double ssw_scaled = scaled_sum_squares(residual, ssw_exponent);
-            if (n > g && ssw_scaled > 0.0) {
-                // F = (SSB/(g-1)) / (SSW/(n-g)) in units of 2^scale:
-                // SSB = eta^2 * sst * 2^(2 variation), SSW = q * 2^(2 e).
+            if (n > g && varies) {
+                const int e_max = *std::max_element(e_level.begin(), e_level.end());
+                double q_within = 0.0;
+                for (size_t l = 0; l < q_level.size(); ++l)
+                    q_within += std::ldexp(q_level[l], 2 * (e_level[l] - e_max));
+                // SSB = eta^2 * sst * 2^(2 (scale + variation)), SSW = q * 2^(2 e_max).
                 const double f = std::ldexp(
                     (observed * p.sst / static_cast<double>(g - 1)) *
-                        static_cast<double>(n - g) / ssw_scaled,
-                    2 * (p.variation - ssw_exponent));
-                if (!std::isfinite(f) || (observed > 0.0 && !(f > 0.0)))
+                        static_cast<double>(n - g) / q_within,
+                    2 * (p.scale + p.variation - e_max));
+                if (!std::isfinite(f) || (observed > 0.0 && !(f >= DBL_MIN)))
                     return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                                "ANOVA F is not representable as a double");
+                                "ANOVA F is not representable as a normal double");
                 out_eight[1] = f;
             }
             out_eight[2] = static_cast<double>(g - 1);

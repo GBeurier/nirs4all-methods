@@ -44,6 +44,13 @@ ABI 2.20.0. No model-state serialization format changes.
   sweeps over 2^k (k from -1060 to 1000) and translations by 1e16 and 1e300
   check invariance of eta^2, F, r, rho, counts, exact distributions, Holm
   and BH.
+- Within-level sums of squares are computed from the original targets with a
+  per-level scale (no global scale or centre erases them); a lost or
+  unrepresentable F is an explicit `N4M_ERR_NUMERICAL_FAILURE`. Cramer's V
+  is computed from exact integer chi-square residuals (exactly 0 at
+  independence). Mixed-exponent and near-zero-effect tests use exact dyadic
+  and rational references; the precision contract in `metrics.h` is revised
+  to what these computations guarantee.
 
 ## [1.3.6] - 2026-10-13
 

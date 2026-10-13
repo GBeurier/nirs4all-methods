@@ -354,6 +354,79 @@ int main() {
                 }
             }
         }
+        // Mixed exponents within one vector and near-zero effects (rules 8-12),
+        // against exact dyadic or rational references.
+        {
+            const auto rel = [](double a, double b) {
+                return std::abs(a - b) <= 1e-12 * std::abs(b);
+            };
+            int64_t f3[3]={0,0,1};
+            // Review P0: a within-level spread far below a huge level is kept
+            // (per-level scaling of the original values); F ~ (4/3)1e800 and
+            // ~2^2148 are not representable: explicit error, not OK + NaN.
+            double huge[3]={0.0,1e-100,1e300};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,huge,3,0,0,1,assoc,perm_counts)
+                    ==N4M_ERR_NUMERICAL_FAILURE);
+            double denorm[3]={0.0,std::ldexp(1.0,-1074),1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,denorm,3,0,0,1,assoc,perm_counts)
+                    ==N4M_ERR_NUMERICAL_FAILURE);
+            // Truly zero within-level variance: F undefined (NaN), status OK.
+            double flat[3]={5.0,5.0,7.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,flat,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[0],1.0) && std::isnan(assoc[1]));
+            // Signed mixture {-2^-200, 2^-200} | {2^300}: SSW = 2^-399,
+            // SSB = (2/3) 2^600, F = (2/3) 2^999 exactly (hand value).
+            double mixed[3]={-std::ldexp(1.0,-200),std::ldexp(1.0,-200),std::ldexp(1.0,300)};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,mixed,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[1],std::ldexp(2.0/3.0,999)) && rel(assoc[0],1.0));
+            // Near-zero effect: {0, 2} | {d, 2+d}, d = 2^-20: eta^2 =
+            // d^2/(4+d^2), F = d^2/2 (rational references).
+            int64_t f4[4]={0,0,1,1};
+            const double dl = std::ldexp(1.0,-20);
+            double near0[4]={0.0,2.0,dl,2.0+dl};
+            REQUIRE(n4m_preflight_factor_association(ctx,f4,near0,4,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[0],dl*dl/(4.0+dl*dl)) && rel(assoc[1],dl*dl/2.0));
+            // Exactly zero effect: equal level means give eta^2 = F = 0.
+            double zero_effect[4]={0.0,2.0,2.0,0.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f4,zero_effect,4,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(assoc[0]==0.0 && assoc[1]==0.0);
+            // Cramer's V at independence (review P0): a 2x9 table with one
+            // unit per cell has chi-square = V = 0 exactly.
+            int64_t rows18[18]; double cols18[18];
+            for (int i = 0; i < 18; ++i) { rows18[i] = i / 9; cols18[i] = i % 9; }
+            REQUIRE(n4m_preflight_factor_association(ctx,rows18,cols18,18,1,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(assoc[0]==0.0 && assoc[1]==0.0);
+            // Near independence: [[m, m+1], [m+1, m]] has chi-square =
+            // 4/(4m+2) and V = 1/(2m+1) exactly (rational reference).
+            for (int64_t m : {50, 1000}) {
+                std::vector<int64_t> rr; std::vector<double> cc;
+                const int64_t cells[4] = {m, m + 1, m + 1, m};
+                for (int k = 0; k < 4; ++k)
+                    for (int64_t j = 0; j < cells[k]; ++j) { rr.push_back(k / 2); cc.push_back(k % 2); }
+                const auto nn = static_cast<int64_t>(rr.size());
+                REQUIRE(n4m_preflight_factor_association(ctx,rr.data(),cc.data(),nn,1,0,1,assoc,perm_counts)==N4M_OK);
+                const double md = static_cast<double>(m);
+                REQUIRE(rel(assoc[0],1.0/(2.0*md+1.0)) && rel(assoc[1],4.0/(4.0*md+2.0)));
+            }
+            // Correlation with mixed exponents: x = {1e-300, 2e-300, 1e300}
+            // behaves as {0, 0, 1}: r = sqrt(3)/2; ranks give rho = 1.
+            double xm[3]={1e-300,2e-300,1e300}, ym[3]={1,2,3};
+            REQUIRE(n4m_stats_correlation_test(ctx,xm,ym,3,0,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(rel(corr[0],std::sqrt(3.0)/2.0));
+            REQUIRE(n4m_stats_correlation_test(ctx,xm,ym,3,1,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(rel(corr[0],1.0));
+            // Exactly uncorrelated (dyadic): r = rho = 0.
+            double xz[4]={1,2,3,4}, yz[4]={1,-1,-1,1};
+            REQUIRE(n4m_stats_correlation_test(ctx,xz,yz,4,0,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(corr[0]==0.0);
+            REQUIRE(n4m_stats_correlation_test(ctx,xz,yz,4,1,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(corr[0]==0.0);
+            // Huge irrelevant offset next to a near-zero slope: y = 1e300 +
+            // {0, 0, 2^945, 2^945} against x = {1, 2, 3, 4}: r = 2/sqrt(5).
+            double yo[4]={1e300,1e300,1e300+std::ldexp(1.0,945),1e300+std::ldexp(1.0,945)};
+            REQUIRE(n4m_stats_correlation_test(ctx,xz,yo,4,0,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(rel(corr[0],2.0/std::sqrt(5.0)));
+        }
         // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
         // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
         double bh[6];
