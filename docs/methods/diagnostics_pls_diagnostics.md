@@ -4,7 +4,7 @@ _Namespace_: **`n4m.metrics.diagnostics`** · _Fully-qualified_: `n4m.metrics.di
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_metrics_pls_diagnostics_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L288). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_metrics_pls_diagnostics_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L310). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R (source-verified):** [`pls_diagnostics(model, X)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/diagnostics.R).
 

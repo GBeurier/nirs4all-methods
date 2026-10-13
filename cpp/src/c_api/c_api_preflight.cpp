@@ -18,6 +18,7 @@
 #include "core/common/pca_helper.h"
 #include "core/common/rng_pcg64.h"
 #include "core/preprocessing/derivatives/savitzky_golay.h"
+#include "core/preprocessing/scatter/snv.h"
 
 namespace {
 using ::n4m::core::Context;
@@ -760,6 +761,43 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "noise proxy internal error"); }
 }
 
+N4M_API n4m_status_t n4m_preflight_snv_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const n4m_matrix_view_t* out,
+    double* row_error_bounds) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    for (const auto* v : {X, out}) {
+        const auto st = check_view(ctx, v);
+        if (st != N4M_OK) return st;
+    }
+    if (!row_error_bounds) return fail(ctx, N4M_ERR_NULL_POINTER, "null SNV bound output");
+    const int64_t n = X->rows, p = X->cols;
+    if (n < 1 || p < 2) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "SNV needs rows >= 1 and cols >= 2");
+    if (out->rows != n || out->cols != p)
+        return fail(ctx, N4M_ERR_SHAPE_MISMATCH, "SNV output shape mismatch");
+    if (static_cast<uint64_t>(n) > SIZE_MAX / sizeof(double) / static_cast<uint64_t>(p))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "SNV size overflow");
+    n4m_pp_snv_state_t* state = n4m_pp_snv_state_new(1, 1, 0);
+    if (!state) return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "SNV state allocation failed");
+    struct Release { n4m_pp_snv_state_t* s; ~Release() { n4m_pp_snv_state_free(s); } } release{state};
+    try {
+        const auto sz = [](int64_t v) { return static_cast<size_t>(v); };
+        std::vector<double> data(sz(n) * sz(p)), result(sz(n) * sz(p));
+        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
+            const double x = at(*X, i, j);
+            if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite SNV input");
+            data[sz(i) * sz(p) + sz(j)] = x;
+        }
+        const auto st = n4m_pp_snv_apply_bounded(state, data.data(), n, p, result.data(),
+                                                 row_error_bounds);
+        if (st != N4M_OK) return fail(ctx, st, "SNV is not representable for a row");
+        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j)
+            put(*out, i, j, result[sz(i) * sz(p) + sz(j)]);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "SNV allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "SNV internal error"); }
+}
+
 N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,
@@ -792,47 +830,55 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     std::fill(query_flags, query_flags + query->rows, uint8_t{0});
     if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
     uint8_t* rflags = self ? query_flags : reference_flags;
-    // Within tolerance iff ||(q - r) / tolerance||_2 <= sqrt(cols). Each
-    // scaled difference is formed without overflow of q - r, and the norm is
-    // accumulated as scale^2 * ssq (LAPACK dnrm2), so neither large nor tiny
-    // differences overflow or underflow. A scaled difference that is itself
-    // not representable exceeds sqrt(cols) and means "far".
-    const double limit = static_cast<double>(query->cols);
-    const double bound = std::sqrt(limit);
-    const auto scaled_difference = [tolerance](double a, double b) {
-        const double d = a - b;
-        if (std::isfinite(d)) return std::fabs(d) / tolerance;
-        return 2.0 * (std::fabs(0.5 * a - 0.5 * b) / tolerance);
+    // RMS distance on a scaled representation independent of the tolerance:
+    // the differences d_j = q_j - r_j are accumulated as scale^2 * ssq
+    // (LAPACK dnrm2), so tiny differences neither underflow nor are divided
+    // by the tolerance first. If some q_j - r_j overflows, the whole pair uses
+    // the exact halves q_j/2 - r_j/2 and its RMS is twice their RMS. The
+    // partial RMS only grows, so a pair stops as soon as it exceeds the
+    // tolerance.
+    const double inv_cols = 1.0 / static_cast<double>(query->cols);
+    const auto rms_within = [&](int64_t i, int64_t k, double& distance) {
+        for (const bool halved : {false, true}) {
+            double scale = 0.0, ssq = 1.0;
+            bool overflow = false, far = false;
+            const double limit = halved ? 0.5 * tolerance : tolerance;
+            for (int64_t j = 0; j < query->cols; ++j) {
+                const double a = at(*query, i, j), b = at(R, k, j);
+                const double d = std::fabs(halved ? 0.5 * a - 0.5 * b : a - b);
+                if (!std::isfinite(d)) { overflow = true; break; }
+                if (d == 0.0) continue;
+                if (scale < d) {
+                    const double r = scale / d;
+                    ssq = 1.0 + ssq * r * r;
+                    scale = d;
+                } else {
+                    const double r = d / scale;
+                    ssq += r * r;
+                }
+                if (scale * std::sqrt(ssq * inv_cols) > limit) { far = true; break; }
+            }
+            if (overflow) continue;
+            if (far) return false;
+            const double rms = scale * std::sqrt(ssq * inv_cols);
+            distance = halved ? 2.0 * rms : rms;
+            return true;
+        }
+        return false;
     };
     int64_t found = 0, candidates = 0;
     for (int64_t i = 0; i < query->rows; ++i) {
         for (int64_t k = self ? i + 1 : 0; k < R.rows; ++k) {
             if (query_groups && query_groups[i] == rgroups[k]) continue;
             ++candidates;
-            double scale = 0.0, ssq = 1.0;
-            bool far = false;
-            for (int64_t j = 0; j < query->cols; ++j) {
-                const double t = scaled_difference(at(*query, i, j), at(R, k, j));
-                if (t == 0.0) continue;
-                if (!(t <= bound)) { far = true; break; }
-                if (scale < t) {
-                    const double r = scale / t;
-                    ssq = 1.0 + ssq * r * r;
-                    scale = t;
-                } else {
-                    const double r = t / scale;
-                    ssq += r * r;
-                }
-                if (!(scale * scale * ssq <= limit)) { far = true; break; }
-            }
-            if (far) continue;
+            double distance = 0.0;
+            if (!rms_within(i, k, distance)) continue;
             query_flags[i] = 1;
             rflags[k] = 1;
             if (found < max_pairs) {
                 pair_indices[2 * found] = i;
                 pair_indices[2 * found + 1] = k;
-                // RMS = tolerance * ||t|| / sqrt(cols); the ratio is <= 1.
-                pair_distances[found] = tolerance * (scale * std::sqrt(ssq) / bound);
+                pair_distances[found] = distance;
             }
             ++found;
         }

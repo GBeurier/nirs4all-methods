@@ -19,13 +19,13 @@ export { Optimizer, type OptimizerOptions, type OptimizerTrial, type BatchResult
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";
 export { preflightPca, preflightRepeatability, preflightSummary,
-         preflightNearestNeighbors, preflightLocalContrast, preflightNoiseProxy,
+         preflightNearestNeighbors, preflightLocalContrast, preflightNoiseProxy, preflightSnv,
          preflightPairsWithinTolerance, preflightFactorAssociation, preflightHolmAdjust,
          clusterHdbscan,
          preflightAdjustedRandIndex, type HdbscanOptions,
          type HdbscanTreeNode, type HdbscanResult, type PreflightPcaResult,
          type PreflightRepeatabilityResult, type PreflightNeighborResult,
-         type PreflightLocalContrastResult, type PreflightNoiseProxyResult,
+         type PreflightLocalContrastResult, type PreflightNoiseProxyResult, type PreflightSnvResult,
          type PreflightPairsResult, type PreflightFactorAssociationResult
        } from "./preflightDiagnostics.js";
 export { Config } from "./config.js";

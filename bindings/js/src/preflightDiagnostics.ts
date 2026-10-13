@@ -393,6 +393,36 @@ export interface PreflightPairsResult {
     candidatePairs: number;
 }
 
+export interface PreflightSnvResult {
+    /** Row-major SNV (population SD); constant rows are exact zeros. */
+    matrix: Matrix;
+    /** Per-row first-order bound on the absolute rounding error of each entry. */
+    rowErrorBounds: Float64Array;
+}
+
+/** SNV with per-row rounding bounds (ABI 2.20 n4m_preflight_snv_compute). */
+export function preflightSnv(X: Matrix): PreflightSnvResult {
+    validateMatrix(X);
+    if (X.cols < 2) throw new RangeError("SNV needs at least two columns");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const out = scope.matrix(new Float64Array(X.data.length), X.rows, X.cols);
+        const bounds = scope.alloc(X.rows * 8);
+        const st = m.ccall("n4m_preflight_snv_compute", "number",
+            ["number", "number", "number", "number"],
+            [ctx.handle, x.viewPtr, out.viewPtr, bounds]) as number;
+        checkStatus(st, ctx.handle);
+        return {
+            matrix: {data: copyF64(out.dataPtr, X.data.length), rows: X.rows, cols: X.cols},
+            rowErrorBounds: copyF64(bounds, X.rows),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
 /** Savitzky-Golay smoothing-residual noise proxy; interior features only. */
 export function preflightNoiseProxy(X: Matrix, windowLength: number, polyorder: number,
     validMask?: Uint8Array): PreflightNoiseProxyResult {

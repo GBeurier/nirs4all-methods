@@ -1,5 +1,22 @@
 # ABI — Changes Log
 
+## 2026-10-13 — ABI 2.20.0: SNV with rounding bounds (unreleased)
+
+Add `n4m_preflight_snv_compute` in `n4m/metrics.h`. It applies SNV (centring
+and population SD) to each row of a finite matrix into a caller view and
+writes one first-order rounding bound per row:
+`(u(|m| + A) + 4 n u^2 max|y|) / sd_y + 8 u max|z|`, where `y` is the row
+rescaled by a power of two, `m` and `sd_y` are its mean and SD, `A` is the
+mean absolute deviation and `z` is the output. A constant row gives exact
+zeros and a bound of 0. The SNV engine behind `n4m_transform_snv_*` now
+rescales each finite row by a power of two and uses compensated sums. Rows at
+the smallest subnormal, rows that overflow and rows with 100,000 offset bands
+are standardized correctly. `n4m_preflight_pairs_within_tolerance` computes
+the RMS on rescaled differences, independent of the tolerance. Its listed
+distances no longer underflow (`[1e-170, 0]` against `[0, 0]` at tolerance
+1e200 gives 7.07e-171). Existing symbols and signatures are unchanged, and no
+serialized format changes.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

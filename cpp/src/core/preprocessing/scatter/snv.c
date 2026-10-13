@@ -2,19 +2,29 @@
 /*
  * Standard Normal Variate (SNV) — row-wise center + scale.
  *
- * Matches numpy.mean / numpy.std (ddof) over axis=1, with the
- * nirs4all.StandardNormalVariate `std[std == 0] = 1.0` guard.
+ * Mean and standard deviation (ddof) over each row, as numpy.mean / numpy.std
+ * over axis=1, with the nirs4all.StandardNormalVariate `std[std == 0] = 1.0`
+ * guard. Agreement with numpy is within rounding (parity tolerance 1e-12),
+ * not bit-for-bit: the moments are computed more accurately.
  *
- * Two-pass formulation (mean then sum-of-squares) is preferred over Welford
- * because numpy's parity stream uses the algebraic identity and matches
- * bit-for-bit when both sides accumulate in the same order.
+ * Numerical scheme (Methods 1.3.7), for a finite row x of n values:
+ *   - constant rows (all values equal) map to exact zeros when centred and
+ *     are never scaled;
+ *   - y = x * 2^-e with e = ilogb(max|x|), an exact power-of-two rescaling
+ *     (|y| < 2), so no sum overflows and subnormal rows are not lost;
+ *   - mean m = m0 + C(y - m0)/n, with m0 = C(y)/n and C a compensated
+ *     (Neumaier) sum, so the mean error is about u(|m| + mean|y - m|);
+ *   - deviations d = y - m are rescaled again by a power of two of max|d|
+ *     (t = d * 2^-k) before squaring, so squares cannot underflow;
+ *   - centred and scaled output is t / sd_t, never reconstructed at the
+ *     original scale; other modes rescale back and must stay finite.
+ * A non-finite result for a finite row returns N4M_ERR_NUMERICAL_FAILURE.
+ * Rows containing NaN/Inf propagate them through the plain formulas.
  *
- * Numerical guards (Methods 1.3.7): rows with non-finite values propagate them
- * through the plain two-pass formulas as before; for finite rows, constant
- * rows map to exact zeros when centred (numpy would standardize the rounding
- * residue of its mean, e.g. eleven 0.1 -> eleven 1.0); rows whose sums or
- * squared deviations overflow or underflow are recomputed on rescaled values;
- * a non-finite result returns N4M_ERR_NUMERICAL_FAILURE.
+ * First-order rounding bound (u = 2^-53) on every entry of a centred and
+ * scaled row, reported by n4m_pp_snv_apply_bounded:
+ *   B = (u (|m| + A) + 4 n u^2 max|y|) / sd_y + 8 u max|z|,
+ * with A = mean|y - m|, sd_y the SD in y units and z the output row.
  */
 
 #include "snv.h"
@@ -43,130 +53,138 @@ void n4m_pp_snv_state_free(n4m_pp_snv_state_t* state) {
     free(state);
 }
 
-/* Row-wise mean and standard deviation that cannot overflow or underflow.
- * `x` is finite. The fast path keeps numpy's two-pass order (sum/N, then
- * sum of squared deviations) so ordinary rows stay bit-identical to numpy;
- * rows whose sums overflow or whose squared deviations leave the normal
- * range are recomputed on values divided by max|x| (resp. max|x - mean|).
- * Returns 0 on success, -1 when the result is not finite. */
-static int snv_row_moments(const double* x, int64_t cols, int64_t denom_count,
-                           int need_std, double* mean_out, double* std_out) {
-    const double n = (double)cols;
-    double acc = 0.0;
-    for (int64_t j = 0; j < cols; ++j) acc += x[j];
-    double mean = acc / n;
-    if (!isfinite(mean)) {
-        double scale = 0.0;
-        for (int64_t j = 0; j < cols; ++j) scale = fmax(scale, fabs(x[j]));
-        double scaled = 0.0;
-        for (int64_t j = 0; j < cols; ++j) scaled += x[j] / scale;
-        mean = (scaled / n) * scale;
+/* Neumaier compensated summation. */
+typedef struct { double sum, comp; } snv_acc_t;
+
+static void snv_acc_add(snv_acc_t* a, double v) {
+    const double t = a->sum + v;
+    if (fabs(a->sum) >= fabs(v)) {
+        a->comp += (a->sum - t) + v;
+    } else {
+        a->comp += (v - t) + a->sum;
     }
-    *mean_out = mean;
-    *std_out = 0.0;
-    if (!need_std || denom_count <= 0) return isfinite(mean) ? 0 : -1;
-    /* Squares below 2^-900 or above DBL_MAX lose the deviations; rescale. */
-    double sq = 0.0;
-    int rescale = 0;
-    for (int64_t j = 0; j < cols; ++j) {
-        const double d = x[j] - mean;
-        if (!isfinite(d)) { rescale = 1; break; }
-        sq += d * d;
-    }
-    /* The row is not constant, so a zero sum means every square underflowed. */
-    if (!rescale && (!isfinite(sq) || sq < 0x1p-900)) rescale = 1;
-    if (!rescale) {
-        *std_out = sqrt(sq / (double)denom_count);
-        return isfinite(*std_out) ? 0 : -1;
-    }
-    double scale = 0.0;
-    for (int64_t j = 0; j < cols; ++j)
-        scale = fmax(scale, fabs(x[j] * 0.5 - mean * 0.5));
-    if (scale == 0.0) return 0;
-    double ssq = 0.0;
-    for (int64_t j = 0; j < cols; ++j) {
-        const double t = (x[j] * 0.5 - mean * 0.5) / scale;
-        ssq += t * t;
-    }
-    /* std = 2 * scale * sqrt(ssq / denom); scale <= DBL_MAX / 2 keeps it finite
-     * unless the true deviation itself exceeds DBL_MAX. */
-    *std_out = 2.0 * scale * sqrt(ssq / (double)denom_count);
-    return isfinite(*std_out) ? 0 : -1;
+    a->sum = t;
 }
 
-n4m_status_t n4m_pp_snv_apply(const n4m_pp_snv_state_t* state,
-                              const double* X, int64_t rows, int64_t cols,
-                              double* out) {
+/* Plain two-pass formulas for rows holding NaN/Inf (unchanged contract). */
+static void snv_row_nonfinite(const n4m_pp_snv_state_t* state, const double* x,
+                              int64_t cols, int64_t denom_count, double* out) {
+    double acc = 0.0, sq = 0.0;
+    for (int64_t j = 0; j < cols; ++j) acc += x[j];
+    const double mean = acc / (double)cols;
+    for (int64_t j = 0; j < cols; ++j) sq += (x[j] - mean) * (x[j] - mean);
+    const double sd = denom_count > 0 ? sqrt(sq / (double)denom_count) : 0.0;
+    const int scale = state->with_std && sd != 0.0;
+    for (int64_t j = 0; j < cols; ++j) {
+        const double v = state->with_mean ? x[j] - mean : x[j];
+        out[j] = scale ? v / sd : v;
+    }
+}
+
+/* One finite, non-constant row. `bound` (may be NULL) receives the rounding
+ * bound of the centred-and-scaled output, NaN for other modes. */
+static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double* x,
+                                   int64_t cols, int64_t denom_count, double* out,
+                                   double* bound) {
+    const double n = (double)cols;
+    const double u = 0x1p-53;
+    double amax = 0.0;
+    for (int64_t j = 0; j < cols; ++j) amax = fmax(amax, fabs(x[j]));
+    const int e = ilogb(amax);
+    snv_acc_t s0 = {0.0, 0.0};
+    for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s0, ldexp(x[j], -e));
+    const double m0 = (s0.sum + s0.comp) / n;
+    snv_acc_t s1 = {0.0, 0.0};
+    double abs_dev = 0.0, dmax = 0.0;
+    for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s1, ldexp(x[j], -e) - m0);
+    const double m = m0 + (s1.sum + s1.comp) / n;
+    for (int64_t j = 0; j < cols; ++j) {
+        const double d = fabs(ldexp(x[j], -e) - m);
+        abs_dev += d;
+        dmax = fmax(dmax, d);
+    }
+    if (bound) *bound = NAN;
+    const int scale = state->with_std && denom_count > 0 && dmax > 0.0;
+    if (!scale) {
+        /* Centre only (or no SD available): x - mean at the original scale. */
+        for (int64_t j = 0; j < cols; ++j) {
+            const double v = state->with_mean ? ldexp(ldexp(x[j], -e) - m, e) : x[j];
+            if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
+            out[j] = v;
+        }
+        return N4M_OK;
+    }
+    const int k = ilogb(dmax);
+    snv_acc_t ss = {0.0, 0.0};
+    for (int64_t j = 0; j < cols; ++j) {
+        const double t = ldexp(ldexp(x[j], -e) - m, -k);
+        snv_acc_add(&ss, t * t);
+    }
+    const double sd_t = sqrt((ss.sum + ss.comp) / (double)denom_count);
+    if (!(sd_t > 0.0) || !isfinite(sd_t)) return N4M_ERR_NUMERICAL_FAILURE;
+    double zmax = 0.0;
+    for (int64_t j = 0; j < cols; ++j) {
+        const double y = ldexp(x[j], -e);
+        double v;
+        if (state->with_mean) {
+            v = ldexp(y - m, -k) / sd_t;
+        } else {
+            /* x / sd = (y / sd_t) * 2^-k. */
+            v = ldexp(y / sd_t, -k);
+        }
+        if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
+        zmax = fmax(zmax, fabs(v));
+        out[j] = v;
+    }
+    if (bound && state->with_mean) {
+        const double sd_y = ldexp(sd_t, k);
+        *bound = (u * (fabs(m) + abs_dev / n) + 4.0 * n * u * u * ldexp(amax, -e)) / sd_y +
+                 8.0 * u * zmax;
+    }
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_snv_apply_bounded(const n4m_pp_snv_state_t* state,
+                                      const double* X, int64_t rows, int64_t cols,
+                                      double* out, double* row_bounds) {
     if (state == NULL || X == NULL || out == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
     if (rows < 0 || cols < 0) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
-    if (rows == 0 || cols == 0) {
-        return N4M_OK;
-    }
-
     const int64_t denom_count = (int64_t)cols - (int64_t)state->ddof;
-
     for (int64_t i = 0; i < rows; ++i) {
         const double* row_in = X + (size_t)i * (size_t)cols;
         double*       row_out = out + (size_t)i * (size_t)cols;
-
+        double* bound = row_bounds ? row_bounds + i : NULL;
+        if (bound) *bound = NAN;
+        if (cols == 0) continue;
         int finite = 1;
         for (int64_t j = 0; j < cols && finite; ++j) finite = isfinite(row_in[j]);
         if (!finite) {
-            /* Unchanged contract: non-finite values propagate (numpy-like). */
-            double acc = 0.0, sq = 0.0;
-            for (int64_t j = 0; j < cols; ++j) acc += row_in[j];
-            const double mean = acc / (double)cols;
-            for (int64_t j = 0; j < cols; ++j) sq += (row_in[j] - mean) * (row_in[j] - mean);
-            const double sd = denom_count > 0 ? sqrt(sq / (double)denom_count) : 0.0;
-            const int scale = state->with_std && sd != 0.0;
-            for (int64_t j = 0; j < cols; ++j) {
-                double v = state->with_mean ? row_in[j] - mean : row_in[j];
-                row_out[j] = scale ? v / sd : v;
-            }
+            snv_row_nonfinite(state, row_in, cols, denom_count, row_out);
             continue;
         }
-        /* Constant rows (every value bitwise equal up to the sign of zero)
-         * have no shape: the mean is the value itself and the SD is zero, so
-         * centring gives exact zeros and no scaling is applied. Rounding
-         * residue of a computed mean is never standardized into signal. */
         int constant = 1;
-        for (int64_t j = 1; j < cols && constant; ++j) {
-            constant = row_in[j] == row_in[0];
-        }
+        for (int64_t j = 1; j < cols && constant; ++j) constant = row_in[j] == row_in[0];
         if (constant) {
-            for (int64_t j = 0; j < cols; ++j) {
-                row_out[j] = state->with_mean ? 0.0 : row_in[j];
-            }
+            for (int64_t j = 0; j < cols; ++j) row_out[j] = state->with_mean ? 0.0 : row_in[j];
+            if (bound && state->with_mean) *bound = 0.0;
             continue;
         }
-
-        double mean = 0.0, std = 0.0;
-        if (state->with_mean || state->with_std) {
-            if (snv_row_moments(row_in, cols, denom_count, state->with_std, &mean, &std) != 0) {
-                return N4M_ERR_NUMERICAL_FAILURE;
-            }
+        if (!state->with_mean && !state->with_std) {
+            for (int64_t j = 0; j < cols; ++j) row_out[j] = row_in[j];
+            continue;
         }
-        /* nirs4all `std[std == 0] = 1.0`: a zero SD leaves the row unscaled. */
-        const int apply_std = state->with_std && std != 0.0;
-
-        for (int64_t j = 0; j < cols; ++j) {
-            double v = row_in[j];
-            if (state->with_mean && apply_std) {
-                /* (x - mean) / std without overflow of the difference. */
-                const double d = v - mean;
-                v = isfinite(d) ? d / std : 2.0 * ((v * 0.5 - mean * 0.5) / std);
-            } else if (state->with_mean) {
-                v = v - mean;
-            } else if (apply_std) {
-                v = v / std;
-            }
-            if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
-            row_out[j] = v;
-        }
+        const n4m_status_t st = snv_row_finite(state, row_in, cols, denom_count, row_out, bound);
+        if (st != N4M_OK) return st;
     }
     return N4M_OK;
+}
+
+n4m_status_t n4m_pp_snv_apply(const n4m_pp_snv_state_t* state,
+                              const double* X, int64_t rows, int64_t cols,
+                              double* out) {
+    return n4m_pp_snv_apply_bounded(state, X, rows, cols, out, NULL);
 }

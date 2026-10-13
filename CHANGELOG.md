@@ -6,26 +6,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI 2.20.0 (project version unchanged until release).
+
+### Added
+
+- `n4m_preflight_snv_compute` (ABI 2.20.0) and the JS wrapper
+  `preflightSnv`: SNV with a per-row first-order rounding bound on every
+  output entry, so callers can tell rounding residue from structure.
+
 ### Fixed
+
+- SNV numerical scheme: each finite row is rescaled by a power of two and
+  summed with compensation (Neumaier). The mean is refined in a second pass,
+  and the deviations are rescaled again before squaring. `[a, 0, -a]` at the
+  smallest subnormal now gives `[sqrt(1.5), 0, -sqrt(1.5)]` instead of
+  returning the row unchanged. Rows with 100,000 offset bands no longer carry
+  a mean error of about 1e-8 SD. Agreement with numpy remains within the
+  1e-12 parity tolerance, but is no longer bit-for-bit.
+- Tolerance-pair distances are computed on rescaled differences independently
+  of the tolerance: `[1e-170, 0]` against `[0, 0]` at tolerance 1e200 now
+  lists 7.07e-171 instead of 0.
 
 - SNV (`n4m_transform_snv_*`, the registry `StandardNormalVariate` and the
   pipelines using it): a constant finite row now maps to exact zeros when
   centred instead of standardizing the rounding residue of its mean (eleven
-  `0.1` gave eleven `1.0`). Finite rows whose sums or squared deviations
-  overflow or underflow are recomputed on rescaled values
-  (`[1e200, 0, -1e200]` gave a zero row); a non-finite result for a finite
-  row returns `N4M_ERR_NUMERICAL_FAILURE`. Ordinary rows keep numpy's
-  two-pass order and their bit-for-bit parity; rows with NaN/Inf propagate
-  them as before.
+  `0.1` gave eleven `1.0`). `[1e200, 0, -1e200]` no longer gives a zero row.
+  A non-finite result for a finite row returns `N4M_ERR_NUMERICAL_FAILURE`.
+  Rows with NaN/Inf propagate them as before.
 - `n4m_preflight_noise_proxy_compute` accepts only the verified
   Savitzky-Golay domain (odd window 3..1001, polyorder <= min(10, window-2))
   and checks the polynomial reproduction moments of the weights; window 41 /
   polyorder 38 previously returned a residual of 0.83 on a constant row.
 - `n4m_preflight_pairs_within_tolerance` no longer drops pairs whose raw
-  difference overflows: differences are scaled before subtraction overflows
-  and the norm is accumulated with rescaling (`q=[1e308,0]`, `r=[-1e308,0]`,
-  tolerance `1.5e308` is now a pair). Tiny differences no longer underflow to
-  a zero distance.
+  difference overflows: such a pair is measured on exact halves
+  (`q=[1e308,0]`, `r=[-1e308,0]`, tolerance `1.5e308` is now a pair).
 - JS: `preflightNoiseProxy`, `preflightPca`, `preflightNearestNeighbors`,
   `preflightLocalContrast` and `preflightFactorAssociation` range-check every
   `int32_t` argument before the Emscripten call (4294967301 was wrapped to a
