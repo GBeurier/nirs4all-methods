@@ -18,16 +18,23 @@ covariance regularization and the null protocol belong to the caller.
 
 ## Frozen semantics
 
-- Domains of validity are stated in each header: assignment costs are centred on
-  their minimum and scaled by a power of two; Gaussian draws factor a scaled
-  covariance; Jaccard refuses `n > 2^53`. `n4m_cluster_robustness_tests` checks
+- Domains of validity are stated in each header: Gaussian draws factor a scaled
+  covariance; Jaccard refuses `n > 2^53`; assignment is exact (see below). `n4m_cluster_robustness_tests` checks
   scaling, translation and constant-column invariance for these kernels, HDBSCAN and
   ARI.
 - `n4m_cluster_jaccard_matrix`: negative labels are unassigned and belong to no cluster;
   labels must be below the declared cluster counts. `J_ij = |A_i ∩ B_j| / (|A_i| + |B_j| -
   |A_i ∩ B_j|)`, NaN when both clusters are empty. Callers restrict both labelings to the
   elements they share before the call.
-- `n4m_linear_sum_assignment`: exactly `scipy.optimize.linear_sum_assignment`. A tall
+- `n4m_linear_sum_assignment`: the algorithm and tie rules of
+  `scipy.optimize.linear_sum_assignment`, evaluated in exact arithmetic (duals and path
+  costs are floating-point expansions, `cpp/src/core/common/expansion.hpp`), so the
+  result is an exact optimum. On random 2–4 × 2–6 matrices with signed costs whose
+  exponents span ±60 to ±600, SciPy's double version is suboptimal in 2–9 % of cases;
+  `n4m_cluster_robustness_tests` and the JS/WASM test check the exact optimum by
+  enumeration with independent exact sums (2240-bit integers, BigInt). Costs are never
+  centred; they are scaled by the smallest power of two that keeps the sums finite, and
+  refused if that scaling is not exact. A tall
   matrix is solved on its transpose and the pairs are sorted by row; `maximize` negates
   the costs; `+inf` forbids a pair; NaN or `-inf` (after negation) is invalid; a missing
   feasible assignment is a numerical failure. Ties: in each augmenting-path search the

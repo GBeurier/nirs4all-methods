@@ -4,6 +4,8 @@
 // adjusted Rand index). Every scaled run must either reproduce the unscaled
 // result under the exact invariance of the statistic, or return an explicit
 // N4M_ERR_UNSUPPORTED without touching the caller's buffers.
+#include <algorithm>
+#include <array>
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
@@ -178,6 +180,122 @@ std::vector<int64_t> assign(n4m_context_t* ctx, std::vector<double> cost, int64_
     return c;
 }
 
+// Independent exact oracle: a finite double is m * 2^q with an integer
+// mantissa m, so every sum is an integer multiple of 2^-1074. Positive and
+// negative parts accumulate in 2240-bit unsigned integers (70 x 32-bit limbs).
+struct Exact {
+    std::array<uint32_t, 70> pos{}, neg{};
+};
+
+void add_bits(std::array<uint32_t, 70>& acc, uint64_t mantissa, int shift) {
+    for (int part = 0; part < 2; ++part) {
+        uint64_t chunk = (mantissa >> (32 * part)) & 0xffffffffu;
+        if (!chunk) continue;
+        const int bit = shift + 32 * part;
+        auto limb = static_cast<size_t>(bit / 32);
+        const int offset = bit % 32;
+        uint64_t carry = chunk << offset;
+        while (carry) {
+            const uint64_t total = static_cast<uint64_t>(acc[limb]) + (carry & 0xffffffffu);
+            acc[limb] = static_cast<uint32_t>(total);
+            carry = (carry >> 32) + (total >> 32);
+            ++limb;
+        }
+    }
+}
+
+void accumulate(Exact& e, double v) {
+    if (v == 0.0) return;
+    int exponent = 0;
+    const double fraction = std::frexp(std::fabs(v), &exponent);  // |v| = f 2^exponent
+    auto mantissa = static_cast<uint64_t>(std::ldexp(fraction, 53));
+    int shift = exponent - 53 + 1074;
+    for (; shift < 0; ++shift) mantissa >>= 1;  // subnormal: the dropped bits are zero
+    add_bits(v > 0 ? e.pos : e.neg, mantissa, shift);
+}
+
+int compare_bits(const std::array<uint32_t, 70>& a, const std::array<uint32_t, 70>& b) {
+    for (size_t i = a.size(); i-- > 0;)
+        if (a[i] != b[i]) return a[i] < b[i] ? -1 : 1;
+    return 0;
+}
+
+// Sign of (sum x) - (sum y) for exact sums x and y.
+int compare_sums(const Exact& x, const Exact& y) {
+    Exact left = x, right = y;  // compare x.pos + y.neg with y.pos + x.neg
+    for (size_t i = 0; i < 70; ++i) {
+        add_bits(left.pos, y.neg[i], static_cast<int>(32 * i));
+        add_bits(right.pos, x.neg[i], static_cast<int>(32 * i));
+    }
+    return compare_bits(left.pos, right.pos);
+}
+
+// Exact optimum of a small rows <= cols minimisation by enumeration, and the
+// exact cost of the returned columns.
+void check_optimal(n4m_context_t* ctx, const std::vector<double>& cost, int64_t rows, int64_t cols) {
+    const auto got = assign(ctx, cost, rows, cols, 0);
+    std::vector<int64_t> perm(static_cast<size_t>(cols));
+    for (int64_t j = 0; j < cols; ++j) perm[static_cast<size_t>(j)] = j;
+    auto cost_of = [&](const std::vector<int64_t>& columns) {
+        Exact e;
+        for (int64_t i = 0; i < rows; ++i)
+            accumulate(e, cost[static_cast<size_t>(i * cols + columns[static_cast<size_t>(i)])]);
+        return e;
+    };
+    const Exact returned = cost_of(got);
+    bool first = true;
+    Exact best;
+    do {
+        const Exact candidate = cost_of(perm);
+        if (first || compare_sums(candidate, best) < 0) best = candidate;
+        first = false;
+    } while (std::next_permutation(perm.begin(), perm.end()));
+    REQUIRE(compare_sums(returned, best) == 0);
+}
+
+void assignment_exactness(n4m_context_t* ctx) {
+    // The oracle itself: -1e20 + 1 + 1 exceeds -1e20 + 0 + 0, which double
+    // arithmetic cannot see.
+    Exact two, zero;
+    for (const double v : {-1e20, 1.0, 1.0}) accumulate(two, v);
+    for (const double v : {-1e20, 0.0, 0.0}) accumulate(zero, v);
+    REQUIRE(compare_sums(two, zero) == 1 && compare_sums(zero, two) == -1 &&
+            compare_sums(two, two) == 0 && -1e20 + 1.0 + 1.0 == -1e20);
+    // Review 2026-10-13 P0: global centring on the minimum turned the lower
+    // block into a constant 1e20 and returned [0, 1, 2] (cost -1e20 + 2)
+    // instead of [0, 2, 1] (cost -1e20). SciPy's double arithmetic also
+    // loses such differences in other matrices; the exact solver does not.
+    const std::vector<double> centring = {-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1};
+    REQUIRE((assign(ctx, centring, 3, 3, 0) == std::vector<int64_t>{0, 2, 1}));
+    check_optimal(ctx, centring, 3, 3);
+    // Centring made 1e308 - (-1e308) overflow and declared this infeasible.
+    const std::vector<double> extreme = {-1e308, 1e308, -1e308, 1e308};
+    const auto columns = assign(ctx, extreme, 2, 2, 0);
+    REQUIRE((columns == std::vector<int64_t>{0, 1} || columns == std::vector<int64_t>{1, 0}));
+    check_optimal(ctx, extreme, 2, 2);
+    // Signed mixtures with exponents spread over [-300, 300] and a few
+    // near-DBL_MAX entries, against the exact enumeration.
+    uint64_t state = 0x9e3779b97f4a7c15u;
+    auto next = [&state]() {
+        state = state * 6364136223846793005u + 1442695040888963407u;
+        return state >> 11;
+    };
+    for (int trial = 0; trial < 600; ++trial) {
+        const auto rows = static_cast<int64_t>(2 + next() % 3);
+        const auto cols = rows + static_cast<int64_t>(next() % 3);
+        const int spread = trial % 3 == 0 ? 60 : (trial % 3 == 1 ? 300 : 1000);
+        std::vector<double> cost(static_cast<size_t>(rows * cols));
+        for (double& v : cost) {
+            const double mantissa = 1.0 + static_cast<double>(next() % 4096) / 4096.0;
+            int exponent = static_cast<int>(next() % static_cast<uint64_t>(2 * spread)) - spread;
+            exponent = std::min(exponent, 1022);
+            v = (next() % 2 ? -1.0 : 1.0) * std::ldexp(mantissa, exponent);
+        }
+        check_optimal(ctx, cost, rows, cols);
+    }
+    std::puts("assignment: exact optimum on mixed signs and exponent spreads");
+}
+
 void assignment_sweep(n4m_context_t* ctx) {
     std::vector<double> base(35);
     for (size_t i = 0; i < base.size(); ++i)
@@ -202,11 +320,10 @@ void assignment_sweep(n4m_context_t* ctx) {
         REQUIRE(assign(ctx, shifted, 5, 7, maximize) == assign(ctx, grid, 5, 7, maximize));
     }
     // A cost range wider than the exponent range is refused, not merged with 0.
-    // Centred costs of order 1e-300 next to one of order 1e300 cannot share
-    // one double scale.
+    // Costs near DBL_MAX next to subnormal costs cannot be scaled exactly.
     std::vector<double> span(base);
-    for (double& v : span) v *= 1e-300;
-    span[0] = 1e300;
+    for (double& v : span) v *= 1e-310;
+    span[0] = 1.7e308;
     assign(ctx, span, 5, 7, 0, N4M_ERR_UNSUPPORTED);
     std::puts("assignment sweep: invariant");
 }
@@ -266,6 +383,7 @@ int main() {
         REQUIRE(n4m_context_create(&ctx) == N4M_OK);
         hdbscan_sweep(ctx);
         assignment_sweep(ctx);
+        assignment_exactness(ctx);
         normal_sweep(ctx);
         ari_invariance(ctx);
         n4m_context_destroy(ctx);

@@ -49,8 +49,15 @@ ABI 2.20.0. No model-state serialization format changes.
   stability returns `N4M_ERR_UNSUPPORTED`, and `inf - inf` excess at zero
   distance counts as 0 instead of NaN. `n4m_preflight_adjusted_rand_index`
   uses exact 128-bit pair-count products (no cancellation near 0).
-  `n4m_linear_sum_assignment` centres and scales finite costs (costs near
-  `DBL_MAX` and large offsets no longer overflow the dual sums).
+  `n4m_linear_sum_assignment` keeps its duals and path costs as exact sums
+  of the input doubles (floating-point expansions): the result is an exact
+  optimum, also for mixed signs and wide exponent spreads where SciPy's
+  double arithmetic can be suboptimal; costs are only scaled by a power of
+  two when sums could overflow, never centred (a first centring version
+  returned `[0,1,2]` instead of `[0,2,1]` for
+  `[[-1e20,1e20,1e20],[1e20,1,0],[1e20,0,1]]` and declared
+  `[[-1e308,1e308],[-1e308,1e308]]` infeasible). Work limit
+  `rows*cols*min(rows,cols) <= 1e8`.
   `n4m_random_multivariate_normal` factors a scaled covariance (no
   underflow for tiny covariances). Magnitude, translation and
   constant-column property tests (`n4m_cluster_robustness_tests`, JS/WASM).

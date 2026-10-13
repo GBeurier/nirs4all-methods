@@ -33,7 +33,7 @@ vendored_licenses:
   - "scipy-rectangular-lsap (BSD-3-Clause)"
 bindings: {}
 publications: []
-notes: "Rectangular linear sum assignment ported from SciPy 1.18.1 scipy.optimize.linear_sum_assignment (Crouse shortest augmenting path, BSD-3-Clause, cpp/src/core/optimization/_vendored), with SciPy tie order. Reference gate: parity/generators/cluster_matching_null_v1.py -> parity/fixtures/cluster_matching_null_v1.json, cpp/tests/test_cluster_matching_null.cpp."
+notes: "Rectangular linear sum assignment ported from SciPy 1.18.1 scipy.optimize.linear_sum_assignment (Crouse shortest augmenting path, BSD-3-Clause, cpp/src/core/optimization/_vendored), with SciPy tie order and exact (floating-point expansion) duals, so the result is an exact optimum. Reference gate: parity/generators/cluster_matching_null_v1.py -> parity/fixtures/cluster_matching_null_v1.json, cpp/tests/test_cluster_matching_null.cpp."
 c_surface:
   - "n4m_linear_sum_assignment"
 fq_name: "n4m.optimize.linear_sum_assignment"
