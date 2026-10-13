@@ -138,16 +138,17 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
  * out_two[1] = g. valid_mask is optional row-major rows x cols bytes, nonzero
  * = valid; unmasked X must be finite and cols >= window_length. The value is
  * a noise proxy under a locally polynomial signal, never an SNR.
- * Numerical domain: the residual of each evaluable window is computed from
- * the window alone as sum_{k>0} w_k (2 x_j - x_{j+k} - x_{j-k}) with
- * symmetrized weights, each second difference summed exactly (TwoSum) and
- * rounded once (windows reaching 2^1021 are prescaled by 1/8), then rescaled
- * by a power of two; residuals are accumulated as scaled sums of squares.
- * Hence: values outside every evaluable window never change the results;
- * exact offsets cancel exactly; power-of-two scaling is exactly equivariant
- * over the finite range; |r - r_hat| <= (h + 3) u sum_k |w_k c_k| for the
- * computed weights. A result above DBL_MAX gives N4M_ERR_NUMERICAL_FAILURE;
- * a positive result below 2^-1074 is reported as 2^-1074. */
+ * Supported numerical domain D: every nonzero valid |x| in [2^-256, 2^256]
+ * and, per row, max/min nonzero valid |x| <= 2^64; otherwise
+ * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain")
+ * before computing. Inside D the residual of each evaluable window is
+ * computed from that window alone as sum_{k>0} w_k (2 x_j - x_{j+k} -
+ * x_{j-k}): the weights are double-double (Gram polynomials, cross-checked
+ * against the Savitzky-Golay engine), each second difference is kept exactly
+ * as three doubles until the double-double weighted sum, rounded once. So
+ * values outside every evaluable window never change the results, exact
+ * offsets cancel exactly, power-of-two scaling is exactly equivariant, and
+ * |r - r_exact| <= 2^-95 sum_k |w_k| |c_k| against the exact SG weights. */
 N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
     int32_t window_length, int32_t polyorder, double* band_noise,
@@ -167,8 +168,10 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
  * rescaled by 2^-ilogb(max|x|), m, sd_y and A = mean|y - m| its mean, SD and
  * mean absolute deviation, n = cols, z the SNV row (0 for a constant row);
  * for a group of r > 1 rows, max member B + (4u + 2 r u^2) max member |z|.
- * X must be finite with cols >= 2. N4M_ERR_NUMERICAL_FAILURE when an output
- * is not representable. Added in ABI 2.20. */
+ * X must be finite with cols >= 2. Supported domain D: every nonzero |x| in
+ * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64 (the centred
+ * spread max|x| / range is then below 2^53 for any non-constant row);
+ * otherwise N4M_ERR_UNSUPPORTED before computing. Added in ABI 2.20. */
 N4M_API n4m_status_t n4m_preflight_snv_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
     int64_t n_groups, const n4m_matrix_view_t* out, double* error_bounds);
@@ -185,13 +188,14 @@ N4M_API n4m_status_t n4m_preflight_snv_compute(
  * query_flags (query rows) and, for two matrices, reference_flags (reference
  * rows) are set to 1 for rows in at least one pair, else 0. out_counts
  * receives [total pairs within tolerance, candidate pairs compared]. All
- * values must be finite. Numerical domain: the whole finite range, with
- * exact decisions. A fast estimate on power-of-two rescaled differences
+ * values must be finite. Supported domain D: every nonzero |x| in
+ * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64; otherwise
+ * N4M_ERR_UNSUPPORTED before computing. Inside D the decisions are exact. A fast estimate on power-of-two rescaled differences
  * (exact halves when some q - r overflows) decides when it is farther than
  * 2^-45 (relative) from the tolerance; otherwise the sign of
  * sum_j (q_j - r_j)^2 - cols tol^2 is computed exactly in a fixed-point
  * accumulator of exact products. An accepted pair publishes
- * min(estimated RMS, tolerance), at least 2^-1074. */
+ * min(estimated RMS, tolerance). */
 N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,

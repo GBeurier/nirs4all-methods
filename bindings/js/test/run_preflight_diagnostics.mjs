@@ -128,37 +128,42 @@ const rel = (actual, expected, r, what = "") => assert.ok(
     `${what} ${actual} != ${expected}`);
 const row = (values) => ({data: new Float64Array(values), rows: 1, cols: values.length});
 const pair = (q, r, tol) => preflightPairsWithinTolerance(row(q), tol, 1, row(r));
-const numericalFailure = (fn) => assert.throws(fn, (e) => e.status === 7);  // N4M_ERR_NUMERICAL_FAILURE
-// Review b1 #3: q - r overflows, yet the RMS distance sqrt(2) * 1e308 <= 1.5e308.
-const huge = pair([1e308, 0], [-1e308, 0], 1.5e308);
+// Exact status codes (types.ts Status): 10 = N4M_ERR_UNSUPPORTED (outside the
+// supported numerical domain), never a trap or a silently wrong value.
+const unsupported = (fn) => assert.throws(fn, (e) => e.status === 10 &&
+    /outside the supported numerical domain/.test(e.message));
+// Supported domain D (rule 13): nonzero |x| in [2^-256, 2^256], per-row spread <= 2^64.
+const A = 2 ** 200, a = 2 ** -200, lo = 2 ** -256, hi = 2 ** 256;
+const huge = pair([A, 0], [-A, 0], 1.5 * A);
 assert.equal(huge.totalPairs, 1);
-rel(huge.distances[0], Math.SQRT2 * 1e308, 4e-16);
-assert.equal(pair([1e308, 0], [-1e308, 0], 1.414e308).totalPairs, 0);
-// Review b1fix #2 / b14fix #8: tolerance-invariant tiny distance, both sides of the threshold.
-for (const tol of [7.0711e-171, 1e-100, 1, 1e200, 1e308]) {
-    const tiny = pair([1e-170, 0], [0, 0], tol);
+rel(huge.distances[0], Math.SQRT2 * A, 4e-16);
+assert.equal(pair([A, 0], [-A, 0], 1.414 * A).totalPairs, 0);
+// Tolerance-invariant distance a/sqrt(2), both sides of the threshold.
+for (const tol of [0.70711 * a, 1e-30, 1, A, hi]) {
+    const tiny = pair([a, 0], [0, 0], tol);
     assert.equal(tiny.totalPairs, 1);
-    rel(tiny.distances[0], 1e-170 / Math.SQRT2, 4e-16, `tol ${tol}`);
+    rel(tiny.distances[0], a / Math.SQRT2, 4e-16, `tol ${tol}`);
 }
-assert.equal(pair([1e-170, 0], [0, 0], 7.0710e-171).totalPairs, 0);
-// Review b14fix #2: [2a,0] vs [0,0] has RMS sqrt(2) a > a at a = 2^-1074.
-const tinyA = 2 ** -1074;
-assert.equal(pair([2 * tinyA, 0], [0, 0], tinyA).totalPairs, 0);
-const subnormal = pair([tinyA, 0], [0, 0], tinyA);
-assert.ok(subnormal.totalPairs === 1 && subnormal.distances[0] === tinyA);
-// Magnitude sweep (same invariants as cpp/tests/test_preflight_robustness.cpp):
-// q - r = [3, 4, 0, 12] has RMS 6.5 at every power-of-two scale.
-for (const k of [-1074, -1022, -500, -100, 0, 100, 500, 1000]) {
+assert.equal(pair([a, 0], [0, 0], 0.70710 * a).totalPairs, 0);
+assert.equal(pair([2 * lo, 0], [0, 0], lo).totalPairs, 0);
+// Domain boundaries on both sides.
+assert.equal(pair([lo, 0], [0, 0], 1).totalPairs, 1);
+assert.equal(pair([hi, 0], [0, 0], 1).totalPairs, 0);
+unsupported(() => pair([lo / 2, 0], [0, 0], 1));
+unsupported(() => pair([hi * 2, 0], [0, 0], 1));
+assert.equal(pair([1, 2 ** 64], [0, 0], 1).totalPairs, 0);
+unsupported(() => pair([1, 2 ** 64 + 2 ** 12], [0, 0], 1));
+unsupported(() => pair([Number.MAX_VALUE, 0], [-Number.MAX_VALUE, 0], 1));
+// Magnitude sweep inside D: q - r = [3, 4, 0, 12] has RMS 6.5 at every scale.
+for (const k of [-256, -200, -100, 0, 100, 200, 248]) {
     const s = 2 ** k, q = [5, 4, 9, 12].map((v) => v * s), r = [2, 0, 9, 0].map((v) => v * s);
-    const exact = (6.5 * s) / s === 6.5;
-    const result = pair(q, r, (exact ? 6.5 : 7) * s);
+    const result = pair(q, r, 6.5 * s);
     assert.equal(result.totalPairs, 1, `k ${k}`);
-    if (6.5 * s >= 2 ** -1022) assert.equal(result.distances[0], 6.5 * s);
-    else assert.ok(result.distances[0] > 0 && Math.abs(result.distances[0] - 6.5 * s) <= tinyA);
+    assert.equal(result.distances[0], 6.5 * s);
     assert.equal(pair(q, r, 6 * s).totalPairs, 0, `k ${k}`);
 }
-// Test-only goldens: exact rational decisions (Python 3.10 fractions) and
-// 400-digit decimal square roots, rounded to binary64.
+// Test-only goldens inside the supported domain: exact rational decisions
+// (Python 3.10 fractions) and 400-digit decimal square roots, rounded to binary64.
 const pairGoldens = [
     [[1.0, 1.0], [-5.551115123125783e-17, -5.551115123125783e-17], 0.9999999999999999, false, 1.0],
     [[1.0, 1.0], [-5.551115123125783e-17, -5.551115123125783e-17], 1.0, false, 1.0],
@@ -169,43 +174,44 @@ const pairGoldens = [
     [[1.0, -1.0, 1.0, -1.0], [0.0, 0.0, 0.0, 0.0], 0.9999999999999999, false, 1.0],
     [[1.0, -1.0, 1.0, -1.0], [0.0, 0.0, 0.0, 0.0], 1.0, true, 1.0],
     [[1.0, -1.0, 1.0, -1.0], [0.0, 0.0, 0.0, 0.0], 1.0000000000000002, true, 1.0],
-    [[4.149515568880993e+180, 2.409919865102884e-181, -2.7997908555096566e-301], [4.149515568880993e+180, 0.0, 9.332636185032189e-302], 1.3913678828425764e-181, false, 1.3913678828425767e-181],
-    [[4.149515568880993e+180, 2.409919865102884e-181, -2.7997908555096566e-301], [4.149515568880993e+180, 0.0, 9.332636185032189e-302], 1.3913678828425767e-181, false, 1.3913678828425767e-181],
-    [[4.149515568880993e+180, 2.409919865102884e-181, -2.7997908555096566e-301], [4.149515568880993e+180, 0.0, 9.332636185032189e-302], 1.391367882842577e-181, true, 1.3913678828425767e-181],
-    [[1e+300, 1.0, -1e-300], [-1e+300, 1.0, 1e-300], 1.1547005383792515e+300, false, 1.1547005383792516e+300],
-    [[1e+300, 1.0, -1e-300], [-1e+300, 1.0, 1e-300], 1.1547005383792516e+300, true, 1.1547005383792516e+300],
-    [[1e+300, 1.0, -1e-300], [-1e+300, 1.0, 1e-300], 1.1547005383792518e+300, true, 1.1547005383792516e+300],
+    [[1.152921504606847e+18, 0.125, -0.1875], [1.152921504606847e+18, 0.0, 0.0625], 0.16137430609197567, false, 0.1613743060919757],
+    [[1.152921504606847e+18, 0.125, -0.1875], [1.152921504606847e+18, 0.0, 0.0625], 0.1613743060919757, false, 0.1613743060919757],
+    [[1.152921504606847e+18, 0.125, -0.1875], [1.152921504606847e+18, 0.0, 0.0625], 0.16137430609197573, true, 0.1613743060919757],
+    [[1.8092513943330656e+75, 1.6069380442589903e+60, 2.4104070663884854e+60], [-1.8092513943330656e+75, 1.6069380442589903e+60, 0.0], 2.0891435590998018e+75, false, 2.089143559099802e+75],
+    [[1.8092513943330656e+75, 1.6069380442589903e+60, 2.4104070663884854e+60], [-1.8092513943330656e+75, 1.6069380442589903e+60, 0.0], 2.089143559099802e+75, false, 2.089143559099802e+75],
+    [[1.8092513943330656e+75, 1.6069380442589903e+60, 2.4104070663884854e+60], [-1.8092513943330656e+75, 1.6069380442589903e+60, 0.0], 2.0891435590998026e+75, true, 2.089143559099802e+75],
     [[3.0, -4.0, 8.673617379884035e-19], [-3.0, 4.0, 0.0], 5.773502691896256, false, 5.773502691896257],
     [[3.0, -4.0, 8.673617379884035e-19], [-3.0, 4.0, 0.0], 5.773502691896257, false, 5.773502691896257],
     [[3.0, -4.0, 8.673617379884035e-19], [-3.0, 4.0, 0.0], 5.773502691896258, true, 5.773502691896257],
-    [[1e+308, 5e-324], [1e+308, 0.0], 5e-324, true, 5e-324],
-    [[1e+308, 5e-324], [1e+308, 0.0], 1e-323, true, 5e-324],
-    [[-1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 1.271161006153646e+308, false, 1.2711610061536462e+308],
-    [[-1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 1.2711610061536462e+308, true, 1.2711610061536462e+308],
-    [[-1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], 1.2711610061536464e+308, true, 1.2711610061536462e+308],
-    [[1e-323, 0.0], [0.0, 0.0], 5e-324, false, 5e-324],
-    [[1e-323, 0.0], [0.0, 0.0], 1e-323, true, 5e-324],
+    [[6.223015277861142e-61, 5.527147875260445e-76], [0.0, -5.527147875260445e-76], 4.4003363024031e-61, false, 4.400336302403101e-61],
+    [[6.223015277861142e-61, 5.527147875260445e-76], [0.0, -5.527147875260445e-76], 4.400336302403101e-61, true, 4.400336302403101e-61],
+    [[6.223015277861142e-61, 5.527147875260445e-76], [0.0, -5.527147875260445e-76], 4.4003363024031016e-61, true, 4.400336302403101e-61],
     [[1e+16, 1.0], [9999999999999998.0, 0.0], 1.5811388300841895, false, 1.5811388300841898],
     [[1e+16, 1.0], [9999999999999998.0, 0.0], 1.5811388300841898, true, 1.5811388300841898],
     [[1e+16, 1.0], [9999999999999998.0, 0.0], 1.58113883008419, true, 1.5811388300841898],
+    [[1.157920892373162e+77, 6.277101735386681e+57], [-1.157920892373162e+77, 6.277101735386681e+57], 1.6375474301492824e+77, false, 1.6375474301492827e+77],
+    [[1.157920892373162e+77, 6.277101735386681e+57], [-1.157920892373162e+77, 6.277101735386681e+57], 1.6375474301492827e+77, true, 1.6375474301492827e+77],
+    [[1.157920892373162e+77, 6.277101735386681e+57], [-1.157920892373162e+77, 6.277101735386681e+57], 1.637547430149283e+77, true, 1.6375474301492827e+77],
+    [[8.636168555094445e-78, 1.5930919111324523e-58], [0.0, -1.5930919111324523e-58], 2.2529721868303873e-58, false, 2.2529721868303876e-58],
+    [[8.636168555094445e-78, 1.5930919111324523e-58], [0.0, -1.5930919111324523e-58], 2.2529721868303876e-58, true, 2.2529721868303876e-58],
+    [[8.636168555094445e-78, 1.5930919111324523e-58], [0.0, -1.5930919111324523e-58], 2.252972186830388e-58, true, 2.2529721868303876e-58],
 ];
 const snvGoldens = [
-    [[1.0715086071862673e+301, 9.332636185032189e-302, -9.332636185032189e-302, 0.0], [1.7320508075688772, -0.5773502691896257, -0.5773502691896257, -0.5773502691896257]],
-    [[1e+300, 1.0, 2.0, 3.0], [1.7320508075688772, -0.5773502691896257, -0.5773502691896257, -0.5773502691896257]],
-    [[-1e-300, 1e-310, 5e-324, 0.0], [-1.7320508075688772, 0.5773502693435858, 0.5773502691126458, 0.5773502691126458]],
-    [[5e-324, 1e-323, 1.5e-323, 0.0], [-0.4472135954999579, 0.4472135954999579, 1.3416407864998738, -1.3416407864998738]],
+    [[1.152921504606847e+18, 0.125, -0.125, 0.0], [1.7320508075688772, -0.5773502691896257, -0.5773502691896257, -0.5773502691896257]],
+    [[1.157920892373162e+77, 1.6069380442589903e+60, 6.277101735386681e+57, 0.0], [1.7320508075688772, -0.5773502691896257, -0.5773502691896257, -0.5773502691896257]],
+    [[8.636168555094445e-78, 6.223015277861142e-61, 2.5908505665283334e-77, 0.0], [-0.5773502691896257, 1.7320508075688772, -0.5773502691896257, -0.5773502691896258]],
     [[1e+16, 1.0, -1.0, 1.0000000000000002e+16], [0.9999999999999998, -0.9999999999999998, -1.0000000000000002, 1.0000000000000002]],
-    [[1.7976931348623157e+308, -1.7976931348623157e+308, 1e-300, 0.0], [1.4142135623730951, -1.4142135623730951, 0.0, -0.0]],
+    [[9.223372036854776e+18, -9.223372036854776e+18, 0.5, 0.0], [1.4142135623730951, -1.4142135623730951, 5.749850312562652e-20, -1.9166167708542177e-20]],
     [[1.0, 1.0000000000000002, 1.0, 1.0], [-0.5773502691896257, 1.7320508075688772, -0.5773502691896257, -0.5773502691896257]],
+    [[-1.5930919111324523e-58, 8.636168555094445e-78, 1.727233711018889e-77, 0.0], [-1.7320508075688772, 0.5773502691896257, 0.5773502691896257, 0.5773502691896257]],
 ];
-// Review b14fix2 #1: exact threshold decisions on mixed-exponent rows.
+// Exact threshold decisions on mixed-exponent rows inside D.
 for (const [q, r, tol, within, rms] of pairGoldens) {
     const got = pair(q, r, tol);
     assert.equal(got.totalPairs === 1, within, `${q} ${r} ${tol}`);
     if (!within) continue;
     assert.ok(got.distances[0] > 0 && got.distances[0] <= tol);
-    if (rms >= 2 ** -1022) assert.ok(Math.abs(got.distances[0] - rms) <= 2 ** -50 * rms);
-    else assert.ok(Math.abs(got.distances[0] - rms) <= tinyA);
+    assert.ok(Math.abs(got.distances[0] - rms) <= 2 ** -50 * rms);
 }
 // SNV of mixed-exponent rows within the reported bound of 400-digit references.
 for (const [x, z] of snvGoldens) {
@@ -213,22 +219,12 @@ for (const [x, z] of snvGoldens) {
     assert.ok(out.errorBounds[0] < 1e-14);
     z.forEach((v, j) => assert.ok(Math.abs(out.matrix.data[j] - v) <= out.errorBounds[0] + 2 ** -53 * Math.abs(v), `${x} ${j}`));
 }
-// Review b14fix2 #2: a value outside every evaluable window cannot change them.
-for (const big of [0, 1, 1e16, 1e300, Number.MAX_VALUE, -1e300]) {
-    const x = row([big, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]);
-    const mask = new Uint8Array(11).fill(1);
-    mask[1] = 0;
-    const out = preflightNoiseProxy(x, 3, 1, mask);
-    rel(out.bandNoise[5], Math.sqrt(2 / 3), 1e-15, `H ${big}`);
-    rel(out.pooled, 1 / Math.sqrt(7), 1e-15, `H ${big}`);
-}
-{
-    const mixed = preflightNoiseProxy(row([0, 0, -(2 ** 500), 2 ** -500, 2 ** 500, 0, 0]), 3, 1);
-    rel(mixed.bandNoise[3], (2 / 3) * 2 ** -500 / Math.sqrt(2 / 3), 1e-15);
-}
-// Review b1fix #1/#3, b14fix #3: SNV at the smallest subnormal, bounds and
-// aggregation of very unbalanced repeats (a [1,2,4], a = 1, 2, 4, 8; 1, 10000, 1, 1 copies).
-const snvRows = preflightSnv({data: new Float64Array([tinyA, 0, -tinyA, 0.1, 0.1, 0.1]), rows: 2, cols: 3});
+unsupported(() => preflightSnv(row([1, 0, 0, Number.MAX_VALUE])));
+unsupported(() => preflightSnv(row([1, 0, 0, 2 ** -1074])));
+unsupported(() => preflightSnv(row([1, 0, 0, 2 ** 64 + 2 ** 12])));
+// SNV at the domain edges, bounds and aggregation of very unbalanced repeats
+// (a [1,2,4], a = 1, 2, 4, 8; 1, 10000, 1, 1 copies).
+const snvRows = preflightSnv({data: new Float64Array([lo, 0, -lo, 0.1, 0.1, 0.1]), rows: 2, cols: 3});
 rel(snvRows.matrix.data[0], Math.sqrt(1.5), 1e-15);
 rel(snvRows.matrix.data[2], -Math.sqrt(1.5), 1e-15);
 assert.ok(snvRows.matrix.data.slice(3).every((v) => v === 0) && snvRows.errorBounds[1] === 0);
@@ -245,22 +241,36 @@ assert.ok(snvRows.errorBounds[0] > 0 && snvRows.errorBounds[0] < 1e-14);
     }
     assert.throws(() => preflightSnv(row([1, 2]), [0], 2), RangeError);
 }
-// Noise proxy: power-of-two equivariance, exact-offset invariance, explicit overflow error.
+// Noise proxy inside D: power-of-two equivariance, exact-offset invariance,
+// window-local residuals, and refusal just outside D.
 {
     const base = [];
     for (let j = 0; j < 11; j++) base.push(j * j);
     for (let j = 0; j < 11; j++) base.push(1 + 2 * j + (j === 5 ? 35 : 0));
     const ref = preflightNoiseProxy({data: new Float64Array(base), rows: 2, cols: 11}, 5, 2);
-    for (const k of [-1074, -1022, -500, -100, 0, 100, 500, 1000]) {
+    for (const k of [-256, -200, -100, 0, 100, 200, 248]) {
         const s = 2 ** k;
         const out = preflightNoiseProxy({data: new Float64Array(base.map((v) => v * s)), rows: 2, cols: 11}, 5, 2);
-        if (ref.pooled * s >= 2 ** -1022) assert.equal(out.pooled, ref.pooled * s, `k ${k}`);
-        else assert.ok(out.pooled > 0 && Math.abs(out.pooled - ref.pooled * s) <= tinyA, `k ${k}`);
+        assert.equal(out.pooled, ref.pooled * s, `k ${k}`);
     }
-    const shifted = preflightNoiseProxy({data: new Float64Array(base.map((v) => v * 2 ** 944 + 2 ** 996)), rows: 2, cols: 11}, 5, 2);
-    rel(shifted.pooled, ref.pooled * 2 ** 944, 1e-15);
-    const alt = Array.from({length: 9}, (_, j) => (j % 2 ? -1 : 1) * Number.MAX_VALUE);
-    numericalFailure(() => preflightNoiseProxy({data: new Float64Array(alt), rows: 1, cols: 9}, 3, 1));
+    unsupported(() => preflightNoiseProxy({data: new Float64Array(base.map((v) => v * 2 ** 250)), rows: 2, cols: 11}, 5, 2));
+    const shifted = preflightNoiseProxy({data: new Float64Array(base.map((v) => v * 2 ** 148 + 2 ** 200)), rows: 2, cols: 11}, 5, 2);
+    rel(shifted.pooled, ref.pooled * 2 ** 148, 1e-15);
+    // [H,0,0,0,0,1,0,...] with index 1 masked: H is outside every evaluable window.
+    const mask = new Uint8Array(11).fill(1);
+    mask[1] = 0;
+    for (const big of [0, 1, 1e16, 2 ** 64, -(2 ** 60)]) {
+        const out = preflightNoiseProxy(row([big, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]), 3, 1, mask);
+        rel(out.bandNoise[5], Math.sqrt(2 / 3), 1e-15, `H ${big}`);
+        rel(out.pooled, 1 / Math.sqrt(7), 1e-15, `H ${big}`);
+    }
+    unsupported(() => preflightNoiseProxy(row([2 ** 65, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]), 3, 1, mask));
+    // Spread 2^60 inside one window: [-2^60, 2^60, 1, 0, 0], window 5 / order 1 -> sqrt(4/5).
+    const spread = preflightNoiseProxy(row([-(2 ** 60), 2 ** 60, 1, 0, 0]), 5, 1);
+    rel(spread.bandNoise[2], Math.sqrt(0.8), 1e-14);
+    // Outside D (review b14fix3 #3/#4): explicit refusal.
+    unsupported(() => preflightNoiseProxy(row([-(2 ** 100), 2 ** 100, 1, 0, 0]), 5, 1));
+    unsupported(() => preflightNoiseProxy(row([-Number.MAX_VALUE, 2 ** -1074, Number.MAX_VALUE]), 3, 1));
 }
 // Review b1 #1: the registry SNV keeps a constant row flat and resists overflow.
 const snvOp = ppCreate("StandardNormalVariate");
