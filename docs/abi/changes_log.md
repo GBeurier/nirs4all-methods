@@ -45,7 +45,11 @@ as vegan `betadisper(type = "centroid")` + `permutest`: distances to group
 centroids, per-group mean distances, one-way ANOVA F and a residual
 permutation test. Both count permuted `F >= F_obs - sqrt(DBL_EPSILON)` (vegan
 convention, on the F scale), and rescale results with `scalbn` after exact
-power-of-two scaling and per-column centring. Terms above 2048 levels and workloads above 250 million
+power-of-two scaling and per-column centring. `n4m_stats_permanova_freedman_lane` adds the partial test of a term
+given the additive main effects of condition factors (row-major
+`n x n_conditions` codes), by Freedman-Lane permutation of the reduced-model
+residuals, with numerical design ranks, `df_term = 0` for an aliased term and
+no test when either design is saturated. Terms above 2048 levels and workloads above 250 million
 operations return `N4M_ERR_UNSUPPORTED`.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The

@@ -36,6 +36,13 @@ ABI 2.20.0. No model-state serialization format changes.
   by an exact power of two and centred per column; sums of squares are mapped
   back with `scalbn`, so subnormal and near-`DBL_MAX` results stay
   representable.
+- `n4m_stats_permanova_freedman_lane` (ABI 2.20.0): partial PERMANOVA of a
+  term given the additive main effects of condition factors, tested by
+  Freedman-Lane permutation of the reduced-model residuals (refit of both
+  designs, `F_perm >= F_obs - sqrt(DBL_EPSILON)`, numerical ranks so an
+  aliased term or a saturated design gives no test). JS/WASM
+  `statsPermanovaFreedmanLane`. It complements the within-strata test, whose
+  null also excludes interactions with the conditions.
 - Reference gate `parity/fixtures/permanova_v1.json`
   (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
   least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
@@ -43,7 +50,11 @@ ABI 2.20.0. No model-state serialization format changes.
   free, conditional, partially aliased, fully aliased, singleton-stratum,
   dispersion-only and PERMDISP F-boundary cases (vegan `permutest.betadisper`
   transcribed as the counting oracle), plus hand-derived closed forms and
-  1e-162 / 1e155-offset scale cases. The reference packages are test-only.
+  1e-162 / 1e155-offset scale cases. Freedman-Lane goldens come from an
+  independent lstsq refit oracle (one, two and zero condition factors,
+  aliased and saturated designs); vegan's own margin and partial-permutest
+  schemes, which are not Freedman-Lane, are transcribed for information only.
+  The reference packages are test-only.
 
 ### Fixed
 

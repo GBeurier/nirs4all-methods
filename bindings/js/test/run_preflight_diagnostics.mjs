@@ -8,7 +8,7 @@ import {
     statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp,
+    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -327,6 +327,16 @@ for (const c of permanovaFixture.cases) {
     assert.equal(got.dfResidual, want.df_residual, c.name);
     assert.equal(got.nAtLeastObserved, want.b, c.name);
     assert.equal(got.nPermutationsExecuted, want.executed, c.name);
+    if (c.freedman_lane) {
+        const fl = c.freedman_lane;
+        const r = statsPermanovaFreedmanLane(X, c.term, fl.conditions, c.n_permutations, fl.seed);
+        assert.ok(close(r.ssTerm, hex(fl.ss_term), hex(fl.ss_total)), c.name);
+        assert.ok(close(r.pseudoF, hex(fl.pseudo_f)), c.name);
+        assert.equal(r.dfTerm, fl.df_term, c.name);
+        assert.equal(r.rankReduced, fl.rank_reduced, c.name);
+        assert.equal(r.nAtLeastObserved, fl.b, c.name);
+        assert.equal(r.nPermutationsExecuted, fl.executed, c.name);
+    }
     if (c.permdisp) {
         const d = statsPermdisp(X, c.term, c.n_permutations, c.permdisp.seed);
         assert.ok(close(d.f, hex(c.permdisp.f)), c.name);

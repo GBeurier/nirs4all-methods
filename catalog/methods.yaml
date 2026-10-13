@@ -10289,6 +10289,7 @@ methods:
     since_abi: "2.20.0"
     abi_symbols:
       - "n4m_stats_permanova"
+      - "n4m_stats_permanova_freedman_lane"
     tu:
       - "cpp/src/c_api/c_api_preflight.cpp"
     headers:
@@ -10313,12 +10314,13 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "PERMANOVA (Anderson 2001) of one categorical term on Euclidean distances between rows, optionally given strata (additive strata + term SS, the vegan adonis2 by='margin' SS for one other factor), with exact identifiable df from the connected components of the level-stratum graph and a seeded within-strata Monte Carlo test (PCG64, numpy.random.default_rng parity). Reference gate: parity/generators/permanova_v1.py -> parity/fixtures/permanova_v1.json, cpp/tests/test_permanova.cpp."
+    notes: "PERMANOVA (Anderson 2001) of one categorical term on Euclidean distances between rows, optionally given strata (additive strata + term SS, the vegan adonis2 by='margin' SS for one other factor), with exact identifiable df from the connected components of the level-stratum graph a seeded within-strata Monte Carlo test (PCG64, numpy.random.default_rng parity), and n4m_stats_permanova_freedman_lane: the partial test given additive main effects of condition factors by Freedman-Lane permutation of reduced-model residuals. Reference gate: parity/generators/permanova_v1.py -> parity/fixtures/permanova_v1.json, cpp/tests/test_permanova.cpp."
     namespace: "stats"
     leaf: "permanova"
     fq_name: "n4m.stats.permanova"
     c_surface:
       - "n4m_stats_permanova"
+      - "n4m_stats_permanova_freedman_lane"
     legacy_ids:
       - "diagnostics.permanova"
   - method_id: "diagnostics.permdisp"
