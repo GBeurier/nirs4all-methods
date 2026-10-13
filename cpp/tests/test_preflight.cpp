@@ -262,6 +262,28 @@ int main() {
         REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,0,exact)==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(n4m_stats_factor_association_exact(ctx,one_level,spread,3,0,10,exact)==N4M_OK);
         REQUIRE(near(exact[0],1) && std::isnan(exact[1]) && std::isnan(exact[3]));
+        // Oversized categorical spaces (review P0): 65536 levels x 65536
+        // classes = 2^32 cells would wrap to 0 in 32-bit size_t. Both APIs
+        // refuse before any allocation or statistic.
+        {
+            const int64_t big = 65536;
+            std::vector<int64_t> codes(static_cast<size_t>(big));
+            std::vector<double> classes(static_cast<size_t>(big));
+            for (int64_t i = 0; i < big; ++i) {
+                codes[static_cast<size_t>(i)] = i;
+                classes[static_cast<size_t>(i)] = static_cast<double>(i);
+            }
+            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),classes.data(),big,1,
+                        100000,exact)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),big,1,0,1,
+                        assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            // Continuous: no table; 65536! arrangements exceed the cap.
+            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),classes.data(),big,0,
+                        100000,exact)==N4M_ERR_UNSUPPORTED);
+            // Within the table budget, the Monte Carlo work budget still refuses.
+            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),3000,1,999,1,
+                        assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+        }
         // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
         // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
         double bh[6];

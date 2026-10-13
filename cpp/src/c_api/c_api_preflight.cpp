@@ -24,6 +24,8 @@ using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
 constexpr long double max_hdbscan_products = 2500000000.0L;
+// Contingency-table budget of the categorical association kernels (cells).
+constexpr size_t max_table_cells = 10000000;
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -178,6 +180,17 @@ struct FactorProblem {
     bool defined() const noexcept {
         return level_n.size() >= 2 && value_n.size() >= 2 && (categorical || sst > 0.0);
     }
+    // Cost of one statistic: rows plus the contingency table it scans.
+    long double cost() const noexcept {
+        return static_cast<long double>(level.size()) +
+               static_cast<long double>(level_n.size()) *
+                   static_cast<long double>(categorical ? value_n.size() : 1);
+    }
+    // Work buffers, allocated only after the caller's budget checks.
+    void allocate() {
+        sums.assign(level_n.size(), 0.0);
+        if (categorical) table.assign(level_n.size() * value_n.size(), 0);
+    }
 };
 
 n4m_status_t prepare_factor(n4m_context_t* ctx, const int64_t* factor_codes,
@@ -205,8 +218,10 @@ n4m_status_t prepare_factor(n4m_context_t* ctx, const int64_t* factor_codes,
     p.value_centered.assign(p.value_n.size(), 0.0);
     for (size_t i = 0; i < exact.size(); ++i)
         p.value_centered[static_cast<size_t>(p.value[i])] = centered[i];
-    p.sums.assign(p.level_n.size(), 0.0);
-    if (p.categorical) p.table.assign(p.level_n.size() * p.value_n.size(), 0);
+    // Checked levels x classes product: refused before any table allocation.
+    if (p.categorical && p.level_n.size() > max_table_cells / p.value_n.size())
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "association contingency table exceeds 10 million cells");
     return N4M_OK;
 }
 
@@ -279,23 +294,27 @@ n4m_status_t prepare_correlation(n4m_context_t* ctx, const double* x, const doub
 // (a multiset of codes) with `other` fixed: every distinct arrangement has
 // equal probability under uniform permutation. Writes N, #{T >= T_obs -
 // tol}/N, #{T >= T_max - tol}/N and T_max (NaN when undefined).
-template <typename Stat>
+// `side` arrives in its observed order; nothing is allocated or evaluated
+// before the arrangement count and the operation budget are accepted.
+template <typename Setup, typename Stat>
 n4m_status_t exact_distribution(n4m_context_t* ctx, std::vector<int64_t> side,
                                 const std::vector<int64_t>& side_n, int64_t max_arrangements,
-                                bool defined, double observed, Stat stat, double* out_four) {
+                                bool defined, long double cost_per_statistic, Setup setup,
+                                Stat stat, double* out_four) {
     if (max_arrangements < 1 || max_arrangements > 10000000)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "max_arrangements must lie in [1, 1e7]");
     const uint64_t cap = static_cast<uint64_t>(max_arrangements);
     const uint64_t count = arrangement_count(side_n, cap);
     if (count > cap)
         return fail(ctx, N4M_ERR_UNSUPPORTED, "distinct arrangements exceed max_arrangements");
-    if (2.0L * static_cast<long double>(count) * static_cast<long double>(side.size()) >
-        max_moment_products)
+    if (2.0L * static_cast<long double>(count) * cost_per_statistic > max_moment_products)
         return fail(ctx, N4M_ERR_UNSUPPORTED,
                     "exact enumeration exceeds 250 million operation budget");
     for (int i = 0; i < 4; ++i) out_four[i] = nan_value;
     out_four[0] = static_cast<double>(count);
     if (!defined) return N4M_OK;
+    setup();
+    const double observed = stat(side.data());
     const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
     std::sort(side.begin(), side.end());
     std::vector<int64_t> start(side);
@@ -997,9 +1016,7 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
         const auto g = static_cast<int64_t>(p.level_n.size());
         const auto v = static_cast<int64_t>(p.value_n.size());
         const long double work =
-            (static_cast<long double>(n) +
-             (p.categorical ? static_cast<long double>(g) * v : 0.0L)) *
-            (static_cast<long double>(n_permutations) + 1.0L);
+            p.cost() * (static_cast<long double>(n_permutations) + 1.0L);
         if (work > max_moment_products)
             return fail(ctx, N4M_ERR_UNSUPPORTED,
                         "association permutations exceed 250 million operation budget");
@@ -1011,6 +1028,7 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
         out_eight[6] = std::min(log10_factorial_ratio(n, p.level_n),
                                 log10_factorial_ratio(n, p.value_n));
         if (!p.defined()) return N4M_OK;
+        p.allocate();
         const double observed = p.statistic(p.level.data(), p.value.data());
         if (!p.categorical) {
             out_eight[0] = observed;
@@ -1068,18 +1086,18 @@ N4M_API n4m_status_t n4m_stats_factor_association_exact(
         FactorProblem p;
         const n4m_status_t st = prepare_factor(ctx, factor_codes, targets, n, categorical, p);
         if (st != N4M_OK) return st;
-        const bool defined = p.defined();
-        const double observed = defined ? p.statistic(p.level.data(), p.value.data()) : nan_value;
         const auto cap = static_cast<uint64_t>(std::max<int64_t>(max_arrangements, 1));
+        const auto setup = [&p]() { p.allocate(); };
         // Enumerate the side with fewer distinct arrangements; the other stays fixed.
         if (arrangement_count(p.level_n, cap) <= arrangement_count(p.value_n, cap))
-            return exact_distribution(ctx, p.level, p.level_n, max_arrangements, defined,
-                                      observed,
+            return exact_distribution(ctx, p.level, p.level_n, max_arrangements, p.defined(),
+                                      p.cost(), setup,
                                       [&p](const int64_t* L) {
                                           return p.statistic(L, p.value.data());
                                       },
                                       out_four);
-        return exact_distribution(ctx, p.value, p.value_n, max_arrangements, defined, observed,
+        return exact_distribution(ctx, p.value, p.value_n, max_arrangements, p.defined(),
+                                  p.cost(), setup,
                                   [&p](const int64_t* Y) {
                                       return p.statistic(p.level.data(), Y);
                                   },
@@ -1174,17 +1192,18 @@ N4M_API n4m_status_t n4m_stats_correlation_exact(
         CorrelationProblem p;
         const n4m_status_t st = prepare_correlation(ctx, x, y, n, method, p);
         if (st != N4M_OK) return st;
-        const bool defined = p.defined();
-        const double observed =
-            defined ? std::abs(p.statistic(p.x_code.data(), p.y_code.data())) : nan_value;
         const auto cap = static_cast<uint64_t>(std::max<int64_t>(max_arrangements, 1));
+        const auto cost = static_cast<long double>(n);
+        const auto setup = []() {};
         if (arrangement_count(p.x_n, cap) <= arrangement_count(p.y_n, cap))
-            return exact_distribution(ctx, p.x_code, p.x_n, max_arrangements, defined, observed,
+            return exact_distribution(ctx, p.x_code, p.x_n, max_arrangements, p.defined(), cost,
+                                      setup,
                                       [&p](const int64_t* X) {
                                           return std::abs(p.statistic(X, p.y_code.data()));
                                       },
                                       out_four);
-        return exact_distribution(ctx, p.y_code, p.y_n, max_arrangements, defined, observed,
+        return exact_distribution(ctx, p.y_code, p.y_n, max_arrangements, p.defined(), cost,
+                                  setup,
                                   [&p](const int64_t* Y) {
                                       return std::abs(p.statistic(p.x_code.data(), Y));
                                   },
