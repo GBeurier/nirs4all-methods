@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "core/common/context.hpp"
+#include "core/common/exact_sum.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/clustering/_vendored/hdbscan.hpp"
 #include "core/common/pca_helper.h"
@@ -702,53 +703,73 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
                 return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
                             "Savitzky-Golay weights do not reproduce polynomial moments");
         }
-        // Each row is centred on its first valid value (SG reproduces
-        // constants, so the residual is translation invariant) and rescaled
-        // by an exact power of two of its largest centred deviation (exact
-        // halves when a deviation overflows), so smoothing runs on values in
-        // [-2, 2] whatever the magnitude. Residuals are accumulated per band
-        // in a scaled sum of squares (value = ssq 2^(2 exp), Neumaier).
-        std::vector<double> data(sz(n) * sz(p), 0.0), smooth(sz(n) * sz(p));
-        std::vector<int> row_exp(sz(n), 0);
+        // Residual at an evaluable band j (its whole window valid), centred
+        // locally with symmetric weights w_k = (w_{+k} + w_{-k}) / 2 (deriv-0
+        // SG weights are symmetric; sum_k w_k = 1 is checked above):
+        //   r_j = x_j - sum_k w_k x_{j+k} = sum_{k>0} w_k c_k,
+        //   c_k = 2 x_j - x_{j+k} - x_{j-k}  (second differences).
+        // Each c_k is summed exactly with error-free TwoSum and rounded once,
+        // so huge neighbours that cancel do not erase a small x_j, and exact
+        // offsets cancel exactly. A window whose values reach 2^1021 is first
+        // scaled by 1/8 (exact above 2^-1071), so |c_k| <= 4 max|x| stays finite. The c_k are then rescaled by an
+        // exact power of two of their maximum before the weighted sum. Only
+        // the window's own values enter: a value outside every evaluable
+        // window cannot change any result. Rounding: |r - r_hat| <= (h + 3) u
+        // sum_k |w_k c_k| for the computed weights.
+        const int64_t centre = window_length - 1;
+        std::vector<double> weight(sz(h + 1));
+        for (int64_t q = 1; q <= h; ++q)
+            weight[sz(q)] = 0.5 * response[sz(centre - q)] + 0.5 * response[sz(centre + q)];
+        std::vector<double> residual(sz(n) * sz(p), 0.0), second(sz(h + 1));
+        std::vector<int> residual_exp(sz(n) * sz(p), 0);
         std::vector<int64_t> invalid_prefix(sz(p) + 1);
         std::vector<uint8_t> evaluable(sz(n) * sz(p), 0);
+        const auto valid = [&](int64_t i, int64_t j) {
+            return !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
+        };
+        const auto two_sum = [](double a, double b, double& err) {
+            const double s = a + b, bb = s - a;
+            err = (a - (s - bb)) + (b - bb);
+            return s;
+        };
         for (int64_t i = 0; i < n; ++i) {
             invalid_prefix[0] = 0;
-            bool have_offset = false, halved = false;
-            double offset = 0.0, dmax = 0.0;
             for (int64_t j = 0; j < p; ++j) {
-                const bool valid = !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
-                invalid_prefix[sz(j) + 1] = invalid_prefix[sz(j)] + (valid ? 0 : 1);
-                if (!valid) continue;
-                const double x = at(*X, i, j);
-                if (!std::isfinite(x))
+                invalid_prefix[sz(j) + 1] = invalid_prefix[sz(j)] + (valid(i, j) ? 0 : 1);
+                if (valid(i, j) && !std::isfinite(at(*X, i, j)))
                     return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
-                if (!have_offset) { offset = x; have_offset = true; }
-                const double d = x - offset;
-                if (!std::isfinite(d)) halved = true;
-                else dmax = std::max(dmax, std::fabs(d));
             }
-            const auto centred = [&](int64_t j) {
-                const double x = at(*X, i, j);
-                return halved ? 0.5 * x - 0.5 * offset : x - offset;
-            };
-            if (halved) {
-                dmax = 0.0;
-                for (int64_t j = 0; j < p; ++j)
-                    if (!valid_mask || valid_mask[sz(i) * sz(p) + sz(j)])
-                        dmax = std::max(dmax, std::fabs(centred(j)));
+            for (int64_t j = h; j < p - h; ++j) {
+                const size_t c = sz(i) * sz(p) + sz(j);
+                if (invalid_prefix[sz(j + h) + 1] != invalid_prefix[sz(j - h)]) continue;
+                evaluable[c] = 1;
+                double xmax = 0.0;
+                for (int64_t q = -h; q <= h; ++q) xmax = std::max(xmax, std::fabs(at(*X, i, j + q)));
+                const bool eighth = xmax >= 0x1p1021;
+                const double f = eighth ? 0.125 : 1.0;
+                const double xj = f * at(*X, i, j);
+                double cmax = 0.0;
+                for (int64_t q = 1; q <= h; ++q) {
+                    double e1 = 0.0, e2 = 0.0;
+                    const double s1 = two_sum(2.0 * xj, -(f * at(*X, i, j + q)), e1);
+                    const double s2 = two_sum(s1, -(f * at(*X, i, j - q)), e2);
+                    second[sz(q)] = s2 + (e2 + e1);
+                    cmax = std::max(cmax, std::fabs(second[sz(q)]));
+                }
+                if (cmax == 0.0) continue;  // flat or linear window: zero residual
+                const int k = std::ilogb(cmax);
+                double acc = 0.0, acc_comp = 0.0;  // Neumaier
+                for (int64_t q = 1; q <= h; ++q) {
+                    const double term = weight[sz(q)] * std::ldexp(second[sz(q)], -k);
+                    const double next = acc + term;
+                    acc_comp += std::fabs(acc) >= std::fabs(term) ? (acc - next) + term
+                                                                  : (term - next) + acc;
+                    acc = next;
+                }
+                residual[c] = acc + acc_comp;
+                residual_exp[c] = k + (eighth ? 3 : 0);
             }
-            const int k = dmax > 0.0 ? std::ilogb(dmax) : 0;
-            row_exp[sz(i)] = k + (halved ? 1 : 0);
-            for (int64_t j = 0; j < p; ++j)
-                if (!valid_mask || valid_mask[sz(i) * sz(p) + sz(j)])
-                    data[sz(i) * sz(p) + sz(j)] = std::ldexp(centred(j), -k);
-            for (int64_t j = h; j < p - h; ++j)
-                evaluable[sz(i) * sz(p) + sz(j)] =
-                    invalid_prefix[sz(j + h) + 1] == invalid_prefix[sz(j - h)] ? 1 : 0;
         }
-        sst = n4m_pp_savgol_state_apply(sg, data.data(), n, p, smooth.data());
-        if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay smoothing failed");
         struct ScaledSsq {
             int exp = 0;
             double ssq = 0.0, comp = 0.0;
@@ -792,11 +813,8 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
             for (int64_t i = 0; i < n; ++i) {
                 const size_t c = sz(i) * sz(p) + sz(j);
                 if (!evaluable[c]) continue;
-                const double r = data[c] - smooth[c];
-                if (!std::isfinite(r))
-                    return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "noise proxy residual overflow");
-                band.add(r, row_exp[sz(i)]);
-                pooled.add(r, row_exp[sz(i)]);
+                band.add(residual[c], residual_exp[c]);
+                pooled.add(residual[c], residual_exp[c]);
             }
             band_counts[j] = band.count;
             if (!band.count) { band_noise[j] = nan_value; continue; }
@@ -919,17 +937,32 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     std::fill(query_flags, query_flags + query->rows, uint8_t{0});
     if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
     uint8_t* rflags = self ? query_flags : reference_flags;
-    // RMS distance and decision in a scaled space, independent of the
-    // tolerance and decided before the published value is rounded:
-    //   d_j = q_j - r_j (or the exact halves q_j/2 - r_j/2 when some
-    //   difference overflows, with the exponent raised by one), k = ilogb of
-    //   max|d|, t_j = d_j 2^-k in [0, 2) (exact), rho = sqrt(sum t^2 / cols),
-    //   RMS = rho 2^k and RMS <= tol  <=>  rho <= tol 2^-k (exact power of two).
-    // Components below 2^-1074 relative to max|d| are not representable after
-    // scaling and contribute nothing (relative effect < 2^-1000). A positive
-    // RMS below 2^-1074 is published as 2^-1074, the smallest positive double.
+    // RMS distance and decision, independent of the tolerance:
+    //   fast estimate: d_j = q_j - r_j (exact halves when some difference
+    //   overflows), rescaled by an exact power of two 2^-e of max|d|, rho =
+    //   sqrt(sum t^2 / cols) with a compensated sum; RMS = rho 2^e, and the
+    //   threshold tau = tol 2^-e is exact. rho carries a relative error below
+    //   8u (rounded differences, squares, sum, division and square root;
+    //   components below 2^-1000 relative are negligible), so |rho - tau| >
+    //   2^-45 tau decides. Otherwise the decision is exact: the sign of
+    //   sum_j (q_j^2 - 2 q_j r_j + r_j^2) - cols tol^2 in an exact fixed-point
+    //   accumulator (no rounding, overflow or underflow).
+    // An accepted pair publishes min(rho 2^e, tol), at least 2^-1074.
     const double inv_cols = 1.0 / static_cast<double>(query->cols);
     const double min_positive = std::numeric_limits<double>::denorm_min();
+    const double margin = 0x1p-45;
+    const auto exact_within = [&](int64_t i, int64_t k) {
+        ::n4m::core::ExactSum sum;
+        for (int64_t j = 0; j < query->cols; ++j) {
+            const double a = at(*query, i, j), b = at(R, k, j);
+            sum.add_product(a, a, false);
+            sum.add_product(a, b, true);
+            sum.add_product(a, b, true);
+            sum.add_product(b, b, false);
+        }
+        for (int64_t c = 0; c < query->cols; ++c) sum.add_product(tolerance, tolerance, true);
+        return sum.sign() <= 0;
+    };
     const auto rms_within = [&](int64_t i, int64_t k, double& distance) {
         bool halved = false;
         double dmax = 0.0;
@@ -946,24 +979,28 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
             dmax = 0.0;
             for (int64_t j = 0; j < query->cols; ++j) dmax = std::max(dmax, diff(j));
         }
+        // Distinct doubles never round to a zero difference (gradual
+        // underflow), so dmax == 0 means identical rows.
         if (dmax == 0.0) { distance = 0.0; return true; }
         const int e = std::ilogb(dmax) + (halved ? 1 : 0);
         const int shift = halved ? e - 1 : e;
         const double tau = std::ldexp(tolerance, -e);
-        // sum t^2 / cols only grows; leave as soon as it exceeds tau^2 by
-        // more than rounding, then decide on the square root.
-        const double tau2 = tau * tau * (1.0 + 0x1p-50);
-        double sum = 0.0, comp = 0.0;  // Neumaier: relative error ~2u
+        const double far2 = tau * tau * (1.0 + 0x1p-40);
+        double sum = 0.0, comp = 0.0;  // Neumaier
         for (int64_t j = 0; j < query->cols; ++j) {
             const double t = std::ldexp(diff(j), -shift);
             const double sq = t * t, next = sum + sq;
             comp += sum >= sq ? (sum - next) + sq : (sq - next) + sum;
             sum = next;
-            if (sum * inv_cols > tau2) return false;
+            if (sum * inv_cols > far2) return false;
         }
         const double rho = std::sqrt((sum + comp) * inv_cols);
-        if (!(rho <= tau)) return false;
-        distance = std::max(std::ldexp(rho, e), min_positive);
+        bool within;
+        if (rho > tau * (1.0 + margin)) within = false;
+        else if (rho < tau * (1.0 - margin)) within = true;
+        else within = exact_within(i, k);
+        if (!within) return false;
+        distance = std::max(std::min(std::ldexp(rho, e), tolerance), min_positive);
         return true;
     };
     int64_t found = 0, candidates = 0;

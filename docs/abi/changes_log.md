@@ -19,20 +19,31 @@ squaring. Rows at the smallest subnormal, rows that overflow, rows offset by
 2^60 or 1e300 and rows with 100,000 offset bands are standardized within
 their bound.
 
-`n4m_preflight_pairs_within_tolerance` compares the RMS with the tolerance
-in a power-of-two scaled space before rounding the published distance. A
-positive distance below 2^-1074 is published as 2^-1074. The decision for
-`[2^-1073, 0]` against `[0, 0]` at tolerance 2^-1074 is therefore far.
+`n4m_preflight_pairs_within_tolerance` decides exactly. A fast estimate on
+power-of-two rescaled differences settles pairs farther than 2^-45 (relative)
+from the tolerance. The other pairs use the exact sign of
+`sum (q - r)^2 - cols tol^2`, computed in a fixed-point accumulator of exact
+products (`core/common/exact_sum.hpp`). With that rule, `[2^-1073, 0]` against
+`[0, 0]` at 2^-1074, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
+`[1, 1, 2^-26]` against 0 at `sqrt(2/3)` are all far. An accepted pair
+publishes min(RMS, tolerance), at least 2^-1074.
 
-`n4m_preflight_noise_proxy_compute` centres each row on its first valid
-value, rescales it by a power of two before smoothing, and accumulates scaled
-sums of squares. It is translation invariant for exact offsets and
-power-of-two equivariant over the finite range. A result above DBL_MAX is
-`N4M_ERR_NUMERICAL_FAILURE`.
+`n4m_preflight_noise_proxy_compute` computes each window's residual from that
+window alone, as weighted second differences with error-free sums. Values
+outside every evaluable window, masked or not, cannot change the results:
+the masked `[H, 0, 0, 0, 0, 1, ...]` gives `sqrt(2/3)` and `1/sqrt(7)` for any
+H. The proxy is translation invariant for exact offsets and power-of-two
+equivariant, and a result above DBL_MAX is `N4M_ERR_NUMERICAL_FAILURE`.
 
 The magnitude-sweep tests (`cpp/tests/test_preflight_robustness.cpp`, JS
-`run_preflight_diagnostics.mjs`) cover scales 2^k for k from -1074 to 1000,
-exact offsets near 1e16 and 1e300, and constant columns of huge amplitude.
+`run_preflight_diagnostics.mjs`) cover:
+
+- scales 2^k for k from -1074 to 1000, exact offsets near 1e16 and 1e300,
+  and constant columns of huge amplitude;
+- mixed exponents within one row: signed huge and tiny values, masked huge
+  values;
+- independent oracles: exact rational pair decisions and 400-digit SNV
+  references.
 Existing symbol signatures are unchanged, and no serialized format changes.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)

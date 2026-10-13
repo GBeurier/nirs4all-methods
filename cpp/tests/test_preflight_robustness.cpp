@@ -196,6 +196,124 @@ void noise_sweep(n4m_context_t* ctx) {
     const auto s = noise(ctx, sub, 1, 11, 5, 2);
     REQUIRE(s.status == N4M_OK && s.band[5] > 0 && s.pooled > 0);
 }
+struct PairGolden { std::vector<double> q, r; double tol; bool within; double rms; };
+struct SnvGolden { std::vector<double> x, z; };
+// Test-only goldens: exact rational decisions (Python 3.10 fractions) and
+// 400-digit decimal square roots, rounded to binary64 (repr round-trips).
+const PairGolden pair_goldens[] = {
+    {{1.0, 1.0}, {-5.551115123125783e-17, -5.551115123125783e-17}, 0.9999999999999999, false, 1.0},
+    {{1.0, 1.0}, {-5.551115123125783e-17, -5.551115123125783e-17}, 1.0, false, 1.0},
+    {{1.0, 1.0}, {-5.551115123125783e-17, -5.551115123125783e-17}, 1.0000000000000002, true, 1.0},
+    {{1.0, 1.0, 1.4901161193847656e-08}, {0.0, 0.0, 0.0}, 0.8164965809277259, false, 0.816496580927726},
+    {{1.0, 1.0, 1.4901161193847656e-08}, {0.0, 0.0, 0.0}, 0.816496580927726, false, 0.816496580927726},
+    {{1.0, 1.0, 1.4901161193847656e-08}, {0.0, 0.0, 0.0}, 0.8164965809277261, true, 0.816496580927726},
+    {{1.0, -1.0, 1.0, -1.0}, {0.0, 0.0, 0.0, 0.0}, 0.9999999999999999, false, 1.0},
+    {{1.0, -1.0, 1.0, -1.0}, {0.0, 0.0, 0.0, 0.0}, 1.0, true, 1.0},
+    {{1.0, -1.0, 1.0, -1.0}, {0.0, 0.0, 0.0, 0.0}, 1.0000000000000002, true, 1.0},
+    {{4.149515568880993e+180, 2.409919865102884e-181, -2.7997908555096566e-301}, {4.149515568880993e+180, 0.0, 9.332636185032189e-302}, 1.3913678828425764e-181, false, 1.3913678828425767e-181},
+    {{4.149515568880993e+180, 2.409919865102884e-181, -2.7997908555096566e-301}, {4.149515568880993e+180, 0.0, 9.332636185032189e-302}, 1.3913678828425767e-181, false, 1.3913678828425767e-181},
+    {{4.149515568880993e+180, 2.409919865102884e-181, -2.7997908555096566e-301}, {4.149515568880993e+180, 0.0, 9.332636185032189e-302}, 1.391367882842577e-181, true, 1.3913678828425767e-181},
+    {{1e+300, 1.0, -1e-300}, {-1e+300, 1.0, 1e-300}, 1.1547005383792515e+300, false, 1.1547005383792516e+300},
+    {{1e+300, 1.0, -1e-300}, {-1e+300, 1.0, 1e-300}, 1.1547005383792516e+300, true, 1.1547005383792516e+300},
+    {{1e+300, 1.0, -1e-300}, {-1e+300, 1.0, 1e-300}, 1.1547005383792518e+300, true, 1.1547005383792516e+300},
+    {{3.0, -4.0, 8.673617379884035e-19}, {-3.0, 4.0, 0.0}, 5.773502691896256, false, 5.773502691896257},
+    {{3.0, -4.0, 8.673617379884035e-19}, {-3.0, 4.0, 0.0}, 5.773502691896257, false, 5.773502691896257},
+    {{3.0, -4.0, 8.673617379884035e-19}, {-3.0, 4.0, 0.0}, 5.773502691896258, true, 5.773502691896257},
+    {{1e+308, 5e-324}, {1e+308, 0.0}, 5e-324, true, 5e-324},
+    {{1e+308, 5e-324}, {1e+308, 0.0}, 1e-323, true, 5e-324},
+    {{-1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, {1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 1.271161006153646e+308, false, 1.2711610061536462e+308},
+    {{-1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, {1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 1.2711610061536462e+308, true, 1.2711610061536462e+308},
+    {{-1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, {1.7976931348623157e+308, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}, 1.2711610061536464e+308, true, 1.2711610061536462e+308},
+    {{1e-323, 0.0}, {0.0, 0.0}, 5e-324, false, 5e-324},
+    {{1e-323, 0.0}, {0.0, 0.0}, 1e-323, true, 5e-324},
+    {{1e+16, 1.0}, {9999999999999998.0, 0.0}, 1.5811388300841895, false, 1.5811388300841898},
+    {{1e+16, 1.0}, {9999999999999998.0, 0.0}, 1.5811388300841898, true, 1.5811388300841898},
+    {{1e+16, 1.0}, {9999999999999998.0, 0.0}, 1.58113883008419, true, 1.5811388300841898},
+};
+const SnvGolden snv_goldens[] = {
+    {{1.0715086071862673e+301, 9.332636185032189e-302, -9.332636185032189e-302, 0.0}, {1.7320508075688772, -0.5773502691896257, -0.5773502691896257, -0.5773502691896257}},
+    {{1e+300, 1.0, 2.0, 3.0}, {1.7320508075688772, -0.5773502691896257, -0.5773502691896257, -0.5773502691896257}},
+    {{-1e-300, 1e-310, 5e-324, 0.0}, {-1.7320508075688772, 0.5773502693435858, 0.5773502691126458, 0.5773502691126458}},
+    {{5e-324, 1e-323, 1.5e-323, 0.0}, {-0.4472135954999579, 0.4472135954999579, 1.3416407864998738, -1.3416407864998738}},
+    {{1e+16, 1.0, -1.0, 1.0000000000000002e+16}, {0.9999999999999998, -0.9999999999999998, -1.0000000000000002, 1.0000000000000002}},
+    {{1.7976931348623157e+308, -1.7976931348623157e+308, 1e-300, 0.0}, {1.4142135623730951, -1.4142135623730951, 0.0, -0.0}},
+    {{1.0, 1.0000000000000002, 1.0, 1.0}, {-0.5773502691896257, 1.7320508075688772, -0.5773502691896257, -0.5773502691896257}},
+};
+
+// Exact threshold decisions on mixed-exponent rows (b14fix2 #1): rational
+// oracle; tolerances are the nearest double to the true RMS and its two
+// neighbours. Accepted distances match the oracle RMS within 2^-50 relative
+// (one subnormal step below 2^-1022) and never exceed the tolerance.
+void oracle_pairs(n4m_context_t* ctx) {
+    for (const auto& g : pair_goldens) {
+        const auto got = pairs(ctx, g.q, g.r, g.tol);
+        REQUIRE((got.total == 1) == g.within);
+        if (!g.within) continue;
+        REQUIRE(got.distance > 0.0 && got.distance <= g.tol);
+        if (g.rms >= std::numeric_limits<double>::min())
+            REQUIRE(std::abs(got.distance - g.rms) <= 0x1p-50 * g.rms);
+        else
+            REQUIRE(std::abs(got.distance - g.rms) <= tiny);
+    }
+}
+
+// SNV of mixed-exponent rows against 400-digit references: error within the
+// reported bound plus the rounding of the reference.
+void oracle_snv(n4m_context_t* ctx) {
+    for (const auto& g : snv_goldens) {
+        const auto s = snv(ctx, g.x, 1, static_cast<int64_t>(g.x.size()));
+        REQUIRE(s.status == N4M_OK && s.bound[0] < 1e-14);
+        for (size_t j = 0; j < g.z.size(); ++j)
+            REQUIRE(std::abs(s.z[j] - g.z[j]) <= s.bound[0] + 0x1p-53 * std::abs(g.z[j]));
+    }
+}
+
+// Noise proxy with huge values next to small ones (b14fix2 #2). Row
+// [H,0,0,0,0,1,0,0,0,0,0], index 1 masked, window 3 / order 1 (weights 1/3,
+// gain sqrt(2/3)): band 5 = sqrt(2/3), pooled over the 7 evaluable bands =
+// 1/sqrt(7), whatever H, because H is outside every evaluable window. With
+// index 1 valid, H enters band 1 only: residual -H/3, band 5 unchanged.
+void noise_mixed(n4m_context_t* ctx) {
+    for (double big : {0.0, 1.0, 1e16, 1e300, dmax, -1e300, tiny, -dmax}) {
+        std::vector<double> x = {big, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0};
+        std::vector<uint8_t> mask(11, 1);
+        mask[1] = 0;
+        auto X = view(x.data(), 1, 11);
+        std::vector<double> band(11);
+        std::vector<int64_t> counts(11);
+        double two[2];
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx, &X, mask.data(), 3, 1, band.data(),
+                                                  counts.data(), two) == N4M_OK);
+        REQUIRE(rel(band[5], std::sqrt(2.0 / 3.0), 1e-15) && rel(two[0], 1 / std::sqrt(7.0), 1e-15));
+        REQUIRE(band[3] == 0.0 && counts[2] == 0 && counts[3] == 1);
+        // Unmasked: band 1 residual -H/3, i.e. noise |H|/3 / sqrt(2/3).
+        REQUIRE(n4m_preflight_noise_proxy_compute(ctx, &X, nullptr, 3, 1, band.data(),
+                                                  counts.data(), two) == N4M_OK);
+        REQUIRE(rel(band[5], std::sqrt(2.0 / 3.0), 1e-15));
+        if (std::abs(big) >= 1.0)
+            REQUIRE(rel(band[1], std::abs(big) / 3 / std::sqrt(2.0 / 3.0), 1e-15));
+        else if (big != 0.0)  // 0.41 2^-1074 is not representable: published as 2^-1074
+            REQUIRE(band[1] == tiny);
+    }
+    // Signed mixture inside one window: [-2^500, 2^-500, 2^500] has the
+    // residual 2^-500 (1 - 1/3) at the centre; |2^-500| is not lost.
+    std::vector<double> x = {0, 0, -std::ldexp(1.0, 500), std::ldexp(1.0, -500),
+                             std::ldexp(1.0, 500), 0, 0};
+    auto X = view(x.data(), 1, 7);
+    std::vector<double> band(7);
+    std::vector<int64_t> counts(7);
+    double two[2];
+    REQUIRE(n4m_preflight_noise_proxy_compute(ctx, &X, nullptr, 3, 1, band.data(),
+                                              counts.data(), two) == N4M_OK);
+    REQUIRE(rel(band[3], std::ldexp(2.0 / 3.0, -500) / std::sqrt(2.0 / 3.0), 1e-15));
+    // Window [-dmax, 2^-1000, dmax]: the second difference 2^-999 survives the
+    // 1/8 prescaling of a window that reaches 2^1021.
+    x = {0, 0, -dmax, std::ldexp(1.0, -1000), dmax, 0, 0};
+    X = view(x.data(), 1, 7);
+    REQUIRE(n4m_preflight_noise_proxy_compute(ctx, &X, nullptr, 3, 1, band.data(),
+                                              counts.data(), two) == N4M_OK);
+    REQUIRE(rel(band[3], std::ldexp(2.0 / 3.0, -1000) / std::sqrt(2.0 / 3.0), 1e-15));
+}
 }  // namespace
 
 int main() {
@@ -205,6 +323,9 @@ int main() {
         snv_sweep(ctx);
         pairs_sweep(ctx);
         noise_sweep(ctx);
+        oracle_pairs(ctx);
+        oracle_snv(ctx);
+        noise_mixed(ctx);
         n4m_context_destroy(ctx);
         std::puts("preflight robustness sweeps: ok");
         return 0;
