@@ -7,7 +7,7 @@ import {
     preflightFactorAssociation, preflightHolmAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex,
+    clusterHdbscan, preflightAdjustedRandIndex, ppCreate, ppTransform, ppDestroy,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -107,6 +107,36 @@ near(noise.bandNoise[5], Math.sqrt(315));
 near(noise.bandNoise[3], Math.sqrt(8.75));
 near(noise.pooled, Math.sqrt(87.5));
 assert.ok(Number.isNaN(noise.bandNoise[0]) && noise.bandCounts[0] === 0 && noise.bandCounts[5] === 2);
+// Review b1 #5: arguments are range-checked before Emscripten's int32
+// conversion (4294967301 would wrap to a window of 5) and against the SG domain.
+const noiseX = {data: new Float64Array(noiseRows), rows: 2, cols: 11};
+for (const [w, o] of [[4294967301, 2], [2 ** 31 + 5, 2], [-(2 ** 32) + 5, 2], [13, 2], [4, 2],
+    [11, 10], [5, 4294967298], [5, -1], [5.5, 2]]) {
+    assert.throws(() => preflightNoiseProxy(noiseX, w, o), RangeError, `${w}/${o}`);
+}
+near(preflightNoiseProxy(noiseX, 11, 9).bandCounts[5], 2);
+const ones41 = {data: new Float64Array(41).fill(1), rows: 1, cols: 41};
+assert.throws(() => preflightNoiseProxy(ones41, 41, 38), RangeError);
+assert.ok(Math.abs(preflightNoiseProxy(ones41, 41, 10).pooled) < 1e-12);
+assert.throws(() => preflightNearestNeighbors({data: new Float64Array([0, 1]), rows: 2, cols: 1},
+    {data: new Float64Array([0, 1]), rows: 2, cols: 1}, 2 ** 32 + 1), RangeError);
+assert.throws(() => preflightPca({data: new Float64Array([1, 2, 3, 4]), rows: 2, cols: 2},
+    2 ** 32 + 1), RangeError);
+// Review b1 #3: q - r overflows, yet the RMS distance sqrt(2) * 1e308 <= 1.5e308.
+const huge = preflightPairsWithinTolerance({data: new Float64Array([1e308, 0]), rows: 1, cols: 2},
+    1.5e308, 1, {data: new Float64Array([-1e308, 0]), rows: 1, cols: 2});
+assert.equal(huge.totalPairs, 1);
+relativeNear(huge.distances[0], Math.SQRT2 * 1e308);
+// Review b1 #1: the registry SNV keeps a constant row flat and resists overflow.
+const snvOp = ppCreate("StandardNormalVariate");
+try {
+    assert.ok(ppTransform(snvOp, new Float64Array(11).fill(0.1), 1, 11).every((v) => v === 0));
+    const extreme = ppTransform(snvOp, new Float64Array([1e200, 0, -1e200]), 1, 3);
+    relativeNear(extreme[0], Math.sqrt(1.5));
+    relativeNear(extreme[2], -Math.sqrt(1.5));
+} finally {
+    ppDestroy(snvOp);
+}
 const pairs = preflightPairsWithinTolerance({
     data: new Float64Array([0, 0, 0.1, 0, 0, 0.3, 5, 5, 0, 0]), rows: 5, cols: 2,
 }, 0.1, 1, undefined, [1, 2, 3, 4, 1]);

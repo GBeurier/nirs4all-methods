@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- SNV (`n4m_transform_snv_*`, the registry `StandardNormalVariate` and the
+  pipelines using it): a constant finite row now maps to exact zeros when
+  centred instead of standardizing the rounding residue of its mean (eleven
+  `0.1` gave eleven `1.0`). Finite rows whose sums or squared deviations
+  overflow or underflow are recomputed on rescaled values
+  (`[1e200, 0, -1e200]` gave a zero row); a non-finite result for a finite
+  row returns `N4M_ERR_NUMERICAL_FAILURE`. Ordinary rows keep numpy's
+  two-pass order and their bit-for-bit parity; rows with NaN/Inf propagate
+  them as before.
+- `n4m_preflight_noise_proxy_compute` accepts only the verified
+  Savitzky-Golay domain (odd window 3..1001, polyorder <= min(10, window-2))
+  and checks the polynomial reproduction moments of the weights; window 41 /
+  polyorder 38 previously returned a residual of 0.83 on a constant row.
+- `n4m_preflight_pairs_within_tolerance` no longer drops pairs whose raw
+  difference overflows: differences are scaled before subtraction overflows
+  and the norm is accumulated with rescaling (`q=[1e308,0]`, `r=[-1e308,0]`,
+  tolerance `1.5e308` is now a pair). Tiny differences no longer underflow to
+  a zero distance.
+- JS: `preflightNoiseProxy`, `preflightPca`, `preflightNearestNeighbors`,
+  `preflightLocalContrast` and `preflightFactorAssociation` range-check every
+  `int32_t` argument before the Emscripten call (4294967301 was wrapped to a
+  window of 5); the noise proxy also checks the Savitzky-Golay domain and
+  `windowLength <= cols`.
+
 ## [1.3.6] - 2026-10-13
 
 ABI 2.19.0. No model-state serialization format changes.
