@@ -1,5 +1,21 @@
 # ABI — Changes Log
 
+## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
+
+Add two generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19
+symbols are unchanged and no serialized format changes.
+
+`n4m_stats_correlation_test` returns the Pearson (method 0) or Spearman
+(method 1, average ranks for ties) correlation of paired finite vectors, the
+distinct-value counts of both vectors, a log10 upper bound on distinct
+permutation outcomes and an optional two-sided Monte Carlo permutation p-value
+`(1+b)/(1+B)`. Draws permute `y` over all units as one block with PCG64 seeded
+as `numpy.random.default_rng`; the b-th draw equals NumPy's b-th
+`permutation(n)`. Ties use `|r| >= |observed| - sqrt(DBL_EPSILON)`. A constant
+vector gives NaN and runs no permutation. Work above 250 million operations
+returns `N4M_ERR_UNSUPPORTED`. `n4m_stats_bh_adjust` returns
+Benjamini-Hochberg step-up adjusted p-values (R `p.adjust("BH")`).
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

@@ -193,6 +193,38 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
 N4M_API n4m_status_t n4m_preflight_holm_adjust(
     n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
 
+/* Pearson (method 0) or Spearman (method 1) correlation between paired
+ * finite vectors x and y over n exchangeable analysis units, with an
+ * optional seeded two-sided Monte Carlo permutation test of y over all
+ * units (a single unrestricted block). Spearman correlates average ranks
+ * (ties share the mean of their ranks, as scipy.stats.rankdata "average"),
+ * so it equals scipy.stats.spearmanr; Pearson equals scipy.stats.pearsonr.
+ * n >= 2, 0 <= n_permutations <= 1000000 and n * (n_permutations + 1) <=
+ * 250 million operations. Permutation draws use PCG64 seeded like
+ * numpy.random.default_rng(seed); the b-th draw equals the b-th
+ * rng.permutation(n), y_i -> y[perm[i]]. -0.0 and +0.0 are one value.
+ * out_five (caller-owned, NaN when undefined):
+ *   [0] correlation coefficient in [-1, 1]; NaN when x or y is constant.
+ *   [1] number of distinct x values; [2] number of distinct y values.
+ *   [3] log10 of min(n!/prod(x_multiplicity!), n!/prod(y_multiplicity!)),
+ *       an upper bound on distinct permutation outcomes of the statistic.
+ *   [4] two-sided Monte Carlo p-value (1+b)/(1+B); NaN when B == 0 or [0]
+ *       is NaN.
+ * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
+ * {b, executed B}; no permutation runs when the coefficient is undefined. */
+N4M_API n4m_status_t n4m_stats_correlation_test(
+    n4m_context_t* ctx, const double* x, const double* y, int64_t n,
+    int32_t method, int32_t n_permutations, uint64_t seed,
+    double* out_five, int64_t* out_two);
+
+/* Benjamini-Hochberg step-up adjusted p-values for one family of m >= 1
+ * hypotheses. Inputs must lie in [0, 1]; with p_(1) <= ... <= p_(m),
+ * adjusted p_(i) = min(1, min_{j>=i} m p_(j) / j), as R p.adjust("BH")
+ * and statsmodels multipletests(method="fdr_bh"). Controls the false
+ * discovery rate under independence or positive regression dependence. */
+N4M_API n4m_status_t n4m_stats_bh_adjust(
+    n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,

@@ -168,6 +168,77 @@ int main() {
         REQUIRE(near(adj[0],1) && near(adj[1],1));
         double invalid_p[1]={1.5};
         REQUIRE(n4m_preflight_holm_adjust(ctx,invalid_p,1,adj)==N4M_ERR_INVALID_ARGUMENT);
+        // Correlation test. Hand values: x=1..5, y={2,4,5,4,5}: Pearson
+        // r=6/sqrt(60); Spearman on average ranks y={1,2.5,4.5,2.5,4.5}:
+        // rho=7/sqrt(90); 5!/(1!2!2!)=30 distinct y arrangements. Permutation
+        // counts b are test-only goldens from an independent NumPy 2.2.6 /
+        // SciPy 1.15.3 reference: rng=np.random.default_rng(seed); b = #{draws
+        // perm=rng.permutation(n) with |scipy.stats.pearsonr/spearmanr(x,
+        // y[perm]).statistic| >= |observed| - sqrt(eps)} over B=999.
+        double cx[5]={1,2,3,4,5}, cy[5]={2,4,5,4,5}, corr[5]; int64_t corr_counts[2];
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,0,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],6.0/std::sqrt(60.0)) && near(corr[1],5) && near(corr[2],3));
+        REQUIRE(near(corr[3],std::log10(30.0)));
+        REQUIRE(corr_counts[0]==133 && corr_counts[1]==999 && near(corr[4],134.0/1000.0));
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,1,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],7.0/std::sqrt(90.0)) && corr_counts[0]==201);
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,0,999,
+                    UINT64_C(18446744073709551557),corr,corr_counts)==N4M_OK);
+        REQUIRE(corr_counts[0]==124);
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,1,999,
+                    UINT64_C(18446744073709551557),corr,corr_counts)==N4M_OK);
+        REQUIRE(corr_counts[0]==190);
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,1,0,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(std::isnan(corr[4]) && corr_counts[1]==0);
+        // Ties in both vectors; SciPy coefficients and NumPy counts.
+        double tx[10]={1,1,2,2,3,3,4,4,5,5}, ty[10]={3,1,4,1,5,9,2,6,5,3};
+        REQUIRE(n4m_stats_correlation_test(ctx,tx,ty,10,0,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.33196440215590134) && corr_counts[0]==373);
+        REQUIRE(n4m_stats_correlation_test(ctx,tx,ty,10,1,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.4099457958749614) && corr_counts[0]==241);
+        REQUIRE(n4m_stats_correlation_test(ctx,tx,ty,10,1,999,
+                    UINT64_C(18446744073709551557),corr,corr_counts)==N4M_OK);
+        REQUIRE(corr_counts[0]==225);
+        // Monotone with an outlier: Spearman 0.979..., Pearson 0.757...;
+        // no draw reaches either observed value (b=0, p=1/1000).
+        double mx[12]={0.5,1.1,1.9,2.4,3.0,3.3,4.2,4.8,5.1,6.0,6.7,7.5};
+        double my[12]={0.9,1.2,1.1,2.0,2.6,2.4,3.9,3.7,5.5,7.9,9.8,30.0};
+        REQUIRE(n4m_stats_correlation_test(ctx,mx,my,12,0,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.7570003200136561) && corr_counts[0]==0);
+        REQUIRE(near(corr[4],1.0/1000.0));
+        REQUIRE(n4m_stats_correlation_test(ctx,mx,my,12,1,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.9790209790209792) && corr_counts[0]==0);
+        // Scale invariance at extreme magnitudes and signed zeros.
+        double hx[5]={1e307,2e307,3e307,4e307,5e307}, hy[5]={-2e-300,-4e-300,-5e-300,-4e-300,-5e-300};
+        REQUIRE(n4m_stats_correlation_test(ctx,hx,hy,5,0,0,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],-6.0/std::sqrt(60.0)));
+        // Constant vectors: undefined coefficient, no permutation.
+        double zx[4]={0.0,-0.0,0.0,-0.0}, sy4[4]={1,2,3,4};
+        REQUIRE(n4m_stats_correlation_test(ctx,zx,sy4,4,1,99,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(std::isnan(corr[0]) && near(corr[1],1) && std::isnan(corr[4]) && corr_counts[1]==0);
+        REQUIRE(near(corr[3],0.0));
+        double nonfinite[4]={1,2,std::nan(""),4};
+        REQUIRE(n4m_stats_correlation_test(ctx,nonfinite,sy4,4,0,0,1,corr,corr_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_correlation_test(ctx,sy4,sy4,4,2,0,1,corr,corr_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_correlation_test(ctx,sy4,sy4,1,0,0,1,corr,corr_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
+        // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
+        double bh[6];
+        REQUIRE(n4m_stats_bh_adjust(ctx,pv,4,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.02) && near(bh[1],0.04) && near(bh[2],0.04) && near(bh[3],0.02));
+        REQUIRE(n4m_stats_bh_adjust(ctx,tied,3,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.03) && near(bh[1],0.03) && near(bh[2],0.9));
+        REQUIRE(n4m_stats_bh_adjust(ctx,capped,2,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.8) && near(bh[1],0.8));
+        double six[6]={0.001,0.2,0.5,0.03,0.04,0.049};
+        REQUIRE(n4m_stats_bh_adjust(ctx,six,6,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.006) && near(bh[1],0.24) && near(bh[2],0.5));
+        REQUIRE(near(bh[3],0.0735) && near(bh[4],0.0735) && near(bh[5],0.0735));
+        REQUIRE(n4m_stats_bh_adjust(ctx,invalid_p,1,bh)==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_bh_adjust(ctx,pv,0,bh)==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(std::isnan(contrast[0]) && near(contrast[2],1) && near(contrast[3],1));
         // Noise proxy, window 5 / quadratic: SG weights (-3,12,17,12,-3)/35,
         // white-noise residual gain^2 = (18/35)^2 + 2(12/35)^2 + 2(3/35)^2

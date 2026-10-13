@@ -63,6 +63,8 @@ excludes:
     - "diagnostics.holm_adjust"
     - "diagnostics.adjusted_rand_index"
     - "diagnostics.hdbscan"
+    - "diagnostics.correlation_test"
+    - "diagnostics.bh_adjust"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |
