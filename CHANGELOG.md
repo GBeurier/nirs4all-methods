@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Public ABI 2.19.0 Preflight diagnostics: a Savitzky-Golay smoothing-residual
+  noise proxy (interior features only, masked windows skipped, normalized by
+  the filter's white-noise residual gain; never an SNR) and row pairs whose
+  root-mean-square feature difference is within a caller-declared tolerance,
+  with group exclusion, exact totals, per-row flags and a bounded pair list.
+  Both reuse existing Methods code (the Savitzky-Golay engine; matrix-view
+  validation) and are exported through WASM with thin TypeScript wrappers.
+  Binding ABI constants and README examples move to 2.19.0.
 - Public ABI 2.18.0 diagnostics for Preflight: centered PCA scores, loadings,
   retained eigenvalues and exact full covariance moments; masked pooled
   repeatability with balanced ICC(1,1); finite summaries with quartiles; and
