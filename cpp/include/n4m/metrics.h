@@ -190,10 +190,23 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  * (exact) chosen from max|y| and then from the centered variation, so eta^2,
  * F, V and the permutation counts are scale invariant over the whole double
  * range (subnormals included) and translation invariant up to the rounding
- * of the shifted inputs themselves; eta^2 and V carry an absolute error of
- * order n * DBL_EPSILON. SSW is accumulated from explicit within-level
- * residuals at their own power-of-two scale; an F that overflows or
- * underflows to zero while SSB > 0 returns N4M_ERR_NUMERICAL_FAILURE. */
+ * of the shifted inputs themselves.
+ * Accuracy: eta^2 is a ratio of sums of O(1) scaled centered terms with no
+ * subtraction of accumulated quantities; its absolute error is of order
+ * n * DBL_EPSILON (equal level means give exactly 0 on dyadic data).
+ * V^2 = chi^2 / (n (min(levels, classes) - 1)) with chi^2 accumulated from
+ * exact integer residuals d = O*n - r*c as sum d^2/(n r c): nonnegative
+ * terms, relative error O(cells * DBL_EPSILON), exactly 0 at independence
+ * (n <= 3e9 for categorical targets). SSW is computed from the original
+ * targets, each level scaled by its own power of two and centered on its own
+ * values, and the level sums are combined by exponents, so a within-level
+ * spread is never erased by another level's magnitude; SSW has relative
+ * error O(n * DBL_EPSILON). F = eta^2 SST/(levels-1) / (SSW/(n-levels)) is
+ * therefore accurate relative to SSB when SSB is not small, and to an
+ * absolute error of order n * DBL_EPSILON * SST/SSW * (n-levels)/(levels-1)
+ * near eta^2 = 0. F is NaN only when every level is constant (SSW = 0
+ * exactly) or n == levels; an F that overflows, or falls below DBL_MIN while
+ * eta^2 > 0, returns N4M_ERR_NUMERICAL_FAILURE. */
 N4M_API n4m_status_t n4m_preflight_factor_association(
     n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
@@ -225,9 +238,10 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
  * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
  * {b, executed B}; no permutation runs when the coefficient is undefined.
  * Both vectors use the same translation- and scale-stable centering as
- * n4m_preflight_factor_association (any finite doubles; |r| carries an
- * absolute error of order n * DBL_EPSILON; the denominator is >= 1/4 after
- * rescaling, so it never underflows). */
+ * n4m_preflight_factor_association (any finite doubles; r is a ratio of sums
+ * of O(1) scaled centered terms, so its absolute error is of order
+ * n * DBL_EPSILON; the denominator is >= 1/4 after rescaling and never
+ * underflows; exactly uncorrelated dyadic data give r = 0). */
 N4M_API n4m_status_t n4m_stats_correlation_test(
     n4m_context_t* ctx, const double* x, const double* y, int64_t n,
     int32_t method, int32_t n_permutations, uint64_t seed,

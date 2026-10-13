@@ -37,6 +37,18 @@ centered on its own values) at their own scale, never as SST - SSB; an F
 that overflows, or underflows while SSB > 0, returns
 `N4M_ERR_NUMERICAL_FAILURE`. Holm and BH keep positive p-values positive.
 
+Precision contract (revised): SSW is computed from the original targets with
+a per-level power-of-two scale and per-level centering, level sums combined
+by exponents, so a within-level spread next to a huge level (levels
+{0, 1e-100} and {1e300}) is kept and its unrepresentable F is refused instead
+of returning F = NaN with OK; F is NaN only when every level is constant.
+Cramer's V is computed from chi^2 accumulated over exact integer residuals
+`O*n - r*c` (nonnegative terms, exactly 0 at independence) instead of
+`sum(O^2/E) - n`, which gave V = 1.5e-8 for a 2x9 table with one unit per
+cell. eta^2, V and r have absolute error of order n * DBL_EPSILON; F is
+relatively accurate when SSB is not small and absolutely accurate near 0
+(see metrics.h). Categorical targets are limited to n <= 3e9.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged
