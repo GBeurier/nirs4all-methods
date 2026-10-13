@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""NumPy/LAPACK goldens for the degenerate SVD / symmetric-eigen tests.
+
+Writes ``cpp/tests/svd_degenerate_goldens.inc`` (test-only data consumed by
+``cpp/tests/test_internal_svd_degenerate.cpp``). The cases are degenerate or
+near-degenerate on purpose: equal eigenvalues, repeated singular values,
+rank-deficient designs, +-1 sign-symmetric designs with opposite rows, already
+diagonal matrices and tiny / denormal off-diagonals.
+
+Eigen and singular vectors of a repeated value are not unique, so the goldens
+are basis-free: sorted eigenvalues / singular values, the orthogonal projector
+onto each eigenvalue cluster, and the projectors onto the row and column
+spaces of the numerical rank. Vector signs are never compared.
+
+Run from the repository root:
+
+    python3 parity/scripts/svd_degenerate_reference.py
+"""
+
+from __future__ import annotations
+
+import pathlib
+import platform
+
+import numpy as np
+
+OUT = (
+    pathlib.Path(__file__).resolve().parents[2] / "cpp/tests/svd_degenerate_goldens.inc"
+)
+CLUSTER_RTOL = 1e-8
+RANK_RTOL = 1e-10
+# Larger cases keep eigenvalue, reconstruction and orthonormality checks only.
+PROJECTOR_MAX_N = 8
+
+
+def pm1_opposite_rows(rows: int, cols: int) -> np.ndarray:
+    """+-1 design; row 2 is the exact opposite of row 0 (mirrored in C++)."""
+    x = np.empty((rows, cols))
+    for i in range(rows):
+        for j in range(cols):
+            if i % 4 == 0:
+                v = 1.0 if j % 3 == 0 else -1.0
+            elif i % 4 == 1:
+                v = 1.0 if (j // 2) % 2 else -1.0
+            elif i % 4 == 2:
+                v = -(1.0 if j % 3 == 0 else -1.0)
+            else:
+                v = 1.0 if j % 5 < 2 else -1.0
+            x[i, j] = v
+    return x
+
+
+def pm1_opposite_cols(rows: int, half: int) -> np.ndarray:
+    """Tall +-1 design whose column j + half is minus column j."""
+    x = np.empty((rows, 2 * half))
+    for i in range(rows):
+        for j in range(half):
+            v = 1.0 if (7 * i + 3 * j) % 5 < 2 else -1.0
+            x[i, j] = v
+            x[i, j + half] = -v
+    return x
+
+
+def clusters(values: np.ndarray, scale: float) -> list[tuple[int, int]]:
+    out: list[tuple[int, int]] = []
+    start = 0
+    for i in range(1, len(values) + 1):
+        if i == len(values) or values[i] - values[i - 1] > CLUSTER_RTOL * scale:
+            out.append((start, i))
+            start = i
+    return out
+
+
+def sym_cases() -> list[tuple[str, np.ndarray]]:
+    cases = []
+    x = pm1_opposite_rows(4, 6)
+    xc = x - x.mean(axis=0)
+    cases.append(("pm1_opposite_centered_gram_4", xc @ xc.T))
+    cases.append(("scaled_identity_4", 4.0 * np.eye(4)))
+    cases.append(("all_ones_6", np.ones((6, 6))))
+    cases.append(("centering_5", np.eye(5) - 0.2))
+    cases.append(("diagonal_repeated_6", np.diag([2.0, 0.0, 1.0, 2.0, 0.0, 1.0])))
+    t = np.diag([1.0, 1.0, 1.0, 1.0])
+    for i in range(3):
+        t[i, i + 1] = t[i + 1, i] = 1e-300
+    cases.append(("tiny_offdiag_equal_diag_4", t))
+    t = np.zeros((4, 4))
+    for i in range(3):
+        t[i, i + 1] = t[i + 1, i] = 1e-310
+    cases.append(("denormal_offdiag_zero_diag_4", t))
+    t = np.diag([1.0, 1.0 + 1e-14, 1.0 + 2e-14, 3.0])
+    for i in range(3):
+        t[i, i + 1] = t[i + 1, i] = 1e-15
+    cases.append(("near_degenerate_cluster_4", t))
+    w = np.diag(np.abs(np.arange(-10.0, 11.0)))
+    for i in range(20):
+        w[i, i + 1] = w[i + 1, i] = 1.0
+    cases.append(("wilkinson_plus_21", w))
+    xt = pm1_opposite_cols(40, 8)
+    xtc = xt - xt.mean(axis=0)
+    cases.append(("pm1_opposite_cols_centered_gram_16", xtc.T @ xtc))
+    return cases
+
+
+def svd_cases() -> list[tuple[str, np.ndarray]]:
+    h2 = np.array([[1.0, 1.0], [1.0, -1.0]])
+    cases = [
+        (
+            "pm1_opposite_3x3",
+            np.array([[-1.0, 1.0, -1.0], [1.0, 1.0, 1.0], [-1.0, -1.0, -1.0]]),
+        ),
+        ("pm1_opposite_4x6", pm1_opposite_rows(4, 6)),
+        (
+            "pm1_opposite_centered_4x6",
+            pm1_opposite_rows(4, 6) - pm1_opposite_rows(4, 6).mean(axis=0),
+        ),
+        (
+            "pm1_opposite_centered_4x8",
+            pm1_opposite_rows(4, 8) - pm1_opposite_rows(4, 8).mean(axis=0),
+        ),
+        ("pm1_opposite_cols_10x6", pm1_opposite_cols(10, 3)),
+        ("hadamard_4_equal_sv", np.kron(h2, h2)),
+        ("hadamard_4_near_equal_sv", np.kron(h2, h2) + np.diag([1e-12, 0.0, 0.0, 0.0])),
+        (
+            "duplicate_columns_5x4",
+            np.array(
+                [
+                    [1.0, 2.0, 1.0, 2.0],
+                    [0.0, 1.0, 0.0, 1.0],
+                    [3.0, -1.0, 3.0, -1.0],
+                    [2.0, 2.0, 2.0, 2.0],
+                    [-1.0, 0.5, -1.0, 0.5],
+                ]
+            ),
+        ),
+        ("diagonal_repeated_4x4", np.diag([3.0, 3.0, 1.0, 0.0])),
+        (
+            "tiny_offdiag_3x3",
+            np.array([[1.0, 1e-300, 0.0], [1e-300, 1.0, 1e-300], [0.0, 1e-300, 1.0]]),
+        ),
+    ]
+    return cases
+
+
+def fmt(values) -> str:
+    return ", ".join(repr(float(v)) for v in np.asarray(values, dtype=float).ravel())
+
+
+def lapack_backend() -> str:
+    lapack = np.show_config(mode="dicts")["Build Dependencies"]["lapack"]
+    return f"{lapack['name']} {lapack['version']}"
+
+
+def main() -> None:
+    lines = [
+        "// GENERATED by parity/scripts/svd_degenerate_reference.py -- do not edit.",
+        "// Test-only NumPy/LAPACK goldens for test_internal_svd_degenerate.cpp.",
+        (
+            f"// numpy {np.__version__} ({lapack_backend()}); python {platform.python_version()};"
+            " numpy.linalg eigh -> dsyevd, svd -> dgesdd."
+        ),
+        f'static const char* const kSvdGoldenNumpyVersion = "{np.__version__}";',
+        "",
+    ]
+    sym_entries = []
+    for idx, (name, a) in enumerate(sym_cases()):
+        w, v = np.linalg.eigh(a)
+        scale = max(1.0, float(np.max(np.abs(w))))
+        cl = clusters(w, scale)
+        proj = [v[:, s:e] @ v[:, s:e].T for s, e in cl]
+        n = a.shape[0]
+        lines.append(f"static const double kSymA{idx}[] = {{{fmt(a)}}};")
+        lines.append(f"static const double kSymW{idx}[] = {{{fmt(w)}}};")
+        lines.append(
+            f"static const int kSymC{idx}[] = {{{', '.join(str(s) for s, _ in cl)}, {n}}};"
+        )
+        if n <= PROJECTOR_MAX_N:
+            lines.append(
+                f"static const double kSymP{idx}[] = {{{fmt(np.concatenate([p.ravel() for p in proj]))}}};"
+            )
+        p_ref = f"kSymP{idx}" if n <= PROJECTOR_MAX_N else "nullptr"
+        sym_entries.append(
+            f'    {{"{name}", {n}, kSymA{idx}, kSymW{idx}, {len(cl)}, kSymC{idx}, {p_ref}}},'
+        )
+    lines.append("")
+    lines.append(
+        "struct SymGolden { const char* name; int n; const double* A; const double* evals_asc;"
+    )
+    lines.append("                   int n_clusters; const int* cluster_start;")
+    lines.append(
+        "                   const double* projectors;  /* nullptr when n > 8 */ };"
+    )
+    lines.append("static const SymGolden kSymGoldens[] = {")
+    lines.extend(sym_entries)
+    lines.append("};")
+    lines.append("")
+
+    svd_entries = []
+    for idx, (name, a) in enumerate(svd_cases()):
+        u, s, vt = np.linalg.svd(a, full_matrices=False)
+        rank = int(np.sum(s > RANK_RTOL * s[0])) if s[0] > 0 else 0
+        row_proj = vt[:rank].T @ vt[:rank]
+        col_proj = u[:, :rank] @ u[:, :rank].T
+        m, n = a.shape
+        lines.append(f"static const double kSvdA{idx}[] = {{{fmt(a)}}};")
+        lines.append(f"static const double kSvdS{idx}[] = {{{fmt(s)}}};")
+        lines.append(f"static const double kSvdRow{idx}[] = {{{fmt(row_proj)}}};")
+        lines.append(f"static const double kSvdCol{idx}[] = {{{fmt(col_proj)}}};")
+        svd_entries.append(
+            f'    {{"{name}", {m}, {n}, kSvdA{idx}, kSvdS{idx}, {rank}, kSvdRow{idx}, kSvdCol{idx}}},'
+        )
+    lines.append("")
+    lines.append(
+        "struct SvdGolden { const char* name; int m; int n; const double* A; const double* sv_desc;"
+    )
+    lines.append(
+        "                   int rank; const double* row_projector; const double* col_projector; };"
+    )
+    lines.append("static const SvdGolden kSvdGoldens[] = {")
+    lines.extend(svd_entries)
+    lines.append("};")
+    lines.append("")
+
+    # PCA through n4m_pca_fit's three dispatch paths (Jacobi, dual-wide QL,
+    # tall-Gram QL). Matrices are rebuilt in C++ from the same formulas.
+    pca_entries = []
+    for idx, (name, pattern, rows, cols, k) in enumerate(
+        [
+            ("pca_jacobi_pm1_opposite_4x8", 0, 4, 8, 4),
+            ("pca_dual_wide_pm1_opposite_4x8192", 0, 4, 8192, 3),
+            ("pca_tall_gram_pm1_opposite_cols_40x16", 1, 40, 16, 12),
+        ]
+    ):
+        x = (
+            pm1_opposite_rows(rows, cols)
+            if pattern == 0
+            else pm1_opposite_cols(rows, cols // 2)
+        )
+        xc = x - x.mean(axis=0)
+        ev = (
+            np.linalg.eigvalsh(xc.T @ xc / (rows - 1))[::-1][:k]
+            if cols <= rows
+            else np.linalg.eigvalsh(xc @ xc.T / (rows - 1))[::-1][:k]
+        )
+        lines.append(f"static const double kPcaEv{idx}[] = {{{fmt(ev)}}};")
+        pca_entries.append(
+            f'    {{"{name}", {pattern}, {rows}, {cols}, {k}, kPcaEv{idx}}},'
+        )
+    lines.append("")
+    lines.append(
+        "struct PcaGolden { const char* name; int pattern; int rows; int cols; int k;"
+    )
+    lines.append("                   const double* explained_var; };")
+    lines.append("static const PcaGolden kPcaGoldens[] = {")
+    lines.extend(pca_entries)
+    lines.append("};")
+    OUT.write_text("\n".join(lines) + "\n")
+    print(f"wrote {OUT}")
+
+
+if __name__ == "__main__":
+    main()

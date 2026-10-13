@@ -36,6 +36,10 @@
  *
  * with eps = 4 * DBL_EPSILON (paranoid; tighter than the standard 1
  * ULP test). Zero-norm columns are skipped to keep the rotation finite.
+ * Columns of norm <= eps * ||A||_F that still fail the test after the
+ * significant columns have converged are zeroed (see
+ * N4M_SVD_NEGLIGIBLE_SWEEPS): they carry the null space of rank-deficient
+ * inputs and cannot be orthogonalised below rounding level.
  */
 
 #include "svd.h"
@@ -53,6 +57,12 @@
 /* Convergence tolerance scale. eps = 4 * DBL_EPSILON keeps the
  * orthogonalisation criterion within ~2 bits of the machine precision. */
 static const double N4M_SVD_EPS = 4.0 * DBL_EPSILON;
+
+/* Consecutive sweeps in which only negligible columns (norm <=
+ * N4M_SVD_EPS * ||A||_F) still rotate before those columns are declared
+ * numerically zero. A rounding-level column that can be orthogonalised
+ * settles within one sweep; three leaves margin. */
+#define N4M_SVD_NEGLIGIBLE_SWEEPS 3
 
 static const double N4M_SVD_ZERO_TOL = 1e-300;
 
@@ -159,6 +169,24 @@ static void householder_tridiagonal(double* V, int64_t n, double* d,
     }
 }
 
+/* Implicit-shift QL on the tridiagonal (d, e), accumulating rotations in V
+ * (EISPACK tql2 / Numerical Recipes tqli).
+ *
+ * Deflation: e[m] is negligible when
+ *
+ *     |e[m]| <= eps * (|d[m]| + |d[m+1]|)     (local, LAPACK dsteqr style)
+ *  or |e[m]| <= eps * tst1                    (EISPACK tql2 matrix scale)
+ *  or |e[m]| <  DBL_MIN                       (underflow, dsteqr's safmin)
+ *
+ * where tst1 = max_{l' <= l} (|d[l']| + |e[l']|). The local test alone never
+ * fires for a cluster of (numerically) zero eigenvalues inside a matrix of
+ * norm ~1: d[m] and d[m+1] are themselves rounding noise there, so it asks
+ * for |e[m]| ~ eps^2 * ||T||, which the rotations cannot reach. Equal or
+ * repeated eigenvalues of rank-deficient Gram matrices hit this case. The
+ * tql2 scale test bounds the error by eps * ||T|| (normwise backward
+ * stable), the same accuracy class as LAPACK's dsteqr.
+ *
+ * Iteration cap: dsteqr's total budget of 30 QL sweeps per eigenvalue. */
 static n4m_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
                                                 int64_t n, double* V) {
     for (int64_t i = 1; i < n; ++i) {
@@ -166,20 +194,28 @@ static n4m_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
     }
     e[n - 1] = 0.0;
 
+    const int64_t max_iter = 30 * n;
+    int64_t iter = 0;
+    double tst1 = 0.0;
     for (int64_t l = 0; l < n; ++l) {
-        int iter = 0;
+        const double scale_l = fabs(d[l]) + fabs(e[l]);
+        if (scale_l > tst1) {
+            tst1 = scale_l;
+        }
         for (;;) {
             int64_t m = l;
             for (; m < n - 1; ++m) {
+                const double ae = fabs(e[m]);
                 const double dd = fabs(d[m]) + fabs(d[m + 1]);
-                if (fabs(e[m]) <= DBL_EPSILON * dd) {
+                if (ae <= DBL_EPSILON * dd || ae <= DBL_EPSILON * tst1 ||
+                    ae < DBL_MIN) {
                     break;
                 }
             }
             if (m == l) {
                 break;
             }
-            if (++iter > 64) {
+            if (++iter > max_iter) {
                 return N4M_ERR_CONVERGENCE_FAILED;
             }
 
@@ -662,27 +698,49 @@ static double deterministic_omega(int64_t row, int64_t col) {
     return 2.0 * unit - 1.0;
 }
 
+static double column_norm2(const double* col, int64_t rows, int64_t cols) {
+    double norm2 = 0.0;
+    for (int64_t i = 0; i < rows; ++i) {
+        const double v = col[(size_t)i * (size_t)cols];
+        norm2 += v * v;
+    }
+    return norm2;
+}
+
+/* Gram-Schmidt on the columns of the row-major (rows x cols) matrix A. A
+ * column that loses more than half its squared norm to the projections is
+ * projected a second time (Kahan's "twice is enough"); a column whose
+ * residual is at rounding level relative to its original norm is linearly
+ * dependent on the previous ones (rank-deficient A, sketch wider than the
+ * rank) and is zeroed instead of normalising rounding noise. */
 static void orthonormalize_columns(double* A, int64_t rows, int64_t cols) {
+    const double dependent_rtol2 =
+        (double)rows * N4M_SVD_EPS * N4M_SVD_EPS;
     for (int64_t c = 0; c < cols; ++c) {
         double* col_c = A + (size_t)c;
-        for (int64_t prev = 0; prev < c; ++prev) {
-            const double* col_prev = A + (size_t)prev;
-            double dot = 0.0;
-            for (int64_t i = 0; i < rows; ++i) {
-                dot += col_c[(size_t)i * (size_t)cols] *
-                       col_prev[(size_t)i * (size_t)cols];
+        const double norm2_in = column_norm2(col_c, rows, cols);
+        double norm2 = norm2_in;
+        for (int pass = 0; pass < 2; ++pass) {
+            for (int64_t prev = 0; prev < c; ++prev) {
+                const double* col_prev = A + (size_t)prev;
+                double dot = 0.0;
+                for (int64_t i = 0; i < rows; ++i) {
+                    dot += col_c[(size_t)i * (size_t)cols] *
+                           col_prev[(size_t)i * (size_t)cols];
+                }
+                for (int64_t i = 0; i < rows; ++i) {
+                    col_c[(size_t)i * (size_t)cols] -=
+                        dot * col_prev[(size_t)i * (size_t)cols];
+                }
             }
-            for (int64_t i = 0; i < rows; ++i) {
-                col_c[(size_t)i * (size_t)cols] -=
-                    dot * col_prev[(size_t)i * (size_t)cols];
+            const double before = norm2;
+            norm2 = column_norm2(col_c, rows, cols);
+            if (c == 0 || norm2 >= 0.5 * before) {
+                break;
             }
         }
-        double norm2 = 0.0;
-        for (int64_t i = 0; i < rows; ++i) {
-            const double v = col_c[(size_t)i * (size_t)cols];
-            norm2 += v * v;
-        }
-        if (!(norm2 > N4M_SVD_ZERO_TOL) || !isfinite(norm2)) {
+        if (!(norm2 > N4M_SVD_ZERO_TOL) || !isfinite(norm2) ||
+            norm2 <= dependent_rtol2 * norm2_in) {
             for (int64_t i = 0; i < rows; ++i) {
                 col_c[(size_t)i * (size_t)cols] = 0.0;
             }
@@ -850,10 +908,27 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
         V[(size_t)i * (size_t)n + (size_t)i] = 1.0;
     }
 
+    /* Columns whose norm is at most N4M_SVD_EPS * ||A||_F are negligible:
+     * dropping them is a perturbation within the SVD's backward error.
+     * ||A||_F is invariant under the rotations, so it is computed once. */
+    double frob2 = 0.0;
+    for (size_t i = 0; i < (size_t)m * (size_t)n; ++i) {
+        frob2 += A[i] * A[i];
+    }
+    const double negligible_norm = N4M_SVD_EPS * sqrt(frob2);
+    unsigned char* unsettled = (unsigned char*)malloc((size_t)n);
+    if (unsettled == NULL) {
+        free(V);
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+
     /* Jacobi sweeps. */
     int converged = 0;
+    int negligible_only_sweeps = 0;
     for (int sweep = 0; sweep < N4M_SVD_MAX_SWEEPS && !converged; ++sweep) {
-        converged = 1;
+        int rotated = 0;
+        int rotated_significant = 0;
+        memset(unsettled, 0, (size_t)n);
         for (int64_t p = 0; p < n - 1; ++p) {
             for (int64_t q = p + 1; q < n; ++q) {
                 /* Compute three inner products: alpha = a_p^T a_p,
@@ -875,7 +950,15 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                 if (fabs(gamma) <= tol) {
                     continue;
                 }
-                converged = 0;
+                rotated = 1;
+                const int p_negligible = sqrt(alpha) <= negligible_norm;
+                const int q_negligible = sqrt(beta) <= negligible_norm;
+                if (p_negligible || q_negligible) {
+                    unsettled[p] = (unsigned char)(unsettled[p] | p_negligible);
+                    unsettled[q] = (unsigned char)(unsettled[q] | q_negligible);
+                } else {
+                    rotated_significant = 1;
+                }
 
                 /* Compute the Givens rotation diagonalising the 2x2
                  * Gram block [[alpha, gamma], [gamma, beta]].
@@ -920,7 +1003,28 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                 }
             }
         }
+        if (!rotated) {
+            converged = 1;
+        } else if (rotated_significant) {
+            negligible_only_sweeps = 0;
+        } else if (++negligible_only_sweeps >= N4M_SVD_NEGLIGIBLE_SWEEPS) {
+            /* Only rounding-level columns still rotate. On exactly
+             * rank-deficient inputs (e.g. +-1 designs with opposite rows)
+             * such a column is pure cancellation noise parallel to a
+             * significant column: each rotation shrinks it by ~eps without
+             * ever making it orthogonal. Zero it, which reports the exact
+             * zero singular value it stands for. */
+            for (int64_t j = 0; j < n; ++j) {
+                if (unsettled[j]) {
+                    for (int64_t i = 0; i < m; ++i) {
+                        A_set(A, n, i, j, 0.0);
+                    }
+                }
+            }
+            converged = 1;
+        }
     }
+    free(unsettled);
 
     if (!converged) {
         free(V);

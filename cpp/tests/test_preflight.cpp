@@ -46,6 +46,18 @@ int main() {
         REQUIRE(n4m_preflight_pca_compute(ctx,&FR,1,&S2,&L2,eigen,moments)==N4M_OK);
         REQUIRE(near(eigen[0],16.0/3.0));
         REQUIRE(near(moments[0],20.0/3.0) && near(moments[1],272.0/9.0));
+        // +-1 spectra with row 2 the exact opposite of row 0 (rank-deficient,
+        // repeated |entries|) used to return N4M_ERR_CONVERGENCE_FAILED from
+        // the Jacobi SVD. Eigenvalues are test-only NumPy 2.2.6 eigvalsh
+        // goldens; the centred rank is 3, so they exhaust the total variance.
+        double pm1[24]={1,-1,-1,1,-1,-1, -1,-1,1,1,-1,-1, -1,1,1,-1,1,1, 1,1,-1,-1,-1,1};
+        double scores3[12]={}, loadings3[18]={}, eigen3[3]={};
+        auto PM=view(pm1,4,6), S3=view(scores3,4,3), L3=view(loadings3,3,6);
+        REQUIRE(n4m_preflight_pca_compute(ctx,&PM,3,&S3,&L3,eigen3,moments)==N4M_OK);
+        REQUIRE(near(eigen3[0],4.451454311908496) && near(eigen3[1],2.943891106099754));
+        REQUIRE(near(eigen3[2],0.2713212486584137));
+        REQUIRE(near(eigen3[0]+eigen3[1]+eigen3[2],moments[0]) && near(moments[0],23.0/3.0));
+        REQUIRE(near(moments[1],257.0/9.0));
         // Two balanced groups: within SS=4, MSW=2; between SS=16,
         // MSB=16 => ICC=(16-2)/(16+2)=7/9, pooled SD=sqrt(2).
         double repeats[4]={0,2,4,6}; int64_t ids[4]={10,10,20,20};

@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- Internal SVD / symmetric-eigen helpers (`cpp/src/core/common/svd.c`) no
+  longer return `N4M_ERR_CONVERGENCE_FAILED`, or wrong factors, on degenerate
+  inputs. This affected PCA (`n4m_pca_fit`, `n4m_preflight_pca_compute`), PCR,
+  Ridge, MB-PLS, Hotelling T2 / Q residuals, FlexiblePCA/SVD and wavelet
+  PCA/SVD. One-sided Jacobi: a rank-deficient null-space column at rounding
+  level (e.g. +-1 spectra where one row is the opposite of another) is now
+  returned as an exact zero singular value instead of rotating forever.
+  Tridiagonal QL: the EISPACK tql2 matrix-scale deflation test and an
+  underflow guard now back up the local test, with LAPACK dsteqr's 30n
+  iteration budget, so clusters of equal eigenvalues converge. Randomized SVD:
+  the sketch basis is re-orthogonalised and rank-deficient sketch columns are
+  dropped. Results on well-conditioned inputs are unchanged: Jacobi
+  bit-identical, QL eigenvalues within 1.3e-15 relative, all 145 registry
+  parity predictions bit-identical. Covered by NumPy 2.2.6 / LAPACK goldens
+  (`parity/scripts/svd_degenerate_reference.py`).
+
 ## [1.3.6] - 2026-10-13
 
 ABI 2.19.0. No model-state serialization format changes.
