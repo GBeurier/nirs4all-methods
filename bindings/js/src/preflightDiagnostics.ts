@@ -106,6 +106,56 @@ export interface StatsExactPermutationResult {
     maximumStatistic: number;
 }
 
+export interface PermanovaResult {
+    ssTotal: number;
+    /** Between-strata SS (0 without strata). */
+    ssStrata: number;
+    /** SS of the term given the strata (additive strata + term model). */
+    ssTerm: number;
+    ssResidual: number;
+    r2: number;
+    partialR2: number;
+    pseudoF: number;
+    /** Identifiable term df: levels - connected components; 0 when aliased. */
+    dfTerm: number;
+    dfResidual: number;
+    nLevels: number;
+    nStrata: number;
+    /** log10 of the distinct within-strata level assignments. */
+    log10DistinctPermutations: number;
+    /** Monte Carlo (1+b)/(1+B); NaN without an executed test. */
+    pValue: number;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
+export interface PermdispResult {
+    /** Euclidean distance of each row to its group centroid. */
+    distances: Float64Array;
+    /** Mean distance per group, in ascending group-code order. */
+    groupMeanDistances: Float64Array;
+    f: number;
+    df1: number;
+    df2: number;
+    nGroups: number;
+    log10DistinctPermutations: number;
+    pValue: number;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
+function validatePermutation(nPermutations: number, seed: number | bigint): bigint {
+    if (!Number.isInteger(nPermutations) || nPermutations < 0 || nPermutations > 1_000_000) {
+        throw new RangeError("permutation count must be an integer in [0, 1000000]");
+    }
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    return seed64;
+}
+
 function validateMatrix(X: Matrix): void {
     if (!Number.isSafeInteger(X.rows) || !Number.isSafeInteger(X.cols) ||
         X.rows < 1 || X.cols < 1 || X.data.length !== X.rows * X.cols) {
@@ -659,6 +709,81 @@ export function statsCorrelationExact(x: Float64Array, y: Float64Array,
                 BigInt(maxArrangements), out]) as number;
         checkStatus(st, ctx.handle);
         return exactResult(out);
+    } finally {
+        scope.close();
+    }
+}
+
+/** PERMANOVA of one categorical term on Euclidean distances between rows,
+ * optionally given strata (permutations stay inside each stratum). */
+export function statsPermanova(X: Matrix, termCodes: readonly (number | bigint)[],
+    strataCodes: readonly (number | bigint)[] | undefined, nPermutations: number,
+    seed: number | bigint): PermanovaResult {
+    validateMatrix(X);
+    if (X.rows < 2 || termCodes.length !== X.rows ||
+        (strataCodes !== undefined && strataCodes.length !== X.rows)) {
+        throw new RangeError("invalid PERMANOVA dimensions");
+    }
+    validateGroupIds(termCodes);
+    if (strataCodes) validateGroupIds(strataCodes);
+    const seed64 = validatePermutation(nPermutations, seed);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const term = scope.i64(termCodes);
+        const strata = strataCodes ? scope.i64(strataCodes) : 0;
+        const out = scope.alloc(13 * 8), counts = scope.alloc(16);
+        const st = m.ccall("n4m_stats_permanova", "number",
+            ["number", "number", "number", "number", "number", "i64", "number", "number"],
+            [ctx.handle, x.viewPtr, term, strata, nPermutations, seed64, out, counts]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 13);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            ssTotal: r[0]!, ssStrata: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!,
+            r2: r[4]!, partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!,
+            nLevels: r[9]!, nStrata: r[10]!, log10DistinctPermutations: r[11]!, pValue: r[12]!,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** PERMDISP (betadisper type "centroid"): distances to group centroids, their
+ * one-way ANOVA F and a residual-permutation test. Not an exchangeability check. */
+export function statsPermdisp(X: Matrix, groupCodes: readonly (number | bigint)[],
+    nPermutations: number, seed: number | bigint): PermdispResult {
+    validateMatrix(X);
+    if (X.rows < 2 || groupCodes.length !== X.rows) {
+        throw new RangeError("invalid PERMDISP dimensions");
+    }
+    validateGroupIds(groupCodes);
+    const seed64 = validatePermutation(nPermutations, seed);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const groups = scope.i64(groupCodes);
+        const distances = scope.alloc(X.rows * 8), means = scope.alloc(X.rows * 8);
+        const out = scope.alloc(6 * 8), counts = scope.alloc(16);
+        const st = m.ccall("n4m_stats_permdisp", "number",
+            ["number", "number", "number", "number", "i64", "number", "number", "number", "number"],
+            [ctx.handle, x.viewPtr, groups, nPermutations, seed64, distances, means, out,
+                counts]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 6);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            distances: copyF64(distances, X.rows),
+            groupMeanDistances: copyF64(means, r[3]!),
+            f: r[0]!, df1: r[1]!, df2: r[2]!, nGroups: r[3]!, log10DistinctPermutations: r[4]!,
+            pValue: r[5]!,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
     } finally {
         scope.close();
     }
