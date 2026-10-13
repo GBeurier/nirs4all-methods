@@ -394,29 +394,41 @@ export interface PreflightPairsResult {
 }
 
 export interface PreflightSnvResult {
-    /** Row-major SNV (population SD); constant rows are exact zeros. */
+    /** Row-major SNV rows (population SD), or group means when groups are given. */
     matrix: Matrix;
-    /** Per-row first-order bound on the absolute rounding error of each entry. */
-    rowErrorBounds: Float64Array;
+    /** Per output row, a first-order bound on the absolute rounding error of each entry. */
+    errorBounds: Float64Array;
 }
 
-/** SNV with per-row rounding bounds (ABI 2.20 n4m_preflight_snv_compute). */
-export function preflightSnv(X: Matrix): PreflightSnvResult {
+/**
+ * SNV with rounding bounds (ABI 2.20 n4m_preflight_snv_compute). With
+ * `groupIds` (dense codes 0..nGroups-1, every group non-empty), each output
+ * row is the equal-weight mean of the SNV rows of one group.
+ */
+export function preflightSnv(X: Matrix, groupIds?: readonly (number | bigint)[],
+    nGroups?: number): PreflightSnvResult {
     validateMatrix(X);
-    if (X.cols < 2) throw new RangeError("SNV needs at least two columns");
+    const groups = groupIds ? nGroups : X.rows;
+    if (X.cols < 2 || groups === undefined || !isInt32In(groups, 1, X.rows) ||
+        (groupIds && groupIds.length !== X.rows) || (!groupIds && nGroups !== undefined &&
+            nGroups !== X.rows)) {
+        throw new RangeError("invalid SNV shape or groups");
+    }
+    if (groupIds) validateGroupIds(groupIds);
     const m = getModule(), scope = new NativeScope();
     try {
         const ctx = scope.ctx;
         const x = scope.matrix(X.data, X.rows, X.cols);
-        const out = scope.matrix(new Float64Array(X.data.length), X.rows, X.cols);
-        const bounds = scope.alloc(X.rows * 8);
+        const out = scope.matrix(new Float64Array(groups * X.cols), groups, X.cols);
+        const gid = groupIds ? scope.i64(groupIds) : 0;
+        const bounds = scope.alloc(groups * 8);
         const st = m.ccall("n4m_preflight_snv_compute", "number",
-            ["number", "number", "number", "number"],
-            [ctx.handle, x.viewPtr, out.viewPtr, bounds]) as number;
+            ["number", "number", "number", "i64", "number", "number"],
+            [ctx.handle, x.viewPtr, gid, BigInt(groups), out.viewPtr, bounds]) as number;
         checkStatus(st, ctx.handle);
         return {
-            matrix: {data: copyF64(out.dataPtr, X.data.length), rows: X.rows, cols: X.cols},
-            rowErrorBounds: copyF64(bounds, X.rows),
+            matrix: {data: copyF64(out.dataPtr, groups * X.cols), rows: groups, cols: X.cols},
+            errorBounds: copyF64(bounds, groups),
         };
     } finally {
         scope.close();

@@ -14,7 +14,7 @@ Per-row area normalisation.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_area_normalization_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L60) · [`n4m_transform_area_normalization_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L62) · [`n4m_transform_area_normalization_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L63). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_area_normalization_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L61) · [`n4m_transform_area_normalization_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L63) · [`n4m_transform_area_normalization_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L64). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

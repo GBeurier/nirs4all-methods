@@ -122,25 +122,77 @@ assert.throws(() => preflightNearestNeighbors({data: new Float64Array([0, 1]), r
     {data: new Float64Array([0, 1]), rows: 2, cols: 1}, 2 ** 32 + 1), RangeError);
 assert.throws(() => preflightPca({data: new Float64Array([1, 2, 3, 4]), rows: 2, cols: 2},
     2 ** 32 + 1), RangeError);
+// Relative error against a nonzero expectation: 0 and sign flips fail.
+const rel = (actual, expected, r, what = "") => assert.ok(
+    Number.isFinite(actual) && Math.abs(actual - expected) <= r * Math.abs(expected),
+    `${what} ${actual} != ${expected}`);
+const row = (values) => ({data: new Float64Array(values), rows: 1, cols: values.length});
+const pair = (q, r, tol) => preflightPairsWithinTolerance(row(q), tol, 1, row(r));
+const numericalFailure = (fn) => assert.throws(fn, (e) => e.status === 7);  // N4M_ERR_NUMERICAL_FAILURE
 // Review b1 #3: q - r overflows, yet the RMS distance sqrt(2) * 1e308 <= 1.5e308.
-const huge = preflightPairsWithinTolerance({data: new Float64Array([1e308, 0]), rows: 1, cols: 2},
-    1.5e308, 1, {data: new Float64Array([-1e308, 0]), rows: 1, cols: 2});
+const huge = pair([1e308, 0], [-1e308, 0], 1.5e308);
 assert.equal(huge.totalPairs, 1);
-relativeNear(huge.distances[0], Math.SQRT2 * 1e308);
-// Review b1fix #2: the distance does not depend on the tolerance.
-for (const tol of [1e-170, 1, 1e200, 1e308]) {
-    const tiny = preflightPairsWithinTolerance({data: new Float64Array([1e-170, 0]), rows: 1, cols: 2},
-        tol, 1, {data: new Float64Array([0, 0]), rows: 1, cols: 2});
+rel(huge.distances[0], Math.SQRT2 * 1e308, 4e-16);
+assert.equal(pair([1e308, 0], [-1e308, 0], 1.414e308).totalPairs, 0);
+// Review b1fix #2 / b14fix #8: tolerance-invariant tiny distance, both sides of the threshold.
+for (const tol of [7.0711e-171, 1e-100, 1, 1e200, 1e308]) {
+    const tiny = pair([1e-170, 0], [0, 0], tol);
     assert.equal(tiny.totalPairs, 1);
-    relativeNear(tiny.distances[0], 1e-170 / Math.SQRT2);
+    rel(tiny.distances[0], 1e-170 / Math.SQRT2, 4e-16, `tol ${tol}`);
 }
-// Review b1fix #1/#3: SNV at the smallest subnormal and per-row rounding bounds.
+assert.equal(pair([1e-170, 0], [0, 0], 7.0710e-171).totalPairs, 0);
+// Review b14fix #2: [2a,0] vs [0,0] has RMS sqrt(2) a > a at a = 2^-1074.
 const tinyA = 2 ** -1074;
+assert.equal(pair([2 * tinyA, 0], [0, 0], tinyA).totalPairs, 0);
+const subnormal = pair([tinyA, 0], [0, 0], tinyA);
+assert.ok(subnormal.totalPairs === 1 && subnormal.distances[0] === tinyA);
+// Magnitude sweep (same invariants as cpp/tests/test_preflight_robustness.cpp):
+// q - r = [3, 4, 0, 12] has RMS 6.5 at every power-of-two scale.
+for (const k of [-1074, -1022, -500, -100, 0, 100, 500, 1000]) {
+    const s = 2 ** k, q = [5, 4, 9, 12].map((v) => v * s), r = [2, 0, 9, 0].map((v) => v * s);
+    const exact = (6.5 * s) / s === 6.5;
+    const result = pair(q, r, (exact ? 6.5 : 7) * s);
+    assert.equal(result.totalPairs, 1, `k ${k}`);
+    if (6.5 * s >= 2 ** -1022) assert.equal(result.distances[0], 6.5 * s);
+    else assert.ok(result.distances[0] > 0 && Math.abs(result.distances[0] - 6.5 * s) <= tinyA);
+    assert.equal(pair(q, r, 6 * s).totalPairs, 0, `k ${k}`);
+}
+// Review b1fix #1/#3, b14fix #3: SNV at the smallest subnormal, bounds and
+// aggregation of very unbalanced repeats (a [1,2,4], a = 1, 2, 4, 8; 1, 10000, 1, 1 copies).
 const snvRows = preflightSnv({data: new Float64Array([tinyA, 0, -tinyA, 0.1, 0.1, 0.1]), rows: 2, cols: 3});
-relativeNear(snvRows.matrix.data[0], Math.sqrt(1.5));
-relativeNear(snvRows.matrix.data[2], -Math.sqrt(1.5));
-assert.ok(snvRows.matrix.data.slice(3).every((v) => v === 0) && snvRows.rowErrorBounds[1] === 0);
-assert.ok(snvRows.rowErrorBounds[0] > 0 && snvRows.rowErrorBounds[0] < 1e-14);
+rel(snvRows.matrix.data[0], Math.sqrt(1.5), 1e-15);
+rel(snvRows.matrix.data[2], -Math.sqrt(1.5), 1e-15);
+assert.ok(snvRows.matrix.data.slice(3).every((v) => v === 0) && snvRows.errorBounds[1] === 0);
+assert.ok(snvRows.errorBounds[0] > 0 && snvRows.errorBounds[0] < 1e-14);
+{
+    const reps = [1, 10000, 1, 1], values = [], gid = [];
+    reps.forEach((n, g) => { for (let i = 0; i < n; i++) { values.push(2 ** g, 2 ** (g + 1), 2 ** (g + 2)); gid.push(g); } });
+    const agg = preflightSnv({data: new Float64Array(values), rows: gid.length, cols: 3}, gid, 4);
+    const mu = 7 / 3, sd = Math.sqrt(((1 - mu) ** 2 + (2 - mu) ** 2 + (4 - mu) ** 2) / 3);
+    for (let g = 0; g < 4; g++) {
+        assert.ok(agg.errorBounds[g] > 0 && agg.errorBounds[g] < 1e-14);
+        [1, 2, 4].forEach((v, j) => assert.ok(
+            Math.abs(agg.matrix.data[g * 3 + j] - (v - mu) / sd) <= agg.errorBounds[g] + 4e-16 * Math.abs((v - mu) / sd)));
+    }
+    assert.throws(() => preflightSnv(row([1, 2]), [0], 2), RangeError);
+}
+// Noise proxy: power-of-two equivariance, exact-offset invariance, explicit overflow error.
+{
+    const base = [];
+    for (let j = 0; j < 11; j++) base.push(j * j);
+    for (let j = 0; j < 11; j++) base.push(1 + 2 * j + (j === 5 ? 35 : 0));
+    const ref = preflightNoiseProxy({data: new Float64Array(base), rows: 2, cols: 11}, 5, 2);
+    for (const k of [-1074, -1022, -500, -100, 0, 100, 500, 1000]) {
+        const s = 2 ** k;
+        const out = preflightNoiseProxy({data: new Float64Array(base.map((v) => v * s)), rows: 2, cols: 11}, 5, 2);
+        if (ref.pooled * s >= 2 ** -1022) assert.equal(out.pooled, ref.pooled * s, `k ${k}`);
+        else assert.ok(out.pooled > 0 && Math.abs(out.pooled - ref.pooled * s) <= tinyA, `k ${k}`);
+    }
+    const shifted = preflightNoiseProxy({data: new Float64Array(base.map((v) => v * 2 ** 944 + 2 ** 996)), rows: 2, cols: 11}, 5, 2);
+    rel(shifted.pooled, ref.pooled * 2 ** 944, 1e-15);
+    const alt = Array.from({length: 9}, (_, j) => (j % 2 ? -1 : 1) * Number.MAX_VALUE);
+    numericalFailure(() => preflightNoiseProxy({data: new Float64Array(alt), rows: 1, cols: 9}, 3, 1));
+}
 // Review b1 #1: the registry SNV keeps a constant row flat and resists overflow.
 const snvOp = ppCreate("StandardNormalVariate");
 try {

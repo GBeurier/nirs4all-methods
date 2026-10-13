@@ -11,21 +11,33 @@ ABI 2.20.0 (project version unchanged until release).
 ### Added
 
 - `n4m_preflight_snv_compute` (ABI 2.20.0) and the JS wrapper
-  `preflightSnv`: SNV with a per-row first-order rounding bound on every
-  output entry, so callers can tell rounding residue from structure.
+  `preflightSnv`: SNV with an optional compensated equal-weight aggregation
+  by group. Each output row carries a first-order bound on the rounding error
+  of its entries, so callers can tell rounding residue from structure.
+- Magnitude-sweep property tests for SNV, the noise proxy and tolerance
+  pairs: scales 2^-1074..2^1000, exact offsets near 1e16 and 1e300, and huge
+  constant columns. Each result is correct within its stated error or an
+  explicit error status.
 
 ### Fixed
 
-- SNV numerical scheme: each finite row is rescaled by a power of two and
-  summed with compensation (Neumaier). The mean is refined in a second pass,
-  and the deviations are rescaled again before squaring. `[a, 0, -a]` at the
+- SNV numerical scheme: each finite row is rescaled by a power of two. The
+  mean is a compensated double-double, so offsets no longer leak into the
+  deviations, and the deviations are rescaled again before squaring. `[a, 0, -a]` at the
   smallest subnormal now gives `[sqrt(1.5), 0, -sqrt(1.5)]` instead of
   returning the row unchanged. Rows with 100,000 offset bands no longer carry
   a mean error of about 1e-8 SD. Agreement with numpy remains within the
   1e-12 parity tolerance, but is no longer bit-for-bit.
 - Tolerance-pair distances are computed on rescaled differences independently
   of the tolerance: `[1e-170, 0]` against `[0, 0]` at tolerance 1e200 now
-  lists 7.07e-171 instead of 0.
+  lists 7.07e-171 instead of 0. The decision is made in the scaled space
+  before rounding: `[2^-1073, 0]` against `[0, 0]` at tolerance 2^-1074
+  (RMS sqrt(2)·2^-1074) is far.
+- Noise proxy: rows are centred and rescaled by a power of two before
+  smoothing, with scaled sums of squares, so a large offset or an extreme
+  scale no longer turns rounding into noise. A result above DBL_MAX is an
+  explicit `N4M_ERR_NUMERICAL_FAILURE`. The residual gain no longer uses
+  `long double`, which differed between x86 and WASM.
 
 - SNV (`n4m_transform_snv_*`, the registry `StandardNormalVariate` and the
   pipelines using it): a constant finite row now maps to exact zeros when

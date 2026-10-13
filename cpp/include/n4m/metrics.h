@@ -137,26 +137,38 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
  * pooled over every evaluable residual cell (NaN if none) divided by g;
  * out_two[1] = g. valid_mask is optional row-major rows x cols bytes, nonzero
  * = valid; unmasked X must be finite and cols >= window_length. The value is
- * a noise proxy under a locally polynomial signal, never an SNR. */
+ * a noise proxy under a locally polynomial signal, never an SNR.
+ * Numerical domain: each row is centred on its first valid value and rescaled
+ * by an exact power of two of its largest centred deviation (exact halves on
+ * overflow) before smoothing, and residuals are accumulated as scaled sums of
+ * squares, so the result is translation invariant for exactly representable
+ * offsets and exactly equivariant under power-of-two scaling over the whole
+ * finite range. A result above DBL_MAX gives N4M_ERR_NUMERICAL_FAILURE; a
+ * positive result below 2^-1074 is reported as 2^-1074. */
 N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
     int32_t window_length, int32_t polyorder, double* band_noise,
     int64_t* band_counts, double* out_two);
 
-/* SNV (centre and scale by the population SD, ddof 0) of each row of X into
- * out (same shape, caller-owned), with the same scheme as
- * n4m_transform_snv_*: constant rows map to exact zeros, values are rescaled
- * by powers of two and summed with compensation, so no finite row overflows
- * or underflows. row_error_bounds[i] (caller-owned, X->rows doubles)
- * receives a first-order bound on the absolute rounding error of every
- * output entry of row i: (u(|m| + A) + 4 n u^2 max|y|) / sd_y + 8 u max|z|,
- * with u = 2^-53, y the row rescaled by 2^-ilogb(max|x|), m and sd_y its mean
- * and SD, A = mean|y - m|, n = cols and z the output row; 0 for a constant
- * row. X must be finite with cols >= 2. N4M_ERR_NUMERICAL_FAILURE when an
- * output is not representable. Added in ABI 2.20. */
+/* SNV (centre and scale by the population SD, ddof 0) of each row of X, with
+ * the scheme of n4m_transform_snv_* (constant rows map to exact zeros;
+ * power-of-two rescaling, compensated sums and a double-double mean, so no
+ * finite row overflows or underflows and large offsets do not leak), then
+ * optionally aggregated. group_ids == NULL: n_groups == X->rows and out
+ * receives the SNV rows. Otherwise group_ids[i] in [0, n_groups) and every
+ * group is non-empty: out row g is the equal-weight mean of the SNV rows of
+ * group g (compensated per band). out is n_groups x cols, caller-owned.
+ * error_bounds[g] (n_groups doubles) bounds the absolute rounding error of
+ * every entry of out row g: for one SNV row,
+ * B = (3uA + n u^2 (A + |m|)) / sd_y + 8 u max|z| with u = 2^-53, y the row
+ * rescaled by 2^-ilogb(max|x|), m, sd_y and A = mean|y - m| its mean, SD and
+ * mean absolute deviation, n = cols, z the SNV row (0 for a constant row);
+ * for a group of r > 1 rows, max member B + (4u + 2 r u^2) max member |z|.
+ * X must be finite with cols >= 2. N4M_ERR_NUMERICAL_FAILURE when an output
+ * is not representable. Added in ABI 2.20. */
 N4M_API n4m_status_t n4m_preflight_snv_compute(
-    n4m_context_t* ctx, const n4m_matrix_view_t* X, const n4m_matrix_view_t* out,
-    double* row_error_bounds);
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
+    int64_t n_groups, const n4m_matrix_view_t* out, double* error_bounds);
 
 /* Row pairs whose root-mean-square feature difference
  * sqrt(sum_j (q_ij - r_hj)^2 / cols) is <= tolerance (finite, > 0).
@@ -170,10 +182,12 @@ N4M_API n4m_status_t n4m_preflight_snv_compute(
  * query_flags (query rows) and, for two matrices, reference_flags (reference
  * rows) are set to 1 for rows in at least one pair, else 0. out_counts
  * receives [total pairs within tolerance, candidate pairs compared]. All
- * values must be finite. The RMS is accumulated with rescaling (dnrm2)
- * independently of the tolerance, so tiny differences keep their distance;
- * when some q - r is not representable (e.g. 1e308 - (-1e308)) the pair is
- * measured on exact halves. */
+ * values must be finite. Numerical domain: the whole finite range. The RMS
+ * is computed on differences rescaled by an exact power of two (exact halves
+ * when some q - r overflows, e.g. 1e308 - (-1e308)) with a compensated sum,
+ * and compared with the tolerance in that scaled space before the published
+ * distance is rounded; the decision is exact up to ~2 ulp of the scaled
+ * RMS. A positive distance below 2^-1074 is published as 2^-1074. */
 N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,
