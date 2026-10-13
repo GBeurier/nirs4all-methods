@@ -257,6 +257,45 @@ int main() {
         REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&Q,&F,nullptr,nullptr,1.0,0,
                                                      nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
         REQUIRE(pcounts[0]==0 && pcounts[1]==1 && qflag[0]==0);
+        // Regression (review b1 #3): q=[1e308,0], r=[-1e308,0] differ by 2e308
+        // (not representable) on one of two features, yet their RMS distance
+        // 2e308 / sqrt(2) = sqrt(2) * 1e308 is within tolerance 1.5e308.
+        {
+            double hq[2]={1e308,0}, hr[2]={-1e308,0}, hd[1]={}; int64_t hi[2]={};
+            auto HQ=view(hq,1,2), HR=view(hr,1,2);
+            REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&HQ,&HR,nullptr,nullptr,1.5e308,1,
+                                                         hi,hd,qflag,rflag,pcounts)==N4M_OK);
+            REQUIRE(pcounts[0]==1 && qflag[0]==1 && rflag[0]==1);
+            REQUIRE(relative_near(hd[0],std::sqrt(2.0)*1e308));
+            // Below tolerance sqrt(2) * 1e308 the same pair is far.
+            REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&HQ,&HR,nullptr,nullptr,1.414e308,1,
+                                                         hi,hd,qflag,rflag,pcounts)==N4M_OK);
+            REQUIRE(pcounts[0]==0);
+            // Tiny differences keep their distance instead of underflowing to 0.
+            double tq[2]={1e-170,0}, tr[2]={0,0};
+            auto TQ=view(tq,1,2), TR=view(tr,1,2);
+            REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&TQ,&TR,nullptr,nullptr,1.0,1,
+                                                         hi,hd,qflag,rflag,pcounts)==N4M_OK);
+            REQUIRE(pcounts[0]==1 && relative_near(hd[0],1e-170/std::sqrt(2.0)));
+        }
+        // Regression (review b1 #2): orders outside the validated domain are
+        // refused (window 41 / order 38 gave a constant-row residual of 0.83),
+        // and a constant row has zero residual at the domain edge (order 10).
+        {
+            std::vector<double> ones(41, 1.0); double cb[41], cp[2]; int64_t cc[41];
+            auto Cst=view(ones.data(),1,41);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Cst,nullptr,41,38,cb,cc,cp)
+                    ==N4M_ERR_INVALID_ARGUMENT);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Cst,nullptr,41,11,cb,cc,cp)
+                    ==N4M_ERR_INVALID_ARGUMENT);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Cst,nullptr,41,10,cb,cc,cp)==N4M_OK);
+            REQUIRE(std::abs(cp[0])<1e-12 && std::abs(cb[20])<1e-12 && cc[20]==1);
+            std::vector<double> wide(1003, 1.0); double wb[1003]; int64_t wc[1003];
+            auto Wd=view(wide.data(),1,1003);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Wd,nullptr,1003,2,wb,wc,cp)
+                    ==N4M_ERR_INVALID_ARGUMENT);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Wd,nullptr,1001,2,wb,wc,cp)==N4M_OK);
+        }
         n4m_context_destroy(ctx);
         std::puts("preflight diagnostics: ok");
         return 0;

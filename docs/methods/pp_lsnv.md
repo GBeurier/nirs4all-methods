@@ -16,7 +16,7 @@ Sliding-window (local) SNV.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_local_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L28) · [`n4m_transform_local_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L31) · [`n4m_transform_local_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L32). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_local_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L35) · [`n4m_transform_local_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L38) · [`n4m_transform_local_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L39). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

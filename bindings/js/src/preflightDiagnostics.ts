@@ -90,6 +90,17 @@ function validateMatrix(X: Matrix): void {
     }
 }
 
+/** Integer in [lo, hi] and representable as a C int32_t (Emscripten passes
+ * "number" arguments as 32-bit integers and would wrap larger values). */
+function isInt32In(value: number, lo: number, hi: number): boolean {
+    return Number.isInteger(value) && value >= -0x80000000 && value <= 0x7fffffff &&
+        value >= lo && value <= hi;
+}
+
+/** Validated Savitzky-Golay domain of the native noise proxy. */
+const NOISE_PROXY_MAX_WINDOW = 1001;
+const NOISE_PROXY_MAX_POLYORDER = 10;
+
 function validateGroupIds(values: readonly (number | bigint)[]): void {
     for (const value of values) {
         if (typeof value === "number" && !Number.isSafeInteger(value)) {
@@ -145,7 +156,7 @@ function copyF64(ptr: number, n: number): Float64Array {
 /** Centered PCA using the native Methods SVD. Output matrices are row-major. */
 export function preflightPca(X: Matrix, k: number): PreflightPcaResult {
     validateMatrix(X);
-    if (!Number.isInteger(k) || k < 1 || k > Math.min(X.rows, X.cols)) {
+    if (!isInt32In(k, 1, Math.min(X.rows, X.cols))) {
         throw new RangeError("invalid PCA component count");
     }
     const m = getModule();
@@ -230,7 +241,7 @@ export function preflightNearestNeighbors(query: Matrix, reference: Matrix, k: n
     queryGroups?: readonly (number | bigint)[],
     referenceGroups?: readonly (number | bigint)[]): PreflightNeighborResult {
     validateMatrix(query); validateMatrix(reference);
-    if (query.cols !== reference.cols || !Number.isInteger(k) || k < 1 ||
+    if (query.cols !== reference.cols || !isInt32In(k, 1, 0x7fffffff) ||
         (queryGroups === undefined) !== (referenceGroups === undefined) ||
         (queryGroups && queryGroups.length !== query.rows) ||
         (referenceGroups && referenceGroups.length !== reference.rows)) {
@@ -265,7 +276,7 @@ export function preflightNearestNeighbors(query: Matrix, reference: Matrix, k: n
 export function preflightLocalContrast(targets: Float64Array,
     neighborIndices: readonly (number | bigint)[], k: number,
     categorical: boolean, groupIds?: readonly (number | bigint)[]): PreflightLocalContrastResult {
-    if (!Number.isSafeInteger(k) || k < 1 || targets.length < 1 ||
+    if (!isInt32In(k, 1, 0x7fffffff) || targets.length < 1 ||
         neighborIndices.length !== targets.length * k ||
         (groupIds && groupIds.length !== targets.length)) {
         throw new RangeError("invalid local contrast dimensions or groups");
@@ -386,9 +397,13 @@ export interface PreflightPairsResult {
 export function preflightNoiseProxy(X: Matrix, windowLength: number, polyorder: number,
     validMask?: Uint8Array): PreflightNoiseProxyResult {
     validateMatrix(X);
-    if (!Number.isInteger(windowLength) || !Number.isInteger(polyorder) ||
+    if (!isInt32In(windowLength, 3, Math.min(NOISE_PROXY_MAX_WINDOW, X.cols)) ||
+        windowLength % 2 === 0 ||
+        !isInt32In(polyorder, 0, Math.min(NOISE_PROXY_MAX_POLYORDER, windowLength - 2)) ||
         (validMask && validMask.length !== X.data.length)) {
-        throw new RangeError("invalid noise proxy window, polyorder or mask");
+        throw new RangeError(
+            "noise proxy needs an odd window in [3, min(1001, cols)], " +
+            "polyorder in [0, min(10, window - 2)] and a matching mask");
     }
     const m = getModule(), scope = new NativeScope();
     try {
@@ -474,7 +489,7 @@ export function preflightFactorAssociation(factorCodes: readonly (number | bigin
     targets: Float64Array, categorical: boolean, nPermutations: number,
     seed: number | bigint): PreflightFactorAssociationResult {
     if (factorCodes.length !== targets.length || targets.length < 2 ||
-        !Number.isInteger(nPermutations) || nPermutations < 0 || nPermutations > 1_000_000) {
+        !isInt32In(nPermutations, 0, 1_000_000)) {
         throw new RangeError("invalid association dimensions or permutation count");
     }
     validateGroupIds(factorCodes);

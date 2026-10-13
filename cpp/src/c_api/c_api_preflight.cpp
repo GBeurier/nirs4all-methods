@@ -24,6 +24,10 @@ using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
 constexpr long double max_hdbscan_products = 2500000000.0L;
+constexpr int32_t max_noise_window = 1001;
+constexpr int32_t max_noise_polyorder = 10;
+// Absolute tolerance on normalized Savitzky-Golay reproduction moments.
+constexpr long double moment_tolerance = 1e-9L;
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -648,10 +652,13 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     if (st != N4M_OK) return st;
     if (!band_noise || !band_counts || !out_two)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null noise proxy output");
-    if (window_length < 3 || window_length % 2 == 0 || polyorder < 0 ||
-        polyorder > window_length - 2)
+    // Validated domain: every odd window in [3, 1001] with polyorder <= 10
+    // reproduces polynomial moments within 4e-12 (Methods 1.3.7 scan); higher
+    // orders lose the reproduction (order 38, window 41: constant residual 0.83).
+    if (window_length < 3 || window_length > max_noise_window || window_length % 2 == 0 ||
+        polyorder < 0 || polyorder > max_noise_polyorder || polyorder > window_length - 2)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
-                    "noise proxy needs an odd window >= 3 and polyorder <= window-2");
+                    "noise proxy needs an odd window in [3, 1001] and polyorder <= min(10, window-2)");
     const int64_t n = X->rows, p = X->cols;
     if (n < 1 || p < window_length)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "noise proxy needs cols >= window length");
@@ -680,6 +687,19 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         const double gain = static_cast<double>(std::sqrt(gain2));
         if (!(gain > 0.0) || !std::isfinite(gain))
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "zero residual gain");
+        // Smoothing invariant: the weights reproduce every polynomial of
+        // degree <= polyorder, sum_k w_k (k/h)^m = [m == 0] for m = 0..polyorder.
+        for (int32_t order = 0; order <= polyorder; ++order) {
+            long double moment = 0.0L;
+            for (int64_t j = h; j < impulse_cols - h; ++j) {
+                const long double k = static_cast<long double>(j - (window_length - 1)) /
+                                      static_cast<long double>(h);
+                moment += static_cast<long double>(response[sz(j)]) * std::pow(k, static_cast<long double>(order));
+            }
+            if (!(std::fabs(moment - (order == 0 ? 1.0L : 0.0L)) <= moment_tolerance))
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                            "Savitzky-Golay weights do not reproduce polynomial moments");
+        }
         std::vector<double> data(sz(n) * sz(p)), smooth(sz(n) * sz(p));
         std::vector<int64_t> invalid_prefix(sz(p) + 1);
         std::vector<uint8_t> evaluable(sz(n) * sz(p), 0);
@@ -772,25 +792,47 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     std::fill(query_flags, query_flags + query->rows, uint8_t{0});
     if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
     uint8_t* rflags = self ? query_flags : reference_flags;
-    // Compare sum(((q-r)/tolerance)^2) with cols: overflow means "far".
+    // Within tolerance iff ||(q - r) / tolerance||_2 <= sqrt(cols). Each
+    // scaled difference is formed without overflow of q - r, and the norm is
+    // accumulated as scale^2 * ssq (LAPACK dnrm2), so neither large nor tiny
+    // differences overflow or underflow. A scaled difference that is itself
+    // not representable exceeds sqrt(cols) and means "far".
     const double limit = static_cast<double>(query->cols);
+    const double bound = std::sqrt(limit);
+    const auto scaled_difference = [tolerance](double a, double b) {
+        const double d = a - b;
+        if (std::isfinite(d)) return std::fabs(d) / tolerance;
+        return 2.0 * (std::fabs(0.5 * a - 0.5 * b) / tolerance);
+    };
     int64_t found = 0, candidates = 0;
     for (int64_t i = 0; i < query->rows; ++i) {
         for (int64_t k = self ? i + 1 : 0; k < R.rows; ++k) {
             if (query_groups && query_groups[i] == rgroups[k]) continue;
             ++candidates;
-            double s = 0.0;
-            for (int64_t j = 0; j < query->cols && s <= limit; ++j) {
-                const double t = (at(*query, i, j) - at(R, k, j)) / tolerance;
-                s += t * t;
+            double scale = 0.0, ssq = 1.0;
+            bool far = false;
+            for (int64_t j = 0; j < query->cols; ++j) {
+                const double t = scaled_difference(at(*query, i, j), at(R, k, j));
+                if (t == 0.0) continue;
+                if (!(t <= bound)) { far = true; break; }
+                if (scale < t) {
+                    const double r = scale / t;
+                    ssq = 1.0 + ssq * r * r;
+                    scale = t;
+                } else {
+                    const double r = t / scale;
+                    ssq += r * r;
+                }
+                if (!(scale * scale * ssq <= limit)) { far = true; break; }
             }
-            if (!(s <= limit)) continue;
+            if (far) continue;
             query_flags[i] = 1;
             rflags[k] = 1;
             if (found < max_pairs) {
                 pair_indices[2 * found] = i;
                 pair_indices[2 * found + 1] = k;
-                pair_distances[found] = tolerance * std::sqrt(s / limit);
+                // RMS = tolerance * ||t|| / sqrt(cols); the ratio is <= 1.
+                pair_distances[found] = tolerance * (scale * std::sqrt(ssq) / bound);
             }
             ++found;
         }

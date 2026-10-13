@@ -123,7 +123,11 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
 
 /* Smoothing-residual noise proxy along the feature axis. Features are assumed
  * equally spaced. Each row is smoothed by the Methods Savitzky-Golay filter
- * (deriv 0, odd window_length >= 3, 0 <= polyorder <= window_length-2).
+ * (deriv 0, odd 3 <= window_length <= 1001, 0 <= polyorder <=
+ * min(10, window_length-2): the domain where the weights were verified to
+ * reproduce polynomials; other values give N4M_ERR_INVALID_ARGUMENT). The
+ * weights must satisfy sum_k w_k (k/h)^m = [m == 0] within 1e-9 for every
+ * m <= polyorder, else N4M_ERR_NUMERICAL_FAILURE.
  * A residual r_ij = x_ij - smooth_ij exists only for interior features
  * (h <= j < cols-h, h = window_length/2) whose whole window is valid in row
  * i: edges are never padded. g = sqrt(sum_k (delta_k - w_k)^2) is the
@@ -151,7 +155,10 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
  * query_flags (query rows) and, for two matrices, reference_flags (reference
  * rows) are set to 1 for rows in at least one pair, else 0. out_counts
  * receives [total pairs within tolerance, candidate pairs compared]. All
- * values must be finite. */
+ * values must be finite. Differences are scaled by the tolerance and their
+ * norm accumulated with rescaling, so a difference q - r that is not
+ * representable (e.g. 1e308 - (-1e308)) is still compared exactly; only a
+ * scaled difference above sqrt(cols) is far without further work. */
 N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,

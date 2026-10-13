@@ -9,6 +9,13 @@ extern "C" {
 #endif
 
 /* ---------- SNV (Standard Normal Variate) -------------------------------- */
+/* Row-wise (x - mean) / sd with numpy's two-pass mean and SD (ddof), and the
+ * nirs4all rule that a zero SD leaves the row unscaled. A constant finite row
+ * (all values equal) maps to exact zeros when centred and is never scaled, so
+ * the rounding residue of a computed mean is never standardized into signal.
+ * Finite rows whose sums or squared deviations overflow or underflow are
+ * recomputed on rescaled values; a non-finite result for a finite row gives
+ * N4M_ERR_NUMERICAL_FAILURE. Rows containing NaN/Inf propagate them. */
 typedef struct n4m_pp_snv_handle_t n4m_pp_snv_handle_t;
 N4M_API n4m_status_t n4m_transform_snv_create(n4m_pp_snv_handle_t** out,
                                         int with_mean, int with_std, int ddof);
