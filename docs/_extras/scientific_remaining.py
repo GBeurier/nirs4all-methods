@@ -1756,7 +1756,11 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "chi-square interval of the within SD needs only the first two. The balanced exact "
         "interval is not truncated to [0, 1]. Bootstrap percentiles are unreliable with few "
         "resampling units; replicates without within-group degrees of freedom are counted as "
-        "invalid. Boundary estimates ($\\sigma_b^2=0$ or $\\sigma_w^2=0$) are flagged per feature.",
+        "invalid. Boundary estimates ($\\sigma_b^2=0$ or $\\sigma_w^2=0$) are flagged per feature. "
+        "Measured percentile coverage at 95 % nominal is 0.86-0.94 for 20 to 60 groups "
+        "(`parity/generators/variance_components_coverage.py`); the intervals are exploratory. "
+        "A likelihood maximum narrower than one grid cell (1/8 decade of gamma) can be missed; "
+        "a variance that does not fit a double returns status 6.",
         "The ABI-2 symbols `n4m_stats_variance_components_reml` and "
         "`n4m_stats_variance_components_intervals` in `n4m/metrics.h` are implemented in "
         "`cpp/src/c_api/c_api_variance_components.cpp` and `cpp/src/core/variance_components.cpp`, "
