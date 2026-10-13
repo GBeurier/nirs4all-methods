@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **223**
+- Curated records: **227**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `f12a9e01bc98939e81ce81bbc4195b2cb24926dd003a2263c8c349b1eeda1b10`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `09a6fe945c7d274a7da54dfaa6bd175c8d10fda963c853aeb190ca509a0df549`
 
 ## References by documentation page
 
@@ -424,11 +424,35 @@ Nikzad-Langerodi, R., Zellinger, W., Saminger-Platz, S. & Moser, B. A. (2018). *
 
 **Provenance:** Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/extra_pls.cpp).
 
+### [`diagnostics_adjusted_rand_index`](diagnostics_adjusted_rand_index.md) — Adjusted Rand index between two partitions
+
+Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193–218, https://doi.org/10.1007/BF01908075.
+
+**Provenance:** https://doi.org/10.1007/BF01908075; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_hdbscan.cpp
+
+### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
+
+Campello, Moulavi & Sander (2013), *Density-Based Clustering Based on Hierarchical Density Estimates*, PAKDD 2013, LNCS 7819, 160–172, https://doi.org/10.1007/978-3-642-37456-2_14; McInnes & Healy (2017), *Accelerated Hierarchical Density Based Clustering*, ICDMW 2017, 33–42, https://doi.org/10.1109/ICDMW.2017.12.
+
+**Provenance:** https://doi.org/10.1007/978-3-642-37456-2_14; https://doi.org/10.1109/ICDMW.2017.12; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/clustering/_vendored/hdbscan.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/hdbscan_v1.json; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/dev/hdbscan.md
+
+### [`diagnostics_holm_adjust`](diagnostics_holm_adjust.md) — Holm step-down adjusted p-values
+
+Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandinavian Journal of Statistics 6(2), 65–70, https://www.jstor.org/stable/4615733.
+
+**Provenance:** https://www.jstor.org/stable/4615733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
 ### [`diagnostics_pls_diagnostics`](diagnostics_pls_diagnostics.md) — PLS model diagnostics: Hotelling T², Q residuals, and DModX
 
 Hotelling (1931), *The Generalization of Student's Ratio*, https://doi.org/10.1214/aoms/1177732979; Jackson & Mudholkar (1979), *Control Procedures for Residuals Associated With Principal Component Analysis*, https://doi.org/10.1080/00401706.1979.10489779; Wold et al. (2001), *PLS-regression: a basic tool of chemometrics*, https://doi.org/10.1016/S0169-7439(01)00155-1.
 
 **Provenance:** https://doi.org/10.1214/aoms/1177732979; https://doi.org/10.1080/00401706.1979.10489779; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/pls_diagnostics.cpp
+
+### [`diagnostics_preflight_qualification`](diagnostics_preflight_qualification.md) — Preflight dataset-qualification diagnostics
+
+This kernel bundle has no single canonical paper. The noise proxy smooths with the Savitzky–Golay filter (Savitzky & Golay, 1964, *Smoothing and Differentiation of Data by Simplified Least Squares Procedures*, https://doi.org/10.1021/ac60214a047). Repeatability reports the one-way random-effects ICC(1,1) (Shrout & Fleiss, 1979, *Intraclass correlations: uses in assessing rater reliability*, https://doi.org/10.1037/0033-2909.86.2.420). Factor association uses eta² with the one-way ANOVA F statistic, or Cramér's V with the Pearson chi-square statistic.
+
+**Provenance:** https://doi.org/10.1021/ac60214a047; https://doi.org/10.1037/0033-2909.86.2.420; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
 
 ### [`diagnostics_regression_metrics`](diagnostics_regression_metrics.md) — Regression and NIR prediction metrics
 

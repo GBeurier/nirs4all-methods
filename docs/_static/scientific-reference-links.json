@@ -889,6 +889,77 @@
       "links": [
         {
           "kind": "doi",
+          "value": "10.1007/BF01908075"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/BF01908075"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_hdbscan.cpp"
+        }
+      ],
+      "page": "diagnostics_adjusted_rand_index"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1007/978-3-642-37456-2_14"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1109/ICDMW.2017.12"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1007/978-3-642-37456-2_14"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/ICDMW.2017.12"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/clustering/_vendored/hdbscan.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/dev/hdbscan.md"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/hdbscan_v1.json"
+        }
+      ],
+      "page": "diagnostics_hdbscan"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.jstor.org/stable/4615733"
+        }
+      ],
+      "page": "diagnostics_holm_adjust"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
           "value": "10.1016/S0169-7439(01)00155-1"
         },
         {
@@ -917,6 +988,35 @@
         }
       ],
       "page": "diagnostics_pls_diagnostics"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1021/ac60214a047"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1037/0033-2909.86.2.420"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1021/ac60214a047"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1037/0033-2909.86.2.420"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp"
+        }
+      ],
+      "page": "diagnostics_preflight_qualification"
     },
     {
       "links": [
@@ -3351,6 +3451,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "f12a9e01bc98939e81ce81bbc4195b2cb24926dd003a2263c8c349b1eeda1b10"
+    "docs/_extras/scientific_remaining.py": "09a6fe945c7d274a7da54dfaa6bd175c8d10fda963c853aeb190ca509a0df549"
   }
 }

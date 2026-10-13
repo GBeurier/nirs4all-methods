@@ -1,0 +1,57 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.preflight_qualification"
+family: "diagnostics.preflight"
+category: "diagnostics"
+subcategory: "preflight"
+since_abi: "2.18.0"
+abi_symbols:
+  - "n4m_preflight_factor_association"
+  - "n4m_preflight_local_contrast"
+  - "n4m_preflight_nearest_neighbors"
+  - "n4m_preflight_noise_proxy_compute"
+  - "n4m_preflight_pairs_within_tolerance"
+  - "n4m_preflight_pca_compute"
+  - "n4m_preflight_repeatability_compute"
+  - "n4m_preflight_summary_compute"
+tu:
+  - "cpp/src/c_api/c_api_preflight.cpp"
+headers:
+  - "cpp/include/n4m/metrics.h"
+carry_along_tu:
+  - "cpp/src/core/common/pca_helper.c"
+  - "cpp/src/core/common/rng_pcg64.c"
+  - "cpp/src/core/preprocessing/derivatives/savitzky_golay.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.preflight_qualification"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts."
+c_surface:
+  - "n4m_preflight_factor_association"
+  - "n4m_preflight_local_contrast"
+  - "n4m_preflight_nearest_neighbors"
+  - "n4m_preflight_noise_proxy_compute"
+  - "n4m_preflight_pairs_within_tolerance"
+  - "n4m_preflight_pca_compute"
+  - "n4m_preflight_repeatability_compute"
+  - "n4m_preflight_summary_compute"
+fq_name: "n4m.metrics.preflight.qualification"
+leaf: "qualification"
+legacy_ids:
+  - "diagnostics.preflight_qualification"
+namespace: "metrics.preflight"

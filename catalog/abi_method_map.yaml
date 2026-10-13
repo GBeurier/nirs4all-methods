@@ -76,6 +76,12 @@ method_prefix:
   diagnostics.regression_metrics: n4m_metrics_regression_metrics
   diagnostics.validation: null
   diagnostics.variable_importance: null
+  # Preflight diagnostics (ABI 2.18/2.19). Longest prefix wins, so the Holm
+  # and ARI symbols leave the generic n4m_preflight bundle.
+  diagnostics.preflight_qualification: n4m_preflight
+  diagnostics.holm_adjust: n4m_preflight_holm_adjust
+  diagnostics.adjusted_rand_index: n4m_preflight_adjusted_rand_index
+  diagnostics.hdbscan: n4m_cluster_hdbscan
 
   # ---- filters ----
   filters.composite: n4m_outlier_detection_composite

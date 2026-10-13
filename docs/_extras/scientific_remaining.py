@@ -1430,6 +1430,130 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "cpp/src/core/utilities/nirs_metrics.c",
     ),
+    "diagnostics_preflight_qualification": _entry(
+        "Preflight dataset-qualification diagnostics",
+        "This kernel bundle has no single canonical paper. The noise proxy smooths with the "
+        "Savitzky–Golay filter (Savitzky & Golay, 1964, *Smoothing and Differentiation of Data "
+        "by Simplified Least Squares Procedures*, https://doi.org/10.1021/ac60214a047). "
+        "Repeatability reports the one-way random-effects ICC(1,1) (Shrout & Fleiss, 1979, "
+        "*Intraclass correlations: uses in assessing rater reliability*, "
+        "https://doi.org/10.1037/0033-2909.86.2.420). Factor association uses eta² with the "
+        "one-way ANOVA F statistic, or Cramér's V with the Pearson chi-square statistic.",
+        "Eight caller-buffer kernels. PCA returns centered scores, loadings and $k$ eigenvalues "
+        "(ddof=1) plus the exact full-spectrum moments $\\sum\\lambda$ and $\\sum\\lambda^2$. "
+        "Repeatability returns, per feature, the pooled within-group SD and, for balanced groups "
+        "of $r$ repeats, $ICC(1,1)=(MS_B-MS_W)/(MS_B+(r-1)MS_W)$. The summary returns count, min, "
+        "max, mean, sample SD and type-7 quartiles. Nearest neighbors are Euclidean and can exclude "
+        "rows of the same group. Local contrast compares target disagreement among neighbors with "
+        "the disagreement expected over all admissible rows. The noise proxy is the RMS of "
+        "$x-\\mathrm{SG}(x)$ over interior features divided by the white-noise residual gain "
+        "$g=\\sqrt{\\sum_k(\\delta_k-w_k)^2}$. Tolerance pairs list row pairs whose RMS feature "
+        "difference is at most a tolerance. Factor association returns eta² and F, or Cramér's V "
+        "and chi-square, with an optional seeded permutation p-value $(1+b)/(1+B)$.",
+        "Qualifying a spectral dataset before modelling: spectral rank and dominance, replicate "
+        "repeatability, local target structure, a smoothing-based noise level, near-duplicate rows, "
+        "and association between metadata factors and the target.",
+        "These are descriptive diagnostics, not model-validation scores. The noise proxy assumes "
+        "equally spaced features and a locally polynomial signal; it is not an SNR. ICC is "
+        "computed only for balanced complete groups and is NaN otherwise. The association test "
+        "assumes exchangeable units and permutes targets as one unrestricted block. PCA moments "
+        "and permutation tests above 250 million operations return `N4M_ERR_UNSUPPORTED`; "
+        "neighbor and pair searches are exhaustive and quadratic in rows.",
+        "The ABI-2 symbols `n4m_preflight_{pca_compute,repeatability_compute,summary_compute,"
+        "nearest_neighbors,local_contrast,noise_proxy_compute,pairs_within_tolerance,"
+        "factor_association}` in `n4m/metrics.h` are implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp`. They reuse the Methods PCA helper, the "
+        "Savitzky–Golay engine and the PCG64 generator, seeded like `numpy.random.default_rng`. "
+        "The JS/WASM binding wraps them in `bindings/js/src/preflightDiagnostics.ts`. NumPy/SciPy "
+        "reference values are pinned in `cpp/tests/test_preflight.cpp`.",
+        "https://doi.org/10.1021/ac60214a047; "
+        "https://doi.org/10.1037/0033-2909.86.2.420; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_preflight.cpp",
+    ),
+    "diagnostics_holm_adjust": _entry(
+        "Holm step-down adjusted p-values",
+        "Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandinavian "
+        "Journal of Statistics 6(2), 65–70, https://www.jstor.org/stable/4615733.",
+        "For one family of $m$ p-values sorted ascending as $p_{(1)}\\le\\dots\\le p_{(m)}$, "
+        "the adjusted value of the hypothesis of rank $i$ is "
+        "$\\min(1,\\max_{j\\le i}(m-j+1)p_{(j)})$. The sort is stable, so tied p-values keep "
+        "their input order, as in R `p.adjust(method = \"holm\")`.",
+        "Controlling the family-wise error rate when several Preflight factor-association tests "
+        "are reported together, without assuming independence between the tests.",
+        "Holm controls the family-wise error rate, not the false discovery rate, and is "
+        "conservative for many correlated tests. The caller defines the family. Inputs must lie "
+        "in $[0,1]$ and $m\\ge 1$.",
+        "The ABI-2 symbol `n4m_preflight_holm_adjust` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `preflightHolmAdjust`. "
+        "R `p.adjust` reference values are pinned in `cpp/tests/test_preflight.cpp`.",
+        "https://www.jstor.org/stable/4615733; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_preflight.cpp",
+    ),
+    "diagnostics_adjusted_rand_index": _entry(
+        "Adjusted Rand index between two partitions",
+        "Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193–218, "
+        "https://doi.org/10.1007/BF01908075.",
+        "From the contingency table $n_{ij}$ of two labelings with row sums $a_i$ and column "
+        "sums $b_j$, $ARI=(\\sum_{ij}\\binom{n_{ij}}{2}-E)/(\\tfrac12[\\sum_i\\binom{a_i}{2}"
+        "+\\sum_j\\binom{b_j}{2}]-E)$, with $E=\\sum_i\\binom{a_i}{2}\\sum_j\\binom{b_j}{2}/"
+        "\\binom{n}{2}$. It is computed from pair-confusion counts, as scikit-learn "
+        "`adjusted_rand_score`.",
+        "Measuring the agreement of two clusterings of the same rows, for example HDBSCAN "
+        "partitions on subsamples when assessing cluster stability.",
+        "Every label value, including -1, is an ordinary class: callers must filter noise first. "
+        "The result is NaN for fewer than two rows or for identical trivial partitions (one class "
+        "or all singletons), where scikit-learn returns 1.0 by convention. ARI can be negative.",
+        "The ABI-2 symbol `n4m_preflight_adjusted_rand_index` in `n4m/metrics.h` is implemented "
+        "in `cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by "
+        "`preflightAdjustedRandIndex`. scikit-learn 1.9.1 reference values are pinned in "
+        "`cpp/tests/test_hdbscan.cpp`.",
+        "https://doi.org/10.1007/BF01908075; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_hdbscan.cpp",
+    ),
+    "diagnostics_hdbscan": _entry(
+        "HDBSCAN* density-based hierarchical clustering",
+        "Campello, Moulavi & Sander (2013), *Density-Based Clustering Based on Hierarchical "
+        "Density Estimates*, PAKDD 2013, LNCS 7819, 160–172, "
+        "https://doi.org/10.1007/978-3-642-37456-2_14; McInnes & Healy (2017), *Accelerated "
+        "Hierarchical Density Based Clustering*, ICDMW 2017, 33–42, "
+        "https://doi.org/10.1109/ICDMW.2017.12.",
+        "The core distance of a row is the Euclidean distance to its `min_samples`-th nearest "
+        "row, counting the row itself. The mutual-reachability distance is "
+        "$d_m(a,b)=\\max(\\mathrm{core}(a),\\mathrm{core}(b),d(a,b))$. A minimum spanning tree "
+        "over $d_m$ gives a single-linkage hierarchy. It is condensed with `min_cluster_size`, "
+        "and clusters are selected by excess of mass (EOM) or as leaves. The result has labels "
+        "(-1 for noise), membership strengths, GLOSH outlier scores, cluster persistence and the "
+        "condensed tree.",
+        "Exploratory detection of dense sample groups and outliers in spectral or score spaces, "
+        "without fixing the number of clusters in advance.",
+        "Results depend on `min_cluster_size`, `min_samples` and the metric, here Euclidean on "
+        "the supplied features. Membership is a relative strength, not a probability. Cost is "
+        "quadratic in rows, and workloads above 2.5e9 distance products are refused. "
+        "Equal-weight MST edges keep Prim insertion order, which scikit-learn leaves unspecified.",
+        "The ABI-2 symbol `n4m_cluster_hdbscan` in `n4m/metrics.h` is a C++ port of "
+        "scikit-learn 1.9.1 `sklearn.cluster.HDBSCAN`, with GLOSH scores and persistence from "
+        "scikit-learn-contrib/hdbscan 0.8.44 (BSD-3-Clause), in "
+        "`cpp/src/core/clustering/_vendored/hdbscan.cpp`. `parity/generators/hdbscan_v1.py` "
+        "writes the reference fixture `parity/fixtures/hdbscan_v1.json`, which "
+        "`cpp/tests/test_hdbscan.cpp` checks. JS/WASM wraps it as `clusterHdbscan`.",
+        "https://doi.org/10.1007/978-3-642-37456-2_14; "
+        "https://doi.org/10.1109/ICDMW.2017.12; "
+        + _REPO
+        + "cpp/src/core/clustering/_vendored/hdbscan.cpp; "
+        + _REPO
+        + "parity/fixtures/hdbscan_v1.json; "
+        + _REPO
+        + "docs/dev/hdbscan.md",
+    ),
     "utilities_hotelling_t2": _entry(
         "Standalone PCA Hotelling T² statistic",
         "Hotelling (1931), *The Generalization of Student's Ratio*, Annals of Mathematical "

@@ -57,14 +57,16 @@ from public_api_docs import (  # noqa: E402
     scan_r_public_api,
 )
 
-CATALOG_SIZE = 216
+CATALOG_SIZE = 220
 REGISTRY_SIZE = 73
 PYTHON_VERIFIED = 184
 # models.pls.pls_regression, preprocessing.scaling.standard_scale and
 # utilities.ragged_summary use the
 # generated n4m.roles index (docs/parity/estimator_roles_coverage.md), which is
 # intentionally separate from the legacy public re-export scanner below.
-PYTHON_C_ONLY = 32
+# The four Preflight/clustering diagnostics (ABI 2.18/2.19) have C and JS/WASM
+# surfaces but no Python wrapper yet.
+PYTHON_C_ONLY = 36
 R_VERIFIED = 77
 MATLAB_VERIFIED = 70
 
