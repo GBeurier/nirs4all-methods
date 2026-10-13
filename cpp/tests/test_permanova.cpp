@@ -122,6 +122,51 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
             == N4M_OK);
     REQUIRE(again.counts[0] == got.counts[0] && again.v[2] == got.v[2]);
 
+    if (s.find("\"freedman_lane\"", lo) < hi) {
+        const auto [flo, fhi] = object_span(s, "freedman_lane", lo, hi);
+        // conditions: list of code lists, stored row-major n x c for the ABI.
+        size_t pos = find_value_for_key(s, "conditions", flo, fhi);
+        const auto [clo, chi] = read_value_span(s, pos);
+        std::vector<std::vector<int64_t>> columns;
+        for (size_t q = clo + 1; q < chi;) {
+            const size_t open = s.find('[', q);
+            if (open == std::string::npos || open >= chi) break;
+            const size_t close = s.find(']', open);
+            std::vector<int64_t> col;
+            for (size_t r = open + 1; r < close;) {
+                char* tail = nullptr;
+                col.push_back(std::strtoll(s.c_str() + r, &tail, 10));
+                r = static_cast<size_t>(tail - s.c_str());
+                while (r < close && (s[r] == ',' || s[r] == ' ' || s[r] == '\n')) ++r;
+            }
+            columns.push_back(col);
+            q = close + 1;
+        }
+        const auto nrows = static_cast<size_t>(rows);
+        std::vector<int64_t> cond(nrows * columns.size());
+        for (size_t i = 0; i < nrows; ++i)
+            for (size_t c = 0; c < columns.size(); ++c) cond[i * columns.size() + c] = columns[c][i];
+        double fl[12];
+        int64_t fcounts[2] = {};
+        const auto fseed = static_cast<uint64_t>(integer(s, "seed", flo, fhi));
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term.data(), cond.data(),
+                    static_cast<int32_t>(columns.size()), b, fseed, fl, fcounts) == N4M_OK);
+        const double ftotal = hex_scalar(s, "ss_total", flo, fhi);
+        const char* fkeys[] = {"ss_total", "ss_reduced", "ss_term", "ss_residual"};
+        for (int i = 0; i < 4; ++i) REQUIRE(near(fl[i], hex_scalar(s, fkeys[i], flo, fhi), ftotal));
+        REQUIRE(near(fl[6], hex_scalar(s, "pseudo_f", flo, fhi)));
+        REQUIRE(fl[7] == static_cast<double>(integer(s, "df_term", flo, fhi)));
+        REQUIRE(fl[8] == static_cast<double>(integer(s, "df_residual", flo, fhi)));
+        REQUIRE(fl[9] == static_cast<double>(integer(s, "rank_reduced", flo, fhi)));
+        const int64_t fb = integer(s, "b", flo, fhi), fexec = integer(s, "executed", flo, fhi);
+        REQUIRE(fcounts[0] == fb && fcounts[1] == fexec);
+        REQUIRE(fexec == 0 ? std::isnan(fl[11])
+                           : near(fl[11], static_cast<double>(1 + fb) / static_cast<double>(1 + fexec)));
+        // With one condition factor the observed partial pseudo-F is the
+        // within-strata PERMANOVA statistic of the same case.
+        if (columns.size() == 1 && columns[0] == strata && std::isfinite(got.v[6]))
+            REQUIRE(near(fl[6], got.v[6]));
+    }
     if (s.find("\"permdisp\"", lo) < hi) {
         const auto [dlo, dhi] = object_span(s, "permdisp", lo, hi);
         const auto n = static_cast<size_t>(rows);
@@ -217,6 +262,17 @@ int main() {
         REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, bout, bcounts) == N4M_OK);
         REQUIRE(tdist[0] == 0.0 && tmeans[1] == 0.0);
 
+        // Freedman-Lane with no condition: fitted = mean, so each draw is the
+        // free permutation of the data and b equals the one-way golden (93).
+        double fl[12];
+        int64_t fcounts[2];
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 0, 999, 17, fl, fcounts)
+                == N4M_OK);
+        REQUIRE(near(fl[6], 54) && near(fl[2], 54) && fl[7] == 1 && fl[8] == 4 && fl[9] == 1);
+        REQUIRE(fcounts[0] == 93 && near(fl[11], 94.0 / 1000.0));
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 1, 0, 1, fl, fcounts)
+                == N4M_ERR_NULL_POINTER);
+
         // Balanced 2x2 in 1-D: term a1 {1,3,2,4}, a2 {5,7,6,8}; strata b1
         // {1,3,5,7}, b2 {2,4,6,8}. Orthogonal: SS_term = 32, SS_strata = 2,
         // SST = 42, SS_res = 8 on 8-3 = 5 df, F = 32/(8/5) = 20.
@@ -229,6 +285,9 @@ int main() {
         REQUIRE(near(r.v[5], 0.8) && near(r.v[4], 32.0 / 42.0));
         // Within strata 4!/(2!2!) = 6 assignments each: log10 36.
         REQUIRE(near(r.v[11], std::log10(36.0)));
+        // Freedman-Lane on the balanced 2x2: the same F = 20 (orthogonal design).
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Z, ta, sb, 1, 0, 1, fl, fcounts) == N4M_OK);
+        REQUIRE(near(fl[6], 20) && near(fl[1], 2) && fl[7] == 1 && fl[8] == 5 && fl[9] == 2);
         // Term aliased with the strata (instrument = site): df 0, no test.
         REQUIRE(permanova(ctx, Z, ta, ta, 999, 1, r) == N4M_OK);
         REQUIRE(r.v[7] == 0 && r.v[2] == 0 && std::isnan(r.v[4]) && std::isnan(r.v[6]));
@@ -264,7 +323,7 @@ int main() {
         REQUIRE(s.find("\"n4m_permanova_v1\"") != std::string::npos);
         const auto [lo, hi] = find_cases_array(s);
         const auto spans = list_case_object_spans(s, lo, hi);
-        REQUIRE(spans.size() == 8);
+        REQUIRE(spans.size() == 11);
         for (const auto& [a, b] : spans) gate_case(ctx, s, a, b);
 
         // Argument validation.

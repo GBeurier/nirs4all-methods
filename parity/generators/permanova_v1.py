@@ -41,6 +41,25 @@ undefined. PERMDISP: ``perm = rng.permutation(n)``; row i receives residual
 transform, because an additive tolerance is not invariant under it (case
 ``permdisp_boundary``).
 
+Freedman-Lane (Freedman & Lane 1983; Anderson 2001, Can. J. Fish. Aquat. Sci.
+58:626-639): the partial test of the term given the additive main effects of
+the condition factors permutes the residuals of the reduced model. The oracle
+fits both designs with ``lstsq`` and, for each ``perm = rng.permutation(n)``,
+refits ``Y* = fitted_reduced + E[perm]`` on both designs; pseudo-F counts when
+``>= F0 - sqrt(eps)``. vegan is NOT this algorithm, so it is not the oracle;
+two vegan schemes are transcribed only as informational counts (vegan master
+964a8de, 2026-10-12):
+* ``vegan_margin_raw``: ``adonis2(by = "margin")`` = ``anovaCCAbymargin``
+  (R/anova.ccabyterm.R lines 54-110) permutes the raw response for the full
+  model and for each model without the term, and compares
+  ``(SS_full - SS_without_term)/Df / (RSS_full/df)`` with ``Fstat - EPS``
+  (lines 76-79 note that conditioning was dropped after vegan 2.0).
+* ``vegan_partial_permutest``: ``permutest.cca(model = "reduced")`` of a partial
+  model term + Condition(others) (R/permutest.cca.R lines 154-157, src/getF.c
+  lines 383-447) permutes the reduced-model residuals AND the condition rows
+  together, residualizes both on the permuted conditions and keeps the term
+  fixed; ``r = n - rank - 1``.
+
 Usage: python parity/generators/permanova_v1.py [output.json]
 """
 
@@ -175,6 +194,95 @@ def permdisp_reference(X: np.ndarray, groups: np.ndarray, seed: int) -> dict:
             "n_groups": k, "log10_distinct": distinct, "b": b, "b_u_rule": int(b_u)}
 
 
+def _rank(D):
+    return int(np.linalg.matrix_rank(D))
+
+
+def _rss(D, Y):
+    beta, *_ = np.linalg.lstsq(D, Y, rcond=None)
+    return float(np.sum((Y - D @ beta) ** 2))
+
+
+def freedman_lane(X, term, conditions, seed) -> dict:
+    n = X.shape[0]
+    Z = np.hstack([np.ones((n, 1))] + [one_hot(c) for c in conditions])
+    W = np.hstack([Z, one_hot(term)])
+    rz, rw = _rank(Z), _rank(W)
+    df_term, df_res = rw - rz, n - rw
+    beta, *_ = np.linalg.lstsq(Z, X, rcond=None)
+    fitted = Z @ beta
+    E = X - fitted
+
+    def fstat(Y):
+        rr, rf = _rss(Z, Y), _rss(W, Y)
+        return ((rr - rf) / df_term) / (rf / df_res) if rf > 0 else np.inf
+
+    ss_total = float(np.sum((X - X.mean(axis=0)) ** 2))
+    rr, rf = _rss(Z, X), _rss(W, X)
+    ss_term = max(rr - rf, 0.0) if df_term > 0 else 0.0
+    defined = df_term > 0 and df_res > 0 and rf > 0
+    f0 = fstat(X) if defined else float("nan")
+    b = 0
+    if defined:
+        rng = np.random.default_rng(seed)
+        for _ in range(PERMUTATIONS):
+            if fstat(fitted + E[rng.permutation(n)]) >= f0 - TOL:
+                b += 1
+    out = {"ss_total": ss_total, "ss_reduced": max(ss_total - rr, 0.0), "ss_term": ss_term,
+           "ss_residual": rf, "pseudo_f": f0, "df_term": df_term, "df_residual": df_res,
+           "rank_reduced": rz, "b": b, "executed": PERMUTATIONS if defined else 0}
+    if defined:
+        out["vegan_margin_raw_b"] = vegan_margin_raw(X, Z, W, df_term, df_res, f0, seed)
+        out["vegan_partial_permutest_b"] = vegan_partial_permutest(X, term, conditions, seed)
+    return out
+
+
+def vegan_margin_raw(X, Z, W, df_term, df_res, f0, seed) -> int:
+    # anovaCCAbymargin: same raw permutation for the full model and the model
+    # without the term; F of change against the permuted full residual.
+    rng = np.random.default_rng(seed)
+    b = 0
+    Xc = X - X.mean(axis=0)
+    for _ in range(PERMUTATIONS):
+        Y = Xc[rng.permutation(X.shape[0])]
+        rf = _rss(W, Y)
+        f = ((_rss(Z, Y) - rf) / df_term) / (rf / df_res) if rf > 0 else np.inf
+        b += f >= f0 - TOL
+    return int(b)
+
+
+def vegan_partial_permutest(X, term, conditions, seed) -> int:
+    # getF.c: rows of the reduced-model residuals E and of the conditions Z
+    # are permuted together; Y and the fixed term X are residualized on the
+    # permuted Z; F = (cca/q)/(ca/r) with r = n - rank([Z X]) - 1.
+    n = X.shape[0]
+    Zc = np.hstack([one_hot(c) for c in conditions])
+    Zc = Zc - Zc.mean(axis=0)
+    Tc = one_hot(term) - one_hot(term).mean(axis=0)
+    q = _rank(np.hstack([Zc, Tc])) - _rank(Zc)
+    r = n - _rank(np.hstack([Zc, Tc])) - 1
+
+    def resid(D, Y):
+        beta, *_ = np.linalg.lstsq(D, Y, rcond=None)
+        return Y - D @ beta
+
+    def fstat(E, Zp):
+        Y = resid(Zp, E)
+        Xr = resid(Zp, Tc)
+        beta, *_ = np.linalg.lstsq(Xr, Y, rcond=None)
+        fit = Xr @ beta
+        return (np.sum(fit**2) / q) / (np.sum((Y - fit) ** 2) / r)
+
+    E = resid(Zc, X - X.mean(axis=0))
+    f0 = fstat(E, Zc)
+    rng = np.random.default_rng(seed)
+    b = 0
+    for _ in range(PERMUTATIONS):
+        p = rng.permutation(n)
+        b += fstat(E[p], Zc[p]) >= f0 - TOL
+    return int(b)
+
+
 def skbio_checks(X: np.ndarray, term: np.ndarray, ref: dict, disp: dict | None) -> dict:
     d = np.sqrt(np.sum((X[:, None, :] - X[None, :, :]) ** 2, axis=2))
     ids = [f"r{i}" for i in range(X.shape[0])]
@@ -188,7 +296,7 @@ def skbio_checks(X: np.ndarray, term: np.ndarray, ref: dict, disp: dict | None) 
     return out
 
 
-def make_case(name, X, term, strata, seed, with_disp, note, skbio=True):
+def make_case(name, X, term, strata, seed, with_disp, note, skbio=True, conditions=None):
     has_strata = strata is not None
     s = strata if has_strata else np.zeros(X.shape[0], dtype=np.int64)
     ref = decompose(X, term, s)
@@ -205,7 +313,7 @@ def make_case(name, X, term, strata, seed, with_disp, note, skbio=True):
             "n_levels": int(np.unique(term).size), "n_strata": int(np.unique(s).size),
             "log10_distinct": hexd([log10_distinct(term, s)])[0],
             "b": permanova_counts(X, term, s, seed),
-            "executed": PERMUTATIONS if ref["defined"] else 0,
+            "executed": PERMUTATIONS if np.isfinite(ref["pseudo_f"]) else 0,
         },
     }
     if disp is not None:
@@ -219,6 +327,16 @@ def make_case(name, X, term, strata, seed, with_disp, note, skbio=True):
         }
     if skbio and not has_strata and ref["defined"]:
         case["informational"] = skbio_checks(X, term, ref, disp)
+    if conditions is not None:
+        fl = freedman_lane(X, term, conditions, seed + 2)
+        case["freedman_lane"] = {
+            "conditions": [[int(v) for v in c] for c in conditions], "seed": seed + 2,
+            **{key: hexd([fl[key]])[0] for key in
+               ("ss_total", "ss_reduced", "ss_term", "ss_residual", "pseudo_f")},
+            **{key: fl[key] for key in ("df_term", "df_residual", "rank_reduced", "b", "executed")},
+            "informational": {key: fl[key] for key in ("vegan_margin_raw_b", "vegan_partial_permutest_b")
+                              if key in fl},
+        }
     return case
 
 
@@ -244,7 +362,7 @@ def main() -> None:
     X = (np.array([[0.0, 0.15, 0.0, 0.0], [0.25, 0.0, 0.1, 0.0], [0.1, -0.2, 0.0, 0.1]])[term]
          + np.where(strata[:, None] == 20, 0.8, 0.0) + rng.normal(scale=0.6, size=(term.size, 4)))
     cases.append(make_case("two_factor_conditional", X, term, strata, 12, True,
-                           "term given strata = adonis2 by='margin' for term + strata"))
+                           "term given strata = adonis2 by='margin' for term + strata", conditions=[strata]))
     cases.append(make_case("two_factor_free", X, term, None, 13, False,
                            "same data, term alone with free permutation"))
 
@@ -253,20 +371,20 @@ def main() -> None:
     strata = np.array([0] * 6 + [1] * 6 + [0] * 6 + [1] * 6, dtype=np.int64)
     X = term[:, None] * np.array([0.5, -0.2]) + rng.normal(scale=0.5, size=(term.size, 2))
     cases.append(make_case("partially_aliased", X, term, strata, 14, False,
-                           "levels {0,1} only in stratum 0 and {2,3} only in stratum 1"))
+                           "levels {0,1} only in stratum 0 and {2,3} only in stratum 1", conditions=[strata]))
 
     # Term identical to strata: aliased, no identifiable effect, no draws.
     term = np.repeat([3, 9, 27], 5).astype(np.int64)
     X = rng.normal(size=(term.size, 2))
     cases.append(make_case("fully_aliased", X, term, term.copy(), 15, False,
-                           "term = strata: df_term 0, p undefined"))
+                           "term = strata: df_term 0, p undefined", conditions=[term.copy()]))
 
     # Singleton stratum, a stratum where the term is constant, and mixed ones.
     strata = np.array([0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3], dtype=np.int64)
     term = np.array([0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1], dtype=np.int64)
     X = term[:, None] * np.array([0.35, 0.05, -0.1]) + rng.normal(scale=0.8, size=(term.size, 3))
     cases.append(make_case("singleton_and_constant_strata", X, term, strata, 16, False,
-                           "stratum 0 has one row, stratum 1 a constant term"))
+                           "stratum 0 has one row, stratum 1 a constant term", conditions=[strata]))
 
     # Astra review: near U = B/(B+W) = 1 an additive tolerance on U merges
     # very different F values; vegan compares F. Expected b = 0 (U rule: 22).
@@ -282,6 +400,32 @@ def main() -> None:
     X = rng.normal(size=(30, 2)) * np.array([0.85, 1.0, 1.25])[term - 1][:, None]
     cases.append(make_case("dispersion_only", X, term, None, 17, True,
                            "heteroscedastic groups with a common centre"))
+
+    # Three factors: term (3 levels) given additive conditions B (2) and C (3),
+    # unbalanced and incompletely crossed; the cells of B x C are the strata.
+    term = rng.integers(0, 3, size=40).astype(np.int64)
+    b_cond = rng.integers(0, 2, size=40).astype(np.int64)
+    c_cond = rng.integers(0, 3, size=40).astype(np.int64)
+    X = (np.array([[0.0, 0.2], [0.25, 0.0], [0.1, -0.15]])[term]
+         + np.where(b_cond[:, None] == 1, 0.5, 0.0) + 0.3 * c_cond[:, None]
+         + rng.normal(scale=0.5, size=(40, 2)))
+    cases.append(make_case("three_factor_additive", X, term, b_cond * 3 + c_cond, 18, False,
+                           "Freedman-Lane given additive B + C; strata are the B x C cells",
+                           conditions=[b_cond, c_cond]))
+
+    # Reduced model saturated: every unit is its own condition level.
+    term = np.array([0, 0, 0, 1, 1, 1], dtype=np.int64)
+    X = rng.normal(size=(6, 2))
+    cases.append(make_case("reduced_saturated", X, term, np.arange(6, dtype=np.int64), 19, False,
+                           "rank(reduced) = n: df_term 0, no test",
+                           conditions=[np.arange(6, dtype=np.int64)]))
+
+    # Full model saturated: rank(full) = n, df_residual 0, F undefined.
+    term = np.array([0, 1, 1], dtype=np.int64)
+    cond = np.array([0, 0, 1], dtype=np.int64)
+    X = rng.normal(size=(3, 2))
+    cases.append(make_case("full_saturated", X, term, cond, 20, False,
+                           "rank(full) = n: df_residual 0, no test", conditions=[cond]))
 
     fixture = {
         "format": "n4m_permanova_v1",

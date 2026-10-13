@@ -489,6 +489,58 @@ struct PermanovaKernel {
         return static_cast<double>(ss);
     }
 };
+// Appends to `basis` (orthonormal n-vectors) the directions of `candidates`
+// not already spanned, by modified Gram-Schmidt with one reorthogonalization.
+// A candidate whose residual norm is <= 1e-9 of its own norm is dependent.
+// Returns the number of vectors appended (the rank increment).
+size_t extend_basis(std::vector<std::vector<double>>& basis,
+                    const std::vector<std::vector<double>>& candidates) {
+    const size_t start = basis.size();
+    for (const auto& c : candidates) {
+        std::vector<double> v(c);
+        long double norm0 = 0.0L;
+        for (double x : v) norm0 += static_cast<long double>(x) * x;
+        if (!(norm0 > 0.0L)) continue;
+        for (int pass = 0; pass < 2; ++pass)
+            for (const auto& q : basis) {
+                long double dot = 0.0L;
+                for (size_t i = 0; i < v.size(); ++i) dot += static_cast<long double>(q[i]) * v[i];
+                for (size_t i = 0; i < v.size(); ++i)
+                    v[i] = static_cast<double>(v[i] - dot * q[i]);
+            }
+        long double norm = 0.0L;
+        for (double x : v) norm += static_cast<long double>(x) * x;
+        if (!(norm > 1e-18L * norm0)) continue;
+        const long double scale = 1.0L / std::sqrt(norm);
+        for (double& x : v) x = static_cast<double>(x * scale);
+        basis.push_back(std::move(v));
+    }
+    return basis.size() - start;
+}
+
+// One indicator column per level of each code vector.
+std::vector<std::vector<double>> indicator_columns(const std::vector<int64_t>& codes) {
+    std::vector<int64_t> counts;
+    const auto dense = dense_codes(codes, counts);
+    std::vector<std::vector<double>> cols(counts.size(), std::vector<double>(codes.size(), 0.0));
+    for (size_t i = 0; i < codes.size(); ++i) cols[static_cast<size_t>(dense[i])][i] = 1.0;
+    return cols;
+}
+
+// Squared norm of the projection of the columns of y (n x k, row-major) on
+// the orthonormal vectors basis[first..last).
+long double projected_ss(const std::vector<std::vector<double>>& basis, size_t first,
+                         size_t last, const std::vector<double>& y, size_t k) {
+    long double ss = 0.0L;
+    const size_t n = basis.empty() ? 0 : basis[0].size();
+    for (size_t b = first; b < last; ++b)
+        for (size_t j = 0; j < k; ++j) {
+            long double dot = 0.0L;
+            for (size_t i = 0; i < n; ++i) dot += static_cast<long double>(basis[b][i]) * y[i * k + j];
+            ss += dot * dot;
+        }
+    return ss;
+}
 }  // namespace
 
 extern "C" {
@@ -1635,6 +1687,126 @@ N4M_API n4m_status_t n4m_stats_permanova(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PERMANOVA allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PERMANOVA internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations,
+    uint64_t seed, double* out_twelve, int64_t* out_two) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!term_codes || !out_twelve || !out_two || (n_conditions > 0 && !condition_codes))
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null Freedman-Lane PERMANOVA buffer");
+    const int64_t n = X->rows, k = X->cols;
+    if (n < 2 || k < 1 || n_conditions < 0 || n_conditions > 64 || n_permutations < 0 ||
+        n_permutations > 1000000)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid Freedman-Lane PERMANOVA dimensions");
+    try {
+        const auto nn = static_cast<size_t>(n), kk = static_cast<size_t>(k);
+        const auto nc = static_cast<size_t>(n_conditions);
+        // Reduced design: intercept and the indicators of every condition
+        // factor (additive main effects, no interaction); full design adds
+        // the term indicators. Ranks are found numerically.
+        std::vector<std::vector<double>> reduced_cols{std::vector<double>(nn, 1.0)};
+        for (size_t c = 0; c < nc; ++c) {
+            std::vector<int64_t> codes(nn);
+            for (size_t i = 0; i < nn; ++i) codes[i] = condition_codes[i * nc + c];
+            for (auto& col : indicator_columns(codes)) reduced_cols.push_back(std::move(col));
+        }
+        const auto term_cols =
+            indicator_columns(std::vector<int64_t>(term_codes, term_codes + n));
+        const long double columns = static_cast<long double>(reduced_cols.size() + term_cols.size());
+        if (columns > 4096.0L)
+            return fail(ctx, N4M_ERR_UNSUPPORTED, "Freedman-Lane design exceeds 4096 columns");
+        const long double work =
+            2.0L * static_cast<long double>(n) * columns * columns +
+            (static_cast<long double>(n) * static_cast<long double>(k) * (columns + 1.0L)) *
+                (static_cast<long double>(n_permutations) + 1.0L);
+        if (work > max_moment_products)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "Freedman-Lane permutations exceed 250 million operation budget");
+        std::vector<double> x;
+        int exponent = 0;
+        if (!scaled_centered_rows(*X, x, exponent))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMANOVA input");
+        std::vector<std::vector<double>> basis;
+        const size_t rank_reduced = extend_basis(basis, reduced_cols);
+        const size_t df_term = extend_basis(basis, term_cols);
+        const size_t rank_full = rank_reduced + df_term;
+        const int64_t df_res = n - static_cast<int64_t>(rank_full);
+        // Residuals of the reduced model (x is centred, the intercept is in it).
+        std::vector<double> e(x);
+        for (size_t b = 0; b < rank_reduced; ++b)
+            for (size_t j = 0; j < kk; ++j) {
+                long double dot = 0.0L;
+                for (size_t i = 0; i < nn; ++i) dot += static_cast<long double>(basis[b][i]) * x[i * kk + j];
+                for (size_t i = 0; i < nn; ++i)
+                    e[i * kk + j] = static_cast<double>(e[i * kk + j] - dot * basis[b][i]);
+            }
+        long double ss_total = 0.0L, ss_e = 0.0L;
+        for (size_t i = 0; i < nn * kk; ++i) {
+            ss_total += static_cast<long double>(x[i]) * x[i];
+            ss_e += static_cast<long double>(e[i]) * e[i];
+        }
+        const long double ss_term = projected_ss(basis, rank_reduced, rank_full, e, kk);
+        const long double ss_res = std::max(0.0L, ss_e - ss_term);
+        for (int i = 0; i < 12; ++i) out_twelve[i] = nan_value;
+        out_twelve[0] = std::scalbn(static_cast<double>(ss_total), 2 * exponent);
+        out_twelve[1] = std::scalbn(static_cast<double>(std::max(0.0L, ss_total - ss_e)), 2 * exponent);
+        out_twelve[2] = std::scalbn(static_cast<double>(ss_term), 2 * exponent);
+        out_twelve[3] = std::scalbn(static_cast<double>(ss_res), 2 * exponent);
+        for (int i = 0; i < 4; ++i)
+            if (!std::isfinite(out_twelve[i]))
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                            "PERMANOVA sums of squares are not representable");
+        if (df_term > 0 && ss_total > 0.0L)
+            out_twelve[4] = static_cast<double>(std::min(1.0L, ss_term / ss_total));
+        if (df_term > 0 && ss_e > 0.0L)
+            out_twelve[5] = static_cast<double>(std::min(1.0L, ss_term / ss_e));
+        if (df_term > 0 && df_res > 0 && ss_res > 0.0L)
+            out_twelve[6] = static_cast<double>((ss_term / static_cast<long double>(df_term)) /
+                                                (ss_res / static_cast<long double>(df_res)));
+        out_twelve[7] = static_cast<double>(df_term);
+        out_twelve[8] = static_cast<double>(df_res);
+        out_twelve[9] = static_cast<double>(rank_reduced);
+        out_twelve[10] = std::lgamma(static_cast<double>(n) + 1.0) / std::log(10.0);
+        out_two[0] = 0;
+        out_two[1] = 0;
+        const double f_observed = out_twelve[6];
+        if (n_permutations == 0 || !std::isfinite(f_observed)) return N4M_OK;
+        // Freedman-Lane: row i of the permuted data is fitted_reduced[i] +
+        // e[perm[i]]. Its term SS given the reduced model is |Q_W' e_p|^2 and
+        // its full-model residual SS is |e|^2 - |Q_Z' e_p|^2 - |Q_W' e_p|^2.
+        const long double f_scale =
+            static_cast<long double>(df_res) / static_cast<long double>(df_term);
+        const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        std::vector<int64_t> perm(nn);
+        std::vector<double> ep(nn * kk);
+        int64_t at_least = 0;
+        for (int32_t b = 0; b < n_permutations; ++b) {
+            n4m_pcg64_engine_permutation(&rng, perm.data(), n);
+            for (size_t i = 0; i < nn; ++i)
+                for (size_t j = 0; j < kk; ++j)
+                    ep[i * kk + j] = e[static_cast<size_t>(perm[i]) * kk + j];
+            const long double reduced_part = projected_ss(basis, 0, rank_reduced, ep, kk);
+            const long double term_part = projected_ss(basis, rank_reduced, rank_full, ep, kk);
+            const long double rest = ss_e - reduced_part - term_part;
+            const double f = rest > 0.0L ? static_cast<double>(term_part / rest * f_scale)
+                                         : std::numeric_limits<double>::infinity();
+            if (f >= f_observed - tolerance) ++at_least;
+        }
+        out_two[0] = at_least;
+        out_two[1] = n_permutations;
+        out_twelve[11] = static_cast<double>(1 + at_least) / static_cast<double>(1 + n_permutations);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "Freedman-Lane PERMANOVA allocation failed");
+    } catch (...) {
+        return fail(ctx, N4M_ERR_INTERNAL, "Freedman-Lane PERMANOVA internal error");
+    }
 }
 
 N4M_API n4m_status_t n4m_stats_permdisp(
