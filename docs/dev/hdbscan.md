@@ -51,6 +51,27 @@ The ARI is new native code, about 30 lines.
   lambda birth/death and stability. The result is deterministic for a given row order;
   callers that need order invariance must fix a canonical row order.
 
+## Overflow guard (ABI 2.20)
+
+An independent review found that finite inputs such as `[0, 1e155, 2e155, 3e155]`
+overflowed the summed squared differences to infinity. Prim then kept its initial
+indices, emitted self-edges, and the condensed tree had seven nodes for four rows,
+written past the caller's `X.rows`-element buffers. The fix, not present in
+scikit-learn:
+
+- when `max|X|` is outside `[2^-480, 2^480]`, X is multiplied by an exact power of two
+  (bringing `max|X|` into `[0.5, 1)`) before distances are summed, and the MST weights
+  are multiplied back exactly. Ordinary data are not scaled, so results remain
+  bit-identical to the reference;
+- an MST weight that is not representable after scaling back returns
+  `N4M_ERR_UNSUPPORTED`;
+- every MST edge must join two distinct rows and two distinct components, and the
+  result sizes and tree order are checked before any output is written. Errors are
+  status codes, not C++ exceptions, because the WASM build does not catch exceptions.
+
+`n4m_hdbscan_tests` and the JS/WASM test run the reproduction with sentinel-guarded
+buffers and check that power-of-ten rescaling keeps the partition and memberships.
+
 ## Tie order matters, including in the reference
 
 Mutual-reachability weights tie structurally, even on continuous data, because an edge

@@ -526,3 +526,130 @@ export function preflightHolmAdjust(pValues: Float64Array): Float64Array {
         scope.close();
     }
 }
+
+export interface ClusterJaccardResult {
+    /** Row-major nClustersA x nClustersB Jaccard indices; NaN when both clusters are empty. */
+    jaccard: Matrix;
+    /** Row-major |A_i ∩ B_j| counts. */
+    intersections: number[];
+    sizesA: number[];
+    sizesB: number[];
+}
+
+export interface LinearSumAssignmentResult {
+    /** min(rows, cols) pairs in increasing row order. */
+    rowInd: number[];
+    colInd: number[];
+}
+
+/** Cluster overlap between two partitions; negative labels are unassigned. */
+export function clusterJaccardMatrix(labelsA: readonly (number | bigint)[],
+    labelsB: readonly (number | bigint)[], nClustersA: number,
+    nClustersB: number): ClusterJaccardResult {
+    if (labelsA.length !== labelsB.length || !Number.isSafeInteger(nClustersA) || nClustersA < 0 ||
+        !Number.isSafeInteger(nClustersB) || nClustersB < 0) {
+        throw new RangeError("invalid Jaccard labels or cluster counts");
+    }
+    validateGroupIds(labelsA); validateGroupIds(labelsB);
+    const cells = nClustersA * nClustersB;
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const pa = scope.i64(labelsA), pb = scope.i64(labelsB);
+        const jac = scope.alloc(cells * 8), inter = scope.alloc(cells * 8);
+        const sa = scope.alloc(nClustersA * 8), sb = scope.alloc(nClustersB * 8);
+        const st = m.ccall("n4m_cluster_jaccard_matrix", "number",
+            ["number", "number", "number", "i64", "i64", "i64", "number", "number", "number", "number"],
+            [ctx.handle, pa, pb, BigInt(labelsA.length), BigInt(nClustersA), BigInt(nClustersB),
+                jac, inter, sa, sb]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        const i64 = (ptr: number, n: number) =>
+            Array.from({length: n}, (_, j) => Number(dv.getBigInt64(ptr + j * 8, true)));
+        return {
+            jaccard: {data: copyF64(jac, cells), rows: nClustersA, cols: nClustersB},
+            intersections: i64(inter, cells), sizesA: i64(sa, nClustersA), sizesB: i64(sb, nClustersB),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** scipy.optimize.linear_sum_assignment (SciPy 1.18.1 tie order); +Infinity forbids a pair. */
+export function linearSumAssignment(cost: Matrix, maximize = false): LinearSumAssignmentResult {
+    validateMatrix(cost);
+    const k = Math.min(cost.rows, cost.cols);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const c = scope.matrix(cost.data, cost.rows, cost.cols);
+        const rows = scope.alloc(k * 8), cols = scope.alloc(k * 8), count = scope.alloc(8);
+        const st = m.ccall("n4m_linear_sum_assignment", "number",
+            ["number", "number", "number", "number", "number", "number"],
+            [ctx.handle, c.viewPtr, maximize ? 1 : 0, rows, cols, count]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        const i64 = (ptr: number) =>
+            Array.from({length: k}, (_, j) => Number(dv.getBigInt64(ptr + j * 8, true)));
+        return {rowInd: i64(rows), colInd: i64(cols)};
+    } finally {
+        scope.close();
+    }
+}
+
+/** numpy.random.default_rng(seed).multivariate_normal(mean, cov, size=n, method="cholesky").
+ * The seed is an unsigned 64-bit integer; pass a bigint above 2^53. Returns a row-major n x d matrix. */
+export function randomMultivariateNormal(mean: Float64Array, cov: Matrix, n: number,
+    seed: number | bigint): Matrix {
+    validateMatrix(cov);
+    if (cov.rows !== cov.cols || mean.length !== cov.rows || !Number.isSafeInteger(n) || n < 0) {
+        throw new RangeError("invalid multivariate normal dimensions");
+    }
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    const d = cov.rows;
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const c = scope.matrix(cov.data, d, d);
+        const mu = scope.alloc(d * 8), out = scope.alloc(n * d * 8);
+        m.HEAPF64.set(mean, mu / 8);
+        const st = m.ccall("n4m_random_multivariate_normal", "number",
+            ["number", "i64", "number", "number", "i64", "number"],
+            [ctx.handle, seed64, mu, c.viewPtr, BigInt(n), out]) as number;
+        checkStatus(st, ctx.handle);
+        return {data: copyF64(out, n * d), rows: n, cols: d};
+    } finally {
+        scope.close();
+    }
+}
+
+/** Successive numpy.random.default_rng(seed).permutation(n) draws from one generator.
+ * The seed is an unsigned 64-bit integer; pass a bigint above 2^53. */
+export function randomPermutations(seed: number | bigint, n: number, nPermutations: number): number[][] {
+    if (!Number.isSafeInteger(n) || n < 0 || !Number.isSafeInteger(nPermutations) || nPermutations < 0) {
+        throw new RangeError("invalid permutation dimensions");
+    }
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const out = scope.alloc(n * nPermutations * 8);
+        const st = m.ccall("n4m_random_permutations", "number",
+            ["number", "i64", "i64", "i64", "number"],
+            [ctx.handle, seed64, BigInt(n), BigInt(nPermutations), out]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return Array.from({length: nPermutations}, (_, b) =>
+            Array.from({length: n}, (_, j) => Number(dv.getBigInt64(out + (b * n + j) * 8, true))));
+    } finally {
+        scope.close();
+    }
+}

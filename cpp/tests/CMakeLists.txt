@@ -84,6 +84,12 @@ target_include_directories(n4m_hdbscan_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 target_compile_definitions(n4m_hdbscan_tests PRIVATE
     N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
 add_test(NAME n4m_hdbscan_tests COMMAND n4m_hdbscan_tests)
+add_executable(n4m_cluster_matching_null_tests test_cluster_matching_null.cpp)
+target_link_libraries(n4m_cluster_matching_null_tests PRIVATE n4m_c)
+target_include_directories(n4m_cluster_matching_null_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(n4m_cluster_matching_null_tests PRIVATE
+    N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
+add_test(NAME n4m_cluster_matching_null_tests COMMAND n4m_cluster_matching_null_tests)
 add_executable(n4m_estimator_tests test_estimator.cpp)
 target_link_libraries(n4m_estimator_tests PRIVATE n4m_c)
 add_test(NAME n4m_estimator_tests COMMAND n4m_estimator_tests)

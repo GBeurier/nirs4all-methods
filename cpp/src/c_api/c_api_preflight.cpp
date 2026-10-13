@@ -15,6 +15,7 @@
 #include "core/common/context.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/clustering/_vendored/hdbscan.hpp"
+#include "core/optimization/_vendored/rectangular_lsap.hpp"
 #include "core/common/pca_helper.h"
 #include "core/common/rng_pcg64.h"
 #include "core/preprocessing/derivatives/savitzky_golay.h"
@@ -576,6 +577,20 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
         params.selection = static_cast<::n4m::core::hdbscan::Selection>(selection_method);
         params.allow_single_cluster = allow_single_cluster != 0;
         const auto result = ::n4m::core::hdbscan::fit(data.data(), n, p, params);
+        if (result.error == ::n4m::core::hdbscan::Error::unrepresentable_distance)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "HDBSCAN distance is not representable in double precision");
+        // Every output has X.rows capacity; check before writing anything.
+        const auto rows = static_cast<size_t>(n);
+        if (result.error != ::n4m::core::hdbscan::Error::none || result.labels.size() != rows || result.membership.size() != rows ||
+            result.outlier_scores.size() != rows || result.persistence.size() > rows ||
+            result.tree.empty() || result.tree.size() > rows)
+            return fail(ctx, N4M_ERR_INTERNAL, "HDBSCAN result violates its size invariants");
+        for (size_t k = 0; k < result.tree.size(); ++k) {
+            const auto parent = result.tree[k].parent;
+            if ((k == 0) != (parent < 0) || parent >= static_cast<int64_t>(k))
+                return fail(ctx, N4M_ERR_INTERNAL, "HDBSCAN condensed tree is not ordered");
+        }
         for (size_t i = 0; i < result.labels.size(); ++i) {
             labels[i] = result.labels[i];
             membership[i] = result.membership[i];
@@ -639,6 +654,145 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "ARI allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "ARI internal error"); }
 }
+N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
+    n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
+    int64_t n_clusters_a, int64_t n_clusters_b, double* jaccard, int64_t* intersections,
+    int64_t* sizes_a, int64_t* sizes_b) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (n < 0 || n_clusters_a < 0 || n_clusters_b < 0)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative Jaccard dimension");
+    if (static_cast<long double>(n_clusters_a) * static_cast<long double>(n_clusters_b) >
+        100000000.0L)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "Jaccard matrix exceeds 100 million cells");
+    const auto ka = static_cast<size_t>(n_clusters_a), kb = static_cast<size_t>(n_clusters_b);
+    if ((n > 0 && (!labels_a || !labels_b)) || (ka * kb > 0 && (!jaccard || !intersections)) ||
+        (ka > 0 && !sizes_a) || (kb > 0 && !sizes_b))
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null Jaccard buffer");
+    for (int64_t i = 0; i < n; ++i)
+        if (labels_a[i] >= n_clusters_a || labels_b[i] >= n_clusters_b)
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "cluster label out of range");
+    std::fill(intersections, intersections + ka * kb, int64_t{0});
+    std::fill(sizes_a, sizes_a + ka, int64_t{0});
+    std::fill(sizes_b, sizes_b + kb, int64_t{0});
+    for (int64_t i = 0; i < n; ++i) {
+        const int64_t a = labels_a[i], b = labels_b[i];
+        if (a >= 0) ++sizes_a[a];
+        if (b >= 0) ++sizes_b[b];
+        if (a >= 0 && b >= 0)
+            ++intersections[static_cast<size_t>(a) * kb + static_cast<size_t>(b)];
+    }
+    for (size_t i = 0; i < ka; ++i) for (size_t j = 0; j < kb; ++j) {
+        const int64_t both = intersections[i * kb + j];
+        const int64_t either = sizes_a[i] + sizes_b[j] - both;
+        jaccard[i * kb + j] = either > 0
+            ? static_cast<double>(both) / static_cast<double>(either) : nan_value;
+    }
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_linear_sum_assignment(
+    n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind,
+    int64_t* col_ind, int64_t* n_assigned) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, cost);
+    if (st != N4M_OK) return st;
+    if (!row_ind || !col_ind || !n_assigned)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null assignment output");
+    if (maximize != 0 && maximize != 1)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "maximize must be 0 or 1");
+    const int64_t rows = cost->rows, cols = cost->cols;
+    if (static_cast<long double>(rows) * cols * std::min(rows, cols) > max_hdbscan_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "assignment exceeds 2.5 billion operations");
+    try {
+        std::vector<double> data(static_cast<size_t>(rows) * static_cast<size_t>(cols));
+        for (int64_t i = 0; i < rows; ++i) for (int64_t j = 0; j < cols; ++j)
+            data[static_cast<size_t>(i) * static_cast<size_t>(cols) + static_cast<size_t>(j)] =
+                at(*cost, i, j);
+        *n_assigned = 0;
+        const auto status = ::n4m::core::lsap::solve(static_cast<size_t>(rows),
+                                                      static_cast<size_t>(cols), data.data(),
+                                                      maximize != 0, row_ind, col_ind);
+        if (status == ::n4m::core::lsap::Status::invalid)
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "assignment cost contains NaN or -inf");
+        if (status == ::n4m::core::lsap::Status::infeasible)
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "assignment cost matrix is infeasible");
+        *n_assigned = std::min(rows, cols);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "assignment allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "assignment internal error"); }
+}
+
+N4M_API n4m_status_t n4m_random_permutations(
+    n4m_context_t* ctx, uint64_t seed, int64_t n, int64_t n_permutations, int64_t* out) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (n < 0 || n_permutations < 0)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative permutation dimension");
+    if (static_cast<long double>(n) * n_permutations > max_moment_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "permutations exceed 250 million entries");
+    if (n > 0 && n_permutations > 0 && !out)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null permutation output");
+    n4m_rng_pcg64 rng{};
+    n4m_pcg64_engine_seed(&rng, seed);
+    for (int64_t b = 0; b < n_permutations; ++b)
+        n4m_pcg64_engine_permutation(&rng, out + b * n, n);
+    return N4M_OK;
+}
+
+N4M_API n4m_status_t n4m_random_multivariate_normal(
+    n4m_context_t* ctx, uint64_t seed, const double* mean, const n4m_matrix_view_t* cov,
+    int64_t n, double* out) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, cov);
+    if (st != N4M_OK) return st;
+    const int64_t d = cov->rows;
+    if (d < 1 || cov->cols != d || n < 0)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "covariance must be square and n >= 0");
+    if (!mean || (n > 0 && !out))
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null multivariate normal buffer");
+    if (static_cast<long double>(n) * d * d > max_hdbscan_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "multivariate normal exceeds 2.5 billion products");
+    try {
+        const auto p = static_cast<size_t>(d);
+        std::vector<double> L(p * p, 0.0);
+        for (size_t j = 0; j < p; ++j) {
+            if (!std::isfinite(mean[j]))
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite mean");
+            for (size_t k = 0; k <= j; ++k)
+                if (!std::isfinite(at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(k))))
+                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite covariance");
+        }
+        // Lower Cholesky factor (Cholesky-Banachiewicz) of the lower triangle.
+        for (size_t j = 0; j < p; ++j) {
+            for (size_t k = 0; k <= j; ++k) {
+                double sum = at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(k));
+                for (size_t m = 0; m < k; ++m) sum -= L[j * p + m] * L[k * p + m];
+                if (k == j) {
+                    if (!(sum > 0.0))
+                        return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                                    "covariance is not positive definite");
+                    L[j * p + j] = std::sqrt(sum);
+                } else {
+                    L[j * p + k] = sum / L[k * p + k];
+                }
+            }
+        }
+        const auto rows = static_cast<size_t>(n);
+        std::vector<double> z(rows * p);
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        n4m_pcg64_engine_standard_normal_fill(&rng, z.data(), z.size());
+        for (size_t i = 0; i < rows; ++i) for (size_t j = 0; j < p; ++j) {
+            double sum = 0.0;
+            for (size_t k = 0; k <= j; ++k) sum += z[i * p + k] * L[j * p + k];
+            out[i * p + j] = sum + mean[j];
+        }
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "multivariate normal allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "multivariate normal internal error"); }
+}
+
 N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
     int32_t window_length, int32_t polyorder, double* band_noise,

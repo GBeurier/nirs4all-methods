@@ -6,6 +6,39 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI 2.20.0. No model-state serialization format changes.
+
+### Added
+
+- Public ABI 2.20.0 cluster matching and null-model kernels in
+  `n4m/metrics.h`: `n4m_cluster_jaccard_matrix` (intersection counts, cluster
+  sizes and Jaccard indices between two partitions, negative labels
+  unassigned), `n4m_linear_sum_assignment` (a BSD-3 port of SciPy 1.18.1
+  `scipy.optimize.linear_sum_assignment` with SciPy's tie order, vendored in
+  `cpp/src/core/optimization/_vendored`) and `n4m_random_multivariate_normal`
+  (NumPy `default_rng(seed).multivariate_normal(..., method="cholesky")` on
+  the existing PCG64 Ziggurat stream). A reference gate
+  (`parity/fixtures/cluster_matching_null_v1.json`,
+  `n4m_cluster_matching_null_tests`) pins SciPy assignments, scikit-learn
+  contingency tables, NumPy draws and stable-tie scikit-learn HDBSCAN
+  partitions of simulated Gaussian data. JS/WASM wrappers:
+  `clusterJaccardMatrix`, `linearSumAssignment`, `randomMultivariateNormal`.
+- `n4m_random_permutations` (ABI 2.20.0): successive
+  `default_rng(seed).permutation(n)` draws from one Methods PCG64 stream, for
+  seeded subsampling plans; JS/WASM `randomPermutations`.
+
+### Fixed
+
+- `n4m_cluster_hdbscan` (since ABI 2.19.0, Methods 1.3.6) could write past
+  the caller's buffers: with finite inputs whose squared distances overflow
+  (for example `[0, 1e155, 2e155, 3e155]`), Prim produced self-edges and the
+  condensed tree had more nodes than rows. Data whose magnitude is outside
+  `[2^-480, 2^480]` are now scaled by an exact power of two (ordinary data are
+  untouched, so results stay bit-identical), unrepresentable MST distances
+  return `N4M_ERR_UNSUPPORTED`, MST edges and tree sizes are validated, and
+  nothing is written when an invariant fails. Sentinel regression tests run
+  natively and in WASM.
+
 ## [1.3.6] - 2026-10-13
 
 ABI 2.19.0. No model-state serialization format changes.

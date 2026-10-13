@@ -51,7 +51,12 @@ struct TreeNode {
     std::int64_t label = -1;    // selected cluster label or -1
 };
 
+// Not part of scikit-learn: a distance that overflows double precision, or an
+// MST that is not a spanning tree, stops the fit before any output is built.
+enum class Error : std::int32_t { none = 0, unrepresentable_distance = 1, invalid_tree = 2 };
+
 struct Result {
+    Error error = Error::none;
     std::vector<std::int64_t> labels;
     std::vector<double> membership;
     std::vector<double> outlier_scores;

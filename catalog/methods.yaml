@@ -10168,6 +10168,84 @@ methods:
       - "n4m_cluster_hdbscan"
     legacy_ids:
       - "diagnostics.hdbscan"
+  - method_id: "diagnostics.cluster_jaccard_matrix"
+    family: "diagnostics.clustering"
+    category: "diagnostics"
+    subcategory: "clustering"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_cluster_jaccard_matrix"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures:
+        - "parity/fixtures/cluster_matching_null_v1.json"
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.cluster_jaccard_matrix"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications: []
+    notes: "Cluster overlap between two partitions of the same elements: intersection counts, cluster sizes and Jaccard indices |A_i ∩ B_j| / |A_i ∪ B_j|, with negative labels unassigned. Reference gate: parity/generators/cluster_matching_null_v1.py (scikit-learn 1.9.1 contingency_matrix) -> parity/fixtures/cluster_matching_null_v1.json, cpp/tests/test_cluster_matching_null.cpp."
+    namespace: "cluster"
+    leaf: "jaccard_matrix"
+    fq_name: "n4m.cluster.jaccard_matrix"
+    c_surface:
+      - "n4m_cluster_jaccard_matrix"
+    legacy_ids:
+      - "diagnostics.cluster_jaccard_matrix"
+  - method_id: "diagnostics.linear_sum_assignment"
+    family: "diagnostics.clustering"
+    category: "diagnostics"
+    subcategory: "clustering"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_linear_sum_assignment"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+      - "cpp/src/core/optimization/_vendored/rectangular_lsap.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures:
+        - "parity/fixtures/cluster_matching_null_v1.json"
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.linear_sum_assignment"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses:
+      - "scipy-rectangular-lsap (BSD-3-Clause)"
+    bindings: {}
+    publications: []
+    notes: "Rectangular linear sum assignment ported from SciPy 1.18.1 scipy.optimize.linear_sum_assignment (Crouse shortest augmenting path, BSD-3-Clause, cpp/src/core/optimization/_vendored), with SciPy tie order. Reference gate: parity/generators/cluster_matching_null_v1.py -> parity/fixtures/cluster_matching_null_v1.json, cpp/tests/test_cluster_matching_null.cpp."
+    namespace: "optimize"
+    leaf: "linear_sum_assignment"
+    fq_name: "n4m.optimize.linear_sum_assignment"
+    c_surface:
+      - "n4m_linear_sum_assignment"
+    legacy_ids:
+      - "diagnostics.linear_sum_assignment"
   - method_id: "filters.correlation"
     family: "filters.feature"
     category: "filters"

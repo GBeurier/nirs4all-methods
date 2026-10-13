@@ -191,6 +191,58 @@ int main() {
                                       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                                       nullptr, nullptr) == N4M_ERR_NULL_POINTER);
 
+        // Regression (review 2026-10-13): squared distances of [0, 1e155,
+        // 2e155, 3e155] overflowed to inf, Prim emitted self-edges and the
+        // condensed tree had 7 nodes for 4 rows, written past the caller's
+        // 4-element buffers. Sentinels guard every output past X.rows.
+        {
+            const double sentinel = -12345.0;
+            double unit[4] = {0, 1, 2, 3}, huge[4] = {0, 1e155, 2e155, 3e155};
+            double tiny[4] = {0, 1e-160, 2e-160, 3e-160};
+            double extreme[2] = {-1e308, 1e308};
+            auto guarded = [&](double* data, int64_t rows, n4m_status_t expect, Output& out) {
+                n4m_matrix_view_t V{};
+                REQUIRE(n4m_matrix_view_init_rowmajor(&V, data, rows, 1, N4M_DTYPE_F64) == N4M_OK);
+                const auto cap = static_cast<size_t>(rows), pad = size_t{8};
+                std::vector<int64_t> lab(cap + pad, -777), par(cap + pad, -777), siz(cap + pad, -777),
+                    tl(cap + pad, -777);
+                std::vector<double> mem(cap + pad, sentinel), out_s(cap + pad, sentinel),
+                    pers(cap + pad, sentinel), bir(cap + pad, sentinel), dea(cap + pad, sentinel),
+                    sta(cap + pad, sentinel);
+                int64_t nc = -1, nn = -1;
+                REQUIRE(n4m_cluster_hdbscan(ctx, &V, 2, 2, 0, 0, lab.data(), mem.data(), out_s.data(),
+                                            &nc, pers.data(), &nn, par.data(), siz.data(), tl.data(),
+                                            bir.data(), dea.data(), sta.data()) == expect);
+                for (size_t i = cap; i < cap + pad; ++i)
+                    REQUIRE(lab[i] == -777 && par[i] == -777 && siz[i] == -777 && tl[i] == -777 &&
+                            mem[i] == sentinel && out_s[i] == sentinel && pers[i] == sentinel &&
+                            bir[i] == sentinel && dea[i] == sentinel && sta[i] == sentinel);
+                if (expect != N4M_OK) return;
+                REQUIRE(nn >= 1 && nn <= rows && nc >= 0 && nc <= rows);
+                out.labels.assign(lab.begin(), lab.begin() + rows);
+                out.membership.assign(mem.begin(), mem.begin() + rows);
+                out.tree_parent.assign(par.begin(), par.begin() + nn);
+                out.birth.assign(bir.begin(), bir.begin() + nn);
+                out.n_clusters = nc;
+            };
+            Output u, h, t, e;
+            guarded(unit, 4, N4M_OK, u);
+            guarded(huge, 4, N4M_OK, h);
+            guarded(tiny, 4, N4M_OK, t);
+            // Rescaling by a power of ten keeps the partition and memberships.
+            for (const Output* rescaled : {&h, &t}) {
+                REQUIRE(rescaled->labels == u.labels && rescaled->tree_parent == u.tree_parent &&
+                        rescaled->n_clusters == u.n_clusters);
+                for (size_t i = 0; i < 4; ++i) REQUIRE(close(rescaled->membership[i], u.membership[i]));
+            }
+            for (size_t k = 0; k < u.birth.size(); ++k) {
+                REQUIRE(close(h.birth[k] * 1e155, u.birth[k]));
+                REQUIRE(close(t.birth[k] * 1e-160, u.birth[k]));
+            }
+            // A 2e308 distance is not representable: refused, nothing written.
+            guarded(extreme, 2, N4M_ERR_UNSUPPORTED, e);
+        }
+
         // ARI reference values from scikit-learn 1.9.1 adjusted_rand_score.
         REQUIRE(close(ari(ctx, {0, 0, 1, 2}, {0, 0, 1, 1}), 0.5714285714285714));
         REQUIRE(close(ari(ctx, {0, 0, 1, 1}, {0, 1, 0, 1}), -0.5));

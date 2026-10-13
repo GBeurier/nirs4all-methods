@@ -124,6 +124,7 @@ n4m_backend_is_available
 n4m_backend_to_string
 n4m_check_abi_compatibility
 n4m_cluster_hdbscan
+n4m_cluster_jaccard_matrix
 n4m_config_clone
 n4m_config_create
 n4m_config_destroy
@@ -355,6 +356,7 @@ n4m_get_abi_version_patch
 n4m_get_build_info
 n4m_get_git_revision
 n4m_get_version_string
+n4m_linear_sum_assignment
 n4m_lowlevel_moments_compute
 n4m_lowlevel_moments_subset_compute
 n4m_lowlevel_moments_subtract
@@ -573,6 +575,8 @@ n4m_preflight_pca_compute
 n4m_preflight_repeatability_compute
 n4m_preflight_summary_compute
 n4m_procedure_run
+n4m_random_multivariate_normal
+n4m_random_permutations
 n4m_rng_pcg64_advance
 n4m_rng_pcg64_create
 n4m_rng_pcg64_destroy
