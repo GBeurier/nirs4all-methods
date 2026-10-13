@@ -673,7 +673,8 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay impulse response failed");
         long double gain2 = 0.0L;
         for (int64_t j = h; j < impulse_cols - h; ++j) {
-            const long double d = static_cast<long double>(impulse[sz(j)]) - response[sz(j)];
+            const long double d = static_cast<long double>(impulse[sz(j)]) -
+                                  static_cast<long double>(response[sz(j)]);
             gain2 += d * d;
         }
         const double gain = static_cast<double>(std::sqrt(gain2));
@@ -710,6 +711,8 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
             scale = std::max(scale, std::abs(smooth[c]));
         }
         if (scale == 0.0) scale = 1.0;
+        const long double lscale = static_cast<long double>(scale);
+        const long double lgain = static_cast<long double>(gain);
         long double pooled = 0.0L;
         int64_t pooled_count = 0;
         for (int64_t j = 0; j < p; ++j) {
@@ -718,18 +721,18 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
             for (int64_t i = 0; i < n; ++i) {
                 const size_t c = sz(i) * sz(p) + sz(j);
                 if (!evaluable[c]) continue;
-                const long double r = static_cast<long double>(smooth[c]) / scale;
+                const long double r = static_cast<long double>(smooth[c]) / lscale;
                 sum += r * r;
                 ++count;
             }
             band_counts[j] = count;
             band_noise[j] = count ? static_cast<double>(
-                scale * std::sqrt(sum / count) / gain) : nan_value;
+                lscale * std::sqrt(sum / static_cast<long double>(count)) / lgain) : nan_value;
             pooled += sum;
             pooled_count += count;
         }
         out_two[0] = pooled_count ? static_cast<double>(
-            scale * std::sqrt(pooled / pooled_count) / gain) : nan_value;
+            lscale * std::sqrt(pooled / static_cast<long double>(pooled_count)) / lgain) : nan_value;
         out_two[1] = gain;
         return N4M_OK;
     } catch (const std::bad_alloc&) {
