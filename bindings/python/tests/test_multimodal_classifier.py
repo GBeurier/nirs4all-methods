@@ -13,7 +13,7 @@ import pytest
 from numpy.testing import assert_allclose, assert_array_equal
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-from n4m import MultimodalClassifierPipeline, MultimodalPipeline, N4MError
+from n4m import MultimodalClassifierPipeline, MultimodalPipeline, N4MError, abi_version
 from n4m._ffi import lib
 from n4m._types import Status
 from n4m.roles import PLSLogistic
@@ -126,7 +126,7 @@ def test_portable_roundtrip_without_fit_and_external_table(monkeypatch):
         trained.fit(blocks, names * 5)
         state = trained.export_state()
         labels, proba = trained.predict(blocks), trained.predict_proba(blocks)
-    assert struct.unpack_from("<4I", state, 4) == (1, 2, 17, 0)
+    assert struct.unpack_from("<4I", state, 4) == (1, *abi_version())
 
     def forbidden(*args, **kwargs):
         raise AssertionError("replay must not fit")
