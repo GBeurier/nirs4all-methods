@@ -18,6 +18,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   ICC, strided views, quantiles, neighbor exclusions, and finite extreme-value
   summaries and distances. Scaled variance and distance calculations retain
   representable f64 results and reject unrepresentable results explicitly.
+- Public ABI 2.19.0 Preflight association kernels:
+  `n4m_preflight_factor_association` (eta^2 and one-way F, or Cramer's V and
+  Pearson chi-square, over exchangeable units, with a seeded Monte Carlo
+  permutation p-value `(1+b)/(1+B)` and a log10 bound on distinct permutation
+  outcomes) and `n4m_preflight_holm_adjust`. Permutations reuse the PCG64
+  engine through a new NumPy-parity `random_interval`/`permutation` helper, so
+  `numpy.random.default_rng(seed).permutation(n)` reproduces every draw. Thin
+  TypeScript wrappers `preflightFactorAssociation` and `preflightHolmAdjust`.
+- Native and WASM cases compare hand-computed effects and NumPy 2.2.6 / SciPy
+  1.15.3 permutation counts recorded as test-only goldens.
 
 The project and npm package version is prepared as 1.3.5. No model-state
 serialization format changes.

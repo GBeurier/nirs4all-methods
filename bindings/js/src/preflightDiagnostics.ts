@@ -34,6 +34,23 @@ export interface PreflightLocalContrastResult {
     expectedSameClassFraction: number;
 }
 
+export interface PreflightFactorAssociationResult {
+    /** eta^2 (continuous) or Cramer's V (categorical); NaN when undefined. */
+    effectSize: number;
+    /** One-way ANOVA F or Pearson chi-square; NaN when undefined. */
+    statistic: number;
+    df1: number;
+    df2: number;
+    nLevels: number;
+    nTargetValues: number;
+    /** log10 upper bound on distinct permutation outcomes. */
+    log10DistinctPermutations: number;
+    /** Monte Carlo (1+b)/(1+B); NaN without permutations. */
+    pValue: number;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
 function validateMatrix(X: Matrix): void {
     if (!Number.isSafeInteger(X.rows) || !Number.isSafeInteger(X.cols) ||
         X.rows < 1 || X.cols < 1 || X.data.length !== X.rows * X.cols) {
@@ -241,6 +258,65 @@ export function preflightLocalContrast(targets: Float64Array,
             contrast: result[0]!, fractionRowsWithNeighbors: result[1]!,
             observedSameClassFraction: result[2]!, expectedSameClassFraction: result[3]!,
         };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Factor-target association over exchangeable units with seeded permutations.
+ * The seed is an unsigned 64-bit integer; pass a bigint above 2^53. */
+export function preflightFactorAssociation(factorCodes: readonly (number | bigint)[],
+    targets: Float64Array, categorical: boolean, nPermutations: number,
+    seed: number | bigint): PreflightFactorAssociationResult {
+    if (factorCodes.length !== targets.length || targets.length < 2 ||
+        !Number.isInteger(nPermutations) || nPermutations < 0 || nPermutations > 1_000_000) {
+        throw new RangeError("invalid association dimensions or permutation count");
+    }
+    validateGroupIds(factorCodes);
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const codes = scope.i64(factorCodes);
+        const y = scope.alloc(targets.length * 8);
+        const out = scope.alloc(64), counts = scope.alloc(16);
+        m.HEAPF64.set(targets, y / 8);
+        const st = m.ccall("n4m_preflight_factor_association", "number",
+            ["number", "number", "number", "i64", "number", "number", "i64", "number", "number"],
+            [ctx.handle, codes, y, BigInt(targets.length), categorical ? 1 : 0,
+                nPermutations, seed64, out, counts]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 8);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            effectSize: r[0]!, statistic: r[1]!, df1: r[2]!, df2: r[3]!,
+            nLevels: r[4]!, nTargetValues: r[5]!, log10DistinctPermutations: r[6]!,
+            pValue: r[7]!,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Holm step-down adjusted p-values for one hypothesis family. */
+export function preflightHolmAdjust(pValues: Float64Array): Float64Array {
+    if (pValues.length < 1) throw new RangeError("Holm family must not be empty");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const input = scope.alloc(pValues.length * 8), out = scope.alloc(pValues.length * 8);
+        m.HEAPF64.set(pValues, input / 8);
+        const st = m.ccall("n4m_preflight_holm_adjust", "number",
+            ["number", "number", "i64", "number"],
+            [ctx.handle, input, BigInt(pValues.length), out]) as number;
+        checkStatus(st, ctx.handle);
+        return copyF64(out, pValues.length);
     } finally {
         scope.close();
     }

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
+    preflightFactorAssociation, preflightHolmAdjust,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -12,7 +13,7 @@ const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 18, 0]);
+assert.deepEqual(abiVersion(), [2, 19, 0]);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);
@@ -74,4 +75,22 @@ const categorical = preflightLocalContrast(new Float64Array([0, 0, 1, 1]),
 near(categorical.contrast, 0.4);
 near(categorical.observedSameClassFraction, 0.5);
 near(categorical.expectedSameClassFraction, 1 / 6);
+// Same hand values and NumPy/SciPy permutation goldens as test_preflight.cpp.
+const assoc = preflightFactorAssociation([4, 4, 4, -9, -9, -9],
+    new Float64Array([1, 2, 3, 7, 8, 9]), false, 999, 17);
+near(assoc.effectSize, 27 / 29);
+near(assoc.statistic, 54);
+near(assoc.log10DistinctPermutations, Math.log10(20));
+assert.equal(assoc.nAtLeastObserved, 93);
+assert.equal(assoc.nPermutationsExecuted, 999);
+near(assoc.pValue, 94 / 1000);
+assert.equal(preflightFactorAssociation([4, 4, 4, -9, -9, -9],
+    new Float64Array([1, 2, 3, 7, 8, 9]), false, 999, 18446744073709551557n).nAtLeastObserved, 88);
+const classAssoc = preflightFactorAssociation([0, 0, 0, 1, 1, 1, 1],
+    new Float64Array([0, 0, 1, 1, 1, 1, 0]), true, 999, 17);
+near(classAssoc.effectSize, 5 / 12);
+near(classAssoc.statistic, 175 / 144);
+assert.equal(classAssoc.nAtLeastObserved, 477);
+const holm = preflightHolmAdjust(new Float64Array([0.01, 0.04, 0.03, 0.005]));
+[0.03, 0.06, 0.06, 0.02].forEach((value, i) => near(holm[i], value));
 console.log("JS/WASM Preflight diagnostics passed");
