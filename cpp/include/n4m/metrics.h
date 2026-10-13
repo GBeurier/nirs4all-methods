@@ -181,7 +181,9 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  *   [7] Monte Carlo p-value (1+b)/(1+B); NaN when B == 0 or [0] is NaN.
  * The permutation statistic is eta^2 or Cramer's V^2; b counts permuted
  * values >= observed - sqrt(DBL_EPSILON). out_two = {b, executed B}; no
- * permutation runs when the effect size is undefined. */
+ * permutation runs when the effect size is undefined. Targets are centered
+ * after an exact power-of-two scaling and a shift to the first target, with
+ * a residual-mean correction, so eta^2 and F are translation invariant. */
 N4M_API n4m_status_t n4m_preflight_factor_association(
     n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
@@ -211,11 +213,33 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
  *   [4] two-sided Monte Carlo p-value (1+b)/(1+B); NaN when B == 0 or [0]
  *       is NaN.
  * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
- * {b, executed B}; no permutation runs when the coefficient is undefined. */
+ * {b, executed B}; no permutation runs when the coefficient is undefined.
+ * Both vectors use the same translation-stable centering as
+ * n4m_preflight_factor_association. */
 N4M_API n4m_status_t n4m_stats_correlation_test(
     n4m_context_t* ctx, const double* x, const double* y, int64_t n,
     int32_t method, int32_t n_permutations, uint64_t seed,
     double* out_five, int64_t* out_two);
+
+/* Exact permutation distributions of the statistics above over n
+ * exchangeable units. The side with fewer distinct arrangements
+ * (n!/prod(multiplicity!)) is enumerated (std::next_permutation over its
+ * multiset of codes) with the other side fixed; every distinct arrangement
+ * has equal probability under uniform permutation. The statistic is eta^2 or
+ * Cramer's V^2 (factor association, same input contract as
+ * n4m_preflight_factor_association) or |r| (correlation, method 0 Pearson,
+ * 1 Spearman). 1 <= max_arrangements <= 10000000; a larger arrangement count,
+ * or 2 * count * n > 250 million operations, returns N4M_ERR_UNSUPPORTED.
+ * out_four (caller-owned): [0] number N of distinct arrangements;
+ * [1] exact p-value #{T >= T_obs - sqrt(DBL_EPSILON)}/N; [2] minimal
+ * attainable exact p-value #{T >= T_max - sqrt(DBL_EPSILON)}/N; [3] T_max.
+ * [1]-[3] are NaN when the statistic is undefined. */
+N4M_API n4m_status_t n4m_stats_factor_association_exact(
+    n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
+    int64_t n, int32_t categorical, int64_t max_arrangements, double* out_four);
+N4M_API n4m_status_t n4m_stats_correlation_exact(
+    n4m_context_t* ctx, const double* x, const double* y, int64_t n,
+    int32_t method, int64_t max_arrangements, double* out_four);
 
 /* Benjamini-Hochberg step-up adjusted p-values for one family of m >= 1
  * hypotheses. Inputs must lie in [0, 1]; with p_(1) <= ... <= p_(m),

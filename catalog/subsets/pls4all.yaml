@@ -65,6 +65,7 @@ excludes:
     - "diagnostics.hdbscan"
     - "diagnostics.correlation_test"
     - "diagnostics.bh_adjust"
+    - "diagnostics.factor_association_exact"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |

@@ -7,6 +7,7 @@ category: "diagnostics"
 subcategory: "statistics"
 since_abi: "2.20.0"
 abi_symbols:
+  - "n4m_stats_correlation_exact"
   - "n4m_stats_correlation_test"
 tu:
   - "cpp/src/c_api/c_api_preflight.cpp"
@@ -31,8 +32,9 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity."
+notes: "Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity; n4m_stats_correlation_exact enumerates the distinct arrangements for the exact p-value and the minimal attainable p-value."
 c_surface:
+  - "n4m_stats_correlation_exact"
   - "n4m_stats_correlation_test"
 fq_name: "n4m.metrics.statistics.correlation_test"
 leaf: "correlation_test"

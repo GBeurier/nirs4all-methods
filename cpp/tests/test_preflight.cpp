@@ -224,6 +224,44 @@ int main() {
                 ==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(n4m_stats_correlation_test(ctx,sy4,sy4,1,0,0,1,corr,corr_counts)
                 ==N4M_ERR_INVALID_ARGUMENT);
+        // Translation invariance (review P0-1): two identical groups at 1e16
+        // have eta^2 = F = 0; {0,2,4} vs {6,8,10} shifted by 1e16 keep
+        // eta^2 = 54/70 and F = 54/(16/4) = 13.5 (hand values).
+        int64_t halves[6]={0,0,0,1,1,1};
+        double same16[6]={1e16,1e16+2,1e16+4,1e16,1e16+2,1e16+4};
+        REQUIRE(n4m_preflight_factor_association(ctx,halves,same16,6,0,0,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(std::abs(assoc[0])<1e-15 && std::abs(assoc[1])<1e-15);
+        double apart16[6]={1e16,1e16+2,1e16+4,1e16+6,1e16+8,1e16+10};
+        REQUIRE(n4m_preflight_factor_association(ctx,halves,apart16,6,0,0,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(relative_near(assoc[0],54.0/70.0) && relative_near(assoc[1],13.5));
+        double x16[5]={1e16,1e16+2,1e16+4,1e16+6,1e16+8};
+        REQUIRE(n4m_stats_correlation_test(ctx,x16,cy,5,0,0,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],6.0/std::sqrt(60.0)));
+        double cy16[5]={1e16+4,1e16+8,1e16+10,1e16+8,1e16+10};
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy16,5,0,0,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],6.0/std::sqrt(60.0)));
+        // Exact enumeration (review P1-1). References: brute force over all
+        // n! permutations with SciPy 1.15.3 statistics (chi2_contingency,
+        // pearsonr, spearmanr) and NumPy 2.2.6, as exact fractions.
+        double exact[4];
+        int64_t f22[8]={0,0,0,0,1,1,1,1}; double y22[8]={0,0,0,0,1,1,1,1};
+        REQUIRE(n4m_stats_factor_association_exact(ctx,f22,y22,8,1,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],70) && near(exact[1],1.0/35.0) && near(exact[2],1.0/35.0));
+        REQUIRE(near(exact[3],1.0));
+        REQUIRE(n4m_stats_factor_association_exact(ctx,fa,ya,6,0,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],20) && near(exact[1],0.1) && near(exact[2],0.1));
+        REQUIRE(near(exact[3],27.0/29.0));
+        REQUIRE(n4m_stats_factor_association_exact(ctx,fc,yc,7,1,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],35) && near(exact[1],17.0/35.0) && near(exact[2],1.0/35.0));
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,0,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],30) && near(exact[1],2.0/15.0) && near(exact[2],1.0/15.0));
+        REQUIRE(near(exact[3],0.9036961141150641));
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[1],0.2) && near(exact[2],1.0/15.0) && near(exact[3],0.9486832980505138));
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,29,exact)==N4M_ERR_UNSUPPORTED);
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,0,exact)==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_factor_association_exact(ctx,one_level,spread,3,0,10,exact)==N4M_OK);
+        REQUIRE(near(exact[0],1) && std::isnan(exact[1]) && std::isnan(exact[3]));
         // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
         // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
         double bh[6];

@@ -93,47 +93,122 @@ double log10_factorial_ratio(int64_t n, const std::vector<int64_t>& counts) noex
     return value / std::log(10.0);
 }
 
-// Permutation statistic over targets[perm[i]] assigned to unit i:
-// eta^2 = sum_g S_g^2/n_g / SST on centered targets, or Cramer's V^2.
-struct AssociationKernel {
-    const std::vector<int64_t>& level;
-    const std::vector<int64_t>& level_n;
-    const std::vector<double>& centered;
-    const std::vector<int64_t>& cls;
-    const std::vector<int64_t>& class_n;
-    bool categorical;
-    double sst;
+// Centered copy, stable under translation: values are divided by a power of
+// two bounding max|v| (exact), shifted by the first value (exact for nearby
+// values), centered on their mean, then corrected by the residual mean.
+// Returns the centered sum of squares.
+double stable_center(const std::vector<double>& values, std::vector<double>& centered) {
+    const size_t n = values.size();
+    centered.assign(n, 0.0);
+    double max_abs = 0.0;
+    for (double v : values) max_abs = std::max(max_abs, std::abs(v));
+    if (!(max_abs > 0.0)) return 0.0;
+    int exponent = 0;
+    std::frexp(max_abs, &exponent);
+    const double origin = std::ldexp(values[0], -exponent);
+    double mean = 0.0;
+    for (size_t i = 0; i < n; ++i) {
+        centered[i] = std::ldexp(values[i], -exponent) - origin;
+        mean += centered[i];
+    }
+    mean /= static_cast<double>(n);
+    double residual = 0.0;
+    for (double& v : centered) {
+        v -= mean;
+        residual += v;
+    }
+    residual /= static_cast<double>(n);
+    double ss = 0.0;
+    for (double& v : centered) {
+        v -= residual;
+        ss += v * v;
+    }
+    return ss;
+}
+
+// Distinct arrangements n!/prod(counts!) when at most cap, else cap + 1.
+uint64_t arrangement_count(const std::vector<int64_t>& counts, uint64_t cap) noexcept {
+    uint64_t result = 1, seen = 0;
+    for (int64_t k : counts)
+        for (int64_t j = 1; j <= k; ++j) {
+            ++seen;
+            if (seen > UINT64_MAX / result) return cap + 1;
+            result = result * seen / static_cast<uint64_t>(j);
+            if (result > cap) return cap + 1;
+        }
+    return result;
+}
+
+// One categorical factor against one target, one row per exchangeable unit.
+// Targets are encoded by dense value codes; for categorical targets value
+// codes are the class codes.
+struct FactorProblem {
+    bool categorical = false;
+    std::vector<int64_t> level, level_n, value, value_n;
+    std::vector<double> value_centered;  // centered target per value code
+    double sst = 0.0;
     std::vector<double> sums;
     std::vector<int64_t> table;
 
-    double operator()(const int64_t* perm) {
+    // eta^2 = sum_g S_g^2/n_g / SST, or Cramer's V^2, of L[i] x Y[i].
+    double statistic(const int64_t* L, const int64_t* Y) {
         const size_t n = level.size(), g = level_n.size();
         if (!categorical) {
             std::fill(sums.begin(), sums.end(), 0.0);
             for (size_t i = 0; i < n; ++i)
-                sums[static_cast<size_t>(level[i])] +=
-                    centered[static_cast<size_t>(perm ? perm[i] : static_cast<int64_t>(i))];
+                sums[static_cast<size_t>(L[i])] += value_centered[static_cast<size_t>(Y[i])];
             double ssb = 0.0;
             for (size_t a = 0; a < g; ++a)
                 ssb += sums[a] * sums[a] / static_cast<double>(level_n[a]);
             return std::min(1.0, ssb / sst);
         }
-        const size_t c = class_n.size();
+        const size_t c = value_n.size();
         std::fill(table.begin(), table.end(), 0);
         for (size_t i = 0; i < n; ++i)
-            ++table[static_cast<size_t>(level[i]) * c +
-                    static_cast<size_t>(cls[static_cast<size_t>(
-                        perm ? perm[i] : static_cast<int64_t>(i))])];
+            ++table[static_cast<size_t>(L[i]) * c + static_cast<size_t>(Y[i])];
         double sum = 0.0;
         for (size_t a = 0; a < g; ++a) for (size_t b = 0; b < c; ++b) {
             const double cell = static_cast<double>(table[a * c + b]);
             if (cell > 0.0)
                 sum += cell * cell /
-                       (static_cast<double>(level_n[a]) * static_cast<double>(class_n[b]));
+                       (static_cast<double>(level_n[a]) * static_cast<double>(value_n[b]));
         }
         return std::max(0.0, (sum - 1.0) / static_cast<double>(std::min(g, c) - 1));
     }
+    bool defined() const noexcept {
+        return level_n.size() >= 2 && value_n.size() >= 2 && (categorical || sst > 0.0);
+    }
 };
+
+n4m_status_t prepare_factor(n4m_context_t* ctx, const int64_t* factor_codes,
+                            const double* targets, int64_t n, int32_t categorical,
+                            FactorProblem& p) {
+    if (!factor_codes || !targets)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null association buffer");
+    if (n < 2 || (categorical != 0 && categorical != 1) ||
+        static_cast<uint64_t>(n) > static_cast<uint64_t>(PTRDIFF_MAX / sizeof(double)))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid association dimensions");
+    constexpr double max_exact_category = 9007199254740991.0;
+    // +0.0 replaces -0.0 so both zero encodings share one value.
+    std::vector<double> exact(targets, targets + n);
+    for (double& y : exact) {
+        if (!std::isfinite(y)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite target");
+        if (categorical && (std::abs(y) > max_exact_category || std::trunc(y) != y))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "category codes must be exact integers");
+        y += 0.0;
+    }
+    p.categorical = categorical != 0;
+    p.level = dense_codes(std::vector<int64_t>(factor_codes, factor_codes + n), p.level_n);
+    p.value = dense_codes(exact, p.value_n);
+    std::vector<double> centered;
+    p.sst = stable_center(exact, centered);
+    p.value_centered.assign(p.value_n.size(), 0.0);
+    for (size_t i = 0; i < exact.size(); ++i)
+        p.value_centered[static_cast<size_t>(p.value[i])] = centered[i];
+    p.sums.assign(p.level_n.size(), 0.0);
+    if (p.categorical) p.table.assign(p.level_n.size() * p.value_n.size(), 0);
+    return N4M_OK;
+}
 
 // Average ranks 1..n; tied values share the mean of their ranks.
 std::vector<double> average_ranks(const std::vector<double>& values) {
@@ -153,24 +228,93 @@ std::vector<double> average_ranks(const std::vector<double>& values) {
     return ranks;
 }
 
-// Values divided by max|v| (sums stay representable; r is scale invariant),
-// then centered. Returns the centered sum of squares.
-double scaled_centered(std::vector<double>& values) noexcept {
-    double scale = 0.0;
-    for (double v : values) scale = std::max(scale, std::abs(v));
-    if (!(scale > 0.0)) return 0.0;
-    double mean = 0.0;
-    for (double& v : values) {
-        v /= scale;
-        mean += v;
+// Paired x, y (ranks for Spearman), one row per exchangeable unit.
+struct CorrelationProblem {
+    std::vector<int64_t> x_code, x_n, y_code, y_n;
+    std::vector<double> x_tab, y_tab;  // centered transform per value code
+    double denominator = 0.0;
+
+    double statistic(const int64_t* X, const int64_t* Y) const {
+        double sxy = 0.0;
+        for (size_t i = 0; i < x_code.size(); ++i)
+            sxy += x_tab[static_cast<size_t>(X[i])] * y_tab[static_cast<size_t>(Y[i])];
+        return std::max(-1.0, std::min(1.0, sxy / denominator));
     }
-    mean /= static_cast<double>(values.size());
-    double ss = 0.0;
-    for (double& v : values) {
-        v -= mean;
-        ss += v * v;
+    bool defined() const noexcept { return denominator > 0.0; }
+};
+
+n4m_status_t prepare_correlation(n4m_context_t* ctx, const double* x, const double* y,
+                                 int64_t n, int32_t method, CorrelationProblem& p) {
+    if (!x || !y) return fail(ctx, N4M_ERR_NULL_POINTER, "null correlation buffer");
+    if (n < 2 || (method != 0 && method != 1) ||
+        static_cast<uint64_t>(n) > static_cast<uint64_t>(PTRDIFF_MAX / sizeof(double)))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid correlation dimensions or method");
+    std::vector<double> xs(x, x + n), ys(y, y + n);
+    for (size_t i = 0; i < xs.size(); ++i) {
+        if (!std::isfinite(xs[i]) || !std::isfinite(ys[i]))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite correlation input");
+        xs[i] += 0.0;
+        ys[i] += 0.0;
     }
-    return ss;
+    p.x_code = dense_codes(xs, p.x_n);
+    p.y_code = dense_codes(ys, p.y_n);
+    if (method == 1) {
+        xs = average_ranks(xs);
+        ys = average_ranks(ys);
+    }
+    std::vector<double> xc, yc;
+    const double sxx = stable_center(xs, xc), syy = stable_center(ys, yc);
+    p.x_tab.assign(p.x_n.size(), 0.0);
+    p.y_tab.assign(p.y_n.size(), 0.0);
+    for (size_t i = 0; i < xc.size(); ++i) {
+        p.x_tab[static_cast<size_t>(p.x_code[i])] = xc[i];
+        p.y_tab[static_cast<size_t>(p.y_code[i])] = yc[i];
+    }
+    if (p.x_n.size() >= 2 && p.y_n.size() >= 2 && sxx > 0.0 && syy > 0.0)
+        p.denominator = std::sqrt(sxx) * std::sqrt(syy);
+    return N4M_OK;
+}
+
+// Exact permutation distribution over the distinct arrangements of `side`
+// (a multiset of codes) with `other` fixed: every distinct arrangement has
+// equal probability under uniform permutation. Writes N, #{T >= T_obs -
+// tol}/N, #{T >= T_max - tol}/N and T_max (NaN when undefined).
+template <typename Stat>
+n4m_status_t exact_distribution(n4m_context_t* ctx, std::vector<int64_t> side,
+                                const std::vector<int64_t>& side_n, int64_t max_arrangements,
+                                bool defined, double observed, Stat stat, double* out_four) {
+    if (max_arrangements < 1 || max_arrangements > 10000000)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "max_arrangements must lie in [1, 1e7]");
+    const uint64_t cap = static_cast<uint64_t>(max_arrangements);
+    const uint64_t count = arrangement_count(side_n, cap);
+    if (count > cap)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "distinct arrangements exceed max_arrangements");
+    if (2.0L * static_cast<long double>(count) * static_cast<long double>(side.size()) >
+        max_moment_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "exact enumeration exceeds 250 million operation budget");
+    for (int i = 0; i < 4; ++i) out_four[i] = nan_value;
+    out_four[0] = static_cast<double>(count);
+    if (!defined) return N4M_OK;
+    const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
+    std::sort(side.begin(), side.end());
+    std::vector<int64_t> start(side);
+    double maximum = -std::numeric_limits<double>::infinity();
+    uint64_t at_least = 0;
+    do {
+        const double t = stat(side.data());
+        maximum = std::max(maximum, t);
+        if (t >= observed - tolerance) ++at_least;
+    } while (std::next_permutation(side.begin(), side.end()));
+    uint64_t at_max = 0;
+    side = start;
+    do {
+        if (stat(side.data()) >= maximum - tolerance) ++at_max;
+    } while (std::next_permutation(side.begin(), side.end()));
+    out_four[1] = static_cast<double>(at_least) / static_cast<double>(count);
+    out_four[2] = static_cast<double>(at_max) / static_cast<double>(count);
+    out_four[3] = maximum;
+    return N4M_OK;
 }
 }  // namespace
 
@@ -843,42 +987,18 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
     double* out_eight, int64_t* out_two) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
-    if (!factor_codes || !targets || !out_eight || !out_two)
-        return fail(ctx, N4M_ERR_NULL_POINTER, "null association buffer");
-    if (n < 2 || (categorical != 0 && categorical != 1) || n_permutations < 0 ||
-        n_permutations > 1000000 ||
-        static_cast<uint64_t>(n) > static_cast<uint64_t>(PTRDIFF_MAX / sizeof(double)))
+    if (!out_eight || !out_two) return fail(ctx, N4M_ERR_NULL_POINTER, "null association buffer");
+    if (n_permutations < 0 || n_permutations > 1000000)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid association dimensions");
     try {
-        constexpr double max_exact_category = 9007199254740991.0;
-        double scale = 0.0;
-        std::vector<int64_t> category(categorical ? static_cast<size_t>(n) : 0);
-        for (int64_t i = 0; i < n; ++i) {
-            const double y = targets[i];
-            if (!std::isfinite(y))
-                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite target");
-            if (categorical) {
-                if (std::abs(y) > max_exact_category || std::trunc(y) != y)
-                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
-                                "category codes must be exact integers");
-                category[static_cast<size_t>(i)] = static_cast<int64_t>(y);
-            }
-            scale = std::max(scale, std::abs(y));
-        }
-        std::vector<int64_t> level_n, class_n, value_n;
-        const auto level = dense_codes(std::vector<int64_t>(factor_codes, factor_codes + n),
-                                       level_n);
-        std::vector<int64_t> cls;
-        if (categorical) cls = dense_codes(category, class_n);
-        // +0.0 replaces -0.0 so both zero encodings share one value.
-        std::vector<double> exact(targets, targets + n);
-        for (double& y : exact) y += 0.0;
-        dense_codes(exact, value_n);
-        const auto g = static_cast<int64_t>(level_n.size());
-        const auto v = static_cast<int64_t>(value_n.size());
-        const auto c = static_cast<int64_t>(class_n.size());
+        FactorProblem p;
+        const n4m_status_t st = prepare_factor(ctx, factor_codes, targets, n, categorical, p);
+        if (st != N4M_OK) return st;
+        const auto g = static_cast<int64_t>(p.level_n.size());
+        const auto v = static_cast<int64_t>(p.value_n.size());
         const long double work =
-            (static_cast<long double>(n) + static_cast<long double>(g) * c) *
+            (static_cast<long double>(n) +
+             (p.categorical ? static_cast<long double>(g) * v : 0.0L)) *
             (static_cast<long double>(n_permutations) + 1.0L);
         if (work > max_moment_products)
             return fail(ctx, N4M_ERR_UNSUPPORTED,
@@ -888,43 +1008,24 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
         out_two[1] = 0;
         out_eight[4] = static_cast<double>(g);
         out_eight[5] = static_cast<double>(v);
-        out_eight[6] = std::min(log10_factorial_ratio(n, level_n),
-                                log10_factorial_ratio(n, value_n));
-        if (g < 2 || v < 2) return N4M_OK;
-        // Scaling by max|y| keeps every sum representable; eta^2 and F are
-        // scale invariant.
-        std::vector<double> centered(static_cast<size_t>(n));
-        double mean = 0.0;
-        for (int64_t i = 0; i < n; ++i) mean += targets[i] / scale;
-        mean /= static_cast<double>(n);
-        double sst = 0.0;
-        for (int64_t i = 0; i < n; ++i) {
-            centered[static_cast<size_t>(i)] = targets[i] / scale - mean;
-            sst += centered[static_cast<size_t>(i)] * centered[static_cast<size_t>(i)];
-        }
-        if (!categorical && !(sst > 0.0)) return N4M_OK;
-        AssociationKernel kernel{level, level_n, centered, cls, class_n,
-                                 categorical != 0, sst,
-                                 std::vector<double>(static_cast<size_t>(g), 0.0),
-                                 std::vector<int64_t>(categorical
-                                     ? static_cast<size_t>(g) * static_cast<size_t>(c) : 0)};
-        const double observed = kernel(nullptr);
-        if (!categorical) {
+        out_eight[6] = std::min(log10_factorial_ratio(n, p.level_n),
+                                log10_factorial_ratio(n, p.value_n));
+        if (!p.defined()) return N4M_OK;
+        const double observed = p.statistic(p.level.data(), p.value.data());
+        if (!p.categorical) {
             out_eight[0] = observed;
-            std::vector<double> level_mean(static_cast<size_t>(g), 0.0);
-            for (int64_t i = 0; i < n; ++i)
-                level_mean[static_cast<size_t>(level[static_cast<size_t>(i)])] +=
-                    centered[static_cast<size_t>(i)];
-            for (int64_t a = 0; a < g; ++a)
-                level_mean[static_cast<size_t>(a)] /=
-                    static_cast<double>(level_n[static_cast<size_t>(a)]);
+            std::vector<double> level_sum(static_cast<size_t>(g), 0.0);
+            for (size_t i = 0; i < p.level.size(); ++i)
+                level_sum[static_cast<size_t>(p.level[i])] +=
+                    p.value_centered[static_cast<size_t>(p.value[i])];
             double ssw = 0.0;
-            for (int64_t i = 0; i < n; ++i) {
-                const double d = centered[static_cast<size_t>(i)] -
-                                 level_mean[static_cast<size_t>(level[static_cast<size_t>(i)])];
+            for (size_t i = 0; i < p.level.size(); ++i) {
+                const auto a = static_cast<size_t>(p.level[i]);
+                const double d = p.value_centered[static_cast<size_t>(p.value[i])] -
+                                 level_sum[a] / static_cast<double>(p.level_n[a]);
                 ssw += d * d;
             }
-            const double ssb = observed * sst;
+            const double ssb = observed * p.sst;
             if (n > g && ssw > 0.0)
                 out_eight[1] = (ssb / static_cast<double>(g - 1)) /
                                (ssw / static_cast<double>(n - g));
@@ -933,18 +1034,20 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
         } else {
             out_eight[0] = std::sqrt(observed);
             out_eight[1] = observed * static_cast<double>(n) *
-                           static_cast<double>(std::min(g, c) - 1);
-            out_eight[2] = static_cast<double>((g - 1) * (c - 1));
+                           static_cast<double>(std::min(g, v) - 1);
+            out_eight[2] = static_cast<double>((g - 1) * (v - 1));
         }
         if (n_permutations == 0) return N4M_OK;
         n4m_rng_pcg64 rng{};
         n4m_pcg64_engine_seed(&rng, seed);
-        std::vector<int64_t> perm(static_cast<size_t>(n));
+        std::vector<int64_t> perm(static_cast<size_t>(n)), permuted(static_cast<size_t>(n));
         const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
         int64_t at_least = 0;
         for (int32_t b = 0; b < n_permutations; ++b) {
             n4m_pcg64_engine_permutation(&rng, perm.data(), n);
-            if (kernel(perm.data()) >= observed - tolerance) ++at_least;
+            for (size_t i = 0; i < perm.size(); ++i)
+                permuted[i] = p.value[static_cast<size_t>(perm[i])];
+            if (p.statistic(p.level.data(), permuted.data()) >= observed - tolerance) ++at_least;
         }
         out_two[0] = at_least;
         out_two[1] = n_permutations;
@@ -954,6 +1057,36 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "association allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "association internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_factor_association_exact(
+    n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
+    int64_t n, int32_t categorical, int64_t max_arrangements, double* out_four) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (!out_four) return fail(ctx, N4M_ERR_NULL_POINTER, "null exact association buffer");
+    try {
+        FactorProblem p;
+        const n4m_status_t st = prepare_factor(ctx, factor_codes, targets, n, categorical, p);
+        if (st != N4M_OK) return st;
+        const bool defined = p.defined();
+        const double observed = defined ? p.statistic(p.level.data(), p.value.data()) : nan_value;
+        const auto cap = static_cast<uint64_t>(std::max<int64_t>(max_arrangements, 1));
+        // Enumerate the side with fewer distinct arrangements; the other stays fixed.
+        if (arrangement_count(p.level_n, cap) <= arrangement_count(p.value_n, cap))
+            return exact_distribution(ctx, p.level, p.level_n, max_arrangements, defined,
+                                      observed,
+                                      [&p](const int64_t* L) {
+                                          return p.statistic(L, p.value.data());
+                                      },
+                                      out_four);
+        return exact_distribution(ctx, p.value, p.value_n, max_arrangements, defined, observed,
+                                  [&p](const int64_t* Y) {
+                                      return p.statistic(p.level.data(), Y);
+                                  },
+                                  out_four);
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "exact association allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "exact association internal error"); }
 }
 
 N4M_API n4m_status_t n4m_preflight_holm_adjust(
@@ -988,61 +1121,39 @@ N4M_API n4m_status_t n4m_stats_correlation_test(
     int32_t method, int32_t n_permutations, uint64_t seed,
     double* out_five, int64_t* out_two) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
-    if (!x || !y || !out_five || !out_two)
-        return fail(ctx, N4M_ERR_NULL_POINTER, "null correlation buffer");
-    if (n < 2 || (method != 0 && method != 1) || n_permutations < 0 ||
-        n_permutations > 1000000 ||
-        static_cast<uint64_t>(n) > static_cast<uint64_t>(PTRDIFF_MAX / sizeof(double)))
+    if (!out_five || !out_two) return fail(ctx, N4M_ERR_NULL_POINTER, "null correlation buffer");
+    if (n_permutations < 0 || n_permutations > 1000000)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid correlation dimensions or method");
     try {
-        for (int64_t i = 0; i < n; ++i)
-            if (!std::isfinite(x[i]) || !std::isfinite(y[i]))
-                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite correlation input");
+        CorrelationProblem p;
+        const n4m_status_t st = prepare_correlation(ctx, x, y, n, method, p);
+        if (st != N4M_OK) return st;
         const long double work = static_cast<long double>(n) *
                                  (static_cast<long double>(n_permutations) + 1.0L);
         if (work > max_moment_products)
             return fail(ctx, N4M_ERR_UNSUPPORTED,
                         "correlation permutations exceed 250 million operation budget");
-        // +0.0 replaces -0.0 so both zero encodings share one value.
-        std::vector<double> xs(x, x + n), ys(y, y + n);
-        for (double& v : xs) v += 0.0;
-        for (double& v : ys) v += 0.0;
-        std::vector<int64_t> x_n, y_n;
-        dense_codes(xs, x_n);
-        dense_codes(ys, y_n);
         for (int i = 0; i < 5; ++i) out_five[i] = nan_value;
         out_two[0] = 0;
         out_two[1] = 0;
-        out_five[1] = static_cast<double>(x_n.size());
-        out_five[2] = static_cast<double>(y_n.size());
-        out_five[3] = std::min(log10_factorial_ratio(n, x_n), log10_factorial_ratio(n, y_n));
-        if (x_n.size() < 2 || y_n.size() < 2) return N4M_OK;
-        if (method == 1) {
-            xs = average_ranks(xs);
-            ys = average_ranks(ys);
-        }
-        const double sxx = scaled_centered(xs), syy = scaled_centered(ys);
-        if (!(sxx > 0.0) || !(syy > 0.0)) return N4M_OK;
-        const double denominator = std::sqrt(sxx) * std::sqrt(syy);
-        const auto size = static_cast<size_t>(n);
-        const auto correlation = [&](const int64_t* perm) {
-            double sxy = 0.0;
-            for (size_t i = 0; i < size; ++i)
-                sxy += xs[i] * ys[perm ? static_cast<size_t>(perm[i]) : i];
-            return std::max(-1.0, std::min(1.0, sxy / denominator));
-        };
-        const double observed = correlation(nullptr);
+        out_five[1] = static_cast<double>(p.x_n.size());
+        out_five[2] = static_cast<double>(p.y_n.size());
+        out_five[3] = std::min(log10_factorial_ratio(n, p.x_n), log10_factorial_ratio(n, p.y_n));
+        if (!p.defined()) return N4M_OK;
+        const double observed = p.statistic(p.x_code.data(), p.y_code.data());
         out_five[0] = observed;
         if (n_permutations == 0) return N4M_OK;
         n4m_rng_pcg64 rng{};
         n4m_pcg64_engine_seed(&rng, seed);
-        std::vector<int64_t> perm(size);
+        std::vector<int64_t> perm(static_cast<size_t>(n)), permuted(static_cast<size_t>(n));
         const double threshold =
             std::abs(observed) - std::sqrt(std::numeric_limits<double>::epsilon());
         int64_t at_least = 0;
         for (int32_t b = 0; b < n_permutations; ++b) {
             n4m_pcg64_engine_permutation(&rng, perm.data(), n);
-            if (std::abs(correlation(perm.data())) >= threshold) ++at_least;
+            for (size_t i = 0; i < perm.size(); ++i)
+                permuted[i] = p.y_code[static_cast<size_t>(perm[i])];
+            if (std::abs(p.statistic(p.x_code.data(), permuted.data())) >= threshold) ++at_least;
         }
         out_two[0] = at_least;
         out_two[1] = n_permutations;
@@ -1052,6 +1163,35 @@ N4M_API n4m_status_t n4m_stats_correlation_test(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "correlation allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "correlation internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_correlation_exact(
+    n4m_context_t* ctx, const double* x, const double* y, int64_t n, int32_t method,
+    int64_t max_arrangements, double* out_four) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (!out_four) return fail(ctx, N4M_ERR_NULL_POINTER, "null exact correlation buffer");
+    try {
+        CorrelationProblem p;
+        const n4m_status_t st = prepare_correlation(ctx, x, y, n, method, p);
+        if (st != N4M_OK) return st;
+        const bool defined = p.defined();
+        const double observed =
+            defined ? std::abs(p.statistic(p.x_code.data(), p.y_code.data())) : nan_value;
+        const auto cap = static_cast<uint64_t>(std::max<int64_t>(max_arrangements, 1));
+        if (arrangement_count(p.x_n, cap) <= arrangement_count(p.y_n, cap))
+            return exact_distribution(ctx, p.x_code, p.x_n, max_arrangements, defined, observed,
+                                      [&p](const int64_t* X) {
+                                          return std::abs(p.statistic(X, p.y_code.data()));
+                                      },
+                                      out_four);
+        return exact_distribution(ctx, p.y_code, p.y_n, max_arrangements, defined, observed,
+                                  [&p](const int64_t* Y) {
+                                      return std::abs(p.statistic(p.x_code.data(), Y));
+                                  },
+                                  out_four);
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "exact correlation allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "exact correlation internal error"); }
 }
 
 N4M_API n4m_status_t n4m_stats_bh_adjust(

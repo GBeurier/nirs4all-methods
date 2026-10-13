@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **229**
+- Curated records: **230**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `3c4dbb85c490a33dc2373b710f21550da11235f9789e6b1fbe100a846e033d7b`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `89cd3aed815d928ebd7c982b49250d75397af6e2addd2e9e2ee851ddca9e6a06`
 
 ## References by documentation page
 
@@ -441,6 +441,12 @@ Benjamini & Hochberg (1995), *Controlling the False Discovery Rate: A Practical 
 Pearson (1895), *Note on regression and inheritance in the case of two parents*, Proceedings of the Royal Society of London 58, 240–242, https://doi.org/10.1098/rspl.1895.0041; Spearman (1904), *The proof and measurement of association between two things*, American Journal of Psychology 15(1), 72–101, https://doi.org/10.2307/1412159; Phipson & Smyth (2010), *Permutation P-values Should Never Be Zero*, Statistical Applications in Genetics and Molecular Biology 9(1), https://doi.org/10.2202/1544-6115.1585.
 
 **Provenance:** https://doi.org/10.1098/rspl.1895.0041; https://doi.org/10.2307/1412159; https://doi.org/10.2202/1544-6115.1585; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_factor_association_exact`](diagnostics_factor_association_exact.md) — Exact permutation distribution of a factor-target association
+
+No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.
+
+**Provenance:** https://doi.org/10.1007/b138696; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
 
 ### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
 

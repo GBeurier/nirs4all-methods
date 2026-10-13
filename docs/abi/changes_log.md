@@ -2,8 +2,8 @@
 
 ## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
 
-Add two generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19
-symbols are unchanged and no serialized format changes.
+Add four generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19
+signatures are unchanged and no serialized format changes.
 
 `n4m_stats_correlation_test` returns the Pearson (method 0) or Spearman
 (method 1, average ranks for ties) correlation of paired finite vectors, the
@@ -15,6 +15,17 @@ as `numpy.random.default_rng`; the b-th draw equals NumPy's b-th
 vector gives NaN and runs no permutation. Work above 250 million operations
 returns `N4M_ERR_UNSUPPORTED`. `n4m_stats_bh_adjust` returns
 Benjamini-Hochberg step-up adjusted p-values (R `p.adjust("BH")`).
+`n4m_stats_factor_association_exact` and `n4m_stats_correlation_exact`
+enumerate the distinct arrangements of the side with fewer arrangements (at
+most `max_arrangements` <= 1e7) and return their count, the exact p-value and
+the minimal attainable exact p-value with the maximum statistic.
+
+Behavior fix in 2.19 `n4m_preflight_factor_association`: targets were divided
+by max|y| and centered on a naive mean, so a large common offset leaked into
+the between-group sum (two identical groups `1e16 + {0, 2, 4}` gave eta^2 =
+0.27, F = 1.5). Targets are now centered after an exact power-of-two scaling,
+a shift to the first target and a residual-mean correction; eta^2 and F are
+translation invariant. Permutation draws and counts are unchanged.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

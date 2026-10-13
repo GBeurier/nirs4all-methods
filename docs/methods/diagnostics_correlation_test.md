@@ -4,7 +4,7 @@ _Namespace_: **`n4m.metrics.statistics`** · _Fully-qualified_: `n4m.metrics.sta
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_correlation_test`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L215). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_correlation_exact`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L240) · [`n4m_stats_correlation_test`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L219). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -30,7 +30,7 @@ The test assumes exchangeable units and permutes $y$ as one unrestricted block; 
 
 ### Implementation
 
-The ABI-2 symbol `n4m_stats_correlation_test` in `n4m/metrics.h` is implemented in `cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsCorrelationTest`. Draws reuse the PCG64 engine seeded like `numpy.random.default_rng`. SciPy `pearsonr`/`spearmanr` coefficients and NumPy permutation counts are pinned in `cpp/tests/test_preflight.cpp`.
+The ABI-2 symbols `n4m_stats_correlation_test` and `n4m_stats_correlation_exact` (exhaustive enumeration of distinct arrangements: exact p-value and minimal attainable p-value) in `n4m/metrics.h` are implemented in `cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsCorrelationTest` and `statsCorrelationExact`. Centering uses an exact power-of-two scaling and a shifted origin, so $r$ is translation invariant. Draws reuse the PCG64 engine seeded like `numpy.random.default_rng`. SciPy `pearsonr`/`spearmanr` coefficients and NumPy permutation counts are pinned in `cpp/tests/test_preflight.cpp`.
 
 ### Sources and provenance
 
@@ -38,7 +38,7 @@ https://doi.org/10.1098/rspl.1895.0041; https://doi.org/10.2307/1412159; https:/
 
 ## Catalog note
 
-Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity.
+Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity; n4m_stats_correlation_exact enumerates the distinct arrangements for the exact p-value and the minimal attainable p-value.
 
 
 _See also_: [methods index](index.md).
