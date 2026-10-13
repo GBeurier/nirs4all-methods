@@ -1941,4 +1941,61 @@ N4M_API n4m_status_t n4m_stats_permdisp(
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PERMDISP allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PERMDISP internal error"); }
 }
+
+N4M_API n4m_status_t n4m_stats_group_means(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int64_t n_groups, double* out_means, int64_t* out_counts) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!group_codes || !out_means || !out_counts)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null group-means buffer");
+    const int64_t n = X->rows, k = X->cols;
+    if (n < 1 || k < 1 || n_groups < 1 || n_groups > n)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid group-means dimensions");
+    try {
+        const auto g = static_cast<size_t>(n_groups), kk = static_cast<size_t>(k);
+        std::vector<int64_t> count(g, 0);
+        for (int64_t i = 0; i < n; ++i) {
+            if (group_codes[i] < 0 || group_codes[i] >= n_groups)
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "group code outside [0, n_groups)");
+            ++count[static_cast<size_t>(group_codes[i])];
+        }
+        if (std::find(count.begin(), count.end(), 0) != count.end())
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "every group needs at least one row");
+        // Running means on values divided by the column's largest magnitude:
+        // finite inputs never overflow and the mean stays within the column range.
+        std::vector<double> scale(kk, 0.0);
+        for (int64_t i = 0; i < n; ++i)
+            for (int64_t j = 0; j < k; ++j) {
+                const double x = at(*X, i, j);
+                if (!std::isfinite(x))
+                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite group-means input");
+                scale[static_cast<size_t>(j)] =
+                    std::max(scale[static_cast<size_t>(j)], std::abs(x));
+            }
+        for (double& s : scale)
+            if (s == 0.0) s = 1.0;
+        std::vector<long double> mean(g * kk, 0.0L);
+        std::vector<int64_t> seen(g, 0);
+        for (int64_t i = 0; i < n; ++i) {
+            const auto c = static_cast<size_t>(group_codes[i]);
+            const auto r = static_cast<long double>(++seen[c]);
+            for (size_t j = 0; j < kk; ++j) {
+                const long double x = static_cast<long double>(at(*X, i, static_cast<int64_t>(j))) /
+                                      static_cast<long double>(scale[j]);
+                mean[c * kk + j] += (x - mean[c * kk + j]) / r;
+            }
+        }
+        for (size_t c = 0; c < g; ++c) {
+            out_counts[c] = count[c];
+            for (size_t j = 0; j < kk; ++j)
+                out_means[c * kk + j] =
+                    static_cast<double>(static_cast<long double>(scale[j]) * mean[c * kk + j]);
+        }
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "group-means allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "group-means internal error"); }
+}
 }  // extern "C"

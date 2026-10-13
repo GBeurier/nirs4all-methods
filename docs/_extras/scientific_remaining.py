@@ -1649,6 +1649,31 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "docs/dev/hdbscan.md",
     ),
+    "diagnostics_group_means": _entry(
+        "Equal-weight per-group column means",
+        "Arithmetic mean of replicate measurements; Welford (1962), *Note on a method for "
+        "calculating corrected sums of squares and products*, Technometrics 4, 419–420, "
+        "https://doi.org/10.1080/00401706.1962.10490022.",
+        "For each group $g$ and column $j$ the kernel returns $\\bar x_{gj}=\\frac1{n_g}\\sum_{i:g(i)=g}x_{ij}$, "
+        "with equal weight per row. It updates a running mean $m\\leftarrow m+(x/s_j-m)/r$ in "
+        "extended precision on values divided by the column's largest magnitude $s_j$, then "
+        "multiplies by $s_j$, so finite inputs never overflow.",
+        "Aggregating homogeneous technical repeats of one physical sample (same instrument and "
+        "campaign) into one row before fitting or validation, so repeats never weigh as "
+        "independent samples.",
+        "Every group needs at least one row; codes must lie in $[0, n_{groups})$. Nonfinite "
+        "values are refused (no mask: callers select complete rows). The mean is not a robust "
+        "location estimate and does not reconcile repeats from different contexts.",
+        "The ABI-2 symbol `n4m_stats_group_means` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsGroupMeans`. "
+        "`cpp/tests/test_group_means.cpp` checks hand-computed means, column-major strides, "
+        "extreme magnitudes where a naive sum overflows, and refusals.",
+        "https://doi.org/10.1080/00401706.1962.10490022; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_group_means.cpp",
+    ),
     "diagnostics_permanova": _entry(
         "PERMANOVA of one categorical term on Euclidean distances",
         "Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, "

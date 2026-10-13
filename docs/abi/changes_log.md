@@ -1,5 +1,14 @@
 # ABI — Changes Log
 
+## 2026-10-13 — ABI 2.20.0 (continued): group means (unreleased)
+
+Add `n4m_stats_group_means` to the same unreleased 2.20.0 surface in
+`n4m/metrics.h`; no serialized format changes. It returns equal-weight
+per-group column means (`n_groups x k`, row-major) and row counts of a strided
+f64 matrix. Each mean is a running mean of the values divided by the
+column's largest magnitude, in extended precision, then scaled back. Invalid
+codes, empty groups and nonfinite values return `N4M_ERR_INVALID_ARGUMENT`.
+
 ## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
 
 Add four generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19
