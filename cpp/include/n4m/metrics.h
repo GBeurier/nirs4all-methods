@@ -263,6 +263,57 @@ N4M_API n4m_status_t n4m_stats_correlation_exact(
  * discovery rate under independence or positive regression dependence. */
 N4M_API n4m_status_t n4m_stats_bh_adjust(
     n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
+/* PERMANOVA (Anderson 2001) on Euclidean distances between the rows of X
+ * (n x k coordinates, e.g. PCA scores), for one categorical term given
+ * optional strata. term_codes and strata_codes are arbitrary int64 level
+ * codes of n elements; strata_codes == NULL is one stratum (the term alone).
+ * Sums of squares follow the additive model strata + term: ss_strata is the
+ * between-strata SS and ss_term = SS(strata + term) - SS(strata), the vegan
+ * adonis2(by = "margin") SS of the term when the strata are the other factor.
+ * The identifiable term df is levels - c, with c the connected components of
+ * the bipartite level-stratum occupancy graph (0 when the term is aliased
+ * with the strata); df_residual = n - strata - df_term.
+ * Monte Carlo test (n_permutations > 0, df_term > 0, within-strata SS > 0):
+ * PCG64 seeded like numpy.random.default_rng(seed). For each draw, every
+ * stratum in ascending code order (members in ascending row order idx) takes
+ * q = rng.permutation(n_s), and row idx[j] receives the data of row idx[q[j]]
+ * (rows move only inside their stratum). b counts partial R^2 >= observed -
+ * sqrt(DBL_EPSILON); p = (1+b)/(1+B).
+ * Requires n >= 2, k >= 1, finite X, at most 2048 term levels, 0 <=
+ * n_permutations <= 1000000 and (n(k+1) + levels^2 k)(B+1) + levels n <= 250
+ * million operations (N4M_ERR_UNSUPPORTED otherwise).
+ * out_thirteen (caller-owned, NaN when undefined):
+ *   [0] ss_total  [1] ss_strata  [2] ss_term  [3] ss_residual
+ *   [4] R^2 = ss_term/ss_total  [5] partial R^2 = ss_term/(ss_term+ss_residual)
+ *   [6] pseudo-F = (ss_term/df_term)/(ss_residual/df_residual)
+ *   [7] df_term  [8] df_residual  [9] term levels  [10] strata
+ *   [11] log10 prod_s (n_s!/prod_a n_as!), the number of distinct
+ *        within-strata level assignments (an upper bound on distinct outcomes)
+ *   [12] Monte Carlo p-value.
+ * out_two = {b, executed B}. */
+N4M_API n4m_status_t n4m_stats_permanova(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* strata_codes, int32_t n_permutations, uint64_t seed,
+    double* out_thirteen, int64_t* out_two);
+
+/* PERMDISP (Anderson 2006), as vegan betadisper(type = "centroid") with
+ * permutest: Euclidean distances of the rows of X to their group centroid,
+ * one-way ANOVA F on those distances, and a Monte Carlo test permuting the
+ * ANOVA residuals of the distances over all rows (PCG64 as
+ * numpy.random.default_rng(seed); row i receives residual perm[i] of the
+ * b-th rng.permutation(n)). b counts B_perm/total >= B/(B+W) -
+ * sqrt(DBL_EPSILON), which is F_perm >= F_obs. Dispersion differences do not
+ * validate exchangeability or a PERMANOVA. Same input limits as
+ * n4m_stats_permanova; work n(2k + B + 1) <= 250 million operations.
+ * distances has n elements; group_mean_distances has capacity n and
+ * receives one mean per group in ascending code order.
+ * out_six: [0] F (NaN with one group, n == groups or zero within SS)
+ * [1] df1 = groups-1 [2] df2 = n-groups [3] groups
+ * [4] log10(n!/prod n_g!) [5] Monte Carlo p-value; out_two = {b, executed B}. */
+N4M_API n4m_status_t n4m_stats_permdisp(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int32_t n_permutations, uint64_t seed, double* distances,
+    double* group_mean_distances, double* out_six, int64_t* out_two);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,

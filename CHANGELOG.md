@@ -22,6 +22,23 @@ ABI 2.20.0. No model-state serialization format changes.
   p-value and the minimal attainable exact p-value (JS
   `statsFactorAssociationExact`, `statsCorrelationExact`). Brute-force SciPy
   references are pinned in the native and JS tests.
+- Public ABI 2.20.0 multivariate tests in `n4m/metrics.h`:
+  `n4m_stats_permanova` (PERMANOVA of one categorical term on Euclidean
+  distances, optionally given strata, with the vegan
+  `adonis2(by = "margin")` sums of squares for one other factor, the exact
+  identifiable term df from the connected components of the level-stratum
+  graph, so an aliased term reports df 0, and a seeded within-strata Monte
+  Carlo test) and `n4m_stats_permdisp` (vegan `betadisper(type =
+  "centroid")` + `permutest` residual permutation). Both reuse the PCG64
+  permutation helper (`numpy.random.default_rng` parity) and are wrapped in
+  JS/WASM as `statsPermanova` and `statsPermdisp`.
+- Reference gate `parity/fixtures/permanova_v1.json`
+  (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
+  least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
+  scikit-bio 0.7.4 `permanova`/`permdisp` and NumPy permutation counts, on
+  free, conditional, partially aliased, fully aliased, singleton-stratum and
+  dispersion-only cases, plus hand-derived closed forms. The reference
+  packages are test-only.
 
 ### Fixed
 
