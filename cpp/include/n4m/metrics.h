@@ -13,7 +13,19 @@ extern "C" {
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
  * elements, and full_moments has two elements: sum(lambda) and
  * sum(lambda^2), over the FULL centered covariance spectrum (ddof=1).
- * The moments remain exact when PCA is truncated or approximated. */
+ * The moments remain exact when PCA is truncated or approximated.
+ * Numerical domain: each column is centred in an exactly rescaled space and
+ * the decomposition runs at one power-of-two scale chosen from the centred
+ * variation, so constant columns (any amplitude) have no influence and a
+ * translation changes nothing beyond the input's own rounding. Scaling X by
+ * 2^s scales eigenvalues and full_moments[0] by 4^s, full_moments[1] by
+ * 16^s and scores by 2^s; loadings are invariant. N4M_ERR_NUMERICAL_FAILURE
+ * means an output is not representable: a moment, or an eigenvalue above
+ * the numerical rank threshold (singular value > max(n,p)*eps*s_max),
+ * overflows or falls below 2^-1042 (fewer than 32 significant bits), or a
+ * score overflows. For unit-scale variation this allows s in about
+ * [-255, 255] (full_moments[1] scales by 16^s). Outputs are unspecified
+ * when the call fails. */
 N4M_API n4m_status_t n4m_preflight_pca_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
     const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
