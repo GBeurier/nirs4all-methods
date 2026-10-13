@@ -9,20 +9,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Fixed
 
 - Internal SVD / symmetric-eigen helpers (`cpp/src/core/common/svd.c`) no
-  longer return `N4M_ERR_CONVERGENCE_FAILED`, or wrong factors, on degenerate
-  inputs. This affected PCA (`n4m_pca_fit`, `n4m_preflight_pca_compute`), PCR,
-  Ridge, MB-PLS, Hotelling T2 / Q residuals, FlexiblePCA/SVD and wavelet
-  PCA/SVD. One-sided Jacobi: a rank-deficient null-space column at rounding
-  level (e.g. +-1 spectra where one row is the opposite of another) is now
-  returned as an exact zero singular value instead of rotating forever.
-  Tridiagonal QL: the EISPACK tql2 matrix-scale deflation test and an
-  underflow guard now back up the local test, with LAPACK dsteqr's 30n
-  iteration budget, so clusters of equal eigenvalues converge. Randomized SVD:
-  the sketch basis is re-orthogonalised and rank-deficient sketch columns are
-  dropped. Results on well-conditioned inputs are unchanged: Jacobi
-  bit-identical, QL eigenvalues within 1.3e-15 relative, all 145 registry
-  parity predictions bit-identical. Covered by NumPy 2.2.6 / LAPACK goldens
-  (`parity/scripts/svd_degenerate_reference.py`).
+  longer return `N4M_ERR_CONVERGENCE_FAILED`, or silently wrong factors, on
+  degenerate or extreme inputs. This affected PCA (`n4m_pca_fit`,
+  `n4m_preflight_pca_compute`), PCR, Ridge, MB-PLS, Hotelling T2 / Q
+  residuals, FlexiblePCA/SVD and wavelet PCA/SVD.
+  - One-sided Jacobi: a column that two consecutive sweeps cancel to
+    rounding level (e.g. +-1 spectra where one row is the opposite of another)
+    is frozen, with its residual norm as singular value and an orthonormal U
+    completion. Weak but full-rank directions converge with relative accuracy.
+  - Tridiagonal QL: LAPACK dsteqr organisation, i.e. unreduced blocks split by
+    the local test, exact per-block scaling of extreme blocks (subnormal
+    spectra resolved) and a 30n total iteration budget.
+  - Randomized SVD: the sketch basis is re-orthogonalised and dependent sketch
+    columns are dropped.
+  - Every helper rescales inputs outside [2^-128, 2^128) by an exact power of
+    two (scale-equivariant over the double range), rejects non-finite input,
+    and reports a significant value it cannot represent (overflow or below
+    2^-1042) as `N4M_ERR_NUMERICAL_FAILURE`.
+  - On non-degenerate inputs the Jacobi and QL results are bit-identical to
+    1.3.6, and all 145 registry parity predictions are bit-identical.
+  - Covered by NumPy 2.2.6 / LAPACK goldens
+    (`parity/scripts/svd_degenerate_reference.py`): relative comparison of
+    every value for decoupled, graded and subnormal cases, per-component
+    residuals and orthogonality, and magnitude sweeps.
+- `n4m_preflight_pca_compute` chooses its scale from the centred variation:
+  constant columns of any amplitude are ignored, translations are exact to the
+  input's rounding, outputs are power-of-two equivariant, and
+  `N4M_ERR_NUMERICAL_FAILURE` is reserved for outputs that are not
+  representable (see `docs/abi/changes_log.md`). ABI unchanged.
 
 ## [1.3.6] - 2026-10-13
 

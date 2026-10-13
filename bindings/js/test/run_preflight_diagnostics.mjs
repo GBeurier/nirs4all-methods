@@ -15,6 +15,8 @@ const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
 const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
+const relativeNearTol = (actual, expected) => assert.ok(
+    Math.abs(actual - expected) <= 1e-12 * Math.abs(expected), `${actual} != ${expected}`);
 await loadModule();
 assert.deepEqual(abiVersion(), [2, 19, 0]);
 const pca = preflightPca({
@@ -34,6 +36,51 @@ near(pm1.eigenvalues[0], 4.451454311908496);
 near(pm1.eigenvalues[1], 2.943891106099754);
 near(pm1.eigenvalues[2], 0.2713212486584137);
 near(pm1.fullMoments[0], 23 / 3);
+// PCA magnitude sweep, translation and constant columns (same design and
+// expectations as test_preflight.cpp): exact power-of-two equivariance when
+// every output is representable, otherwise exactly N4M_ERR_NUMERICAL_FAILURE.
+const NUMERICAL_FAILURE = 7;
+const pcaBase = [3, -1, 4, 1, -5, 9, 2, -6, 5, 3, -5, 8, 9, -7, 9, 3, 2, -3, 8, 4,
+                 -6, 2, 6, 4, -3, 3, 3, -8, 3, 2];
+const pcaOf = (values, cols = 5) =>
+    preflightPca({data: new Float64Array(values), rows: 6, cols}, 3);
+const statusOf = (values) => {
+    try { pcaOf(values); return 0; } catch (e) { return e.status; }
+};
+const base = pcaOf(pcaBase);
+for (const s of [-200, -100, 0, 100, 200]) {
+    const f = 2 ** s;
+    const r = pcaOf(pcaBase.map((v) => v * f));
+    for (let a = 0; a < 3; ++a) assert.equal(r.eigenvalues[a], base.eigenvalues[a] * f * f);
+    assert.equal(r.fullMoments[0], base.fullMoments[0] * f * f);
+    assert.equal(r.fullMoments[1], base.fullMoments[1] * f * f * f * f);
+    r.scores.data.forEach((v, i) => assert.equal(v, base.scores.data[i] * f));
+    assert.deepEqual(Array.from(r.loadings.data), Array.from(base.loadings.data));
+}
+const scaled = (s) => pcaBase.map((v) => v * 2 ** (s / 2) * 2 ** (s - s / 2));
+for (const s of [-1014, -1022, -500, 500, 1000]) {
+    assert.equal(statusOf(scaled(s)), NUMERICAL_FAILURE, `scale 2^${s}`);
+}
+const shifted = pcaOf(pcaBase.map((v) => 16 * v + 1e16));
+for (let a = 0; a < 3; ++a) relativeNearTol(shifted.eigenvalues[a], 256 * base.eigenvalues[a]);
+assert.equal(statusOf(pcaBase.map((v) => v * 2 ** 950 + 1e300)), NUMERICAL_FAILURE);
+const withConstants = [];
+for (let i = 0; i < 6; ++i) {
+    withConstants.push(1e300, ...pcaBase.slice(5 * i, 5 * i + 5), -1.7976931348623157e308, 5e-324);
+}
+const c = pcaOf(withConstants, 8);
+for (let a = 0; a < 3; ++a) relativeNearTol(c.eigenvalues[a], base.eigenvalues[a]);
+relativeNearTol(c.fullMoments[1], base.fullMoments[1]);
+// Weak decoupled variance (NumPy 2.2.6 golden), relative accuracy kept.
+const weak = new Float64Array(96);
+[1, 0, 0, 0, 1e-9, 0, 0, 1e-9, 1e-9].forEach((v, i) => { weak[i] = v; weak[9 + i] = -v; });
+const wk = preflightPca({data: weak, rows: 32, cols: 3}, 2);
+relativeNearTol(wk.eigenvalues[0], 0.06451612903225808);
+relativeNearTol(wk.eigenvalues[1], 1.6890541862902547e-19);
+for (let a = 0; a < 3; ++a) {
+    assert.ok(c.loadings.data[8 * a] === 0 && c.loadings.data[8 * a + 6] === 0 &&
+              c.loadings.data[8 * a + 7] === 0);
+}
 assert.equal(pca.scores.rows, 4);
 assert.equal(pca.loadings.cols, 2);
 const repeat = preflightRepeatability({

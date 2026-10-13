@@ -1,5 +1,20 @@
 # ABI — Changes Log
 
+## Unreleased — ABI 2.19.0 unchanged: `n4m_preflight_pca_compute` numerical domain
+
+No symbol, signature or layout change. `n4m_preflight_pca_compute` now centres
+each column in an exactly rescaled space (two-term mean) and runs the
+decomposition at one power-of-two scale chosen from the centred variation.
+Constant columns of any amplitude have no influence, a translation changes
+nothing beyond the input's own rounding, and scaling X by 2^s scales
+eigenvalues and `full_moments[0]` by 4^s, `full_moments[1]` by 16^s and scores
+by 2^s, with loadings invariant. `N4M_ERR_NUMERICAL_FAILURE` now means only
+that an output is not representable: a moment or an above-rank eigenvalue
+overflows or falls below 2^-1042, or a score overflows. For unit-scale
+variation this allows s in about [-255, 255]. Representing the moments outside
+that range would need a new output (for example a binary exponent), which is
+an ABI change.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

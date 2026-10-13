@@ -17,6 +17,110 @@ static n4m_matrix_view_t view(double* x, int64_t n, int64_t p) {
     REQUIRE(n4m_matrix_view_init_rowmajor(&v, x, n, p, N4M_DTYPE_F64)==N4M_OK);
     return v;
 }
+// --- PCA magnitude / translation / constant-column invariance -------------
+struct PcaRun {
+    n4m_status_t status;
+    std::vector<double> eigen, moments, scores, loadings;
+};
+static PcaRun run_pca(n4m_context_t* ctx, std::vector<double> x, int64_t n, int64_t p, int32_t k) {
+    PcaRun r{N4M_OK, std::vector<double>(static_cast<size_t>(k)), std::vector<double>(2),
+             std::vector<double>(static_cast<size_t>(n * k)),
+             std::vector<double>(static_cast<size_t>(k * p))};
+    auto X=view(x.data(),n,p), S=view(r.scores.data(),n,k), L=view(r.loadings.data(),k,p);
+    r.status=n4m_preflight_pca_compute(ctx,&X,k,&S,&L,r.eigen.data(),r.moments.data());
+    return r;
+}
+static bool rel_close(double a, double b, double tol) {
+    return std::abs(a-b) <= tol*std::max(std::abs(a),std::abs(b));
+}
+static bool representable(double x) { return std::isfinite(x) && x >= std::ldexp(1.0,-1042); }
+// 6 x 5 integer design (exact under any power-of-two scaling); centred rank 5.
+static const double kPcaBase[30]={3,-1,4,1,-5, 9,2,-6,5,3, -5,8,9,-7,9, 3,2,-3,8,4,
+                                  -6,2,6,4,-3, 3,3,-8,3,2};
+static void pca_invariance_tests(n4m_context_t* ctx) {
+    const int64_t n=6, p=5; const int32_t k=3;
+    const std::vector<double> base_x(kPcaBase,kPcaBase+30);
+    const PcaRun base=run_pca(ctx,base_x,n,p,k);
+    REQUIRE(base.status==N4M_OK && base.eigen[2]>0.0 && base.moments[1]>0.0);
+    // Magnitude sweep: X * 2^s. Every output is exactly equivariant when
+    // representable; otherwise the call reports N4M_ERR_NUMERICAL_FAILURE.
+    const int sweep[]={-1014,-1022,-500,-200,-100,0,100,200,500,1000};
+    int ok_count=0, refused=0;
+    for (int s : sweep) {
+        std::vector<double> x(base_x);
+        for (double& v : x) v=std::ldexp(v,s);
+        const PcaRun r=run_pca(ctx,x,n,p,k);
+        bool expect_ok=representable(std::ldexp(base.moments[0],2*s)) &&
+                       representable(std::ldexp(base.moments[1],4*s));
+        for (double e : base.eigen) expect_ok=expect_ok && representable(std::ldexp(e,2*s));
+        if (!expect_ok) {
+            REQUIRE(r.status==N4M_ERR_NUMERICAL_FAILURE);
+            ++refused;
+            continue;
+        }
+        REQUIRE(r.status==N4M_OK);
+        ++ok_count;
+        for (int32_t a=0;a<k;++a) REQUIRE(r.eigen[static_cast<size_t>(a)]==
+                                          std::ldexp(base.eigen[static_cast<size_t>(a)],2*s));
+        REQUIRE(r.moments[0]==std::ldexp(base.moments[0],2*s));
+        REQUIRE(r.moments[1]==std::ldexp(base.moments[1],4*s));
+        for (size_t i=0;i<r.scores.size();++i)
+            REQUIRE(r.scores[i]==std::ldexp(base.scores[i],s));
+        REQUIRE(r.loadings==base.loadings);
+    }
+    // s in {-200,...,200} is representable; |s|>=500 (16^s moment) is not.
+    REQUIRE(ok_count==5 && refused==5);
+    // Translation: integer data + 2^40 and 16*X + 1e16 are exact inputs.
+    for (int t=0;t<2;++t) {
+        std::vector<double> x(base_x);
+        for (double& v : x) v = t==0 ? v+std::ldexp(1.0,40) : 16.0*v+1e16;
+        const PcaRun r=run_pca(ctx,x,n,p,k);
+        const double f = t==0 ? 1.0 : 256.0;
+        REQUIRE(r.status==N4M_OK);
+        for (int32_t a=0;a<k;++a)
+            REQUIRE(rel_close(r.eigen[static_cast<size_t>(a)],f*base.eigen[static_cast<size_t>(a)],1e-12));
+        REQUIRE(rel_close(r.moments[0],f*base.moments[0],1e-12));
+        REQUIRE(rel_close(r.moments[1],f*f*base.moments[1],1e-12));
+        for (size_t i=0;i<r.loadings.size();++i)
+            REQUIRE(std::abs(r.loadings[i]-base.loadings[i])<=1e-12);
+    }
+    // A 1e300 offset is exact for X * 2^950, but every variance is then
+    // ~2^1900: not representable, so an explicit failure.
+    {
+        std::vector<double> x(base_x);
+        for (double& v : x) v=std::ldexp(v,950)+1e300;
+        REQUIRE(run_pca(ctx,x,n,p,k).status==N4M_ERR_NUMERICAL_FAILURE);
+    }
+    // Constant columns of any amplitude are ignored: same spectrum, scores
+    // and loadings, zero loading on the constant columns.
+    {
+        const int64_t pc=p+3;
+        std::vector<double> x(static_cast<size_t>(n*pc));
+        for (int64_t i=0;i<n;++i) {
+            for (int64_t j=0;j<p;++j) x[static_cast<size_t>(i*pc+j+1)]=base_x[static_cast<size_t>(i*p+j)];
+            x[static_cast<size_t>(i*pc)]=1e300;
+            x[static_cast<size_t>(i*pc+p+1)]=-1.7976931348623157e308;
+            x[static_cast<size_t>(i*pc+p+2)]=4.9e-324;
+        }
+        const PcaRun r=run_pca(ctx,x,n,pc,k);
+        REQUIRE(r.status==N4M_OK);
+        for (int32_t a=0;a<k;++a)
+            REQUIRE(rel_close(r.eigen[static_cast<size_t>(a)],base.eigen[static_cast<size_t>(a)],1e-12));
+        REQUIRE(rel_close(r.moments[0],base.moments[0],1e-12));
+        REQUIRE(rel_close(r.moments[1],base.moments[1],1e-12));
+        for (int32_t a=0;a<k;++a) {
+            const auto row=static_cast<size_t>(a*pc);
+            REQUIRE(r.loadings[row]==0.0 && r.loadings[row+static_cast<size_t>(p)+1]==0.0 &&
+                    r.loadings[row+static_cast<size_t>(p)+2]==0.0);
+            for (int64_t j=0;j<p;++j)
+                REQUIRE(std::abs(r.loadings[row+static_cast<size_t>(j)+1]-
+                                 base.loadings[static_cast<size_t>(a*p+j)])<=1e-12);
+        }
+        for (size_t i=0;i<r.scores.size();++i)
+            REQUIRE(std::abs(r.scores[i]-base.scores[i])<=1e-11);
+    }
+}
+
 int main() {
     try {
         n4m_context_t* ctx=nullptr;
@@ -58,6 +162,19 @@ int main() {
         REQUIRE(near(eigen3[2],0.2713212486584137));
         REQUIRE(near(eigen3[0]+eigen3[1]+eigen3[2],moments[0]) && near(moments[0],23.0/3.0));
         REQUIRE(near(moments[1],257.0/9.0));
+        pca_invariance_tests(ctx);
+        // Weak decoupled variance: [A; -A; 26 zero rows], A = [[1,0,0],
+        // [0,1e-9,0],[0,1e-9,1e-9]]. NumPy 2.2.6 SVD golden for the second
+        // variance; it must keep full relative accuracy.
+        {
+            std::vector<double> w(96, 0.0);
+            const double a[9]={1,0,0, 0,1e-9,0, 0,1e-9,1e-9};
+            for (int i=0;i<9;++i) { w[static_cast<size_t>(i)]=a[i]; w[static_cast<size_t>(9+i)]=-a[i]; }
+            const PcaRun r=run_pca(ctx,w,32,3,2);
+            REQUIRE(r.status==N4M_OK);
+            REQUIRE(rel_close(r.eigen[0],0.06451612903225808,1e-12));
+            REQUIRE(rel_close(r.eigen[1],1.6890541862902547e-19,1e-12));
+        }
         // Two balanced groups: within SS=4, MSW=2; between SS=16,
         // MSB=16 => ICC=(16-2)/(16+2)=7/9, pooled SD=sqrt(2).
         double repeats[4]={0,2,4,6}; int64_t ids[4]={10,10,20,20};
