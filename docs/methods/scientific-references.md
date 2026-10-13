@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `16e754512cf9c440399503539e8bd57c64d3e2025a4390282bc424cccb95f796`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `eaf0b22a4056f27f6569842724953b7b824c08f050ff721d6f11158f7ce1fd71`
 
 ## References by documentation page
 
@@ -462,9 +462,9 @@ Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandina
 
 ### [`diagnostics_permanova`](diagnostics_permanova.md) — PERMANOVA of one categorical term on Euclidean distances
 
-Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, Austral Ecology 26, 32–46, https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; McArdle & Anderson (2001), *Fitting multivariate models to community data: a comment on distance-based redundancy analysis*, Ecology 82, 290–297, https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; Anderson & ter Braak (2003), *Permutation tests for multi-factorial analysis of variance*, Journal of Statistical Computation and Simulation 73, 85–113, https://doi.org/10.1080/00949650215733.
+Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, Austral Ecology 26, 32–46, https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; McArdle & Anderson (2001), *Fitting multivariate models to community data: a comment on distance-based redundancy analysis*, Ecology 82, 290–297, https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; Anderson & ter Braak (2003), *Permutation tests for multi-factorial analysis of variance*, Journal of Statistical Computation and Simulation 73, 85–113, https://doi.org/10.1080/00949650215733; Anderson (2001), *Permutation tests for univariate or multivariate analysis of variance and regression*, Canadian Journal of Fisheries and Aquatic Sciences 58, 626–639, https://doi.org/10.1139/f00-178.
 
-**Provenance:** https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; https://doi.org/10.1080/00949650215733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json
+**Provenance:** https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; https://doi.org/10.1080/00949650215733; https://doi.org/10.1139/f00-178; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json
 
 ### [`diagnostics_permdisp`](diagnostics_permdisp.md) — PERMDISP test of multivariate dispersion
 
