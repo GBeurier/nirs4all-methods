@@ -129,6 +129,26 @@ export interface PermanovaResult {
     nPermutationsExecuted: number;
 }
 
+export interface FreedmanLaneResult {
+    ssTotal: number;
+    /** Model SS of the reduced design (intercept + condition main effects). */
+    ssReduced: number;
+    /** SS(full) - SS(reduced). */
+    ssTerm: number;
+    ssResidual: number;
+    r2: number;
+    partialR2: number;
+    pseudoF: number;
+    /** rank(full) - rank(reduced); 0 when aliased with the conditions. */
+    dfTerm: number;
+    dfResidual: number;
+    rankReduced: number;
+    log10DistinctPermutations: number;
+    pValue: number;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
 export interface PermdispResult {
     /** Euclidean distance of each row to its group centroid. */
     distances: Float64Array;
@@ -781,6 +801,48 @@ export function statsPermdisp(X: Matrix, groupCodes: readonly (number | bigint)[
             groupMeanDistances: copyF64(means, r[3]!),
             f: r[0]!, df1: r[1]!, df2: r[2]!, nGroups: r[3]!, log10DistinctPermutations: r[4]!,
             pValue: r[5]!,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Partial PERMANOVA of a term given the additive main effects of condition
+ * factors (one code array per factor), tested by Freedman-Lane permutation of
+ * the reduced-model residuals. */
+export function statsPermanovaFreedmanLane(X: Matrix, termCodes: readonly (number | bigint)[],
+    conditionCodes: readonly (readonly (number | bigint)[])[], nPermutations: number,
+    seed: number | bigint): FreedmanLaneResult {
+    validateMatrix(X);
+    if (X.rows < 2 || termCodes.length !== X.rows || conditionCodes.length > 64 ||
+        conditionCodes.some((c) => c.length !== X.rows)) {
+        throw new RangeError("invalid Freedman-Lane PERMANOVA dimensions");
+    }
+    validateGroupIds(termCodes);
+    conditionCodes.forEach(validateGroupIds);
+    const seed64 = validatePermutation(nPermutations, seed);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const term = scope.i64(termCodes);
+        const rowMajor: (number | bigint)[] = [];
+        for (let i = 0; i < X.rows; i++) for (const c of conditionCodes) rowMajor.push(c[i]!);
+        const conditions = conditionCodes.length ? scope.i64(rowMajor) : 0;
+        const out = scope.alloc(12 * 8), counts = scope.alloc(16);
+        const st = m.ccall("n4m_stats_permanova_freedman_lane", "number",
+            ["number", "number", "number", "number", "number", "number", "i64", "number", "number"],
+            [ctx.handle, x.viewPtr, term, conditions, conditionCodes.length, nPermutations, seed64,
+                out, counts]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 12);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            ssTotal: r[0]!, ssReduced: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!, r2: r[4]!,
+            partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!, rankReduced: r[9]!,
+            log10DistinctPermutations: r[10]!, pValue: r[11]!,
             nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
             nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
         };

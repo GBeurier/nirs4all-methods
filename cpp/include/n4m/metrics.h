@@ -300,6 +300,35 @@ N4M_API n4m_status_t n4m_stats_permanova(
     const int64_t* strata_codes, int32_t n_permutations, uint64_t seed,
     double* out_thirteen, int64_t* out_two);
 
+/* Partial PERMANOVA of one categorical term given the additive main effects
+ * of n_conditions categorical factors, tested by Freedman-Lane permutation of
+ * the residuals of the reduced model (Freedman & Lane 1983; Anderson 2001,
+ * Can. J. Fish. Aquat. Sci. 58:626). Euclidean distances between the rows of
+ * X (n x k). condition_codes is row-major n x n_conditions (NULL when 0); the
+ * reduced design is the intercept plus the indicators of every condition
+ * factor (no interaction), the full design adds the term indicators, and
+ * ranks are numerical (Gram-Schmidt, relative tolerance 1e-9).
+ * df_term = rank(full) - rank(reduced), 0 when the term is aliased with the
+ * conditions; df_residual = n - rank(full). pseudo-F =
+ * (SS_term/df_term)/(SS_residual/df_residual), SS_term = SS(full) -
+ * SS(reduced). Monte Carlo test (n_permutations > 0 and a defined pseudo-F):
+ * PCG64 as numpy.random.default_rng(seed); the b-th draw perm =
+ * rng.permutation(n) gives data fitted_reduced[i] + residual[perm[i]], refitted
+ * on both designs; b counts pseudo-F_perm >= F_obs - sqrt(DBL_EPSILON) (+inf
+ * for a zero residual SS), p = (1+b)/(1+B). Scaling and centring as
+ * n4m_stats_permanova. Limits: at most 4096 design columns and
+ * 2 n c^2 + n k (c+1)(B+1) <= 250 million operations (c design columns).
+ * out_twelve (NaN when undefined): [0] ss_total [1] ss_reduced (model SS of
+ * the reduced design) [2] ss_term [3] ss_residual [4] ss_term/ss_total
+ * [5] partial R^2 ss_term/(ss_term+ss_residual) [6] pseudo-F [7] df_term
+ * [8] df_residual [9] rank of the reduced design (intercept included)
+ * [10] log10(n!), the distinct residual permutations bound [11] p-value.
+ * out_two = {b, executed B}. */
+N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations,
+    uint64_t seed, double* out_twelve, int64_t* out_two);
+
 /* PERMDISP (Anderson 2006), as vegan betadisper(type = "centroid") with
  * permutest: Euclidean distances of the rows of X to their group centroid,
  * one-way ANOVA F on those distances, and a Monte Carlo test permuting the
