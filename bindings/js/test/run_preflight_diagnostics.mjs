@@ -8,7 +8,7 @@ import {
     statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, statsGroupMeans, regressionMetrics, N4mError,
+    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, statsGroupMeans, statsRegressionScores, Status, N4mError,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -343,19 +343,33 @@ for (const c of permanovaFixture.cases) {
 }
 console.log("JS/WASM Preflight diagnostics passed");
 
-// Group means: hand values (same case as test_group_means.cpp), extreme magnitudes.
+// Group means: exact dyadic values (same case as test_group_means.cpp).
 const gm = statsGroupMeans({data: new Float64Array([1, 2, 3, 6, 10, -4, 0, 0, 1, 1, 2, 8]),
     rows: 6, cols: 2}, [1, 1, 0, 2, 2, 2], 3);
 assert.deepEqual(Array.from(gm.means.data), [10, -4, 2, 4, 1, 3]);
 assert.deepEqual(gm.counts, [1, 2, 3]);
-const huge = statsGroupMeans({data: new Float64Array([Number.MAX_VALUE, Number.MAX_VALUE]),
-    rows: 2, cols: 1}, [0, 0], 1);
-assert.equal(huge.means.data[0], Number.MAX_VALUE);
+// 2^52 offset: mean(2^52 + {1, 2, 4}) = 2^52 + 7/3 rounds to 2^52 + 2.
+const offset = statsGroupMeans({data: new Float64Array([2 ** 52 + 1, 2 ** 52 + 2, 2 ** 52 + 4]),
+    rows: 3, cols: 1}, [0, 0, 0], 1);
+assert.equal(offset.means.data[0], 2 ** 52 + 2);
+// Declared domain: inside at its boundary, refused outside with ERR_UNSUPPORTED.
+assert.equal(statsGroupMeans({data: new Float64Array([1, 2 ** 64]), rows: 2, cols: 1}, [0, 0], 1).counts[0], 2);
+const domainError = (fn) => assert.throws(fn, (e) => e instanceof N4mError && e.status === Status.ERR_UNSUPPORTED);
+domainError(() => statsGroupMeans({data: new Float64Array([1, 2 ** 65]), rows: 2, cols: 1}, [0, 0], 1));
+domainError(() => statsGroupMeans({data: new Float64Array([Number.MAX_VALUE]), rows: 1, cols: 1}, [0], 1));
 assert.throws(() => statsGroupMeans({data: new Float64Array([1, 2]), rows: 2, cols: 1}, [0, 2], 3));
 assert.throws(() => statsGroupMeans({data: new Float64Array([1, 2]), rows: 2, cols: 1}, [0, 0], 2), N4mError);
-// Regression metrics: y = (1, 2, 3, 4), prediction (1, 3, 3, 2): SSE = 5, SST = 5.
-const rm = regressionMetrics(new Float64Array([1, 2, 3, 4]), new Float64Array([1, 3, 3, 2]));
-near(rm.rmse, Math.sqrt(5 / 4));
-near(rm.mae, 3 / 4);
-near(rm.r2, 0);
-
+// Regression scores: y = (1, 2, 3, 4), prediction (1, 3, 3, 2): SSE = 5, SAE = 3, SST = 5.
+for (const k of [-200, 0, 200]) {
+    const s = 2 ** k;
+    const rs = statsRegressionScores(new Float64Array([1, 2, 3, 4].map((v) => v * s)),
+        new Float64Array([1, 3, 3, 2].map((v) => v * s)));
+    assert.equal(rs.rmse, Math.sqrt(5 / 4) * s);
+    assert.equal(rs.mae, 0.75 * s);
+    assert.equal(rs.r2, 0);
+}
+const shiftedScores = statsRegressionScores(new Float64Array([1, 2, 3, 4].map((v) => v + 2 ** 52)),
+    new Float64Array([1, 3, 3, 2].map((v) => v + 2 ** 52)));
+assert.equal(shiftedScores.r2, 0);
+assert.ok(Number.isNaN(statsRegressionScores(new Float64Array([2, 2]), new Float64Array([1, 3])).r2));
+domainError(() => statsRegressionScores(new Float64Array([1, 2 ** 300]), new Float64Array([1, 1])));

@@ -1,13 +1,23 @@
 # ABI — Changes Log
 
-## 2026-10-13 — ABI 2.20.0 (continued): group means (unreleased)
+## 2026-10-13 — ABI 2.20.0 (continued): group means and regression scores (unreleased)
 
-Add `n4m_stats_group_means` to the same unreleased 2.20.0 surface in
-`n4m/metrics.h`; no serialized format changes. It returns equal-weight
-per-group column means (`n_groups x k`, row-major) and row counts of a strided
-f64 matrix. Each mean is a running mean of the values divided by the
-column's largest magnitude, in extended precision, then scaled back. Invalid
-codes, empty groups and nonfinite values return `N4M_ERR_INVALID_ARGUMENT`.
+These two kernels are added to the same unreleased 2.20.0 surface in
+`n4m/metrics.h`. No serialized format changes.
+
+- `n4m_stats_group_means` returns the equal-weight per-group column means
+  (`n_groups x k`, row-major) and the row counts of a strided f64 matrix.
+  Each mean is a double-double sum divided once by the group size.
+- `n4m_stats_regression_scores` returns RMSE, MAE and R² of paired vectors.
+  It uses explicit residuals, deviations around a double-double mean, and
+  double-double sums. R² is NaN when the target is constant.
+
+Domain of validity (lead rule 13), the same for both kernels: finite values,
+every nonzero |x| in [2^-256, 2^256], and max nonzero |x| / min nonzero |x|
+<= 2^64 inside each input array. Outside this domain they return
+`N4M_ERR_UNSUPPORTED` with the message "input outside the supported
+numerical domain (...)". Nonfinite values return `N4M_ERR_INVALID_ARGUMENT`,
+as do invalid group codes and empty groups.
 
 ## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
 

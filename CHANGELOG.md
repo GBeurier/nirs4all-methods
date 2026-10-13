@@ -10,16 +10,25 @@ ABI 2.20.0. No model-state serialization format changes.
 
 ### Added
 
-- Public ABI 2.20.0 `n4m_stats_group_means`: equal-weight per-group column
-  means of a strided matrix, computed as running means of the values divided
-  by each column's largest magnitude in extended precision, so finite inputs
-  never overflow. Codes lie in `[0, n_groups)`, every group is nonempty, and
-  nonfinite values are refused. It is used by nirs4all-preflight to aggregate
-  homogeneous technical repeats before its validation probe. JS/WASM gets
-  `statsGroupMeans`, and a new `regressionMetrics` wrapper (RMSE, MAE, R²)
-  over the existing `n4m_metrics_regression_metrics_*` exports. Catalog
-  entry `diagnostics.group_means`, hand-value C++ test
-  `n4m_group_means_tests`, and the matching JS test.
+- Public ABI 2.20.0 `n4m_stats_group_means` and `n4m_stats_regression_scores`.
+  Group means are equal-weight per-group column means of a strided matrix,
+  computed as double-double (TwoSum) sums divided once by the group size.
+  Regression scores are RMSE, MAE and R² computed from explicit residuals
+  and from deviations around a double-double mean, with every sum in
+  double-double. R² is NaN (undefined) for a constant target.
+  Both kernels declare a numerical domain: finite values, every nonzero
+  |x| in [2^-256, 2^256], and a spread of at most 2^64 per input array.
+  Outside this domain they refuse with `N4M_ERR_UNSUPPORTED` ("input
+  outside the supported numerical domain"); nonfinite values return
+  `N4M_ERR_INVALID_ARGUMENT`.
+  nirs4all-preflight uses them to aggregate technical repeats and to score
+  its validation probe.
+  New JS/WASM wrappers: `statsGroupMeans` and `statsRegressionScores`.
+  Catalog entries: `diagnostics.group_means` and
+  `diagnostics.regression_scores`.
+  `n4m_group_means_tests` covers exact dyadic cases, scale sweeps from
+  2^-200 to 2^200, a 2^52 offset, a one-ulp case, and both sides of the
+  domain boundaries; the JS test mirrors it.
 - Public ABI 2.20.0 generic statistics: `n4m_stats_correlation_test`
   (Pearson or Spearman correlation with a seeded two-sided permutation
   p-value, NumPy `default_rng` permutation parity) and `n4m_stats_bh_adjust`

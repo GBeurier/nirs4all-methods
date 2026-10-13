@@ -30,7 +30,7 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Equal-weight per-group column means (scaled running means in extended precision), used to aggregate homogeneous technical repeats before fitting. Hand-computed and extreme-magnitude checks in cpp/tests/test_group_means.cpp."
+notes: "Equal-weight per-group column means (double-double sums divided once), used to aggregate homogeneous technical repeats before fitting. Declared numerical domain D (nonzero |x| in [2^-256, 2^256], spread <= 2^64), refused outside. Exact dyadic, sweep and boundary checks in cpp/tests/test_group_means.cpp."
 c_surface:
   - "n4m_stats_group_means"
 fq_name: "n4m.stats.group_means"

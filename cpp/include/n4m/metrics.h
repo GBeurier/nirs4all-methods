@@ -371,17 +371,32 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     int32_t n_permutations, uint64_t seed, double* distances,
     double* group_mean_distances, double* out_six, int64_t* out_two);
 
-/* Equal-weight per-group column means of the rows of X (n x k, any positive
+/* Declared numerical domain D of the n4m_stats_group_means and
+ * n4m_stats_regression_scores kernels: finite values, every nonzero |x| in
+ * [2^-256, 2^256] and a spread max|x| / min nonzero |x| <= 2^64 inside each
+ * input array. Outside D they return N4M_ERR_UNSUPPORTED with the context
+ * message "input outside the supported numerical domain (...)" before
+ * computing; nonfinite values are N4M_ERR_INVALID_ARGUMENT.
+ *
+ * Equal-weight per-group column means of the rows of X (n x k, any positive
  * strides). group_codes has n entries in [0, n_groups); every group needs at
- * least one row (n_groups <= n). Means are running means of the values
- * divided by each column's largest magnitude, in extended precision, then
- * scaled back: finite inputs never overflow and each mean lies within its
- * column's range. Nonfinite values fail (no mask; select complete rows).
- * out_means is n_groups x k row-major; out_counts receives the rows per
- * group. Generic aggregation of homogeneous technical repeats. */
+ * least one row (n_groups <= n). Each mean is a double-double (TwoSum) sum
+ * divided once by the group size, then rounded: within D no partial sum
+ * overflows and the result is the correctly computed mean to about one
+ * rounding. out_means is n_groups x k row-major; out_counts receives the rows
+ * per group. Generic aggregation of homogeneous technical repeats. */
 N4M_API n4m_status_t n4m_stats_group_means(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
     int64_t n_groups, double* out_means, int64_t* out_counts);
+
+/* RMSE, MAE and R^2 of paired vectors (n >= 1), with the domain D above for
+ * y_true and y_pred. Residuals and deviations from a
+ * double-double mean are explicit and summed in double-double, so no large
+ * nearly-equal accumulations are subtracted. out_three = {RMSE, MAE, R^2};
+ * R^2 = 1 - SSE/SST is NaN ("undefined") when y_true is constant. */
+N4M_API n4m_status_t n4m_stats_regression_scores(
+    n4m_context_t* ctx, const double* y_true, const double* y_pred, int64_t n,
+    double* out_three);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
