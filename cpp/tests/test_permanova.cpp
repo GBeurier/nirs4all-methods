@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -173,6 +174,49 @@ int main() {
         REQUIRE(permanova(ctx, YH, fa, nullptr, 0, 1, r) == N4M_OK);
         REQUIRE(near(r.v[4], 27.0 / 29.0) && near(r.v[0], 58e300, 58e300));
 
+        // Scale reconstruction never forms scale^2 (Astra review). Six values
+        // of magnitude 1e-162: SS = 6e-324 rounds to the smallest subnormal.
+        double tiny[6] = {-1e-162, -1e-162, -1e-162, 1e-162, 1e-162, 1e-162};
+        int64_t halves6[6] = {0, 0, 0, 1, 1, 1};
+        auto T = view(tiny, 6, 1);
+        REQUIRE(permanova(ctx, T, halves6, nullptr, 0, 1, r) == N4M_OK);
+        const double denorm = std::numeric_limits<double>::denorm_min();
+        REQUIRE(r.v[0] == denorm && r.v[2] == denorm && r.v[3] == 0.0);
+        REQUIRE(near(r.v[4], 1.0) && near(r.v[5], 1.0));
+        // 1e155 + 1e140 * {0,2,4,12,14,16}: finite SS near 2.3e282, while
+        // scale^2 would overflow. Reference: exact double differences to the
+        // first value (Sterbenz), summed in long double here.
+        double big[6];
+        const double steps[6] = {0, 2, 4, 12, 14, 16};
+        for (int i = 0; i < 6; ++i) big[i] = 1e155 + 1e140 * steps[i];
+        long double mean = 0.0L, m0 = 0.0L, m1 = 0.0L;
+        for (int i = 0; i < 6; ++i) mean += static_cast<long double>(big[i] - big[0]) / 6.0L;
+        for (int i = 0; i < 3; ++i) m0 += static_cast<long double>(big[i] - big[0]) / 3.0L;
+        for (int i = 3; i < 6; ++i) m1 += static_cast<long double>(big[i] - big[0]) / 3.0L;
+        long double sst = 0.0L, ssw = 0.0L;
+        for (int i = 0; i < 6; ++i) {
+            const long double d = static_cast<long double>(big[i] - big[0]);
+            sst += (d - mean) * (d - mean);
+            ssw += (d - (i < 3 ? m0 : m1)) * (d - (i < 3 ? m0 : m1));
+        }
+        auto B6 = view(big, 6, 1);
+        REQUIRE(permanova(ctx, B6, halves6, nullptr, 0, 1, r) == N4M_OK);
+        REQUIRE(std::isfinite(r.v[0]) && r.v[0] > 2e282 && r.v[0] < 2.5e282);
+        REQUIRE(near(r.v[0], static_cast<double>(sst), 0.0));
+        REQUIRE(near(r.v[3], static_cast<double>(ssw), 0.0));
+        REQUIRE(near(r.v[2], static_cast<double>(sst - ssw), 0.0));
+        double bdist[6], bmeans[6], bout[6];
+        int64_t bcounts[2];
+        REQUIRE(n4m_stats_permdisp(ctx, &B6, halves6, 0, 1, bdist, bmeans, bout, bcounts) == N4M_OK);
+        REQUIRE(near(bdist[0], static_cast<double>(m0 - static_cast<long double>(big[0] - big[0])), 0.0));
+        REQUIRE(near(bmeans[0], static_cast<double>(
+            (std::abs(static_cast<long double>(big[0] - big[0]) - m0) +
+             std::abs(static_cast<long double>(big[1] - big[0]) - m0) +
+             std::abs(static_cast<long double>(big[2] - big[0]) - m0)) / 3.0L), 0.0));
+        double tdist[6], tmeans[6];
+        REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, bout, bcounts) == N4M_OK);
+        REQUIRE(tdist[0] == 0.0 && tmeans[1] == 0.0);
+
         // Balanced 2x2 in 1-D: term a1 {1,3,2,4}, a2 {5,7,6,8}; strata b1
         // {1,3,5,7}, b2 {2,4,6,8}. Orthogonal: SS_term = 32, SS_strata = 2,
         // SST = 42, SS_res = 8 on 8-3 = 5 df, F = 32/(8/5) = 20.
@@ -220,7 +264,7 @@ int main() {
         REQUIRE(s.find("\"n4m_permanova_v1\"") != std::string::npos);
         const auto [lo, hi] = find_cases_array(s);
         const auto spans = list_case_object_spans(s, lo, hi);
-        REQUIRE(spans.size() == 7);
+        REQUIRE(spans.size() == 8);
         for (const auto& [a, b] : spans) gate_case(ctx, s, a, b);
 
         // Argument validation.

@@ -297,6 +297,20 @@ const disp = statsPermdisp({data: new Float64Array([0, 2, 10, 14, 18]), rows: 5,
     [7, 7, 3, 3, 3], 0, 1);
 near(disp.f, 15 / 16);
 [8 / 3, 1].forEach((v, i) => near(disp.groupMeanDistances[i], v));
+// Scale reconstruction without scale^2 (same cases as test_permanova.cpp).
+const tiny = statsPermanova({data: new Float64Array([-1e-162, -1e-162, -1e-162, 1e-162, 1e-162, 1e-162]),
+    rows: 6, cols: 1}, [0, 0, 0, 1, 1, 1], undefined, 0, 1);
+assert.equal(tiny.ssTotal, Number.MIN_VALUE);
+assert.equal(tiny.ssResidual, 0);
+const bigX = [0, 2, 4, 12, 14, 16].map((k) => 1e155 + 1e140 * k);
+const big = statsPermanova({data: new Float64Array(bigX), rows: 6, cols: 1},
+    [0, 0, 0, 1, 1, 1], undefined, 0, 1);
+const bigD = bigX.map((v) => v - bigX[0]);
+const dm = bigD.reduce((a, b) => a + b, 0) / 6;
+const sst = bigD.reduce((a, v) => a + (v - dm) ** 2, 0);
+assert.ok(Number.isFinite(big.ssTotal) && Math.abs(big.ssTotal - sst) <= 1e-10 * sst);
+const bigDisp = statsPermdisp({data: new Float64Array(bigX), rows: 6, cols: 1}, [0, 0, 0, 1, 1, 1], 0, 1);
+assert.ok(bigDisp.distances.every(Number.isFinite));
 const permanovaFixture = JSON.parse(readFileSync(
     new URL("../../../parity/fixtures/permanova_v1.json", import.meta.url), "utf8"));
 for (const c of permanovaFixture.cases) {

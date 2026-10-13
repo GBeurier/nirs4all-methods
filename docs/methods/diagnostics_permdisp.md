@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.permdisp` · _Cata
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_permdisp`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L338). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_permdisp`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L344). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -18,7 +18,7 @@ Anderson (2006), *Distance-based tests for homogeneity of multivariate dispersio
 
 ### Mathematical principle
 
-Each row's Euclidean distance $z_i$ to its group centroid is computed, then a one-way ANOVA $F$ compares the groups' mean distances. As in vegan `betadisper(type = "centroid")` and `permutest`, the Monte Carlo test permutes the ANOVA residuals $z_i-\bar z_{g(i)}$ over all rows and counts permuted $F$ at least the observed one.
+Each row's Euclidean distance $z_i$ to its group centroid is computed, then a one-way ANOVA $F$ compares the groups' mean distances. As in vegan `betadisper(type = "centroid")` and `permutest`, the Monte Carlo test permutes the ANOVA residuals $z_i-\bar z_{g(i)}$ over all rows, refits and counts permuted $F\ge F_{obs}-\sqrt{\epsilon}$.
 
 ### Appropriate uses
 
