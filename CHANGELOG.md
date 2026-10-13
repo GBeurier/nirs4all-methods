@@ -30,6 +30,12 @@ ABI 2.20.0. No model-state serialization format changes.
   between-group effect (two identical groups at `1e16` gave eta^2 = 0.27).
   Centering is now translation stable (power-of-two scaling, shifted origin,
   residual-mean correction), with translation-invariance tests.
+- The categorical association kernels computed `levels x classes` in
+  `size_t` without overflow check and allocated the table before the budget
+  check; 65536 x 65536 wrapped to 0 in WASM32 and the exact API then wrote
+  out of bounds. The product is now checked and capped at 10 million cells
+  before any allocation, and both the Monte Carlo and exact APIs refuse
+  oversized work before evaluating any statistic.
 
 ## [1.3.6] - 2026-10-13
 

@@ -183,7 +183,9 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  * values >= observed - sqrt(DBL_EPSILON). out_two = {b, executed B}; no
  * permutation runs when the effect size is undefined. Targets are centered
  * after an exact power-of-two scaling and a shift to the first target, with
- * a residual-mean correction, so eta^2 and F are translation invariant. */
+ * a residual-mean correction, so eta^2 and F are translation invariant.
+ * categorical=1 with levels * classes > 10 million cells returns
+ * N4M_ERR_UNSUPPORTED before any table allocation or statistic. */
 N4M_API n4m_status_t n4m_preflight_factor_association(
     n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
@@ -229,7 +231,9 @@ N4M_API n4m_status_t n4m_stats_correlation_test(
  * Cramer's V^2 (factor association, same input contract as
  * n4m_preflight_factor_association) or |r| (correlation, method 0 Pearson,
  * 1 Spearman). 1 <= max_arrangements <= 10000000; a larger arrangement count,
- * or 2 * count * n > 250 million operations, returns N4M_ERR_UNSUPPORTED.
+ * or 2 * count * (n + levels * classes) > 250 million operations, returns
+ * N4M_ERR_UNSUPPORTED before any statistic is evaluated (and, as above, a
+ * categorical table above 10 million cells is refused before allocation).
  * out_four (caller-owned): [0] number N of distinct arrangements;
  * [1] exact p-value #{T >= T_obs - sqrt(DBL_EPSILON)}/N; [2] minimal
  * attainable exact p-value #{T >= T_max - sqrt(DBL_EPSILON)}/N; [3] T_max.

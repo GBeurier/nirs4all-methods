@@ -192,4 +192,12 @@ const exactRho = statsCorrelationExact(new Float64Array([1, 2, 3, 4, 5]),
 assert.equal(exactRho.nArrangements, 30);
 near(exactRho.pValue, 0.2);
 near(exactRho.minimumPValue, 1 / 15);
+// Oversized categorical space (review P0): 65536 levels x 65536 classes
+// overflow 32-bit sizes; both APIs refuse before allocating.
+const bigCodes = Array.from({length: 65536}, (_, i) => i);
+const bigClasses = Float64Array.from(bigCodes);
+assert.throws(() => statsFactorAssociationExact(bigCodes, bigClasses, true, 100000));
+assert.throws(() => preflightFactorAssociation(bigCodes, bigClasses, true, 0, 1));
+assert.ok(statsFactorAssociationExact([0, 0, 1, 1], new Float64Array([0, 0, 1, 1]), true, 10)
+    .nArrangements === 6);
 console.log("JS/WASM Preflight diagnostics passed");

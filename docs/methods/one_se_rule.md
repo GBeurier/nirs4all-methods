@@ -48,7 +48,7 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_metrics_one_se_rule_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L324). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_metrics_one_se_rule_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L328). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
