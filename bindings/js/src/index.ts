@@ -19,11 +19,13 @@ export { Optimizer, type OptimizerOptions, type OptimizerTrial, type BatchResult
 export { loadModule, getModule, makeMatrixView, readArrayView } from "./ffi.js";
 export { Context } from "./context.js";
 export { preflightPca, preflightRepeatability, preflightSummary,
-         preflightNearestNeighbors, preflightLocalContrast, preflightHdbscan,
+         preflightNearestNeighbors, preflightLocalContrast, preflightNoiseProxy,
+         preflightPairsWithinTolerance, preflightHdbscan,
          preflightAdjustedRandIndex, type PreflightHdbscanOptions,
          type PreflightHdbscanTreeNode, type PreflightHdbscanResult, type PreflightPcaResult,
          type PreflightRepeatabilityResult, type PreflightNeighborResult,
-         type PreflightLocalContrastResult
+         type PreflightLocalContrastResult, type PreflightNoiseProxyResult,
+         type PreflightPairsResult
        } from "./preflightDiagnostics.js";
 export { Config } from "./config.js";
 export { Model, fitPls, predictPls, fitModel, predictModel, fitAom, fitAomChain, fitPop, fitAomRidge, fitAomStack, computeSplit, computeSplitIndices, type PlsModel, type FittedModel, type AomModel, type AomChainDescriptor, type AomChainModel, type PopModel, type AomRidgeOptions, type AomStackOptions, type SplitKind, type SplitOptions, type SplitIndices } from "./model.js";

@@ -15,6 +15,7 @@
 #include "core/common/matrix_view.hpp"
 #include "core/clustering/_vendored/hdbscan.hpp"
 #include "core/common/pca_helper.h"
+#include "core/preprocessing/derivatives/savitzky_golay.h"
 
 namespace {
 using ::n4m::core::Context;
@@ -572,5 +573,162 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "ARI allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "ARI internal error"); }
+}
+N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
+    int32_t window_length, int32_t polyorder, double* band_noise,
+    int64_t* band_counts, double* out_two) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!band_noise || !band_counts || !out_two)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null noise proxy output");
+    if (window_length < 3 || window_length % 2 == 0 || polyorder < 0 ||
+        polyorder > window_length - 2)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "noise proxy needs an odd window >= 3 and polyorder <= window-2");
+    const int64_t n = X->rows, p = X->cols;
+    if (n < 1 || p < window_length)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "noise proxy needs cols >= window length");
+    if (static_cast<uint64_t>(n) > SIZE_MAX / sizeof(double) / static_cast<uint64_t>(p))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "noise proxy size overflow");
+    n4m_pp_savgol_state_t* sg = n4m_pp_savgol_state_new(
+        window_length, polyorder, 0, 1.0, N4M_PP_SAVGOL_NEAREST, 0.0);
+    if (!sg) return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "Savitzky-Golay state allocation failed");
+    struct Release { n4m_pp_savgol_state_t* s; ~Release() { n4m_pp_savgol_state_free(s); } } release{sg};
+    try {
+        const int64_t h = window_length / 2;
+        const auto sz = [](int64_t v) { return static_cast<size_t>(v); };
+        // Residual gain from the filter's own impulse response: interior
+        // outputs of a centred unit impulse of length 2w-1 are the weights.
+        const int64_t impulse_cols = 2 * static_cast<int64_t>(window_length) - 1;
+        std::vector<double> impulse(sz(impulse_cols), 0.0), response(sz(impulse_cols));
+        impulse[sz(window_length - 1)] = 1.0;
+        auto sst = n4m_pp_savgol_state_apply(sg, impulse.data(), 1, impulse_cols, response.data());
+        if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay impulse response failed");
+        long double gain2 = 0.0L;
+        for (int64_t j = h; j < impulse_cols - h; ++j) {
+            const long double d = static_cast<long double>(impulse[sz(j)]) - response[sz(j)];
+            gain2 += d * d;
+        }
+        const double gain = static_cast<double>(std::sqrt(gain2));
+        if (!(gain > 0.0) || !std::isfinite(gain))
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "zero residual gain");
+        std::vector<double> data(sz(n) * sz(p)), smooth(sz(n) * sz(p));
+        std::vector<int64_t> invalid_prefix(sz(p) + 1);
+        std::vector<uint8_t> evaluable(sz(n) * sz(p), 0);
+        for (int64_t i = 0; i < n; ++i) {
+            invalid_prefix[0] = 0;
+            for (int64_t j = 0; j < p; ++j) {
+                const bool valid = !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
+                double x = 0.0;
+                if (valid) {
+                    x = at(*X, i, j);
+                    if (!std::isfinite(x))
+                        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
+                }
+                data[sz(i) * sz(p) + sz(j)] = x;
+                invalid_prefix[sz(j) + 1] = invalid_prefix[sz(j)] + (valid ? 0 : 1);
+            }
+            for (int64_t j = h; j < p - h; ++j)
+                evaluable[sz(i) * sz(p) + sz(j)] =
+                    invalid_prefix[sz(j + h) + 1] == invalid_prefix[sz(j - h)] ? 1 : 0;
+        }
+        sst = n4m_pp_savgol_state_apply(sg, data.data(), n, p, smooth.data());
+        if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay smoothing failed");
+        double scale = 0.0;
+        for (size_t c = 0; c < data.size(); ++c) {
+            if (!evaluable[c]) continue;
+            smooth[c] = data[c] - smooth[c];
+            if (!std::isfinite(smooth[c]))
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "noise proxy residual overflow");
+            scale = std::max(scale, std::abs(smooth[c]));
+        }
+        if (scale == 0.0) scale = 1.0;
+        long double pooled = 0.0L;
+        int64_t pooled_count = 0;
+        for (int64_t j = 0; j < p; ++j) {
+            long double sum = 0.0L;
+            int64_t count = 0;
+            for (int64_t i = 0; i < n; ++i) {
+                const size_t c = sz(i) * sz(p) + sz(j);
+                if (!evaluable[c]) continue;
+                const long double r = static_cast<long double>(smooth[c]) / scale;
+                sum += r * r;
+                ++count;
+            }
+            band_counts[j] = count;
+            band_noise[j] = count ? static_cast<double>(
+                scale * std::sqrt(sum / count) / gain) : nan_value;
+            pooled += sum;
+            pooled_count += count;
+        }
+        out_two[0] = pooled_count ? static_cast<double>(
+            scale * std::sqrt(pooled / pooled_count) / gain) : nan_value;
+        out_two[1] = gain;
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "noise proxy allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "noise proxy internal error"); }
+}
+
+N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
+    n4m_context_t* ctx, const n4m_matrix_view_t* query,
+    const n4m_matrix_view_t* reference, const int64_t* query_groups,
+    const int64_t* reference_groups, double tolerance, int64_t max_pairs,
+    int64_t* pair_indices, double* pair_distances, uint8_t* query_flags,
+    uint8_t* reference_flags, int64_t* out_counts) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const bool self = reference == nullptr;
+    auto st = check_view(ctx, query);
+    if (st != N4M_OK) return st;
+    if (!self) {
+        st = check_view(ctx, reference);
+        if (st != N4M_OK) return st;
+    }
+    const n4m_matrix_view_t& R = self ? *query : *reference;
+    if (!query_flags || !out_counts || (!self && !reference_flags) ||
+        (max_pairs > 0 && (!pair_indices || !pair_distances)))
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null pair output");
+    if (!self && (query_groups == nullptr) != (reference_groups == nullptr))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "both pair group arrays are required");
+    if (query->rows < 1 || query->cols < 1 || R.rows < 1 || R.cols != query->cols ||
+        max_pairs < 0 || !std::isfinite(tolerance) || !(tolerance > 0.0))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid pair dimensions or tolerance");
+    const int64_t* rgroups = self ? query_groups : reference_groups;
+    for (const auto* v : {query, &R})
+        for (int64_t i = 0; i < v->rows; ++i)
+            for (int64_t j = 0; j < v->cols; ++j)
+                if (!std::isfinite(at(*v, i, j)))
+                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite pair input");
+    std::fill(query_flags, query_flags + query->rows, uint8_t{0});
+    if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
+    uint8_t* rflags = self ? query_flags : reference_flags;
+    // Compare sum(((q-r)/tolerance)^2) with cols: overflow means "far".
+    const double limit = static_cast<double>(query->cols);
+    int64_t found = 0, candidates = 0;
+    for (int64_t i = 0; i < query->rows; ++i) {
+        for (int64_t k = self ? i + 1 : 0; k < R.rows; ++k) {
+            if (query_groups && query_groups[i] == rgroups[k]) continue;
+            ++candidates;
+            double s = 0.0;
+            for (int64_t j = 0; j < query->cols && s <= limit; ++j) {
+                const double t = (at(*query, i, j) - at(R, k, j)) / tolerance;
+                s += t * t;
+            }
+            if (!(s <= limit)) continue;
+            query_flags[i] = 1;
+            rflags[k] = 1;
+            if (found < max_pairs) {
+                pair_indices[2 * found] = i;
+                pair_indices[2 * found + 1] = k;
+                pair_distances[found] = tolerance * std::sqrt(s / limit);
+            }
+            ++found;
+        }
+    }
+    out_counts[0] = found;
+    out_counts[1] = candidates;
+    return N4M_OK;
 }
 }  // extern "C"

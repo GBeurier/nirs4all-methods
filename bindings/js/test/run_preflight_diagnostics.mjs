@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
+    preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     preflightHdbscan, preflightAdjustedRandIndex,
 } from "../dist/index.js";
@@ -76,6 +77,29 @@ const categorical = preflightLocalContrast(new Float64Array([0, 0, 1, 1]),
 near(categorical.contrast, 0.4);
 near(categorical.observedSameClassFraction, 0.5);
 near(categorical.expectedSameClassFraction, 1 / 6);
+// Window 5 / quadratic SG weights (-3,12,17,12,-3)/35; gain^2 = 18/35.
+// Row 0 quadratic, row 1 linear plus impulse 35 at band 5.
+const noiseRows = [];
+for (let j = 0; j < 11; j++) noiseRows.push(j * j);
+for (let j = 0; j < 11; j++) noiseRows.push(1 + 2 * j + (j === 5 ? 35 : 0));
+const noise = preflightNoiseProxy({data: new Float64Array(noiseRows), rows: 2, cols: 11}, 5, 2);
+near(noise.gain, Math.sqrt(18 / 35));
+near(noise.bandNoise[5], Math.sqrt(315));
+near(noise.bandNoise[3], Math.sqrt(8.75));
+near(noise.pooled, Math.sqrt(87.5));
+assert.ok(Number.isNaN(noise.bandNoise[0]) && noise.bandCounts[0] === 0 && noise.bandCounts[5] === 2);
+const pairs = preflightPairsWithinTolerance({
+    data: new Float64Array([0, 0, 0.1, 0, 0, 0.3, 5, 5, 0, 0]), rows: 5, cols: 2,
+}, 0.1, 1, undefined, [1, 2, 3, 4, 1]);
+assert.equal(pairs.totalPairs, 2);
+assert.equal(pairs.candidatePairs, 9);
+assert.deepEqual(pairs.pairs, [0, 1]);
+near(pairs.distances[0], Math.sqrt(0.005));
+assert.deepEqual(Array.from(pairs.queryFlags), [1, 1, 0, 0, 1]);
+const cross = preflightPairsWithinTolerance({data: new Float64Array([0, 0]), rows: 1, cols: 2},
+    0.1, 0, {data: new Float64Array([0, 0.1, 1, 1]), rows: 2, cols: 2});
+assert.equal(cross.totalPairs, 1);
+assert.deepEqual(Array.from(cross.referenceFlags), [1, 0]);
 const blobs = preflightHdbscan({data: new Float64Array([0, 0, 1, 1, 5, 5, 6, 6]), rows: 4, cols: 2},
     {minClusterSize: 2, minSamples: 2});
 assert.equal(blobs.nClusters, 2);
