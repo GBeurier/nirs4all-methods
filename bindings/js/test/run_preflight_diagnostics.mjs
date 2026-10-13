@@ -4,9 +4,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
+    preflightFactorAssociation, preflightHolmAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    preflightHdbscan, preflightAdjustedRandIndex,
+    clusterHdbscan, preflightAdjustedRandIndex,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -74,6 +75,24 @@ near(continuous.fractionRowsWithNeighbors, 1);
 assert.ok(Number.isNaN(continuous.observedSameClassFraction));
 const categorical = preflightLocalContrast(new Float64Array([0, 0, 1, 1]),
     [2, 2, 3, 2], 1, true, [1, 1, 2, 3]);
+// Same hand values and NumPy/SciPy permutation goldens as test_preflight.cpp.
+const assoc = preflightFactorAssociation([4, 4, 4, -9, -9, -9],
+    new Float64Array([1, 2, 3, 7, 8, 9]), false, 999, 17);
+near(assoc.effectSize, 27 / 29);
+near(assoc.statistic, 54);
+near(assoc.log10DistinctPermutations, Math.log10(20));
+assert.equal(assoc.nAtLeastObserved, 93);
+assert.equal(assoc.nPermutationsExecuted, 999);
+near(assoc.pValue, 94 / 1000);
+assert.equal(preflightFactorAssociation([4, 4, 4, -9, -9, -9],
+    new Float64Array([1, 2, 3, 7, 8, 9]), false, 999, 18446744073709551557n).nAtLeastObserved, 88);
+const classAssoc = preflightFactorAssociation([0, 0, 0, 1, 1, 1, 1],
+    new Float64Array([0, 0, 1, 1, 1, 1, 0]), true, 999, 17);
+near(classAssoc.effectSize, 5 / 12);
+near(classAssoc.statistic, 175 / 144);
+assert.equal(classAssoc.nAtLeastObserved, 477);
+const holm = preflightHolmAdjust(new Float64Array([0.01, 0.04, 0.03, 0.005]));
+[0.03, 0.06, 0.06, 0.02].forEach((value, i) => near(holm[i], value));
 near(categorical.contrast, 0.4);
 near(categorical.observedSameClassFraction, 0.5);
 near(categorical.expectedSameClassFraction, 1 / 6);
@@ -100,7 +119,7 @@ const cross = preflightPairsWithinTolerance({data: new Float64Array([0, 0]), row
     0.1, 0, {data: new Float64Array([0, 0.1, 1, 1]), rows: 2, cols: 2});
 assert.equal(cross.totalPairs, 1);
 assert.deepEqual(Array.from(cross.referenceFlags), [1, 0]);
-const blobs = preflightHdbscan({data: new Float64Array([0, 0, 1, 1, 5, 5, 6, 6]), rows: 4, cols: 2},
+const blobs = clusterHdbscan({data: new Float64Array([0, 0, 1, 1, 5, 5, 6, 6]), rows: 4, cols: 2},
     {minClusterSize: 2, minSamples: 2});
 assert.equal(blobs.nClusters, 2);
 assert.equal(blobs.labels[0], blobs.labels[1]);
@@ -110,7 +129,7 @@ assert.equal(blobs.tree[0].parent, -1);
 assert.equal(blobs.tree[0].size, 4);
 assert.equal(blobs.persistence.length, 2);
 assert.equal(blobs.membership.length, 4);
-assert.throws(() => preflightHdbscan({data: new Float64Array([0, 1]), rows: 2, cols: 1},
+assert.throws(() => clusterHdbscan({data: new Float64Array([0, 1]), rows: 2, cols: 1},
     {minClusterSize: 1, minSamples: 1}), RangeError);
 near(preflightAdjustedRandIndex([0, 0, 1, 2], [0, 0, 1, 1]), 0.5714285714285714);
 near(preflightAdjustedRandIndex([0, 0, 1, 1], [0, 1, 0, 1]), -0.5);
@@ -122,7 +141,7 @@ const same = (a, b) => Number.isNaN(b) ? Number.isNaN(a) : a === b ||
 const fixture = JSON.parse(readFileSync(
     new URL("../../../parity/fixtures/hdbscan_v1.json", import.meta.url), "utf8"));
 for (const c of fixture.cases) {
-    const got = preflightHdbscan({data: new Float64Array(c.input_hex.map(hex)), rows: c.rows, cols: c.cols}, {
+    const got = clusterHdbscan({data: new Float64Array(c.input_hex.map(hex)), rows: c.rows, cols: c.cols}, {
         minClusterSize: c.params.min_cluster_size, minSamples: c.params.min_samples,
         selection: c.params.selection_method === 1 ? "leaf" : "eom",
         allowSingleCluster: c.params.allow_single_cluster === 1,

@@ -86,6 +86,16 @@ uint64_t n4m_pcg64_engine_next_uint64(n4m_rng_pcg64* rng);
  * cache. */
 uint32_t n4m_pcg64_engine_next_uint32(n4m_rng_pcg64* rng);
 
+/* Draw one integer in [0, max] (inclusive) with NumPy's `random_interval`:
+ * smallest all-ones mask >= max, then masked rejection on `next_uint32` when
+ * max <= 0xFFFFFFFF, otherwise on `next_uint64`. */
+uint64_t n4m_pcg64_engine_interval(n4m_rng_pcg64* rng, uint64_t max);
+
+/* Write a uniform permutation of [0, n) to out[0..n). Bit-for-bit equal to
+ * `numpy.random.default_rng(seed).permutation(n)` for the same engine state:
+ * Fisher-Yates from the last position down, j = random_interval(i). */
+void n4m_pcg64_engine_permutation(n4m_rng_pcg64* rng, int64_t* out, int64_t n);
+
 /* Draw a uniform double in [0, 1) — `(uint64 >> 11) * 2^-53`. Matches
  * NumPy's `next_double` callback for the PCG64 bit generator. */
 double n4m_pcg64_engine_next_double(n4m_rng_pcg64* rng);

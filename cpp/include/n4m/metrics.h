@@ -103,7 +103,7 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
  * tree_lambda_birth (1/distance, root 0), tree_lambda_death (largest lambda
  * at which a point or child leaves the node) and tree_stability (excess of
  * mass before selection). Lambda is +inf at distance 0. */
-N4M_API n4m_status_t n4m_preflight_hdbscan(
+N4M_API n4m_status_t n4m_cluster_hdbscan(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, int64_t min_cluster_size,
     int64_t min_samples, int32_t selection_method, int32_t allow_single_cluster,
     int64_t* labels, double* membership, double* outlier_scores, int64_t* n_clusters,
@@ -158,6 +158,40 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     const int64_t* reference_groups, double tolerance, int64_t max_pairs,
     int64_t* pair_indices, double* pair_distances, uint8_t* query_flags,
     uint8_t* reference_flags, int64_t* out_counts);
+
+/* Association between one categorical factor and one target over n
+ * exchangeable analysis units (one row per unit), with an optional seeded
+ * Monte Carlo permutation test of the target labels over all units (a single
+ * unrestricted block). factor_codes are arbitrary int64 level codes. targets
+ * must be finite; categorical=1 requires exactly representable integer class
+ * codes (|code| <= 2^53-1). n >= 2, 0 <= n_permutations <= 1000000, and
+ * (n + levels*classes) * (n_permutations + 1) <= 250 million operations.
+ * Permutation draws use PCG64 seeded like numpy.random.default_rng(seed); the
+ * b-th draw equals the b-th rng.permutation(n), target i -> targets[perm[i]].
+ * out_eight (caller-owned, NaN when undefined):
+ *   [0] effect size: eta^2 = SS_between/SS_total (continuous) or Cramer's V
+ *       (categorical); NaN with fewer than two levels or target values.
+ *   [1] statistic: one-way ANOVA F (NaN when n == levels or SS_within == 0)
+ *       or Pearson chi-square without continuity correction.
+ *   [2] df1: levels-1, or (levels-1)*(classes-1).
+ *   [3] df2: n-levels (continuous), NaN (categorical).
+ *   [4] number of factor levels; [5] number of distinct target values.
+ *   [6] log10 of min(n!/prod(level_count!), n!/prod(target_multiplicity!)),
+ *       an upper bound on distinct permutation outcomes of the statistic.
+ *   [7] Monte Carlo p-value (1+b)/(1+B); NaN when B == 0 or [0] is NaN.
+ * The permutation statistic is eta^2 or Cramer's V^2; b counts permuted
+ * values >= observed - sqrt(DBL_EPSILON). out_two = {b, executed B}; no
+ * permutation runs when the effect size is undefined. */
+N4M_API n4m_status_t n4m_preflight_factor_association(
+    n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
+    int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
+    double* out_eight, int64_t* out_two);
+
+/* Holm step-down adjusted p-values for one family of m >= 1 hypotheses.
+ * Inputs must lie in [0, 1]; adjusted[i] = min(1, max_{j<=rank(i)}
+ * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm"). */
+N4M_API n4m_status_t n4m_preflight_holm_adjust(
+    n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,

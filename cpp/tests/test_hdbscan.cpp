@@ -30,7 +30,7 @@ n4m_status_t run(n4m_context_t* ctx, const n4m_matrix_view_t& X, int64_t mcs, in
     o.labels.assign(n, 0); o.tree_parent.assign(n, 0); o.tree_size.assign(n, 0);
     o.tree_label.assign(n, 0); o.membership.assign(n, 0); o.outlier.assign(n, 0);
     o.persistence.assign(n, 0); o.birth.assign(n, 0); o.death.assign(n, 0); o.stability.assign(n, 0);
-    const auto st = n4m_preflight_hdbscan(
+    const auto st = n4m_cluster_hdbscan(
         ctx, &X, mcs, ms, method, single, o.labels.data(), o.membership.data(), o.outlier.data(),
         &o.n_clusters, o.persistence.data(), &o.n_nodes, o.tree_parent.data(), o.tree_size.data(),
         o.tree_label.data(), o.birth.data(), o.death.data(), o.stability.data());
@@ -187,7 +187,7 @@ int main() {
         REQUIRE(n4m_matrix_view_init_rowmajor(&B, big.data(), 60000, 1, N4M_DTYPE_F64) == N4M_OK);
         REQUIRE(run(ctx, B, 2, 2, 0, 0, o) == N4M_ERR_UNSUPPORTED);
         int64_t labels[4];
-        REQUIRE(n4m_preflight_hdbscan(ctx, &X, 2, 2, 0, 0, labels, nullptr, nullptr, nullptr,
+        REQUIRE(n4m_cluster_hdbscan(ctx, &X, 2, 2, 0, 0, labels, nullptr, nullptr, nullptr,
                                       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                                       nullptr, nullptr) == N4M_ERR_NULL_POINTER);
 

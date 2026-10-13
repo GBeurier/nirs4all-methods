@@ -1,8 +1,11 @@
 # ABI — Changes Log
 
-## 2026-10-13 — ABI 2.19.0: Preflight HDBSCAN and ARI (unreleased)
+## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
-Add two caller-buffer operations in `n4m/metrics.h`. `n4m_preflight_hdbscan` runs Euclidean HDBSCAN* (scikit-learn
+Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged
+and no serialized format changes.
+
+`n4m_cluster_hdbscan` runs Euclidean HDBSCAN* (scikit-learn
 1.9.1 semantics: `min_samples` counts the row itself, EOM or leaf selection,
 `allow_single_cluster`) and writes per-row labels/membership/GLOSH scores,
 per-cluster persistence and the condensed cluster tree (parent, size, label,
@@ -11,12 +14,8 @@ edges keep Prim insertion order (stable sort); scikit-learn leaves that order
 unspecified. Workloads above 2.5e9 distance products return
 `N4M_ERR_UNSUPPORTED`. `n4m_preflight_adjusted_rand_index` returns the
 Hubert-Arabie ARI, NaN for fewer than two rows or identical trivial
-partitions. ABI 2.18.0 already shipped in npm `@nirs4all/methods@1.3.5`, so
-this is a minor bump; the project version is left for the release batch.
-No serialized format changes.
-## 2026-10-13 — ABI 2.19.0: noise proxy and tolerance pairs (unreleased)
+partitions.
 
-Add two caller-buffer operations in `n4m/metrics.h`.
 `n4m_preflight_noise_proxy_compute` smooths rows with the existing
 Savitzky-Golay engine (deriv 0, odd window >= 3, polyorder <= window-2) and
 returns, per feature, the root mean square of `x - smooth` over rows whose
@@ -27,10 +26,21 @@ also returned. `n4m_preflight_pairs_within_tolerance` lists row pairs (within
 one matrix, i < h, or query x reference) whose RMS feature difference is at
 most a positive finite tolerance, excluding equal group IDs, and reports the
 exact total, candidate count and per-row flags even when the listing is
-truncated. Overflowing differences count as distant. No serialized format
-changes; 2.18 symbols are unchanged.
+truncated. Overflowing differences count as distant.
 
-## 2026-10-12 — ABI 2.18.0: reusable Preflight diagnostics (unreleased)
+`n4m_preflight_factor_association` takes one row per exchangeable unit (int64
+factor codes, finite targets or exact integer class codes) and returns eta^2,
+ANOVA F and degrees of freedom, or Cramer's V and Pearson chi-square, plus the
+level/value counts, a log10 upper bound on distinct permutation outcomes and an
+optional Monte Carlo permutation p-value `(1+b)/(1+B)`. Draws permute targets
+over all units as one block with PCG64 seeded as `numpy.random.default_rng`;
+the b-th draw equals NumPy's b-th `permutation(n)`. Ties use
+`>= observed - sqrt(DBL_EPSILON)` on eta^2 or V^2. Undefined effects return NaN
+and run no permutation. Work above 250 million operations returns
+`N4M_ERR_UNSUPPORTED`. `n4m_preflight_holm_adjust` returns Holm step-down
+adjusted p-values with stable ordering.
+
+## 2026-10-12 — ABI 2.18.0: reusable Preflight diagnostics (released in 1.3.5)
 
 Add five caller-buffer C ABI operations in `n4m/metrics.h`: centered PCA
 scores/loadings/eigenvalues plus exact full covariance spectral moments,
