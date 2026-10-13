@@ -1,9 +1,8 @@
 # ABI — Changes Log
 
-## 2026-10-13 — ABI 2.18.0 (continued): Preflight HDBSCAN and ARI (unreleased)
+## 2026-10-13 — ABI 2.19.0: Preflight HDBSCAN and ARI (unreleased)
 
-Add two caller-buffer operations to the still-unreleased 2.18.0 surface in
-`n4m/metrics.h`. `n4m_preflight_hdbscan` runs Euclidean HDBSCAN* (scikit-learn
+Add two caller-buffer operations in `n4m/metrics.h`. `n4m_preflight_hdbscan` runs Euclidean HDBSCAN* (scikit-learn
 1.9.1 semantics: `min_samples` counts the row itself, EOM or leaf selection,
 `allow_single_cluster`) and writes per-row labels/membership/GLOSH scores,
 per-cluster persistence and the condensed cluster tree (parent, size, label,
@@ -12,7 +11,8 @@ edges keep Prim insertion order (stable sort); scikit-learn leaves that order
 unspecified. Workloads above 2.5e9 distance products return
 `N4M_ERR_UNSUPPORTED`. `n4m_preflight_adjusted_rand_index` returns the
 Hubert-Arabie ARI, NaN for fewer than two rows or identical trivial
-partitions. The ABI version stays 2.18.0 because 2.18.0 has not been tagged.
+partitions. ABI 2.18.0 already shipped in npm `@nirs4all/methods@1.3.5`, so
+this is a minor bump; the project version is left for the release batch.
 No serialized format changes.
 
 ## 2026-10-12 — ABI 2.18.0: reusable Preflight diagnostics (unreleased)

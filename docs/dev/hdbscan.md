@@ -1,6 +1,6 @@
 # HDBSCAN for Preflight: reuse assessment and reference gate
 
-Status: ABI 2.18.0 (unreleased), `n4m_preflight_hdbscan` and
+Status: ABI 2.19.0 (unreleased), `n4m_preflight_hdbscan` and
 `n4m_preflight_adjusted_rand_index` in `n4m/metrics.h`. Requested by
 nirs4all-preflight lot PF-05 (clustering capability).
 
