@@ -43,6 +43,16 @@ ABI 2.20.0. No model-state serialization format changes.
   aliased term or a saturated design gives no test). JS/WASM
   `statsPermanovaFreedmanLane`. It complements the within-strata test, whose
   null also excludes interactions with the conditions.
+- Numerical domain of `n4m_stats_permanova`, `n4m_stats_permanova_freedman_lane`
+  and `n4m_stats_permdisp`: columns are centred before scaling and the common
+  power-of-two unit comes from the centred variation, so constant columns of
+  any amplitude and large offsets change nothing; every sum of squares
+  (including each permutation's residual SS) is a sum of squared terms of
+  explicit residuals, never a difference of totals; unrepresentable sums of
+  squares or distances return `N4M_ERR_NUMERICAL_FAILURE` instead of 0 or
+  infinity; design sizes and budgets are checked before any level-dependent
+  allocation. Property tests sweep magnitudes 2^k (k from -1069 to 1000),
+  offsets (1e16, 2^300, 1e300) and huge constant columns in native and WASM.
 - Reference gate `parity/fixtures/permanova_v1.json`
   (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
   least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
