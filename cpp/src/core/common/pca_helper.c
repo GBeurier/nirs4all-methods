@@ -6,6 +6,7 @@
 
 #include "pca_helper.h"
 
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,23 @@ static int use_tall_gram_svd(int64_t rows, int64_t cols,
  * the entry with the largest absolute value is non-negative. If we need to
  * flip a row, we also flip the corresponding column of the scores buffer
  * (when provided) so X = scores @ components remains invariant. */
+/* S is descending. A variance S^2/(n-1) of a component above the numerical
+ * rank threshold (S > max(rows, cols) * eps * S[0]) must be finite and keep
+ * at least 32 significant bits (>= 2^-1042); otherwise the PCA outputs are
+ * not representable and the fit fails explicitly. */
+static int variances_representable(const double* S, const double* ev,
+                                   int64_t k, int64_t rows, int64_t cols) {
+    const double tol =
+        (double)((rows > cols) ? rows : cols) * DBL_EPSILON * S[0];
+    for (int64_t i = 0; i < k; ++i) {
+        if (!isfinite(ev[i]) ||
+            (S[i] > tol && ev[i] < ldexp(1.0, -1042))) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static void flip_signs_max_abs(double* components, double* scores,
                                 int64_t k, int64_t cols, int64_t n_scores) {
     for (int64_t i = 0; i < k; ++i) {
@@ -140,6 +158,11 @@ n4m_status_t n4m_pca_fit(const double* X, int64_t rows, int64_t cols,
                     U[(size_t)r * (size_t)k + (size_t)i] * S[i];
             }
         }
+        if (!variances_representable(S, ev, k, rows, cols)) {
+            free(mean); free(Xc); free(U); free(S); free(Vt);
+            free(ev); free(scores_train);
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
         flip_signs_max_abs(Vt, scores_train, k, cols, rows);
 
         out->rows = rows;
@@ -195,6 +218,11 @@ n4m_status_t n4m_pca_fit(const double* X, int64_t rows, int64_t cols,
      * the X = scores @ components decomposition stays consistent (the
      * scores buffer itself is local and only used to flip the components
      * here). */
+    if (!variances_representable(S, ev, k, rows, cols)) {
+        free(mean); free(Xc); free(U); free(S); free(Vt);
+        free(components); free(ev); free(scores_train);
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
     flip_signs_max_abs(components, scores_train, k, cols, rows);
 
     out->rows = rows;
