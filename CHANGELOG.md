@@ -30,12 +30,16 @@ ABI 2.20.0 (project version unchanged until release).
   1e-12 parity tolerance, but is no longer bit-for-bit.
 - Tolerance-pair distances are computed on rescaled differences independently
   of the tolerance: `[1e-170, 0]` against `[0, 0]` at tolerance 1e200 now
-  lists 7.07e-171 instead of 0. The decision is made in the scaled space
-  before rounding: `[2^-1073, 0]` against `[0, 0]` at tolerance 2^-1074
-  (RMS sqrt(2)·2^-1074) is far.
-- Noise proxy: rows are centred and rescaled by a power of two before
-  smoothing, with scaled sums of squares, so a large offset or an extreme
-  scale no longer turns rounding into noise. A result above DBL_MAX is an
+  lists 7.07e-171 instead of 0. Pairs within 2^-45 (relative) of the
+  tolerance are decided exactly from `sum (q - r)^2` against `cols tol^2`,
+  using a fixed-point accumulator of exact products. `[2^-1073, 0]` against
+  `[0, 0]` at 2^-1074, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
+  `[1, 1, 2^-26]` against 0 at `sqrt(2/3)` are far.
+- Noise proxy: each window's residual is computed from the window alone,
+  as weighted second differences with error-free sums and scaled sums of
+  squares. A large offset, an extreme scale or a huge value outside the
+  evaluable windows, masked or not, no longer turns rounding into noise or
+  erases it. A result above DBL_MAX is an
   explicit `N4M_ERR_NUMERICAL_FAILURE`. The residual gain no longer uses
   `long double`, which differed between x86 and WASM.
 
