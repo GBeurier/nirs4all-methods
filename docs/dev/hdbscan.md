@@ -51,26 +51,34 @@ The ARI is new native code, about 30 lines.
   lambda birth/death and stability. The result is deterministic for a given row order;
   callers that need order invariance must fix a canonical row order.
 
-## Overflow guard (ABI 2.20)
+## Distance guard (ABI 2.20)
 
 An independent review found that finite inputs such as `[0, 1e155, 2e155, 3e155]`
 overflowed the summed squared differences to infinity. Prim then kept its initial
 indices, emitted self-edges, and the condensed tree had seven nodes for four rows,
-written past the caller's `X.rows`-element buffers. The fix, not present in
-scikit-learn:
+written past the caller's `X.rows`-element buffers. A first fix scaled the whole
+matrix by a power of two; a second review showed that a global scale still flushed
+small differences to zero (`[0, 1, 3, 10, 11, 14, 1e200]` became all noise instead of
+`[0, 0, 0, 1, 1, 1, -1]`). The current guard, not present in scikit-learn, works per pair:
 
-- when `max|X|` is outside `[2^-480, 2^480]`, X is multiplied by an exact power of two
-  (bringing `max|X|` into `[0.5, 1)`) before distances are summed, and the MST weights
-  are multiplied back exactly. Ordinary data are not scaled, so results remain
-  bit-identical to the reference;
-- an MST weight that is not representable after scaling back returns
+- the plain sum of squared differences is kept when it is finite and at least
+  `2^-968`. Below that bound, squared differences may lose precision in the subnormal
+  range; above it, no term overflowed. Ordinary distances are therefore bit-identical
+  to the reference;
+- otherwise the distance is `s · sqrt(Σ (t_k / s)^2)` with `s = max_k |t_k|`, which
+  neither overflows nor underflows for representable distances;
+- a distance above `DBL_MAX` (detected on every pair Prim evaluates) returns
   `N4M_ERR_UNSUPPORTED`;
 - every MST edge must join two distinct rows and two distinct components, and the
   result sizes and tree order are checked before any output is written. Errors are
   status codes, not C++ exceptions, because the WASM build does not catch exceptions.
 
-`n4m_hdbscan_tests` and the JS/WASM test run the reproduction with sentinel-guarded
-buffers and check that power-of-ten rescaling keeps the partition and memberships.
+`n4m_hdbscan_tests` and the JS/WASM test run the overflow reproduction with
+sentinel-guarded buffers. `parity/fixtures/cluster_matching_null_v1.json` adds five
+multi-magnitude cases (the review vector, blobs scaled by `1e-200` and `1e170`, unit
+blobs with an outlier at `(1e300, -1e300)`, and columns at `1e-200` and `1e-250`). Their
+reference is scikit-learn `HDBSCAN(metric="precomputed")` on exact `math.dist`
+distances; labels match up to permutation and membership within 1e-12.
 
 ## Tie order matters, including in the reference
 

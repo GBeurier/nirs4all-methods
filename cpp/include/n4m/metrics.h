@@ -85,12 +85,13 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
  * values, min_cluster_size>=2, 1<=min_samples<=X.rows, selection_method
  * 0=EOM or 1=leaf, allow_single_cluster 0 or 1. Workloads with
  * rows*rows*cols above 2.5e9 return N4M_ERR_UNSUPPORTED.
- * Overflow guard (ABI 2.20): when max|X| is outside [2^-480, 2^480], X is
- * scaled by an exact power of two before distances are summed and the MST
- * weights are scaled back exactly; ordinary data are not scaled. An MST
- * distance that is not representable in double precision returns
- * N4M_ERR_UNSUPPORTED, and the result is checked against the output
- * capacities before anything is written.
+ * Distance guard (ABI 2.20): a pair whose plain sum of squared differences
+ * overflows or falls below 2^-968 is recomputed as
+ * max|t| * sqrt(sum((t / max|t|)^2)), so representable distances neither
+ * overflow nor underflow; other pairs keep the scikit-learn operation order.
+ * A distance above DBL_MAX returns N4M_ERR_UNSUPPORTED, rows*cols above 5e7
+ * too, and the result is checked against the output capacities before
+ * anything is written.
  * Tie rule: MST edges of equal mutual-reachability weight are processed in
  * Prim insertion order (stable sort); Prim keeps the lowest row index on
  * equal weights. EOM replaces a node by its children only when their summed
@@ -151,7 +152,7 @@ N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
  * last to first, an unassigned column wins equal reduced costs; a constant
  * matrix gives the identity). Caller-owned row_ind/col_ind receive
  * min(rows, cols) pairs in increasing row order; *n_assigned their count.
- * rows * cols * min(rows, cols) must not exceed 2.5e9. */
+ * rows * cols * min(rows, cols) must not exceed 2.5e9 and rows * cols 5e7. */
 N4M_API n4m_status_t n4m_linear_sum_assignment(
     n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind,
     int64_t* col_ind, int64_t* n_assigned);
@@ -174,7 +175,8 @@ N4M_API n4m_status_t n4m_random_permutations(
  * view (d >= 1), mean has d finite values, out is caller-owned row-major
  * n x d (n >= 0). A covariance that is not numerically positive definite
  * returns N4M_ERR_NUMERICAL_FAILURE; regularization is the caller's choice.
- * n * d * d must not exceed 2.5e9. */
+ * Limits (N4M_ERR_UNSUPPORTED, checked before any allocation, also for n = 0):
+ * d * d and n * d at most 5e7 values, d^3 / 6 and n * d * d at most 2.5e9. */
 N4M_API n4m_status_t n4m_random_multivariate_normal(
     n4m_context_t* ctx, uint64_t seed, const double* mean, const n4m_matrix_view_t* cov,
     int64_t n, double* out);

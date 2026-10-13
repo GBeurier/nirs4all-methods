@@ -161,6 +161,41 @@ void permutations_case(n4m_context_t* ctx, const std::string& s, size_t lo, size
     REQUIRE(out == flat_int_array(s, "draws", lo, hi));
 }
 
+// Labels up to a bijection with identical noise.
+void same_partition(const std::vector<int64_t>& got, const std::vector<int64_t>& want) {
+    REQUIRE(got.size() == want.size());
+    std::map<int64_t, int64_t> forward, backward;
+    for (size_t i = 0; i < got.size(); ++i) {
+        REQUIRE((got[i] < 0) == (want[i] < 0));
+        if (got[i] < 0) continue;
+        REQUIRE(forward.emplace(got[i], want[i]).first->second == want[i]);
+        REQUIRE(backward.emplace(want[i], got[i]).first->second == got[i]);
+    }
+}
+
+// Squared differences that overflow or underflow (review 2026-10-13: the
+// global 2^k scaling turned [0, 1, 3, 10, 11, 14, 1e200] into all noise).
+void multiscale_hdbscan_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
+    const auto rows = integer(s, "rows", lo, hi), cols = integer(s, "cols", lo, hi);
+    auto x = hex_array(s, "input_hex", lo, hi);
+    n4m_matrix_view_t X{};
+    REQUIRE(n4m_matrix_view_init_rowmajor(&X, x.data(), rows, cols, N4M_DTYPE_F64) == N4M_OK);
+    const auto un = static_cast<size_t>(rows);
+    std::vector<int64_t> labels(un), parent(un), size(un), label(un);
+    std::vector<double> membership(un), outlier(un), persistence(un), birth(un), death(un), stab(un);
+    int64_t clusters = 0, nodes = 0;
+    REQUIRE(n4m_cluster_hdbscan(ctx, &X, integer(s, "min_cluster_size", lo, hi),
+                                integer(s, "min_samples", lo, hi), 0, 0, labels.data(),
+                                membership.data(), outlier.data(), &clusters, persistence.data(),
+                                &nodes, parent.data(), size.data(), label.data(), birth.data(),
+                                death.data(), stab.data()) == N4M_OK);
+    same_partition(labels, int_array(s, "labels", lo, hi));
+    const auto want = hex_array(s, "membership_hex", lo, hi);
+    for (size_t i = 0; i < un; ++i) REQUIRE(close(membership[i], want[i]));
+    std::printf("multiscale hdbscan %-30s clusters=%lld ok\n", text(s, "name", lo, hi).c_str(),
+                static_cast<long long>(clusters));
+}
+
 void gaussian_hdbscan_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
     const auto d = integer(s, "d", lo, hi), n = integer(s, "n", lo, hi);
     auto cov = hex_array(s, "cov_hex", lo, hi);
@@ -178,15 +213,8 @@ void gaussian_hdbscan_case(n4m_context_t* ctx, const std::string& s, size_t lo, 
                                 membership.data(), outlier.data(), &clusters, persistence.data(),
                                 &nodes, parent.data(), size.data(), label.data(), birth.data(),
                                 death.data(), stab.data()) == N4M_OK);
-    const auto want = int_array(s, "labels", lo, hi);
     REQUIRE(clusters == integer(s, "n_clusters", lo, hi));
-    std::map<int64_t, int64_t> forward, backward;
-    for (size_t i = 0; i < un; ++i) {
-        REQUIRE((labels[i] < 0) == (want[i] < 0));
-        if (labels[i] < 0) continue;
-        REQUIRE(forward.emplace(labels[i], want[i]).first->second == want[i]);
-        REQUIRE(backward.emplace(want[i], labels[i]).first->second == labels[i]);
-    }
+    same_partition(labels, int_array(s, "labels", lo, hi));
     std::printf("gaussian hdbscan %-32s clusters=%lld ok\n", text(s, "name", lo, hi).c_str(),
                 static_cast<long long>(clusters));
 }
@@ -208,10 +236,11 @@ int main() {
             else if (kind == "normal") normal_case(ctx, s, a, b);
             else if (kind == "permutations") permutations_case(ctx, s, a, b);
             else if (kind == "gaussian_hdbscan") gaussian_hdbscan_case(ctx, s, a, b);
+            else if (kind == "multiscale_hdbscan") multiscale_hdbscan_case(ctx, s, a, b);
             else REQUIRE(false);
         }
         REQUIRE(seen["assignment"] == 12 && seen["jaccard"] == 4 && seen["normal"] == 4 && seen["permutations"] == 4 &&
-                seen["gaussian_hdbscan"] == 3);
+                seen["gaussian_hdbscan"] == 3 && seen["multiscale_hdbscan"] == 5);
 
         // Argument validation.
         double cost[4] = {1, 2, 3, 4};
@@ -249,6 +278,28 @@ int main() {
         REQUIRE(n4m_random_permutations(ctx, 1, -1, 1, perm) == N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(n4m_random_permutations(ctx, 1, 2, 1, nullptr) == N4M_ERR_NULL_POINTER);
         REQUIRE(n4m_random_permutations(ctx, 1, 100000, 100000, perm) == N4M_ERR_UNSUPPORTED);
+        // Review 2026-10-13 P0: a 65536 x 65536 overlapping view with n = 0
+        // bypassed the n*d*d budget and, on WASM32, d*d wrapped to 0 before
+        // the Cholesky factor was written. Limits are now checked first.
+        {
+            std::vector<double> backing(131071, 1.0), big_mean(65536, 0.0);
+            n4m_matrix_view_t O{};
+            REQUIRE(n4m_matrix_view_init_strided(&O, backing.data(), 65536, 65536, 1, 1,
+                                                 N4M_DTYPE_F64) == N4M_OK);
+            REQUIRE(n4m_random_multivariate_normal(ctx, 1, big_mean.data(), &O, 0, nullptr) ==
+                    N4M_ERR_UNSUPPORTED);
+            // d^3/6 above 2.5e9 is refused even though d*d fits.
+            n4m_matrix_view_t Q{};
+            REQUIRE(n4m_matrix_view_init_strided(&Q, backing.data(), 2500, 2500, 1, 1,
+                                                 N4M_DTYPE_F64) == N4M_OK);
+            REQUIRE(n4m_random_multivariate_normal(ctx, 1, big_mean.data(), &Q, 0, nullptr) ==
+                    N4M_ERR_UNSUPPORTED);
+            // Zero draws of a valid covariance succeed without writing.
+            double identity[4] = {1, 0, 0, 1};
+            n4m_matrix_view_t E{};
+            REQUIRE(n4m_matrix_view_init_rowmajor(&E, identity, 2, 2, N4M_DTYPE_F64) == N4M_OK);
+            REQUIRE(n4m_random_multivariate_normal(ctx, 1, mean, &E, 0, nullptr) == N4M_OK);
+        }
         mean[1] = std::numeric_limits<double>::infinity();
         REQUIRE(n4m_random_multivariate_normal(ctx, 1, mean, &C, 2, out) == N4M_ERR_INVALID_ARGUMENT);
         n4m_context_destroy(ctx);
