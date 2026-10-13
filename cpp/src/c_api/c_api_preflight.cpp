@@ -455,22 +455,29 @@ bool centred_rows(const n4m_matrix_view_t& v, std::vector<double>& y, int& expon
     return true;
 }
 
-// A non-negative quantity computed in the scaled unit, mapped back by
-// 2^shift in long double. `resolution` is the rounding floor of the
-// computation in the scaled unit: a value at or below it is numerically
-// zero and may be returned as 0. False when the value is not representable
-// as a double: overflow, or a value above the floor that underflows to 0.
-bool unscale(long double scaled, int shift, long double resolution, double& out) {
-    const long double value = std::scalbn(scaled, shift);
-    out = static_cast<double>(value);
-    return std::isfinite(out) && !(scaled > resolution && !(out > 0.0));
-}
-
-// Rounding floor of sums of squares of n x k centred values whose total is
-// `total`: n k DBL_EPSILON^2 total.
-long double ss_resolution(long double total, size_t n, size_t k) {
-    const long double eps = std::numeric_limits<double>::epsilon();
-    return total * static_cast<long double>(n) * static_cast<long double>(k) * eps * eps;
+// Publishes non-negative values computed in the scaled unit (true value =
+// scaled 2^shift). When every positive true value is a normal double, the
+// true values are written and *exponent = 0. Otherwise (overflow, or a
+// positive value below DBL_MIN, including one that would underflow to 0)
+// the scaled values are written and *exponent = shift, so the true value is
+// out * 2^exponent: a positive quantity is never published as 0. False only
+// when a positive value is not representable even in the scaled unit (it is
+// below 2^-1074 of the largest), which the caller reports as an error.
+bool publish(const std::vector<long double>& scaled, int shift,
+             const std::vector<double*>& out, int32_t& exponent) {
+    bool normal = true;
+    for (long double v : scaled) {
+        const long double value = std::scalbn(v, shift);
+        if (v > 0.0L && !(value >= static_cast<long double>(std::numeric_limits<double>::min()) &&
+                          value <= static_cast<long double>(std::numeric_limits<double>::max())))
+            normal = false;
+    }
+    exponent = normal ? 0 : shift;
+    for (size_t i = 0; i < scaled.size(); ++i) {
+        *out[i] = static_cast<double>(normal ? std::scalbn(scaled[i], shift) : scaled[i]);
+        if (scaled[i] > 0.0L && !(*out[i] > 0.0)) return false;
+    }
+    return true;
 }
 
 // Term sum of squares and EXPLICIT residual sum of squares of the additive
@@ -1548,11 +1555,11 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
 N4M_API n4m_status_t n4m_stats_permanova(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* strata_codes, int32_t n_permutations, uint64_t seed,
-    double* out_thirteen, int64_t* out_two) {
+    double* out_thirteen, int64_t* out_two, int32_t* ss_exponent) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
     const auto st = check_view(ctx, X);
     if (st != N4M_OK) return st;
-    if (!term_codes || !out_thirteen || !out_two)
+    if (!term_codes || !out_thirteen || !out_two || !ss_exponent)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null PERMANOVA buffer");
     const int64_t n = X->rows, k = X->cols;
     if (n < 2 || k < 1 || n_permutations < 0 || n_permutations > 1000000)
@@ -1693,13 +1700,11 @@ N4M_API n4m_status_t n4m_stats_permanova(
         const auto [ss_term, ss_res] =
             r > 0 ? kernel(nullptr) : std::pair<long double, long double>{0.0L, within};
         for (int i = 0; i < 13; ++i) out_thirteen[i] = nan_value;
-        const long double floor = ss_resolution(ss_total, nn, kk);
-        if (!unscale(ss_total, 2 * exponent, floor, out_thirteen[0]) ||
-            !unscale(ss_strata, 2 * exponent, floor, out_thirteen[1]) ||
-            !unscale(ss_term, 2 * exponent, floor, out_thirteen[2]) ||
-            !unscale(ss_res, 2 * exponent, floor, out_thirteen[3]))
+        if (!publish({ss_total, ss_strata, ss_term, ss_res}, 2 * exponent,
+                     {&out_thirteen[0], &out_thirteen[1], &out_thirteen[2], &out_thirteen[3]},
+                     *ss_exponent))
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                        "PERMANOVA sums of squares are not representable as doubles");
+                        "PERMANOVA sum of squares below 2^-1074 of the total");
         // Ratios and the test statistic stay in the scaled unit.
         const bool defined = df_term > 0 && within > 0.0L;
         if (df_term > 0 && ss_total > 0.0L)
@@ -1754,11 +1759,12 @@ N4M_API n4m_status_t n4m_stats_permanova(
 N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations,
-    uint64_t seed, double* out_twelve, int64_t* out_two) {
+    uint64_t seed, double* out_twelve, int64_t* out_two, int32_t* ss_exponent) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
     const auto st = check_view(ctx, X);
     if (st != N4M_OK) return st;
-    if (!term_codes || !out_twelve || !out_two || (n_conditions > 0 && !condition_codes))
+    if (!term_codes || !out_twelve || !out_two || !ss_exponent ||
+        (n_conditions > 0 && !condition_codes))
         return fail(ctx, N4M_ERR_NULL_POINTER, "null Freedman-Lane PERMANOVA buffer");
     const int64_t n = X->rows, k = X->cols;
     if (n < 2 || k < 1 || n_conditions < 0 || n_conditions > 64 || n_permutations < 0 ||
@@ -1820,13 +1826,11 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
         for (double v : y) ss_total += static_cast<long double>(v) * v;
         const auto [ss_term, ss_res] = project(basis, rank_reduced, e, kk, scratch);
         for (int i = 0; i < 12; ++i) out_twelve[i] = nan_value;
-        const long double floor = ss_resolution(ss_total, nn, kk);
-        if (!unscale(ss_total, 2 * exponent, floor, out_twelve[0]) ||
-            !unscale(ss_reduced, 2 * exponent, floor, out_twelve[1]) ||
-            !unscale(df_term > 0 ? ss_term : 0.0L, 2 * exponent, floor, out_twelve[2]) ||
-            !unscale(ss_res, 2 * exponent, floor, out_twelve[3]))
+        if (!publish({ss_total, ss_reduced, df_term > 0 ? ss_term : 0.0L, ss_res}, 2 * exponent,
+                     {&out_twelve[0], &out_twelve[1], &out_twelve[2], &out_twelve[3]},
+                     *ss_exponent))
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                        "PERMANOVA sums of squares are not representable as doubles");
+                        "PERMANOVA sum of squares below 2^-1074 of the total");
         if (df_term > 0 && ss_total > 0.0L)
             out_twelve[4] = static_cast<double>(std::min(1.0L, ss_term / ss_total));
         if (df_term > 0 && ss_e > 0.0L)
@@ -1877,11 +1881,13 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
 N4M_API n4m_status_t n4m_stats_permdisp(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
     int32_t n_permutations, uint64_t seed, double* distances,
-    double* group_mean_distances, double* out_six, int64_t* out_two) {
+    double* group_mean_distances, double* out_six, int64_t* out_two,
+    int32_t* distance_exponent) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
     const auto st = check_view(ctx, X);
     if (st != N4M_OK) return st;
-    if (!group_codes || !distances || !group_mean_distances || !out_six || !out_two)
+    if (!group_codes || !distances || !group_mean_distances || !out_six || !out_two ||
+        !distance_exponent)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null PERMDISP buffer");
     const int64_t n = X->rows, k = X->cols;
     if (n < 2 || k < 1 || n_permutations < 0 || n_permutations > 1000000)
@@ -1932,19 +1938,16 @@ N4M_API n4m_status_t n4m_stats_permdisp(
             resid[i] = z[i] - zmean[static_cast<size_t>(group[i])];
             residual += resid[i] * resid[i];
         }
-        long double z_max = 0.0L;
-        for (size_t i = 0; i < nn; ++i) z_max = std::max(z_max, z[i]);
-        // Distances below n k DBL_EPSILON of the largest are rounding level.
-        const long double floor = z_max * static_cast<long double>(nn * kk) *
-                                  static_cast<long double>(std::numeric_limits<double>::epsilon());
-        for (size_t i = 0; i < nn; ++i)
-            if (!unscale(z[i], exponent, floor, distances[i]))
-                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                            "PERMDISP distances are not representable as doubles");
-        for (size_t c = 0; c < g; ++c)
-            if (!unscale(zmean[c], exponent, floor, group_mean_distances[c]))
-                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                            "PERMDISP distances are not representable as doubles");
+        std::vector<long double> published(z);
+        std::vector<double*> targets;
+        for (size_t i = 0; i < nn; ++i) targets.push_back(&distances[i]);
+        for (size_t c = 0; c < g; ++c) {
+            published.push_back(zmean[c]);
+            targets.push_back(&group_mean_distances[c]);
+        }
+        if (!publish(published, exponent, targets, *distance_exponent))
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                        "PERMDISP distance below 2^-1074 of the largest");
         for (int i = 0; i < 6; ++i) out_six[i] = nan_value;
         out_six[1] = static_cast<double>(g) - 1.0;
         out_six[2] = static_cast<double>(n) - static_cast<double>(g);

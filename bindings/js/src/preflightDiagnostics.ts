@@ -107,6 +107,8 @@ export interface StatsExactPermutationResult {
 }
 
 export interface PermanovaResult {
+    /** Sums of squares are ss* x 2^ssExponent; 0 when they are normal doubles. */
+    ssExponent: number;
     ssTotal: number;
     /** Between-strata SS (0 without strata). */
     ssStrata: number;
@@ -130,6 +132,8 @@ export interface PermanovaResult {
 }
 
 export interface FreedmanLaneResult {
+    /** Sums of squares are ss* x 2^ssExponent; 0 when they are normal doubles. */
+    ssExponent: number;
     ssTotal: number;
     /** Model SS of the reduced design (intercept + condition main effects). */
     ssReduced: number;
@@ -150,6 +154,8 @@ export interface FreedmanLaneResult {
 }
 
 export interface PermdispResult {
+    /** Distances are distances x 2^distanceExponent; 0 when normal doubles. */
+    distanceExponent: number;
     /** Euclidean distance of each row to its group centroid. */
     distances: Float64Array;
     /** Mean distance per group, in ascending group-code order. */
@@ -753,14 +759,16 @@ export function statsPermanova(X: Matrix, termCodes: readonly (number | bigint)[
         const x = scope.matrix(X.data, X.rows, X.cols);
         const term = scope.i64(termCodes);
         const strata = strataCodes ? scope.i64(strataCodes) : 0;
-        const out = scope.alloc(13 * 8), counts = scope.alloc(16);
+        const out = scope.alloc(13 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
         const st = m.ccall("n4m_stats_permanova", "number",
-            ["number", "number", "number", "number", "number", "i64", "number", "number"],
-            [ctx.handle, x.viewPtr, term, strata, nPermutations, seed64, out, counts]) as number;
+            ["number", "number", "number", "number", "number", "i64", "number", "number", "number"],
+            [ctx.handle, x.viewPtr, term, strata, nPermutations, seed64, out, counts,
+                exponent]) as number;
         checkStatus(st, ctx.handle);
         const r = copyF64(out, 13);
         const dv = new DataView(m.HEAPU8.buffer);
         return {
+            ssExponent: dv.getInt32(exponent, true),
             ssTotal: r[0]!, ssStrata: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!,
             r2: r[4]!, partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!,
             nLevels: r[9]!, nStrata: r[10]!, log10DistinctPermutations: r[11]!, pValue: r[12]!,
@@ -788,15 +796,17 @@ export function statsPermdisp(X: Matrix, groupCodes: readonly (number | bigint)[
         const x = scope.matrix(X.data, X.rows, X.cols);
         const groups = scope.i64(groupCodes);
         const distances = scope.alloc(X.rows * 8), means = scope.alloc(X.rows * 8);
-        const out = scope.alloc(6 * 8), counts = scope.alloc(16);
+        const out = scope.alloc(6 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
         const st = m.ccall("n4m_stats_permdisp", "number",
-            ["number", "number", "number", "number", "i64", "number", "number", "number", "number"],
+            ["number", "number", "number", "number", "i64", "number", "number", "number", "number",
+                "number"],
             [ctx.handle, x.viewPtr, groups, nPermutations, seed64, distances, means, out,
-                counts]) as number;
+                counts, exponent]) as number;
         checkStatus(st, ctx.handle);
         const r = copyF64(out, 6);
         const dv = new DataView(m.HEAPU8.buffer);
         return {
+            distanceExponent: dv.getInt32(exponent, true),
             distances: copyF64(distances, X.rows),
             groupMeanDistances: copyF64(means, r[3]!),
             f: r[0]!, df1: r[1]!, df2: r[2]!, nGroups: r[3]!, log10DistinctPermutations: r[4]!,
@@ -831,15 +841,17 @@ export function statsPermanovaFreedmanLane(X: Matrix, termCodes: readonly (numbe
         const rowMajor: (number | bigint)[] = [];
         for (let i = 0; i < X.rows; i++) for (const c of conditionCodes) rowMajor.push(c[i]!);
         const conditions = conditionCodes.length ? scope.i64(rowMajor) : 0;
-        const out = scope.alloc(12 * 8), counts = scope.alloc(16);
+        const out = scope.alloc(12 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
         const st = m.ccall("n4m_stats_permanova_freedman_lane", "number",
-            ["number", "number", "number", "number", "number", "number", "i64", "number", "number"],
+            ["number", "number", "number", "number", "number", "number", "i64", "number", "number",
+                "number"],
             [ctx.handle, x.viewPtr, term, conditions, conditionCodes.length, nPermutations, seed64,
-                out, counts]) as number;
+                out, counts, exponent]) as number;
         checkStatus(st, ctx.handle);
         const r = copyF64(out, 12);
         const dv = new DataView(m.HEAPU8.buffer);
         return {
+            ssExponent: dv.getInt32(exponent, true),
             ssTotal: r[0]!, ssReduced: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!, r2: r[4]!,
             partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!, rankReduced: r[9]!,
             log10DistinctPermutations: r[10]!, pValue: r[11]!,

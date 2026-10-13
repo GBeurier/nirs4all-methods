@@ -20,6 +20,9 @@
 namespace {
 using namespace n4m_testing;
 
+// Exponent of the published sums of squares / distances of the last call.
+int32_t g_exp = 0;
+
 struct Permanova {
     double v[13];
     int64_t counts[2];
@@ -33,7 +36,7 @@ n4m_matrix_view_t view(double* x, int64_t n, int64_t k) {
 
 n4m_status_t permanova(n4m_context_t* ctx, const n4m_matrix_view_t& X, const int64_t* term,
                        const int64_t* strata, int32_t b, uint64_t seed, Permanova& out) {
-    return n4m_stats_permanova(ctx, &X, term, strata, b, seed, out.v, out.counts);
+    return n4m_stats_permanova(ctx, &X, term, strata, b, seed, out.v, out.counts, &g_exp);
 }
 
 bool near(double got, double want, double scale = 1.0) {
@@ -150,7 +153,7 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
         int64_t fcounts[2] = {};
         const auto fseed = static_cast<uint64_t>(integer(s, "seed", flo, fhi));
         REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term.data(), cond.data(),
-                    static_cast<int32_t>(columns.size()), b, fseed, fl, fcounts) == N4M_OK);
+                    static_cast<int32_t>(columns.size()), b, fseed, fl, fcounts, &g_exp) == N4M_OK);
         const double ftotal = hex_scalar(s, "ss_total", flo, fhi);
         const char* fkeys[] = {"ss_total", "ss_reduced", "ss_term", "ss_residual"};
         for (int i = 0; i < 4; ++i) REQUIRE(near(fl[i], hex_scalar(s, fkeys[i], flo, fhi), ftotal));
@@ -174,7 +177,7 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
         int64_t counts[2] = {};
         const auto dseed = static_cast<uint64_t>(integer(s, "seed", dlo, dhi));
         REQUIRE(n4m_stats_permdisp(ctx, &X, term.data(), b, dseed, dist.data(), means.data(),
-                                   out.data(), counts) == N4M_OK);
+                                   out.data(), counts, &g_exp) == N4M_OK);
         const auto want_dist = hex_list(s, "distances", dlo, dhi);
         const auto want_means = hex_list(s, "group_mean_distances", dlo, dhi);
         for (size_t i = 0; i < n; ++i) REQUIRE(near(dist[i], want_dist[i]));
@@ -194,14 +197,16 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
 
 // ---------------------------------------------------------------------------
 // Systematic robustness properties (magnitude sweep, translation, constant
-// columns). Every result is either correct or an explicit
-// N4M_ERR_NUMERICAL_FAILURE; never a silently wrong number.
+// columns, mixed exponents). Sums of squares and distances are published
+// as out * 2^exponent: exponent 0 only when every positive value is a
+// normal double, so nothing positive is ever published as 0 or inf.
 // ---------------------------------------------------------------------------
 struct Outputs {
     n4m_status_t status = N4M_OK;
     std::vector<double> ss;     // sums of squares or distances (scale with 2^power k)
     std::vector<double> ratios; // scale invariant values (R^2, F, df, p)
     std::vector<int64_t> counts;
+    int32_t exponent = 0;
 };
 
 // 12 rows: term 3 levels x strata 2 levels (unbalanced), integer coordinates.
@@ -217,23 +222,24 @@ Outputs run_kernel(n4m_context_t* ctx, int which, std::vector<double> x, int64_t
     int64_t counts[2] = {};
     if (which == 0) {
         double v[13];
-        o.status = n4m_stats_permanova(ctx, &X, kTerm, kStrata, 199, 7, v, counts);
+        o.status = n4m_stats_permanova(ctx, &X, kTerm, kStrata, 199, 7, v, counts, &g_exp);
         o.ss = {v[0], v[1], v[2], v[3]};
         o.ratios = {v[4], v[5], v[6], v[7], v[8], v[12]};
     } else if (which == 1) {
         double v[12];
-        o.status = n4m_stats_permanova_freedman_lane(ctx, &X, kTerm, kStrata, 1, 199, 7, v, counts);
+        o.status = n4m_stats_permanova_freedman_lane(ctx, &X, kTerm, kStrata, 1, 199, 7, v, counts, &g_exp);
         o.ss = {v[0], v[1], v[2], v[3]};
         o.ratios = {v[4], v[5], v[6], v[7], v[8], v[9], v[11]};
     } else {
         std::vector<double> dist(12), means(12);
         double v[6];
-        o.status = n4m_stats_permdisp(ctx, &X, kTerm, 199, 7, dist.data(), means.data(), v, counts);
+        o.status = n4m_stats_permdisp(ctx, &X, kTerm, 199, 7, dist.data(), means.data(), v, counts, &g_exp);
         o.ss = dist;
         o.ss.insert(o.ss.end(), means.begin(), means.begin() + 3);
         o.ratios = {v[0], v[1], v[2], v[5]};
     }
     o.counts = {counts[0], counts[1]};
+    o.exponent = g_exp;
     return o;
 }
 
@@ -242,32 +248,30 @@ bool same_ratio(double got, double want) {
     return std::abs(got - want) <= 1e-9 * std::max(1.0, std::abs(want));
 }
 
+// True value of a published output.
+long double true_value(double v, int32_t exponent) {
+    return std::ldexp(static_cast<long double>(v), exponent);
+}
+
+// Publication contract: exponent 0 only when every positive output is a
+// normal double; a positive true value is never published as 0.
+void check_contract(const Outputs& o, const char* tag) {
+    for (double v : o.ss)
+        if (v < 0.0 || std::isnan(v) || std::isinf(v) ||
+            (o.exponent == 0 && v > 0.0 && v < std::numeric_limits<double>::min()))
+            throw std::runtime_error(std::string(tag) + " publication contract violated");
+}
+
 // Scaled data must reproduce the base ratios and counts, with sums of
-// squares (power 2) or distances (power 1) scaled by 2^(power*k) when
-// representable, and an explicit numerical failure otherwise.
+// squares (power 2) or distances (power 1) scaled by 2^(power*k).
 void check_scaled(const Outputs& base, const Outputs& got, int power, int k, const char* tag) {
-    bool representable = true;
-    for (double v : base.ss) {
-        const long double e = std::ldexp(static_cast<long double>(v), power * k);
-        if (v > 0.0 && (e > static_cast<long double>(std::numeric_limits<double>::max()) ||
-                        e < static_cast<long double>(std::numeric_limits<double>::denorm_min()) / 2))
-            representable = false;
-    }
-    if (!representable) {
-        if (got.status != N4M_ERR_NUMERICAL_FAILURE)
-            throw std::runtime_error(std::string(tag) + " expected numerical failure at k=" +
-                                     std::to_string(k));
-        return;
-    }
     if (got.status != N4M_OK)
         throw std::runtime_error(std::string(tag) + " unexpected status at k=" + std::to_string(k));
+    check_contract(got, tag);
     for (size_t i = 0; i < base.ss.size(); ++i) {
-        const long double e = std::ldexp(static_cast<long double>(base.ss[i]), power * k);
-        const long double err = std::abs(static_cast<long double>(got.ss[i]) - e);
-        const bool ok = e >= static_cast<long double>(std::numeric_limits<double>::min())
-            ? err <= 1e-9L * e
-            : err <= 1e-9L * e + static_cast<long double>(std::numeric_limits<double>::denorm_min());
-        if (!ok || (base.ss[i] > 0.0 && !(got.ss[i] > 0.0)))
+        const long double want = std::ldexp(true_value(base.ss[i], base.exponent), power * k);
+        const long double have = true_value(got.ss[i], got.exponent);
+        if (std::abs(have - want) > 1e-9L * want || (want > 0.0L && !(have > 0.0L)))
             throw std::runtime_error(std::string(tag) + " SS mismatch at k=" + std::to_string(k));
     }
     for (size_t i = 0; i < base.ratios.size(); ++i)
@@ -278,7 +282,7 @@ void check_scaled(const Outputs& base, const Outputs& got, int power, int k, con
 }
 
 void robustness_sweep(n4m_context_t* ctx) {
-    const char* names[3] = {"permanova", "freedman_lane", "permdisp"};
+    static const char* names[3] = {"permanova", "freedman_lane", "permdisp"};
     for (int which = 0; which < 3; ++which) {
         const int power = which == 2 ? 1 : 2;
         const std::vector<double> base_x(kBase, kBase + 24);
@@ -299,7 +303,7 @@ void robustness_sweep(n4m_context_t* ctx) {
             check_scaled(base, run_kernel(ctx, which, x, 2), power, k, names[which]);
         }
         // 1e300 + data spaced by its ulp (2^944): the sums of squares exceed
-        // DBL_MAX, so the only acceptable answer is an explicit failure.
+        // DBL_MAX and are published in the scaled unit with their exponent.
         {
             std::vector<double> x(base_x);
             for (double& v : x) v = 1e300 + std::ldexp(v, 944);
@@ -317,6 +321,19 @@ void robustness_sweep(n4m_context_t* ctx) {
             }
             check_scaled(base, run_kernel(ctx, which, x, 5), power, 0, names[which]);
         }
+    }
+    // Mixed exponents in one matrix: column 1 * 2^300 next to column 2 *
+    // -2^-700 (signed). Column 2 is 2^-2000 of column 1 in every sum, so the
+    // results equal the column-1-only results scaled by 2^600.
+    for (int which = 0; which < 3; ++which) {
+        std::vector<double> one(12), mixed(24);
+        for (int i = 0; i < 12; ++i) {
+            one[static_cast<size_t>(i)] = kBase[2 * i];
+            mixed[static_cast<size_t>(2 * i)] = std::ldexp(kBase[2 * i], 300);
+            mixed[static_cast<size_t>(2 * i + 1)] = -std::ldexp(kBase[2 * i + 1], -700);
+        }
+        const Outputs base1 = run_kernel(ctx, which, one, 1);
+        check_scaled(base1, run_kernel(ctx, which, mixed, 2), which == 2 ? 1 : 2, 300, names[which]);
     }
     // Astra P0 constant column: SS 58 next to a constant 1e308 column.
     double c2[12] = {1e308, 1, 1e308, 2, 1e308, 3, 1e308, 7, 1e308, 8, 1e308, 9};
@@ -354,7 +371,7 @@ void cancellation_case(n4m_context_t* ctx) {
     auto Y = view(y, 16, 1);
     double fl[12];
     int64_t counts[2];
-    REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, a, b, 1, 99, 3, fl, counts) == N4M_OK);
+    REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, a, b, 1, 99, 3, fl, counts, &g_exp) == N4M_OK);
     REQUIRE(fl[3] > 0.0 && std::abs(fl[3] - static_cast<double>(rss)) <= 1e-3 * static_cast<double>(rss));
     REQUIRE(std::isfinite(fl[6]) && std::abs(fl[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
     REQUIRE(counts[0] == 0 && counts[1] == 99);
@@ -362,6 +379,48 @@ void cancellation_case(n4m_context_t* ctx) {
     REQUIRE(permanova(ctx, Y, a, b, 99, 3, r) == N4M_OK);
     REQUIRE(r.v[3] > 0.0 && std::abs(r.v[3] - static_cast<double>(rss)) <= 1e-3 * static_cast<double>(rss));
     REQUIRE(std::isfinite(r.v[6]) && std::abs(r.v[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
+}
+
+// Astra round 3 dyadic fixture: 16 balanced rows, A, B in {-1, +1}, residual
+// r alternating +-1 in each cell; columns 2^-500 B and 2^-560 (A + r). Exact
+// analytic outputs for A given B: SS_A = SS_res = 2^-1116 (below the double
+// range), F = 13, partial R^2 = 1/2, SS_total = 2^-996 + 2^-1115.
+void dyadic_case(n4m_context_t* ctx) {
+    double x[32];
+    int64_t a[16], b[16];
+    for (int i = 0; i < 16; ++i) {
+        const int cell = i / 4;
+        a[i] = cell < 2 ? -1 : 1;
+        b[i] = cell % 2 == 0 ? -1 : 1;
+        const double r = i % 2 == 0 ? 1.0 : -1.0;
+        x[2 * i] = std::ldexp(static_cast<double>(b[i]), -500);
+        x[2 * i + 1] = std::ldexp(static_cast<double>(a[i]) + r, -560);
+    }
+    auto X = view(x, 16, 2);
+    const long double ss_a = std::ldexp(1.0L, -1116);
+    const long double total = std::ldexp(1.0L, -996) + std::ldexp(1.0L, -1115);
+    const auto exact = [](long double got, long double want) {
+        return std::abs(got - want) <= 1e-12L * want;
+    };
+    double fl[12];
+    int64_t counts[2];
+    REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, a, b, 1, 99, 5, fl, counts, &g_exp) == N4M_OK);
+    REQUIRE(g_exp != 0);  // 2^-1116 is not a normal double: scaled publication
+    REQUIRE(exact(true_value(fl[2], g_exp), ss_a) && exact(true_value(fl[3], g_exp), ss_a));
+    REQUIRE(exact(true_value(fl[0], g_exp), total));
+    REQUIRE(std::abs(fl[6] - 13.0) <= 1e-12 * 13.0 && std::abs(fl[5] - 0.5) <= 1e-12);
+    REQUIRE(fl[7] == 1 && fl[8] == 13 && counts[1] == 99);
+    Permanova r{};
+    REQUIRE(permanova(ctx, X, a, b, 99, 5, r) == N4M_OK);
+    REQUIRE(g_exp != 0);
+    REQUIRE(exact(true_value(r.v[2], g_exp), ss_a) && exact(true_value(r.v[3], g_exp), ss_a));
+    REQUIRE(std::abs(r.v[6] - 13.0) <= 1e-12 * 13.0 && std::abs(r.v[5] - 0.5) <= 1e-12);
+    // PERMDISP by A: every row lies sqrt(2^-1000 + 2^-1120) from its centroid.
+    double dist[16], means[16], out6[6];
+    REQUIRE(n4m_stats_permdisp(ctx, &X, a, 0, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
+    const long double d = std::sqrt(std::ldexp(1.0L, -1000) + std::ldexp(1.0L, -1120));
+    for (double v : dist) REQUIRE(exact(true_value(v, g_exp), d));
+    REQUIRE(std::isnan(out6[0]));  // equal distances: zero within SS, F undefined
 }
 
 // Size checks precede dense allocation: 20000 levels are refused at once.
@@ -377,7 +436,7 @@ void size_limits(n4m_context_t* ctx) {
     double fl[12];
     int64_t counts[2];
     REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term.data(), levels.data(), 1, 0, 1, fl,
-                                              counts) == N4M_ERR_UNSUPPORTED);
+                                              counts, &g_exp) == N4M_ERR_UNSUPPORTED);
 }
 }  // namespace
 
@@ -408,13 +467,17 @@ int main() {
         REQUIRE(near(r.v[4], 27.0 / 29.0) && near(r.v[0], 58e300, 58e300));
 
         // Scale reconstruction never forms scale^2 (Astra review). Six values
-        // of magnitude 1e-162: SS = 6e-324 rounds to the smallest subnormal.
+        // of magnitude 1e-162: SS = 6 x^2 ~ 6e-324 is not a normal double, so
+        // it is published in the scaled unit with its exponent, not rounded.
         double tiny[6] = {-1e-162, -1e-162, -1e-162, 1e-162, 1e-162, 1e-162};
         int64_t halves6[6] = {0, 0, 0, 1, 1, 1};
         auto T = view(tiny, 6, 1);
         REQUIRE(permanova(ctx, T, halves6, nullptr, 0, 1, r) == N4M_OK);
-        const double denorm = std::numeric_limits<double>::denorm_min();
-        REQUIRE(r.v[0] == denorm && r.v[2] == denorm && r.v[3] == 0.0);
+        const long double six_x2 = 6.0L * static_cast<long double>(tiny[3]) * tiny[3];
+        REQUIRE(g_exp != 0);
+        REQUIRE(std::abs(true_value(r.v[0], g_exp) - six_x2) <= 1e-12L * six_x2);
+        REQUIRE(std::abs(true_value(r.v[2], g_exp) - six_x2) <= 1e-12L * six_x2);
+        REQUIRE(true_value(r.v[3], g_exp) <= 1e-15L * six_x2);
         REQUIRE(near(r.v[4], 1.0) && near(r.v[5], 1.0));
         // 1e155 + 1e140 * {0,2,4,12,14,16}: finite SS near 2.3e282, while
         // scale^2 would overflow. Reference: exact double differences to the
@@ -434,31 +497,32 @@ int main() {
         }
         auto B6 = view(big, 6, 1);
         REQUIRE(permanova(ctx, B6, halves6, nullptr, 0, 1, r) == N4M_OK);
+        REQUIRE(g_exp == 0);
         REQUIRE(std::isfinite(r.v[0]) && r.v[0] > 2e282 && r.v[0] < 2.5e282);
         REQUIRE(near(r.v[0], static_cast<double>(sst), 0.0));
         REQUIRE(near(r.v[3], static_cast<double>(ssw), 0.0));
         REQUIRE(near(r.v[2], static_cast<double>(sst - ssw), 0.0));
         double bdist[6], bmeans[6], bout[6];
         int64_t bcounts[2];
-        REQUIRE(n4m_stats_permdisp(ctx, &B6, halves6, 0, 1, bdist, bmeans, bout, bcounts) == N4M_OK);
+        REQUIRE(n4m_stats_permdisp(ctx, &B6, halves6, 0, 1, bdist, bmeans, bout, bcounts, &g_exp) == N4M_OK);
         REQUIRE(near(bdist[0], static_cast<double>(m0 - static_cast<long double>(big[0] - big[0])), 0.0));
         REQUIRE(near(bmeans[0], static_cast<double>(
             (std::abs(static_cast<long double>(big[0] - big[0]) - m0) +
              std::abs(static_cast<long double>(big[1] - big[0]) - m0) +
              std::abs(static_cast<long double>(big[2] - big[0]) - m0)) / 3.0L), 0.0));
         double tdist[6], tmeans[6];
-        REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, bout, bcounts) == N4M_OK);
+        REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, bout, bcounts, &g_exp) == N4M_OK);
         REQUIRE(tdist[0] == 0.0 && tmeans[1] == 0.0);
 
         // Freedman-Lane with no condition: fitted = mean, so each draw is the
         // free permutation of the data and b equals the one-way golden (93).
         double fl[12];
         int64_t fcounts[2];
-        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 0, 999, 17, fl, fcounts)
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 0, 999, 17, fl, fcounts, &g_exp)
                 == N4M_OK);
         REQUIRE(near(fl[6], 54) && near(fl[2], 54) && fl[7] == 1 && fl[8] == 4 && fl[9] == 1);
         REQUIRE(fcounts[0] == 93 && near(fl[11], 94.0 / 1000.0));
-        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 1, 0, 1, fl, fcounts)
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 1, 0, 1, fl, fcounts, &g_exp)
                 == N4M_ERR_NULL_POINTER);
 
         // Balanced 2x2 in 1-D: term a1 {1,3,2,4}, a2 {5,7,6,8}; strata b1
@@ -474,7 +538,7 @@ int main() {
         // Within strata 4!/(2!2!) = 6 assignments each: log10 36.
         REQUIRE(near(r.v[11], std::log10(36.0)));
         // Freedman-Lane on the balanced 2x2: the same F = 20 (orthogonal design).
-        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Z, ta, sb, 1, 0, 1, fl, fcounts) == N4M_OK);
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Z, ta, sb, 1, 0, 1, fl, fcounts, &g_exp) == N4M_OK);
         REQUIRE(near(fl[6], 20) && near(fl[1], 2) && fl[7] == 1 && fl[8] == 5 && fl[9] == 2);
         // Term aliased with the strata (instrument = site): df 0, no test.
         REQUIRE(permanova(ctx, Z, ta, ta, 999, 1, r) == N4M_OK);
@@ -495,7 +559,7 @@ int main() {
         auto D = view(d, 5, 1);
         double dist[5], means[5], out6[6];
         int64_t counts[2];
-        REQUIRE(n4m_stats_permdisp(ctx, &D, gd, 0, 1, dist, means, out6, counts) == N4M_OK);
+        REQUIRE(n4m_stats_permdisp(ctx, &D, gd, 0, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
         REQUIRE(near(dist[0], 1) && near(dist[1], 1) && near(dist[2], 4) && near(dist[3], 0) &&
                 near(dist[4], 4));
         // Ascending code order: group 3 first.
@@ -503,11 +567,12 @@ int main() {
         REQUIRE(near(out6[0], 15.0 / 16.0) && out6[1] == 1 && out6[2] == 3 && out6[3] == 2);
         REQUIRE(near(out6[4], std::log10(10.0)) && std::isnan(out6[5]) && counts[1] == 0);
         int64_t one_group[5] = {1, 1, 1, 1, 1};
-        REQUIRE(n4m_stats_permdisp(ctx, &D, one_group, 99, 1, dist, means, out6, counts) == N4M_OK);
+        REQUIRE(n4m_stats_permdisp(ctx, &D, one_group, 99, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
         REQUIRE(std::isnan(out6[0]) && std::isnan(out6[5]) && counts[1] == 0);
 
         robustness_sweep(ctx);
         cancellation_case(ctx);
+        dyadic_case(ctx);
         size_limits(ctx);
 
         // Reference gate.
@@ -526,7 +591,7 @@ int main() {
         REQUIRE(permanova(ctx, Y, fa, nullptr, 1000001, 1, r) == N4M_ERR_INVALID_ARGUMENT);
         y[2] = std::nan("");
         REQUIRE(permanova(ctx, Y, fa, nullptr, 0, 1, r) == N4M_ERR_INVALID_ARGUMENT);
-        REQUIRE(n4m_stats_permdisp(ctx, &Y, fa, 0, 1, dist, means, out6, counts)
+        REQUIRE(n4m_stats_permdisp(ctx, &Y, fa, 0, 1, dist, means, out6, counts, &g_exp)
                 == N4M_ERR_INVALID_ARGUMENT);
         y[2] = 3;
         std::vector<double> many(3000, 0.0);
@@ -541,8 +606,8 @@ int main() {
         REQUIRE(permanova(ctx, W, halves.data(), nullptr, 999, 1, r) == N4M_ERR_UNSUPPORTED);
         std::vector<double> wdist(100000), wmeans(100000);
         REQUIRE(n4m_stats_permdisp(ctx, &W, halves.data(), 9999, 1, wdist.data(), wmeans.data(),
-                                   out6, counts) == N4M_ERR_UNSUPPORTED);
-        REQUIRE(n4m_stats_permdisp(ctx, &Y, fa, 0, 1, nullptr, means, out6, counts)
+                                   out6, counts, &g_exp) == N4M_ERR_UNSUPPORTED);
+        REQUIRE(n4m_stats_permdisp(ctx, &Y, fa, 0, 1, nullptr, means, out6, counts, &g_exp)
                 == N4M_ERR_NULL_POINTER);
         n4m_context_destroy(ctx);
         std::puts("permanova tests ok");
