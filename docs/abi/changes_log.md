@@ -1,5 +1,21 @@
 # ABI — Changes Log
 
+## 2026-10-13 — ABI 2.19.0: Preflight factor association and Holm (unreleased)
+
+Add two caller-buffer C ABI operations in `n4m/metrics.h`.
+`n4m_preflight_factor_association` takes one row per exchangeable unit (int64
+factor codes, finite targets or exact integer class codes) and returns eta^2,
+ANOVA F and degrees of freedom, or Cramer's V and Pearson chi-square, plus the
+level/value counts, a log10 upper bound on distinct permutation outcomes and an
+optional Monte Carlo permutation p-value `(1+b)/(1+B)`. Draws permute targets
+over all units as one block with PCG64 seeded as `numpy.random.default_rng`;
+the b-th draw equals NumPy's b-th `permutation(n)`. Ties use
+`>= observed - sqrt(DBL_EPSILON)` on eta^2 or V^2. Undefined effects return NaN
+and run no permutation. Work above 250 million operations returns
+`N4M_ERR_UNSUPPORTED`. `n4m_preflight_holm_adjust` returns Holm step-down
+adjusted p-values with stable ordering. Outputs are caller-owned; no
+serialized format changes. Project/package versions are not bumped here.
+
 ## 2026-10-12 — ABI 2.18.0: reusable Preflight diagnostics (unreleased)
 
 Add five caller-buffer C ABI operations in `n4m/metrics.h`: centered PCA

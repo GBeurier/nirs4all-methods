@@ -369,6 +369,34 @@ uint32_t n4m_pcg64_engine_next_uint32(n4m_rng_pcg64* rng) {
     return (uint32_t)(next & 0xFFFFFFFFu);
 }
 
+uint64_t n4m_pcg64_engine_interval(n4m_rng_pcg64* rng, uint64_t max) {
+    if (max == 0) return 0;
+    uint64_t mask = max;
+    mask |= mask >> 1;
+    mask |= mask >> 2;
+    mask |= mask >> 4;
+    mask |= mask >> 8;
+    mask |= mask >> 16;
+    mask |= mask >> 32;
+    uint64_t value;
+    if (max <= 0xFFFFFFFFu) {
+        while ((value = (n4m_pcg64_engine_next_uint32(rng) & mask)) > max) {}
+    } else {
+        while ((value = (n4m_pcg64_engine_next_uint64(rng) & mask)) > max) {}
+    }
+    return value;
+}
+
+void n4m_pcg64_engine_permutation(n4m_rng_pcg64* rng, int64_t* out, int64_t n) {
+    for (int64_t i = 0; i < n; ++i) out[i] = i;
+    for (int64_t i = n - 1; i > 0; --i) {
+        const int64_t j = (int64_t)n4m_pcg64_engine_interval(rng, (uint64_t)i);
+        const int64_t tmp = out[i];
+        out[i] = out[j];
+        out[j] = tmp;
+    }
+}
+
 double n4m_pcg64_engine_next_double(n4m_rng_pcg64* rng) {
     /* (rnd >> 11) * 2^-53 — bit-exact match to NumPy's `uint64_to_double`. */
     uint64_t r = n4m_pcg64_engine_next_uint64(rng);
