@@ -14,18 +14,18 @@ extern "C" {
  * elements, and full_moments has two elements: sum(lambda) and
  * sum(lambda^2), over the FULL centered covariance spectrum (ddof=1).
  * The moments remain exact when PCA is truncated or approximated.
- * Numerical domain: each column is centred in an exactly rescaled space and
- * the decomposition runs at one power-of-two scale chosen from the centred
- * variation, so constant columns (any amplitude) have no influence and a
- * translation changes nothing beyond the input's own rounding. Scaling X by
- * 2^s scales eigenvalues and full_moments[0] by 4^s, full_moments[1] by
- * 16^s and scores by 2^s; loadings are invariant. N4M_ERR_NUMERICAL_FAILURE
- * means an output is not representable: a moment, or an eigenvalue above
- * the numerical rank threshold (singular value > max(n,p)*eps*s_max),
- * overflows or falls below 2^-1042 (fewer than 32 significant bits), or a
- * score overflows. For unit-scale variation this allows s in about
- * [-255, 255] (full_moments[1] scales by 16^s). Outputs are unspecified
- * when the call fails. */
+ * Supported numerical domain: every nonzero |x| in [2^-128, 2^128] and
+ * max/min nonzero |x| <= 2^64 (exact zeros allowed); anything else returns
+ * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain")
+ * before computing. Inside it every output is a normal double: each column
+ * is centred in an exactly rescaled space (two-term mean) and the
+ * decomposition runs at one power-of-two scale chosen from the centred
+ * variation, so constant columns have no influence, translations change
+ * nothing beyond the input's rounding, and scaling X by 2^s scales the
+ * eigenvalues and full_moments[0] by 4^s, full_moments[1] by 16^s and
+ * scores by 2^s (loadings invariant). Eigenvalues carry the SVD accuracy of
+ * core/common/svd.h: a variance below 2^-1000 times the largest one, which
+ * only cancellation can produce, is reported as 0. */
 N4M_API n4m_status_t n4m_preflight_pca_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
     const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,

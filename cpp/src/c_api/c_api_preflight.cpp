@@ -47,11 +47,13 @@ n4m_status_t check_view(n4m_context_t* ctx, const n4m_matrix_view_t* v) noexcept
     return N4M_OK;
 }
 
-// A published positive quantity must be finite and keep at least 32
-// significant bits (>= 2^-1042) when it lands in the subnormal range.
-bool representable(double x) noexcept {
-    return std::isfinite(x) && x >= std::ldexp(1.0, -1042);
-}
+// Supported numerical domain (rule 13) of the PCA kernel: every nonzero
+// |x| in [2^-pca_domain_exp, 2^pca_domain_exp] and max/min nonzero |x| <=
+// 2^domain_spread_exp. The PCA declares a magnitude bound tighter than 2^256
+// because trace(C^2) is quartic in X: with |x| <= 2^128 every published
+// value (eigenvalues, both moments, scores) is a normal double.
+constexpr int pca_domain_exp = 128;
+constexpr int domain_spread_exp = 64;
 
 double at(const n4m_matrix_view_t& v, int64_t i, int64_t j) noexcept {
     return static_cast<const double*>(v.data)[i * v.row_stride + j * v.col_stride];
@@ -174,6 +176,23 @@ N4M_API n4m_status_t n4m_preflight_pca_compute(
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PCA input");
             data[static_cast<size_t>(i) * up + static_cast<size_t>(j)] = x;
         }
+        {
+            double maxabs = 0.0, minabs = std::numeric_limits<double>::infinity();
+            for (double x : data) {
+                const double a = std::fabs(x);
+                if (a > 0.0) {
+                    maxabs = std::max(maxabs, a);
+                    minabs = std::min(minabs, a);
+                }
+            }
+            if (maxabs > 0.0 &&
+                (maxabs > std::ldexp(1.0, pca_domain_exp) ||
+                 minabs < std::ldexp(1.0, -pca_domain_exp) ||
+                 maxabs > std::ldexp(minabs, domain_spread_exp)))
+                return fail(ctx, N4M_ERR_UNSUPPORTED,
+                            "input outside the supported numerical domain (finite, nonzero |x| "
+                            "in [2^-128, 2^128], max/min nonzero |x| <= 2^64)");
+        }
         // Centre every column in its own exactly rescaled space (max|x| in
         // [0.5, 1)), then bring all centred columns to one power-of-two scale
         // 2^g set by the largest centred variation. Constant columns centre
@@ -186,18 +205,23 @@ N4M_API n4m_status_t n4m_preflight_pca_compute(
             for (size_t i = 0; i < un; ++i) maxabs = std::max(maxabs, std::fabs(data[i * up + j]));
             int e = 0;
             if (maxabs > 0.0) (void)std::frexp(maxabs, &e);
-            // Two-term mean mean_hi + mean_lo: a single rounded mean would
-            // shift every centred value by up to ulp(offset), which is not
-            // small against the variation of a translated column.
-            double mean_hi = 0.0;
-            for (size_t i = 0; i < un; ++i) {
-                data[i * up + j] = std::ldexp(data[i * up + j], -e);
-                mean_hi += data[i * up + j];
-            }
-            mean_hi /= static_cast<double>(n);
-            double mean_lo = 0.0;
-            for (size_t i = 0; i < un; ++i) mean_lo += data[i * up + j] - mean_hi;
-            mean_lo /= static_cast<double>(n);
+            // Two-term mean mean_hi + mean_lo from compensated (Neumaier)
+            // sums: a plain sum loses small values next to large ones of
+            // opposite sign, and a single rounded mean would shift every
+            // centred value by up to ulp(offset).
+            for (size_t i = 0; i < un; ++i) data[i * up + j] = std::ldexp(data[i * up + j], -e);
+            const auto compensated_mean = [&](double shift) {
+                double sum = 0.0, comp = 0.0;
+                for (size_t i = 0; i < un; ++i) {
+                    const double x = data[i * up + j] - shift;
+                    const double t = sum + x;
+                    comp += (std::fabs(sum) >= std::fabs(x)) ? (sum - t) + x : (x - t) + sum;
+                    sum = t;
+                }
+                return (sum + comp) / static_cast<double>(n);
+            };
+            const double mean_hi = compensated_mean(0.0);
+            const double mean_lo = compensated_mean(mean_hi);
             double cmax = 0.0;
             for (size_t i = 0; i < un; ++i) {
                 data[i * up + j] = (data[i * up + j] - mean_hi) - mean_lo;
@@ -238,36 +262,20 @@ N4M_API n4m_status_t n4m_preflight_pca_compute(
             }
         }
         const long double d = static_cast<long double>(n - 1);
+        // Inside the domain every rescaled output below is a normal double.
         const double m1 = std::ldexp(static_cast<double>(sum1 / d), 2 * g);
         const double m2 = std::ldexp(static_cast<double>(sum2 / (d * d)), 4 * g);
-        if (varying && (!representable(m1) || !representable(m2)))
-            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                        "PCA spectral moments are outside the double range");
 
         n4m_pca_fit_t fit{};
         const auto st = n4m_pca_fit(data.data(), n, p, k, 0, &fit);
         if (st != N4M_OK) return fail(ctx, st, "PCA fit failed");
-        // An eigenvalue is significant (numerical rank, decided in the
-        // rescaled space) when its singular value exceeds max(n,p)*eps*s_max.
-        const double rank_tol = static_cast<double>(std::max(n, p)) *
-                                std::numeric_limits<double>::epsilon();
-        const double significant = fit.explained_var[0] * rank_tol * rank_tol;
-        bool ok = true;
         for (int64_t a = 0; a < k; ++a) {
-            const double lambda = std::ldexp(fit.explained_var[a], 2 * g);
-            if (fit.explained_var[a] > significant && !representable(lambda)) ok = false;
-            eigenvalues[a] = lambda;
+            eigenvalues[a] = std::ldexp(fit.explained_var[a], 2 * g);
             for (int64_t j = 0; j < p; ++j) put(*loadings, a, j, fit.components[a * p + j]);
         }
-        for (int64_t i = 0; i < n; ++i) for (int64_t a = 0; a < k; ++a) {
-            const double score = std::ldexp(fit.scores[i * k + a], g);
-            if (!std::isfinite(score)) ok = false;
-            put(*scores, i, a, score);
-        }
+        for (int64_t i = 0; i < n; ++i) for (int64_t a = 0; a < k; ++a)
+            put(*scores, i, a, std::ldexp(fit.scores[i * k + a], g));
         n4m_pca_fit_free(&fit);
-        if (!ok)
-            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                        "PCA eigenvalues or scores are outside the double range");
         full_moments[0] = varying ? m1 : 0.0;
         full_moments[1] = varying ? m2 : 0.0;
         return N4M_OK;
