@@ -19,27 +19,37 @@ squaring. Rows at the smallest subnormal, rows that overflow, rows offset by
 2^60 or 1e300 and rows with 100,000 offset bands are standardized within
 their bound.
 
+The three Preflight kernels follow one supported numerical domain D: every
+nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64.
+Inputs outside D are refused before computing with `N4M_ERR_UNSUPPORTED`
+("input outside the supported numerical domain"). Inside D, results are
+correct to the documented precision.
+
 `n4m_preflight_pairs_within_tolerance` decides exactly. A fast estimate on
 power-of-two rescaled differences settles pairs farther than 2^-45 (relative)
 from the tolerance. The other pairs use the exact sign of
 `sum (q - r)^2 - cols tol^2`, computed in a fixed-point accumulator of exact
-products (`core/common/exact_sum.hpp`). With that rule, `[2^-1073, 0]` against
-`[0, 0]` at 2^-1074, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
+products (`core/common/exact_sum.hpp`). With that rule, `[2^-255, 0]` against
+`[0, 0]` at 2^-256, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
 `[1, 1, 2^-26]` against 0 at `sqrt(2/3)` are all far. An accepted pair
-publishes min(RMS, tolerance), at least 2^-1074.
+publishes min(RMS, tolerance).
 
 `n4m_preflight_noise_proxy_compute` computes each window's residual from that
-window alone, as weighted second differences with error-free sums. Values
-outside every evaluable window, masked or not, cannot change the results:
-the masked `[H, 0, 0, 0, 0, 1, ...]` gives `sqrt(2/3)` and `1/sqrt(7)` for any
-H. The proxy is translation invariant for exact offsets and power-of-two
-equivariant, and a result above DBL_MAX is `N4M_ERR_NUMERICAL_FAILURE`.
+window alone. The second differences are kept exactly, as three doubles each,
+and multiplied by double-double Savitzky-Golay weights (Gram polynomials,
+cross-checked against the SG engine); the double-double sum is rounded once.
+Values outside every evaluable window, masked or not, cannot change the
+results: the masked `[H, 0, 0, 0, 0, 1, ...]` gives `sqrt(2/3)` and
+`1/sqrt(7)` for any H. The spread-2^60 window `[-2^60, 2^60, 1, 0, 0]`
+(window 5, order 1) gives its analytic `sqrt(4/5)`. `[-2^100, 2^100, 1, 0, 0]`
+and `[-DBL_MAX, 2^-1074, DBL_MAX]` lie outside D and are refused.
 
 The magnitude-sweep tests (`cpp/tests/test_preflight_robustness.cpp`, JS
 `run_preflight_diagnostics.mjs`) cover:
 
-- scales 2^k for k from -1074 to 1000, exact offsets near 1e16 and 1e300,
-  and constant columns of huge amplitude;
+- scales 2^k for k from -256 to 248 and their out-of-D neighbours, exact
+  offsets near 1e16 and 2^200, and constant columns up to the spread
+  limit;
 - mixed exponents within one row: signed huge and tiny values, masked huge
   values;
 - independent oracles: exact rational pair decisions and 400-digit SNV

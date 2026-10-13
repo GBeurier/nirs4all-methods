@@ -14,10 +14,23 @@ ABI 2.20.0 (project version unchanged until release).
   `preflightSnv`: SNV with an optional compensated equal-weight aggregation
   by group. Each output row carries a first-order bound on the rounding error
   of its entries, so callers can tell rounding residue from structure.
-- Magnitude-sweep property tests for SNV, the noise proxy and tolerance
-  pairs: scales 2^-1074..2^1000, exact offsets near 1e16 and 1e300, and huge
-  constant columns. Each result is correct within its stated error or an
-  explicit error status.
+- Property and oracle tests for SNV, the noise proxy and tolerance pairs on
+  the supported domain: scales 2^-256..2^248 and their out-of-domain
+  neighbours, exact offsets near 1e16 and 2^200, constant columns up to the
+  spread limit, mixed exponents within a row, exact rational and 400-digit
+  references. Each result is correct within its stated error, or the input is
+  refused with `N4M_ERR_UNSUPPORTED` outside the domain.
+
+### Changed
+
+- Supported numerical domain of the Preflight kernels (`n4m_preflight_snv_compute`,
+  `n4m_preflight_noise_proxy_compute`, `n4m_preflight_pairs_within_tolerance`):
+  every nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero
+  |x| <= 2^64. Inputs outside are refused before computing with
+  `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain").
+  Inside, results are correct to the documented precision. The machinery that
+  only served out-of-domain inputs (halved differences, 1/8 prescaling,
+  subnormal clamps) is removed.
 
 ### Fixed
 
@@ -29,19 +42,18 @@ ABI 2.20.0 (project version unchanged until release).
   a mean error of about 1e-8 SD. Agreement with numpy remains within the
   1e-12 parity tolerance, but is no longer bit-for-bit.
 - Tolerance-pair distances are computed on rescaled differences independently
-  of the tolerance: `[1e-170, 0]` against `[0, 0]` at tolerance 1e200 now
-  lists 7.07e-171 instead of 0. Pairs within 2^-45 (relative) of the
+  of the tolerance: `[2^-200, 0]` against `[0, 0]` lists 2^-200/sqrt(2) at any
+  tolerance instead of 0. Pairs within 2^-45 (relative) of the
   tolerance are decided exactly from `sum (q - r)^2` against `cols tol^2`,
-  using a fixed-point accumulator of exact products. `[2^-1073, 0]` against
-  `[0, 0]` at 2^-1074, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
+  using a fixed-point accumulator of exact products. `[2^-255, 0]` against
+  `[0, 0]` at 2^-256, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
   `[1, 1, 2^-26]` against 0 at `sqrt(2/3)` are far.
-- Noise proxy: each window's residual is computed from the window alone,
-  as weighted second differences with error-free sums and scaled sums of
-  squares. A large offset, an extreme scale or a huge value outside the
-  evaluable windows, masked or not, no longer turns rounding into noise or
-  erases it. A result above DBL_MAX is an
-  explicit `N4M_ERR_NUMERICAL_FAILURE`. The residual gain no longer uses
-  `long double`, which differed between x86 and WASM.
+- Noise proxy: each window's residual is computed from the window alone.
+  Its second differences are kept exactly until a double-double weighted sum
+  with double-double Savitzky-Golay weights. A huge value outside the
+  evaluable windows, masked or not, no longer erases the noise, and
+  `[-2^60, 2^60, 1, 0, 0]` gives its analytic `sqrt(4/5)`. The gain no longer
+  uses `long double`, which differed between x86 and WASM.
 
 - SNV (`n4m_transform_snv_*`, the registry `StandardNormalVariate` and the
   pipelines using it): a constant finite row now maps to exact zeros when

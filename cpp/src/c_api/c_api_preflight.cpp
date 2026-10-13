@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "core/common/context.hpp"
+#include "core/common/double_double.hpp"
 #include "core/common/exact_sum.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/clustering/_vendored/hdbscan.hpp"
@@ -30,6 +31,32 @@ constexpr int32_t max_noise_window = 1001;
 constexpr int32_t max_noise_polyorder = 10;
 // Absolute tolerance on normalized Savitzky-Golay reproduction moments.
 constexpr long double moment_tolerance = 1e-9L;
+
+// Supported numerical domain of the Preflight kernels (lead rule 13): every
+// nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64.
+// Inputs outside it are refused with N4M_ERR_UNSUPPORTED before computing.
+constexpr int domain_max_exponent = 256;
+constexpr int domain_spread_exponent = 64;
+constexpr const char* domain_message =
+    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
+    "max/min nonzero |x| <= 2^64 per row)";
+
+struct DomainScan {
+    double max = 0.0, min = std::numeric_limits<double>::infinity();
+    bool ok = true;
+    void add(double x) {
+        if (!std::isfinite(x)) { ok = false; return; }
+        const double a = std::fabs(x);
+        if (a == 0.0) return;
+        if (a < std::ldexp(1.0, -domain_max_exponent) || a > std::ldexp(1.0, domain_max_exponent))
+            ok = false;
+        max = std::max(max, a);
+        min = std::min(min, a);
+    }
+    bool in_domain() const {
+        return ok && (max == 0.0 || max <= std::ldexp(min, domain_spread_exponent));
+    }
+};
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -673,157 +700,142 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     try {
         const int64_t h = window_length / 2;
         const auto sz = [](int64_t v) { return static_cast<size_t>(v); };
-        // Residual gain from the filter's own impulse response: interior
-        // outputs of a centred unit impulse of length 2w-1 are the weights.
-        const int64_t impulse_cols = 2 * static_cast<int64_t>(window_length) - 1;
-        std::vector<double> impulse(sz(impulse_cols), 0.0), response(sz(impulse_cols));
-        impulse[sz(window_length - 1)] = 1.0;
-        auto sst = n4m_pp_savgol_state_apply(sg, impulse.data(), 1, impulse_cols, response.data());
-        if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay impulse response failed");
-        double gain2 = 0.0, gain2_comp = 0.0;  // Neumaier, same on every host
-        for (int64_t j = h; j < impulse_cols - h; ++j) {
-            const double d = impulse[sz(j)] - response[sz(j)];
-            const double sq = d * d, next = gain2 + sq;
-            gain2_comp += gain2 >= sq ? (gain2 - next) + sq : (sq - next) + gain2;
-            gain2 = next;
+        using ::n4m::core::DD;
+        using ::n4m::core::dd_add;
+        using ::n4m::core::dd_mul;
+        const auto valid = [&](int64_t i, int64_t j) {
+            return !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
+        };
+        // Domain pre-pass (rule 13) over the valid cells of each row.
+        for (int64_t i = 0; i < n; ++i) {
+            DomainScan scan;
+            for (int64_t j = 0; j < p; ++j) {
+                if (!valid(i, j)) continue;
+                if (!std::isfinite(at(*X, i, j)))
+                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
+                scan.add(at(*X, i, j));
+            }
+            if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         }
-        const double gain = std::sqrt(gain2 + gain2_comp);
-        if (!(gain > 0.0) || !std::isfinite(gain))
-            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "zero residual gain");
-        // Smoothing invariant: the weights reproduce every polynomial of
-        // degree <= polyorder, sum_k w_k (k/h)^m = [m == 0] for m = 0..polyorder.
+        // Smoothing weights w_k = sum_{m<=order} t_m(0) t_m(k) / ||t_m||^2 from
+        // the Gram (discrete Chebyshev) polynomials on k = -h..h, N = 2h+1:
+        // t_0 = 1, t_1 = k, t_{m+1} = k t_m - b_m t_{m-1},
+        // b_m = m^2 (N^2 - m^2) / (4 (4 m^2 - 1)), ||t_m||^2 = b_m ||t_{m-1}||^2,
+        // in double-double. Odd t_m vanish at 0, so w_{-k} = w_k exactly.
+        const double nw = static_cast<double>(window_length);
+        std::vector<DD> weight(sz(h + 1), ::n4m::core::dd_div({1.0, 0.0}, {nw, 0.0}));
+        std::vector<DD> t_prev(sz(h + 1)), t_cur(sz(h + 1));
+        for (int64_t k = 0; k <= h; ++k) {
+            t_prev[sz(k)] = {1.0, 0.0};
+            t_cur[sz(k)] = {static_cast<double>(k), 0.0};
+        }
+        DD norm = {nw, 0.0};
+        for (int32_t m = 1; m <= polyorder; ++m) {
+            const double md = static_cast<double>(m);
+            const DD beta = ::n4m::core::dd_div({md * md * (nw * nw - md * md), 0.0},
+                                                 {4.0 * (4.0 * md * md - 1.0), 0.0});
+            norm = dd_mul(norm, beta);  // ||t_m||^2
+            if (m % 2 == 0) {
+                const DD scale = ::n4m::core::dd_div(t_cur[0], norm);
+                for (int64_t k = 0; k <= h; ++k)
+                    weight[sz(k)] = dd_add(weight[sz(k)], dd_mul(scale, t_cur[sz(k)]));
+            }
+            if (m == polyorder) break;
+            // t_{m+1} = k t_m - beta_m t_{m-1}
+            for (int64_t k = 0; k <= h; ++k) {
+                const DD next = dd_add(dd_mul({static_cast<double>(k), 0.0}, t_cur[sz(k)]),
+                                       ::n4m::core::dd_neg(dd_mul(beta, t_prev[sz(k)])));
+                t_prev[sz(k)] = t_cur[sz(k)];
+                t_cur[sz(k)] = next;
+            }
+        }
+        // Cross-checks: the weights agree with the Methods Savitzky-Golay
+        // engine's impulse response, which reproduces polynomials of degree
+        // <= order (moments within 1e-9), and sum to 1 within 2^-90.
+        const int64_t centre = window_length - 1, impulse_cols = 2 * centre + 1;
+        std::vector<double> impulse(sz(impulse_cols), 0.0), response(sz(impulse_cols));
+        impulse[sz(centre)] = 1.0;
+        const auto sst = n4m_pp_savgol_state_apply(sg, impulse.data(), 1, impulse_cols, response.data());
+        if (sst != N4M_OK) return fail(ctx, sst, "Savitzky-Golay impulse response failed");
         for (int32_t order = 0; order <= polyorder; ++order) {
             long double moment = 0.0L;
-            for (int64_t j = h; j < impulse_cols - h; ++j) {
-                const long double k = static_cast<long double>(j - (window_length - 1)) /
-                                      static_cast<long double>(h);
-                moment += static_cast<long double>(response[sz(j)]) * std::pow(k, static_cast<long double>(order));
-            }
+            for (int64_t q = -h; q <= h; ++q)
+                moment += static_cast<long double>(response[sz(centre + q)]) *
+                          std::pow(static_cast<long double>(q) / static_cast<long double>(h),
+                                   static_cast<long double>(order));
             if (!(std::fabs(moment - (order == 0 ? 1.0L : 0.0L)) <= moment_tolerance))
                 return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
                             "Savitzky-Golay weights do not reproduce polynomial moments");
         }
-        // Residual at an evaluable band j (its whole window valid), centred
-        // locally with symmetric weights w_k = (w_{+k} + w_{-k}) / 2 (deriv-0
-        // SG weights are symmetric; sum_k w_k = 1 is checked above):
+        DD total = weight[0];
+        for (int64_t k = 1; k <= h; ++k) {
+            const DD w = weight[sz(k)];
+            if (!(std::fabs(w.hi - response[sz(centre + k)]) <= 1e-9 &&
+                  std::fabs(w.hi - response[sz(centre - k)]) <= 1e-9))
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                            "Gram weights disagree with the Savitzky-Golay engine");
+            total = dd_add(total, dd_add(w, w));
+        }
+        if (!(std::fabs(weight[0].hi - response[sz(centre)]) <= 1e-9) ||
+            !(std::fabs((total.hi - 1.0) + total.lo) <= 0x1p-90))
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "Savitzky-Golay weights do not sum to 1");
+        // Residual gain for unit white noise: g^2 = (1 - w_0)^2 + 2 sum_{k>0} w_k^2.
+        const DD one_minus = dd_add({1.0, 0.0}, ::n4m::core::dd_neg(weight[0]));
+        DD gain2 = dd_mul(one_minus, one_minus);
+        for (int64_t k = 1; k <= h; ++k) {
+            const DD w2 = dd_mul(weight[sz(k)], weight[sz(k)]);
+            gain2 = dd_add(gain2, dd_add(w2, w2));
+        }
+        const double gain = std::sqrt(gain2.hi + gain2.lo);
+        if (!(gain > 0.0)) return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "zero residual gain");
+        // Residual of an evaluable band j (its whole window valid), from the
+        // window alone (values outside every evaluable window never enter):
         //   r_j = x_j - sum_k w_k x_{j+k} = sum_{k>0} w_k c_k,
-        //   c_k = 2 x_j - x_{j+k} - x_{j-k}  (second differences).
-        // Each c_k is summed exactly with error-free TwoSum and rounded once,
-        // so huge neighbours that cancel do not erase a small x_j, and exact
-        // offsets cancel exactly. A window whose values reach 2^1021 is first
-        // scaled by 1/8 (exact above 2^-1071), so |c_k| <= 4 max|x| stays finite. The c_k are then rescaled by an
-        // exact power of two of their maximum before the weighted sum. Only
-        // the window's own values enter: a value outside every evaluable
-        // window cannot change any result. Rounding: |r - r_hat| <= (h + 3) u
-        // sum_k |w_k c_k| for the computed weights.
-        const int64_t centre = window_length - 1;
-        std::vector<double> weight(sz(h + 1));
-        for (int64_t q = 1; q <= h; ++q)
-            weight[sz(q)] = 0.5 * response[sz(centre - q)] + 0.5 * response[sz(centre + q)];
-        std::vector<double> residual(sz(n) * sz(p), 0.0), second(sz(h + 1));
-        std::vector<int> residual_exp(sz(n) * sz(p), 0);
+        //   c_k = 2 x_j - x_{j+k} - x_{j-k}
+        // (sum_k w_k = 1). Each c_k is kept exactly as three doubles (TwoSum,
+        // no overflow inside the domain) and multiplied by the double-double
+        // weight; the sum is double-double and rounded once. Inside the
+        // domain, |r - r_exact| <= 2^-95 sum_k |w_k| |c_k| (exact weights).
         std::vector<int64_t> invalid_prefix(sz(p) + 1);
-        std::vector<uint8_t> evaluable(sz(n) * sz(p), 0);
-        const auto valid = [&](int64_t i, int64_t j) {
-            return !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
+        std::vector<double> band_sum(sz(p), 0.0), band_comp(sz(p), 0.0);
+        double pooled_sum = 0.0, pooled_comp = 0.0;
+        int64_t pooled_count = 0;
+        const auto neumaier = [](double& sum, double& comp, double v) {
+            const double next = sum + v;
+            comp += sum >= v ? (sum - next) + v : (v - next) + sum;
+            sum = next;
         };
-        const auto two_sum = [](double a, double b, double& err) {
-            const double s = a + b, bb = s - a;
-            err = (a - (s - bb)) + (b - bb);
-            return s;
-        };
+        std::fill(band_counts, band_counts + p, int64_t{0});
         for (int64_t i = 0; i < n; ++i) {
             invalid_prefix[0] = 0;
-            for (int64_t j = 0; j < p; ++j) {
+            for (int64_t j = 0; j < p; ++j)
                 invalid_prefix[sz(j) + 1] = invalid_prefix[sz(j)] + (valid(i, j) ? 0 : 1);
-                if (valid(i, j) && !std::isfinite(at(*X, i, j)))
-                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
-            }
             for (int64_t j = h; j < p - h; ++j) {
-                const size_t c = sz(i) * sz(p) + sz(j);
                 if (invalid_prefix[sz(j + h) + 1] != invalid_prefix[sz(j - h)]) continue;
-                evaluable[c] = 1;
-                double xmax = 0.0;
-                for (int64_t q = -h; q <= h; ++q) xmax = std::max(xmax, std::fabs(at(*X, i, j + q)));
-                const bool eighth = xmax >= 0x1p1021;
-                const double f = eighth ? 0.125 : 1.0;
-                const double xj = f * at(*X, i, j);
-                double cmax = 0.0;
+                const double xj = at(*X, i, j);
+                DD r{};
                 for (int64_t q = 1; q <= h; ++q) {
-                    double e1 = 0.0, e2 = 0.0;
-                    const double s1 = two_sum(2.0 * xj, -(f * at(*X, i, j + q)), e1);
-                    const double s2 = two_sum(s1, -(f * at(*X, i, j - q)), e2);
-                    second[sz(q)] = s2 + (e2 + e1);
-                    cmax = std::max(cmax, std::fabs(second[sz(q)]));
+                    const DD s1 = ::n4m::core::dd_two_sum(2.0 * xj, -at(*X, i, j + q));
+                    const DD s2 = ::n4m::core::dd_two_sum(s1.hi, -at(*X, i, j - q));
+                    const DD& w = weight[sz(q)];
+                    r = dd_add(r, dd_mul(w, {s2.hi, 0.0}));
+                    r = dd_add(r, dd_mul(w, {s2.lo, 0.0}));
+                    r = dd_add(r, dd_mul(w, {s1.lo, 0.0}));
                 }
-                if (cmax == 0.0) continue;  // flat or linear window: zero residual
-                const int k = std::ilogb(cmax);
-                double acc = 0.0, acc_comp = 0.0;  // Neumaier
-                for (int64_t q = 1; q <= h; ++q) {
-                    const double term = weight[sz(q)] * std::ldexp(second[sz(q)], -k);
-                    const double next = acc + term;
-                    acc_comp += std::fabs(acc) >= std::fabs(term) ? (acc - next) + term
-                                                                  : (term - next) + acc;
-                    acc = next;
-                }
-                residual[c] = acc + acc_comp;
-                residual_exp[c] = k + (eighth ? 3 : 0);
+                const double res = r.hi + r.lo;
+                ++band_counts[j];
+                ++pooled_count;
+                neumaier(band_sum[sz(j)], band_comp[sz(j)], res * res);
+                neumaier(pooled_sum, pooled_comp, res * res);
             }
         }
-        struct ScaledSsq {
-            int exp = 0;
-            double ssq = 0.0, comp = 0.0;
-            bool any = false;
-            int64_t count = 0;
-            void add_square(double v) {
-                const double next = ssq + v;
-                comp += ssq >= v ? (ssq - next) + v : (v - next) + ssq;
-                ssq = next;
-            }
-            void add(double r, int e) {  // adds (r 2^e)^2
-                ++count;
-                if (r == 0.0) return;
-                const int k = std::ilogb(r) + e;
-                const double t = std::ldexp(r, e - k);  // [1, 2)
-                if (!any) { exp = k; ssq = t * t; comp = 0.0; any = true; return; }
-                if (k > exp) {
-                    ssq = std::ldexp(ssq, 2 * (exp - k));
-                    comp = std::ldexp(comp, 2 * (exp - k));
-                    exp = k;
-                    add_square(t * t);
-                } else {
-                    const double v = std::ldexp(t, k - exp);
-                    add_square(v * v);
-                }
-            }
-            // sqrt(sum / count) / gain; status != OK when not representable.
-            n4m_status_t rms(double gain, double& out) const {
-                if (!any) { out = 0.0; return N4M_OK; }
-                const double m = std::sqrt((ssq + comp) / static_cast<double>(count)) / gain;
-                out = std::ldexp(m, exp);
-                if (!std::isfinite(out)) return N4M_ERR_NUMERICAL_FAILURE;
-                // A positive RMS below 2^-1074 is reported as 2^-1074.
-                out = std::max(out, std::numeric_limits<double>::denorm_min());
-                return N4M_OK;
-            }
-        };
-        ScaledSsq pooled;
-        for (int64_t j = 0; j < p; ++j) {
-            ScaledSsq band;
-            for (int64_t i = 0; i < n; ++i) {
-                const size_t c = sz(i) * sz(p) + sz(j);
-                if (!evaluable[c]) continue;
-                band.add(residual[c], residual_exp[c]);
-                pooled.add(residual[c], residual_exp[c]);
-            }
-            band_counts[j] = band.count;
-            if (!band.count) { band_noise[j] = nan_value; continue; }
-            if (band.rms(gain, band_noise[j]) != N4M_OK)
-                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "band noise proxy is not representable");
-        }
-        if (!pooled.count) out_two[0] = nan_value;
-        else if (pooled.rms(gain, out_two[0]) != N4M_OK)
-            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "pooled noise proxy is not representable");
+        for (int64_t j = 0; j < p; ++j)
+            band_noise[j] = band_counts[j]
+                ? std::sqrt((band_sum[sz(j)] + band_comp[sz(j)]) / static_cast<double>(band_counts[j])) / gain
+                : nan_value;
+        out_two[0] = pooled_count
+            ? std::sqrt((pooled_sum + pooled_comp) / static_cast<double>(pooled_count)) / gain
+            : nan_value;
         out_two[1] = gain;
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -864,10 +876,15 @@ N4M_API n4m_status_t n4m_preflight_snv_compute(
         if (std::find(members.begin(), members.end(), int64_t{0}) != members.end())
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "empty SNV group");
         std::vector<double> data(sz(n) * sz(p)), z(sz(n) * sz(p)), row_bound(sz(n));
-        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
-            const double x = at(*X, i, j);
-            if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite SNV input");
-            data[sz(i) * sz(p) + sz(j)] = x;
+        for (int64_t i = 0; i < n; ++i) {
+            DomainScan scan;
+            for (int64_t j = 0; j < p; ++j) {
+                const double x = at(*X, i, j);
+                if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite SNV input");
+                scan.add(x);
+                data[sz(i) * sz(p) + sz(j)] = x;
+            }
+            if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         }
         const auto st = n4m_pp_snv_apply_bounded(state, data.data(), n, p, z.data(),
                                                  row_bound.data());
@@ -930,26 +947,29 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid pair dimensions or tolerance");
     const int64_t* rgroups = self ? query_groups : reference_groups;
     for (const auto* v : {query, &R})
-        for (int64_t i = 0; i < v->rows; ++i)
-            for (int64_t j = 0; j < v->cols; ++j)
+        for (int64_t i = 0; i < v->rows; ++i) {
+            DomainScan scan;
+            for (int64_t j = 0; j < v->cols; ++j) {
                 if (!std::isfinite(at(*v, i, j)))
                     return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite pair input");
+                scan.add(at(*v, i, j));
+            }
+            if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        }
     std::fill(query_flags, query_flags + query->rows, uint8_t{0});
     if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
     uint8_t* rflags = self ? query_flags : reference_flags;
-    // RMS distance and decision, independent of the tolerance:
-    //   fast estimate: d_j = q_j - r_j (exact halves when some difference
-    //   overflows), rescaled by an exact power of two 2^-e of max|d|, rho =
-    //   sqrt(sum t^2 / cols) with a compensated sum; RMS = rho 2^e, and the
-    //   threshold tau = tol 2^-e is exact. rho carries a relative error below
-    //   8u (rounded differences, squares, sum, division and square root;
-    //   components below 2^-1000 relative are negligible), so |rho - tau| >
-    //   2^-45 tau decides. Otherwise the decision is exact: the sign of
+    // RMS distance and decision, independent of the tolerance. Inside the
+    // domain no difference q_j - r_j overflows or underflows to zero.
+    //   fast estimate: d_j = q_j - r_j rescaled by an exact power of two 2^-e
+    //   of max|d|, rho = sqrt(sum t^2 / cols) with a compensated sum; RMS =
+    //   rho 2^e, and tau = tol 2^-e is exact (or decides by its magnitude).
+    //   rho carries a relative error below 8u, so |rho - tau| > 2^-45 tau
+    //   decides. Otherwise the decision is exact: the sign of
     //   sum_j (q_j^2 - 2 q_j r_j + r_j^2) - cols tol^2 in an exact fixed-point
-    //   accumulator (no rounding, overflow or underflow).
-    // An accepted pair publishes min(rho 2^e, tol), at least 2^-1074.
+    //   accumulator (core/common/exact_sum.hpp).
+    // An accepted pair publishes min(rho 2^e, tol).
     const double inv_cols = 1.0 / static_cast<double>(query->cols);
-    const double min_positive = std::numeric_limits<double>::denorm_min();
     const double margin = 0x1p-45;
     const auto exact_within = [&](int64_t i, int64_t k) {
         ::n4m::core::ExactSum sum;
@@ -964,31 +984,17 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
         return sum.sign() <= 0;
     };
     const auto rms_within = [&](int64_t i, int64_t k, double& distance) {
-        bool halved = false;
         double dmax = 0.0;
-        for (int64_t j = 0; j < query->cols; ++j) {
-            const double d = std::fabs(at(*query, i, j) - at(R, k, j));
-            if (!std::isfinite(d)) { halved = true; break; }
-            dmax = std::max(dmax, d);
-        }
-        const auto diff = [&](int64_t j) {
-            const double a = at(*query, i, j), b = at(R, k, j);
-            return std::fabs(halved ? 0.5 * a - 0.5 * b : a - b);
-        };
-        if (halved) {
-            dmax = 0.0;
-            for (int64_t j = 0; j < query->cols; ++j) dmax = std::max(dmax, diff(j));
-        }
-        // Distinct doubles never round to a zero difference (gradual
-        // underflow), so dmax == 0 means identical rows.
+        for (int64_t j = 0; j < query->cols; ++j)
+            dmax = std::max(dmax, std::fabs(at(*query, i, j) - at(R, k, j)));
+        // Distinct doubles never round to a zero difference.
         if (dmax == 0.0) { distance = 0.0; return true; }
-        const int e = std::ilogb(dmax) + (halved ? 1 : 0);
-        const int shift = halved ? e - 1 : e;
+        const int e = std::ilogb(dmax);
         const double tau = std::ldexp(tolerance, -e);
         const double far2 = tau * tau * (1.0 + 0x1p-40);
         double sum = 0.0, comp = 0.0;  // Neumaier
         for (int64_t j = 0; j < query->cols; ++j) {
-            const double t = std::ldexp(diff(j), -shift);
+            const double t = std::ldexp(std::fabs(at(*query, i, j) - at(R, k, j)), -e);
             const double sq = t * t, next = sum + sq;
             comp += sum >= sq ? (sum - next) + sq : (sq - next) + sum;
             sum = next;
@@ -1000,7 +1006,7 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
         else if (rho < tau * (1.0 - margin)) within = true;
         else within = exact_within(i, k);
         if (!within) return false;
-        distance = std::max(std::min(std::ldexp(rho, e), tolerance), min_positive);
+        distance = std::min(std::ldexp(rho, e), tolerance);
         return true;
     };
     int64_t found = 0, candidates = 0;

@@ -256,51 +256,60 @@ int main() {
         REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&O,&T,nullptr,nullptr,0.1,0,
                                                      nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
         REQUIRE(pcounts[0]==1 && pcounts[1]==2 && qflag[0]==1 && rflag[0]==1 && rflag[1]==0);
-        // An overflowing difference is far, not an error.
+        // Values outside the supported domain are refused, never misread.
         Q=view(max_query,1,1); F=view(min_ref,1,1);
         REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&Q,&F,nullptr,nullptr,1.0,0,
-                                                     nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
-        REQUIRE(pcounts[0]==0 && pcounts[1]==1 && qflag[0]==0);
-        // Regression (review b1 #3, b1fix #2, b14fix #2/#8). Distances use a
-        // relative tolerance on the expected value (so 0 never passes) and
+                                                     nullptr,nullptr,qflag,rflag,pcounts)
+                ==N4M_ERR_UNSUPPORTED);
+        // Regression (review b1 #3, b1fix #2, b14fix #2/#8) inside the domain
+        // (nonzero |x| in [2^-256, 2^256], per-row spread <= 2^64). Distances use
+        // a relative tolerance on the expected value (so 0 never passes) and
         // decisions are checked on both sides of each threshold.
         {
-            const double tiny=std::ldexp(1.0,-1074);
-            double hd[1]={}; int64_t hi[2]={};
-            const auto pair = [&](double q0, double r0, double tol) {
-                double q[2]={q0,0}, r[2]={r0,0};
+            const double A=std::ldexp(1.0,200), a=std::ldexp(1.0,-200);
+            const double lo=std::ldexp(1.0,-256), hi=std::ldexp(1.0,256);
+            double hd[1]={}; int64_t hi_idx[2]={};
+            const auto status = [&](double q0, double q1, double r0, double r1, double tol) {
+                double q[2]={q0,q1}, r[2]={r0,r1};
                 auto Q2=view(q,1,2), R2=view(r,1,2);
                 hd[0]=-1.0;
-                REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&Q2,&R2,nullptr,nullptr,tol,1,
-                                                             hi,hd,qflag,rflag,pcounts)==N4M_OK);
+                return n4m_preflight_pairs_within_tolerance(ctx,&Q2,&R2,nullptr,nullptr,tol,1,
+                                                            hi_idx,hd,qflag,rflag,pcounts);
+            };
+            const auto pair = [&](double q0, double r0, double tol) {
+                REQUIRE(status(q0,0,r0,0,tol)==N4M_OK);
                 return pcounts[0]==1;
             };
-            // q - r = 2e308 is not representable; RMS = sqrt(2) 1e308.
-            REQUIRE(pair(1e308,-1e308,1.5e308) && rel(hd[0],std::sqrt(2.0)*1e308,4e-16));
-            REQUIRE(!pair(1e308,-1e308,1.414e308));
-            // RMS 1e-170/sqrt(2) = 7.0710678118654752e-171 at every tolerance.
-            for (double tol : {7.0711e-171, 1e-100, 1.0, 1e200, 1e308}) {
-                REQUIRE(pair(1e-170,0,tol));
-                REQUIRE(rel(hd[0],1e-170/std::sqrt(2.0),4e-16));
+            // q - r = 2A on one of two features: RMS sqrt(2) A.
+            REQUIRE(pair(A,-A,1.5*A) && rel(hd[0],std::sqrt(2.0)*A,4e-16));
+            REQUIRE(!pair(A,-A,1.414*A));
+            // RMS a/sqrt(2) at every tolerance (tolerance-free distance).
+            for (double tol : {0.70711*a, 1e-30, 1.0, A, hi}) {
+                REQUIRE(pair(a,0,tol));
+                REQUIRE(rel(hd[0],a/std::sqrt(2.0),4e-16));
             }
-            REQUIRE(!pair(1e-170,0,7.0710e-171));
-            // b14fix #2: [2a,0] vs [0,0] has RMS sqrt(2) a > a (a = 2^-1074),
-            // even though sqrt(2) a rounds to a in the subnormal range.
-            REQUIRE(!pair(2*tiny,0,tiny));
-            REQUIRE(pair(2*tiny,0,2*tiny) && hd[0]>=tiny && hd[0]<=2*tiny);
-            // [a,0] vs [0,0]: RMS a/sqrt(2) is below 2^-1074 and is published
-            // as 2^-1074 (documented); the decision uses the exact scaled value.
-            REQUIRE(pair(tiny,0,tiny) && hd[0]==tiny);
-            REQUIRE(pair(tiny,0,1e300) && hd[0]==tiny);
+            REQUIRE(!pair(a,0,0.70710*a));
+            // At the lower edge: [2 lo, 0] vs 0 has RMS sqrt(2) lo > lo.
+            REQUIRE(!pair(2*lo,0,lo));
+            REQUIRE(pair(2*lo,0,2*lo) && rel(hd[0],std::sqrt(2.0)*lo,4e-16));
+            // Domain boundaries on both sides: magnitudes and per-row spread.
+            REQUIRE(status(lo,0,hi,0,1.0)==N4M_OK);
+            REQUIRE(status(std::nextafter(lo,0.0),0,0,0,1.0)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(status(std::nextafter(hi,INFINITY),0,0,0,1.0)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(status(1.0,std::ldexp(1.0,64),0,0,1.0)==N4M_OK);
+            REQUIRE(status(1.0,std::nextafter(std::ldexp(1.0,64),INFINITY),0,0,1.0)
+                    ==N4M_ERR_UNSUPPORTED);
+            REQUIRE(status(0,0,std::ldexp(1.0,-100),std::ldexp(1.0,-30),1.0)
+                    ==N4M_ERR_UNSUPPORTED);
         }
         // SNV with per-row rounding bounds (ABI 2.20). Rows: constant (exact
-        // zeros, bound 0), [a,0,-a,0] at the smallest subnormal and at 1e308
+        // zeros, bound 0), [a,0,-a,0] at the domain edges 2^-256 and 2^256
         // (mean 0, SD a/sqrt(2): [sqrt(2),0,-sqrt(2),0]), [1,2,3,4]
         // (z = (j-2.5)/sqrt(1.25)), and an offset row at 2^60.
         {
-            const double tiny=std::ldexp(1.0,-1074), off=std::ldexp(1.0,60);
+            const double lo=std::ldexp(1.0,-256), hi=std::ldexp(1.0,256), off=std::ldexp(1.0,60);
             // Row 4 is [c, c, c, c + 256] with c = 2^60 (ulp 256).
-            double sx[20]={0.1,0.1,0.1,0.1, tiny,0,-tiny,0, 1e308,0,-1e308,0, 1,2,3,4,
+            double sx[20]={0.1,0.1,0.1,0.1, lo,0,-lo,0, hi,0,-hi,0, 1,2,3,4,
                            off,off,off,off+256};
             double so[20]={}, sb[5]={};
             auto SX=view(sx,5,4), SO=view(so,5,4);
@@ -328,11 +337,11 @@ int main() {
             }
             auto WX=view(wx.data(),2,wide), WO=view(wo.data(),2,wide);
             REQUIRE(n4m_preflight_snv_compute(ctx,&WX,nullptr,2,&WO,wb)==N4M_OK);
-            const double lo=-1.0/std::sqrt(99999.0), hi_z=std::sqrt(99999.0);
+            const double z_lo=-1.0/std::sqrt(99999.0), hi_z=std::sqrt(99999.0);
             for (int i=0;i<2;++i) {
                 double err=0;
                 for (int64_t j=0;j<wide;++j)
-                    err=std::max(err,std::abs(wo[static_cast<size_t>(i*wide+j)]-(j+1<wide?lo:hi_z)));
+                    err=std::max(err,std::abs(wo[static_cast<size_t>(i*wide+j)]-(j+1<wide?z_lo:hi_z)));
                 REQUIRE(err<=wb[i] && wb[i]<1e-12);
             }
             // Aggregation (b14fix #3): a [1,2,4] with a = 1, 2, 4, 8 and
@@ -364,6 +373,21 @@ int main() {
             REQUIRE(n4m_preflight_snv_compute(ctx,&TX,badgid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);
             int64_t onegid[2]={0,0};
             REQUIRE(n4m_preflight_snv_compute(ctx,&TX,onegid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);
+            // Domain boundaries: 2^256 next to 1 (spread 2^256), 2^-257, and a
+            // spread just above 2^64 are refused; a spread of exactly 2^64 is not.
+            for (const auto& row : {std::vector<double>{1.0, std::ldexp(1.0,256)},
+                                    std::vector<double>{std::ldexp(1.0,-257), 0.0},
+                                    std::vector<double>{1.0, std::nextafter(std::ldexp(1.0,64),INFINITY)}}) {
+                std::vector<double> rx(row), ro(2); double rb[1];
+                auto RX=view(rx.data(),1,2), RO=view(ro.data(),1,2);
+                REQUIRE(n4m_preflight_snv_compute(ctx,&RX,nullptr,1,&RO,rb)==N4M_ERR_UNSUPPORTED);
+            }
+            {
+                double rx[2]={1.0,std::ldexp(1.0,64)}, ro[2]; double rb[1];
+                auto RX=view(rx,1,2), RO=view(ro,1,2);
+                REQUIRE(n4m_preflight_snv_compute(ctx,&RX,nullptr,1,&RO,rb)==N4M_OK);
+                REQUIRE(rel(ro[0],-1.0,1e-15) && rel(ro[1],1.0,1e-15));
+            }
             double bad[2]={1,std::nan("")};
             auto BX=view(bad,1,2), BO=view(so,1,2);
             REQUIRE(n4m_preflight_snv_compute(ctx,&BX,nullptr,1,&BO,sb)==N4M_ERR_INVALID_ARGUMENT);
