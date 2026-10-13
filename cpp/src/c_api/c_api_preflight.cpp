@@ -95,37 +95,70 @@ double log10_factorial_ratio(int64_t n, const std::vector<int64_t>& counts) noex
     return value / std::log(10.0);
 }
 
-// Centered copy, stable under translation: values are divided by a power of
-// two bounding max|v| (exact), shifted by the first value (exact for nearby
-// values), centered on their mean, then corrected by the residual mean.
-// Returns the centered sum of squares.
-double stable_center(const std::vector<double>& values, std::vector<double>& centered) {
-    const size_t n = values.size();
-    centered.assign(n, 0.0);
-    double max_abs = 0.0;
-    for (double v : values) max_abs = std::max(max_abs, std::abs(v));
-    if (!(max_abs > 0.0)) return 0.0;
+// Exponent e of a power of two bounding max|v|: max|v| * 2^-e in [1/2, 1).
+int bounding_exponent(const std::vector<double>& values) noexcept {
+    double largest = 0.0;
+    for (double v : values) largest = std::max(largest, std::abs(v));
     int exponent = 0;
-    std::frexp(max_abs, &exponent);
-    const double origin = std::ldexp(values[0], -exponent);
+    if (largest > 0.0) std::frexp(largest, &exponent);
+    return exponent;
+}
+
+// In-place centering without cancellation of a large common offset: shift
+// by the first value (exact for nearby values), subtract the mean, then the
+// residual mean.
+void center_in_place(std::vector<double>& v) noexcept {
+    if (v.empty()) return;
+    const double origin = v[0];
     double mean = 0.0;
-    for (size_t i = 0; i < n; ++i) {
-        centered[i] = std::ldexp(values[i], -exponent) - origin;
-        mean += centered[i];
+    for (double& x : v) {
+        x -= origin;
+        mean += x;
     }
-    mean /= static_cast<double>(n);
+    mean /= static_cast<double>(v.size());
     double residual = 0.0;
-    for (double& v : centered) {
-        v -= mean;
-        residual += v;
+    for (double& x : v) {
+        x -= mean;
+        residual += x;
     }
-    residual /= static_cast<double>(n);
+    residual /= static_cast<double>(v.size());
+    for (double& x : v) x -= residual;
+}
+
+// Centered copy, stable under translation and scale: values are divided by
+// a power of two 2^scale bounding max|v| (exact), centered with
+// center_in_place, then divided by a power of two 2^variation bounding the
+// centered variation (exact), so max|c| lies in [1/2, 1) whatever the input
+// magnitude. Returns the sum of squares of that copy (>= 1/4, or 0 when
+// every value is equal); the true centered sum of squares is that value
+// times 2^(2 * (scale + variation)).
+double stable_center(const std::vector<double>& values, std::vector<double>& centered,
+                     int* scale = nullptr, int* variation = nullptr) {
+    const int e1 = bounding_exponent(values);
+    centered.resize(values.size());
+    for (size_t i = 0; i < values.size(); ++i) centered[i] = std::ldexp(values[i], -e1);
+    center_in_place(centered);
+    const int e2 = bounding_exponent(centered);
+    if (scale) *scale = e1;
+    if (variation) *variation = e2;
     double ss = 0.0;
     for (double& v : centered) {
-        v -= residual;
+        v = std::ldexp(v, -e2);
         ss += v * v;
     }
     return ss;
+}
+
+// Sum of squares with a power-of-two scale chosen from max|d|: returns
+// q and the exponent e such that sum(d^2) = q * 2^(2e), q in [1/4, n).
+double scaled_sum_squares(const std::vector<double>& d, int& exponent) noexcept {
+    exponent = bounding_exponent(d);
+    double q = 0.0;
+    for (double v : d) {
+        const double scaled = std::ldexp(v, -exponent);
+        q += scaled * scaled;
+    }
+    return q;
 }
 
 // Distinct arrangements n!/prod(counts!) when at most cap, else cap + 1.
@@ -148,7 +181,9 @@ struct FactorProblem {
     bool categorical = false;
     std::vector<int64_t> level, level_n, value, value_n;
     std::vector<double> value_centered;  // centered target per value code
+    std::vector<double> scaled;          // targets * 2^-scale (exact)
     double sst = 0.0;
+    int scale = 0, variation = 0;  // true SST = sst * 2^(2 (scale + variation))
     std::vector<double> sums;
     std::vector<int64_t> table;
 
@@ -214,7 +249,9 @@ n4m_status_t prepare_factor(n4m_context_t* ctx, const int64_t* factor_codes,
     p.level = dense_codes(std::vector<int64_t>(factor_codes, factor_codes + n), p.level_n);
     p.value = dense_codes(exact, p.value_n);
     std::vector<double> centered;
-    p.sst = stable_center(exact, centered);
+    p.sst = stable_center(exact, centered, &p.scale, &p.variation);
+    p.scaled.resize(exact.size());
+    for (size_t i = 0; i < exact.size(); ++i) p.scaled[i] = std::ldexp(exact[i], -p.scale);
     p.value_centered.assign(p.value_n.size(), 0.0);
     for (size_t i = 0; i < exact.size(); ++i)
         p.value_centered[static_cast<size_t>(p.value[i])] = centered[i];
@@ -1032,21 +1069,33 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
         const double observed = p.statistic(p.level.data(), p.value.data());
         if (!p.categorical) {
             out_eight[0] = observed;
-            std::vector<double> level_sum(static_cast<size_t>(g), 0.0);
+            // SSW from explicit within-level residuals (never SST - SSB): each
+            // level is centered on its own values (shifted origin), so small
+            // within-level spreads survive a large between-level offset, and
+            // accumulated at the residuals' power-of-two scale.
+            std::vector<std::vector<double>> by_level(static_cast<size_t>(g));
             for (size_t i = 0; i < p.level.size(); ++i)
-                level_sum[static_cast<size_t>(p.level[i])] +=
-                    p.value_centered[static_cast<size_t>(p.value[i])];
-            double ssw = 0.0;
-            for (size_t i = 0; i < p.level.size(); ++i) {
-                const auto a = static_cast<size_t>(p.level[i]);
-                const double d = p.value_centered[static_cast<size_t>(p.value[i])] -
-                                 level_sum[a] / static_cast<double>(p.level_n[a]);
-                ssw += d * d;
+                by_level[static_cast<size_t>(p.level[i])].push_back(p.scaled[i]);
+            std::vector<double> residual;
+            residual.reserve(p.level.size());
+            for (auto& members : by_level) {
+                center_in_place(members);
+                residual.insert(residual.end(), members.begin(), members.end());
             }
-            const double ssb = observed * p.sst;
-            if (n > g && ssw > 0.0)
-                out_eight[1] = (ssb / static_cast<double>(g - 1)) /
-                               (ssw / static_cast<double>(n - g));
+            int ssw_exponent = 0;
+            const double ssw_scaled = scaled_sum_squares(residual, ssw_exponent);
+            if (n > g && ssw_scaled > 0.0) {
+                // F = (SSB/(g-1)) / (SSW/(n-g)) in units of 2^scale:
+                // SSB = eta^2 * sst * 2^(2 variation), SSW = q * 2^(2 e).
+                const double f = std::ldexp(
+                    (observed * p.sst / static_cast<double>(g - 1)) *
+                        static_cast<double>(n - g) / ssw_scaled,
+                    2 * (p.variation - ssw_exponent));
+                if (!std::isfinite(f) || (observed > 0.0 && !(f > 0.0)))
+                    return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                                "ANOVA F is not representable as a double");
+                out_eight[1] = f;
+            }
             out_eight[2] = static_cast<double>(g - 1);
             out_eight[3] = static_cast<double>(n - g);
         } else {

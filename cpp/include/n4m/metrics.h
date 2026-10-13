@@ -185,7 +185,15 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  * after an exact power-of-two scaling and a shift to the first target, with
  * a residual-mean correction, so eta^2 and F are translation invariant.
  * categorical=1 with levels * classes > 10 million cells returns
- * N4M_ERR_UNSUPPORTED before any table allocation or statistic. */
+ * N4M_ERR_UNSUPPORTED before any table allocation or statistic.
+ * Domain: any finite doubles. The centered copy is rescaled by powers of two
+ * (exact) chosen from max|y| and then from the centered variation, so eta^2,
+ * F, V and the permutation counts are scale invariant over the whole double
+ * range (subnormals included) and translation invariant up to the rounding
+ * of the shifted inputs themselves; eta^2 and V carry an absolute error of
+ * order n * DBL_EPSILON. SSW is accumulated from explicit within-level
+ * residuals at their own power-of-two scale; an F that overflows or
+ * underflows to zero while SSB > 0 returns N4M_ERR_NUMERICAL_FAILURE. */
 N4M_API n4m_status_t n4m_preflight_factor_association(
     n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
@@ -216,8 +224,10 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
  *       is NaN.
  * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
  * {b, executed B}; no permutation runs when the coefficient is undefined.
- * Both vectors use the same translation-stable centering as
- * n4m_preflight_factor_association. */
+ * Both vectors use the same translation- and scale-stable centering as
+ * n4m_preflight_factor_association (any finite doubles; |r| carries an
+ * absolute error of order n * DBL_EPSILON; the denominator is >= 1/4 after
+ * rescaling, so it never underflows). */
 N4M_API n4m_status_t n4m_stats_correlation_test(
     n4m_context_t* ctx, const double* x, const double* y, int64_t n,
     int32_t method, int32_t n_permutations, uint64_t seed,
@@ -248,6 +258,7 @@ N4M_API n4m_status_t n4m_stats_correlation_exact(
 /* Benjamini-Hochberg step-up adjusted p-values for one family of m >= 1
  * hypotheses. Inputs must lie in [0, 1]; with p_(1) <= ... <= p_(m),
  * adjusted p_(i) = min(1, min_{j>=i} m p_(j) / j), as R p.adjust("BH")
+ * (positive p-values, subnormal ones included, stay positive)
  * and statsmodels multipletests(method="fdr_bh"). Controls the false
  * discovery rate under independence or positive regression dependence. */
 N4M_API n4m_status_t n4m_stats_bh_adjust(
