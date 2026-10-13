@@ -165,3 +165,78 @@ out["large"] = balanced_intervals([[0.01 * i + 0.5 * (j - 1) for j in range(3)] 
 out["one_df_sd_chi2"] = [np.sqrt(2 / stats.chi2.ppf(0.975, 1)), np.sqrt(2 / stats.chi2.ppf(0.025, 1))]
 json.dump(out, open(sys.argv[1], "w"), indent=1, default=float)
 print(json.dumps(out, indent=1, default=float)[:6000])
+
+
+# ---- Review round 1 additions -------------------------------------------
+def witness_data():
+    """Multimodal witness: sizes [1,152,350,363]; every group is its mean
+    +/- h (odd sizes keep one value at the mean), SSW = 3333.5."""
+    sizes = [1, 152, 350, 363]
+    means = [7.763121181, -0.196654690, -0.399240353, -0.241778259]
+    h = np.sqrt(3333.5 / sum(r - (r % 2) for r in sizes))
+    g, y = [], []
+    for i, (r, m) in enumerate(zip(sizes, means)):
+        for j in range(r):
+            if r % 2 == 1 and j == r - 1:
+                y.append(m)
+            else:
+                y.append(m + h if j % 2 == 0 else m - h)
+            g.append(i)
+    return g, y, h
+
+wg, wy, wh = witness_data()
+dense = dense_reml(wg, wy)
+# Profile scan on a dense grid of gamma (dense REML log-likelihood, profiled
+# s2w by 1-D bounded search) to confirm the two local maxima.
+out["witness"] = {"h": wh, "dense": dense,
+                  "loglik_boundary": float(reml_loglik(wg, wy, 0.0, np.var(wy, ddof=1)))}
+
+from fractions import Fraction
+def exact_balanced(groups):
+    """Exact ANOVA of a balanced design from the actual doubles (Fraction)."""
+    ys = [[Fraction(v) for v in grp] for grp in groups]
+    g, r = len(ys), len(ys[0])
+    m = [sum(v) / r for v in ys]; gm = sum(m) / g
+    msw = sum((v - mi) ** 2 for grp, mi in zip(ys, m) for v in grp) / (g * (r - 1))
+    msb = r * sum((mi - gm) ** 2 for mi in m) / (g - 1)
+    return float(max(Fraction(0), (msb - msw) / r)), float(msw), float((msb - msw) / (msb + (r - 1) * msw))
+huge = [[1e155 - 3e145, 1e155 - 1e145], [1e155 + 1e145, 1e155 + 3e145]]
+out["huge_offset"] = {"y": [v for grp in huge for v in grp], "exact": exact_balanced(huge)}
+
+# Quantile goldens over the documented domain, including extreme tails.
+# SciPy 1.18.1 chi2.ppf is ~3e-6 relative off in the lower tail at df = 1e8
+# (Wilson-Hilferty agrees with mpmath, not SciPy there), so those two points
+# come from an mpmath (30 digits) bisection on the defining series
+# P(a, x) = x^a e^-x sum_k x^k / Gamma(a + k + 1).
+import mpmath as mp
+
+def mp_chi2_lower_ppf(p, df):
+    mp.mp.dps = 30
+    a = mp.mpf(df) / 2
+    def cdf(x):
+        x = mp.mpf(x) / 2
+        term = 1 / a; total = term; k = 0
+        while True:
+            k += 1; term *= x / (a + k); total += term
+            if term < total * mp.mpf(10) ** -24:
+                break
+        return total * mp.e ** (a * mp.log(x) - x - mp.loggamma(a))
+    lo, hi = mp.mpf(df) * 0.99, mp.mpf(df)
+    for _ in range(80):
+        mid = (lo + hi) / 2
+        if cdf(mid) < p: lo = mid
+        else: hi = mid
+    return float((lo + hi) / 2)
+
+qs = {"chi2": [], "f": []}
+for p in [1e-12, 1e-6, 0.025, 0.5, 0.975, 1 - 1e-6, 1 - 1e-12]:
+    for d in [0.5, 1, 7, 100, 1e4, 1e6, 1e8]:
+        if d >= 1e8 and p < 1e-3:
+            qs["chi2"].append([p, d, mp_chi2_lower_ppf(p, d)])
+        else:
+            qs["chi2"].append([p, d, float(stats.chi2.ppf(p, d))])
+    for d1, d2 in [(1, 1), (2, 1), (3, 8), (8, 3), (999, 2000), (1, 1e6), (1e6, 1), (5e5, 5e5)]:
+        qs["f"].append([p, d1, d2, float(stats.f.ppf(p, d1, d2))])
+out["quantile_grid"] = qs
+out["provenance"]["mpmath"] = mp.__version__
+json.dump(out, open(sys.argv[1], "w"), indent=1, default=float)

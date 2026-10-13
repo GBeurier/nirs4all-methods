@@ -408,22 +408,33 @@ N4M_API n4m_status_t n4m_stats_permdisp(
  * feature (column of X), by REML, for balanced or unbalanced groups.
  * group_ids has X.rows elements; valid_mask is optional row-major
  * X.rows x X.cols bytes, nonzero = valid; unmasked X values must be finite.
- * Every group with >= 1 valid value enters, singletons included. The
- * restricted likelihood is maximised over gamma = s2b/s2w >= 0 after
- * profiling s2w: a grid on gamma = 0 and log10(gamma) in
- * [-8, log10(1000 max(1, F))] with step 1/4 (F the one-way ANOVA ratio),
- * then bisection on its derivative to a relative width of 4 DBL_EPSILON.
+ * Every group with >= 1 valid value enters, singletons included.
+ * Numerical domain: each feature is rescaled by exact powers of two chosen
+ * from its CENTRED variation (translation and scale invariant: shifting by
+ * 1e300 or scaling by 2^k changes the variances by 2^2k only); within-group
+ * residuals carry their own exponent, so a within variation many orders
+ * below the between variation is kept. The restricted likelihood is
+ * profiled in gamma = s2b/s2w and evaluated with its derivative on gamma = 0
+ * and log10(gamma) in [-8, log10(1000 max(1, F))] with step 1/8 (F the
+ * one-way ANOVA ratio). Every grid cell where the derivative changes sign
+ * from - to + is bisected to a relative width of 4 DBL_EPSILON, gamma = 0
+ * is a candidate when the derivative there is >= 0, and the candidate with
+ * the largest restricted likelihood is kept (several local maxima occur for
+ * unbalanced groups). When F > 2^64 the REML limit s2w = SSW/(N-g),
+ * s2b = sample variance of the group means is used (relative error O(1/F)).
  * out is row-major X.cols x 8: [0] sigma2_between, [1] sigma2_within,
  * [2] ICC(1) = s2b/(s2b+s2w), [3] restricted log-likelihood
  * -(1/2)[(N-1) log 2pi + log|V| + log(1'V^-1 1) + r'V^-1 r] (statsmodels
- * MixedLM convention), [4] groups, [5] observations, [6] local minima of
- * the profiled criterion on the grid, [7] bisection iterations.
+ * MixedLM convention), [4] groups, [5] observations, [6] local-maximum
+ * candidates compared, [7] bisection iterations.
  * band_status: 0 interior optimum, 1 insufficient (fewer than two groups
  * or no within-group degree of freedom), 2 boundary sigma2_between = 0
  * (ICC 0), 3 zero total variance (undefined), 4 boundary sigma2_within = 0
  * with distinct group means (ICC 1, sigma2_between = sample variance of
- * the group means, log-likelihood NaN), 5 not converged (optimum at the
- * search bound or no derivative sign change). Undefined outputs are NaN. */
+ * the group means, log-likelihood NaN), 5 not converged (derivative still
+ * negative at the search bound, or a bisection failed), 6 a variance is
+ * not representable as a double (overflow, or a positive value that
+ * underflows). Undefined outputs are NaN; counts are always written. */
 N4M_API n4m_status_t n4m_stats_variance_components_reml(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
     const uint8_t* valid_mask, double* out, int32_t* band_status);
@@ -434,8 +445,9 @@ N4M_API n4m_status_t n4m_stats_variance_components_reml(
  *       within SS with N-g df: sqrt(SSW/chi2_{1-a/2}), sqrt(SSW/chi2_{a/2});
  * [2,3] balanced ANOVA ICC(1,1), exact F interval (Searle 1971):
  *       F=MSB/MSW, FL=F/F_{1-a/2}(g-1,N-g), FU=F*F_{1-a/2}(N-g,g-1),
- *       bounds (F*-1)/(F*+r-1), not truncated; only when every group has
- *       the same r >= 2 valid values;
+ *       bounds (F*-1)/(F*+r-1), not truncated (both 1 when MSW = 0 or
+ *       F > 2^200); only when every group has the same r >= 2 valid values;
+ *       it assumes independent groups, which the caller must establish;
  * [4,5] within-group pooled SD and [6,7] REML ICC(1): percentile (type-7)
  *       intervals of a cluster bootstrap over n_bootstrap replicates.
  * cluster_ids (optional, X.rows elements) names the resampling unit; each
@@ -445,12 +457,18 @@ N4M_API n4m_status_t n4m_stats_variance_components_reml(
  * drawn unit with that multiplicity. The same draws serve every feature.
  * A replicate is valid for a feature when its REML status is 0, 2 or 4;
  * n_valid_replicates (X.cols) counts them, and the percentiles use valid
- * replicates only. n_bootstrap = 0 skips the bootstrap. More than 2.5e9
- * bootstrap operations return N4M_ERR_UNSUPPORTED. */
+ * replicates only. The percentile interval is not coverage-calibrated
+ * (about 91 % for 95 % nominal with 20 balanced pairs of repeats).
+ * n_bootstrap = 0 skips the bootstrap. Quantiles need 1/2 <= df <= 2^31.
+ * interval_status (X.cols): 0, or 6 when a bound is not representable as a
+ * double or a quantile is outside its domain (that bound is NaN). More than
+ * 2.5e9 bootstrap operations, n_bootstrap x X.cols x (groups + 1024),
+ * return N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_stats_variance_components_intervals(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
     const int64_t* cluster_ids, const uint8_t* valid_mask, double confidence,
-    int32_t n_bootstrap, uint64_t seed, double* out, int64_t* n_valid_replicates);
+    int32_t n_bootstrap, uint64_t seed, double* out, int64_t* n_valid_replicates,
+    int32_t* interval_status);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,

@@ -9,7 +9,6 @@ import {
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, N4mError,
-    clusterHdbscan, preflightAdjustedRandIndex,
     statsVarianceComponentsReml, statsVarianceComponentsIntervals,
 } from "../dist/index.js";
 
@@ -452,33 +451,51 @@ console.log("JS/WASM Preflight diagnostics passed");
 // One-way REML and intervals: same independent references as
 // cpp/tests/test_variance_components.cpp (dense REML score equations with
 // NumPy 2.5.4 / SciPy 1.18.1; SciPy chi2/F quantiles; NumPy-drawn bootstrap).
-const relNear = (actual, expected, tol) => assert.ok(
+const vcNear = (actual, expected, tol) => assert.ok(
     Math.abs(actual - expected) <= tol * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`);
 const ga = [0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 4, 4];
 const ya = { data: new Float64Array([1.0, 1.4, 2.2, 2.0, 2.9, 0.3, 0.9, 0.4, 0.8, 1.7, 3.1, 2.5]), rows: 12, cols: 1 };
 const vc = statsVarianceComponentsReml(ya, ga);
 assert.equal(vc.status[0], 0);
-relNear(vc.sigma2Between[0], 0.7446105326226952, 1e-10);
-relNear(vc.sigma2Within[0], 0.13630617544724544, 1e-10);
-relNear(vc.icc[0], 0.8452678054592837, 1e-10);
-relNear(vc.logLikelihood[0], -10.963218720046495, 1e-12);
+vcNear(vc.sigma2Between[0], 0.7446105326226952, 1e-10);
+vcNear(vc.sigma2Within[0], 0.13630617544724544, 1e-10);
+vcNear(vc.icc[0], 0.8452678054592837, 1e-10);
+vcNear(vc.logLikelihood[0], -10.963218720046495, 1e-12);
 assert.deepEqual([vc.nGroups[0], vc.nObservations[0]], [5, 12]);
 const vci = statsVarianceComponentsIntervals(ya, ga, {
     confidence: 0.95, nBootstrap: 40, seed: 12345n,
     clusterIds: [7, 7, 7, 7, 7, 3, 3, 3, 3, 9, 5, 5],
 });
-relNear(vci.sdChiSquare[0], 0.24570003389152809, 1e-10);
-relNear(vci.sdChiSquare[1], 0.7563308737449301, 1e-10);
+vcNear(vci.sdChiSquare[0], 0.24570003389152809, 1e-10);
+vcNear(vci.sdChiSquare[1], 0.7563308737449301, 1e-10);
 assert.ok(Number.isNaN(vci.iccExactF[0]));
 assert.equal(vci.nValidReplicates[0], 40);
-relNear(vci.sdBootstrap[0], 0.3094525017261184, 1e-10);
-relNear(vci.sdBootstrap[1], 0.42426406871192857, 1e-10);
+vcNear(vci.sdBootstrap[0], 0.3094525017261184, 1e-10);
+vcNear(vci.sdBootstrap[1], 0.42426406871192857, 1e-10);
 assert.equal(vci.iccBootstrap[0], 0);
-relNear(vci.iccBootstrap[1], 0.9233717840878614, 1e-8);
+vcNear(vci.iccBootstrap[1], 0.9233717840878614, 1e-8);
 const balanced = statsVarianceComponentsIntervals({
     data: new Float64Array([1.0, 1.2, 0.9, 2.0, 2.3, 2.1, 0.2, 0.1, 0.5, 1.4, 1.6, 1.3]), rows: 12, cols: 1,
 }, [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3], { confidence: 0.95, nBootstrap: 0, seed: 0 });
-relNear(balanced.iccExactF[0], 0.7838941809128407, 1e-10);
-relNear(balanced.iccExactF[1], 0.9968006295172774, 1e-10);
+vcNear(balanced.iccExactF[0], 0.7838941809128407, 1e-10);
+vcNear(balanced.iccExactF[1], 0.9968006295172774, 1e-10);
 assert.equal(balanced.nValidReplicates[0], 0);
+assert.equal(balanced.intervalStatus[0], 0);
+// Exponent-managed scaling: 1e155 offsets with 1e145 spread are exact
+// (Fraction reference); variances beyond DBL_MAX and positive variances
+// below the subnormal range return status 6 with NaN, never a silent value.
+const twoGroups = [0, 0, 1, 1];
+const huge = statsVarianceComponentsReml({ data: new Float64Array([1e155 - 3e145, 1e155 - 1e145, 1e155 + 1e145, 1e155 + 3e145]), rows: 4, cols: 1 }, twoGroups);
+assert.equal(huge.status[0], 0);
+vcNear(huge.sigma2Between[0], 7.000004539241947e+290, 1e-9);
+vcNear(huge.sigma2Within[0], 1.9999999359517287e+290, 1e-9);
+const over = statsVarianceComponentsReml({ data: new Float64Array([-1e300, -9e299, 9e299, 1e300]), rows: 4, cols: 1 }, twoGroups);
+assert.equal(over.status[0], 6);
+assert.ok(Number.isNaN(over.sigma2Between[0]) && Number.isNaN(over.icc[0]));
+const subnormal = 2 ** -1060;
+const under = statsVarianceComponentsReml({ data: new Float64Array([subnormal, 3 * subnormal, 9 * subnormal, 15 * subnormal]), rows: 4, cols: 1 }, twoGroups);
+assert.equal(under.status[0], 6);
+const overCi = statsVarianceComponentsIntervals({ data: new Float64Array([-1e300, -9e299, 9e299, 1e300]), rows: 4, cols: 1 }, twoGroups, { confidence: 0.95, nBootstrap: 0, seed: 0 });
+assert.equal(overCi.intervalStatus[0], 0);
+assert.ok(overCi.sdChiSquare[0] > 0 && Number.isFinite(overCi.sdChiSquare[1]));
 console.log("variance components: ok");
