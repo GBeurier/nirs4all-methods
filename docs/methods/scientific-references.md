@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **230**
+- Curated records: **232**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `89cd3aed815d928ebd7c982b49250d75397af6e2addd2e9e2ee851ddca9e6a06`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `1666855d252a3c6ed2bcfd5cfd36095dc7a1f04019d062d973c75e567a2c8958`
 
 ## References by documentation page
 
@@ -459,6 +459,18 @@ Campello, Moulavi & Sander (2013), *Density-Based Clustering Based on Hierarchic
 Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandinavian Journal of Statistics 6(2), 65–70, https://www.jstor.org/stable/4615733.
 
 **Provenance:** https://www.jstor.org/stable/4615733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_permanova`](diagnostics_permanova.md) — PERMANOVA of one categorical term on Euclidean distances
+
+Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, Austral Ecology 26, 32–46, https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; McArdle & Anderson (2001), *Fitting multivariate models to community data: a comment on distance-based redundancy analysis*, Ecology 82, 290–297, https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; Anderson & ter Braak (2003), *Permutation tests for multi-factorial analysis of variance*, Journal of Statistical Computation and Simulation 73, 85–113, https://doi.org/10.1080/00949650215733.
+
+**Provenance:** https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; https://doi.org/10.1080/00949650215733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json
+
+### [`diagnostics_permdisp`](diagnostics_permdisp.md) — PERMDISP test of multivariate dispersion
+
+Anderson (2006), *Distance-based tests for homogeneity of multivariate dispersions*, Biometrics 62, 245–253, https://doi.org/10.1111/j.1541-0420.2005.00440.x.
+
+**Provenance:** https://doi.org/10.1111/j.1541-0420.2005.00440.x; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json
 
 ### [`diagnostics_pls_diagnostics`](diagnostics_pls_diagnostics.md) — PLS model diagnostics: Hotelling T², Q residuals, and DModX
 

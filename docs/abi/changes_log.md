@@ -26,6 +26,25 @@ the between-group sum (two identical groups `1e16 + {0, 2, 4}` gave eta^2 =
 0.27, F = 1.5). Targets are now centered after an exact power-of-two scaling,
 a shift to the first target and a residual-mean correction; eta^2 and F are
 translation invariant. Permutation draws and counts are unchanged.
+## 2026-10-13 — ABI 2.20.0 (continued): PERMANOVA and PERMDISP (unreleased)
+
+Add two more generic caller-buffer operations in `n4m/metrics.h` to the same
+unreleased 2.20.0 surface; no serialized format changes.
+
+`n4m_stats_permanova` runs PERMANOVA (Anderson 2001) of one categorical term on
+Euclidean distances between the rows of a coordinate matrix, optionally given
+strata. It returns the total, between-strata, term-given-strata and residual
+sums of squares of the additive model strata + term (the vegan
+`adonis2(by = "margin")` SS for one other factor), R², partial R², pseudo-F,
+the identifiable term df (levels minus the connected components of the
+level-stratum occupancy graph; 0 when the term is aliased with the strata),
+the residual df, the log10 count of distinct within-strata assignments and a
+seeded Monte Carlo p-value whose draws permute rows only inside their stratum
+(PCG64, `numpy.random.default_rng` parity). `n4m_stats_permdisp` runs PERMDISP
+as vegan `betadisper(type = "centroid")` + `permutest`: distances to group
+centroids, per-group mean distances, one-way ANOVA F and a residual
+permutation test. Terms above 2048 levels and workloads above 250 million
+operations return `N4M_ERR_UNSUPPORTED`.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The
 centered copy is rescaled by exact powers of two chosen from max|y| and then

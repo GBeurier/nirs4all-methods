@@ -66,6 +66,8 @@ excludes:
     - "diagnostics.correlation_test"
     - "diagnostics.bh_adjust"
     - "diagnostics.factor_association_exact"
+    - "diagnostics.permanova"
+    - "diagnostics.permdisp"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |
