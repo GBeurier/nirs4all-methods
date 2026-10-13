@@ -9,9 +9,63 @@ namespace n4m::core::distributions {
 namespace {
 constexpr double tiny = 1e-300;
 constexpr double eps = std::numeric_limits<double>::epsilon();
-constexpr int max_terms = 1000000;
+constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
+constexpr double half_log_two_pi = 0.918938533204672741780329736406;
+constexpr double stirling_threshold = 15.0;
+constexpr int max_terms = 10000000;
 
-// Power series: P(a,x) = x^a e^-x / Gamma(a+1) * sum_k x^k / ((a+1)...(a+k)).
+// phi(t) = t - 1 - log t >= 0, accurate near t = 1 (series in u = t - 1).
+double phi(double t) noexcept {
+    const double u = t - 1.0;
+    if (std::abs(u) >= 0.1) return u - std::log(t);
+    // u - log1p(u) = sum_{k>=2} (-1)^k u^k / k.
+    double term = u * u, sum = 0.0;
+    for (int k = 2; k < 60; ++k) {
+        const double add = (k % 2 == 0 ? term : -term) / k;
+        sum += add;
+        if (std::abs(add) <= eps * sum) break;
+        term *= u;
+    }
+    return sum;
+}
+
+// Stirling remainder delta(a) = lgamma(a) - [(a-1/2) log a - a + log(2 pi)/2],
+// a >= 15: the omitted term is below 2^-52 delta(a).
+double stirling_delta(double a) noexcept {
+    const double inv = 1.0 / a, inv2 = inv * inv;
+    return inv * (1.0 / 12.0 -
+                  inv2 * (1.0 / 360.0 -
+                          inv2 * (1.0 / 1260.0 -
+                                  inv2 * (1.0 / 1680.0 -
+                                          inv2 * (1.0 / 1188.0 - inv2 * 691.0 / 360360.0)))));
+}
+
+// log of x^a e^-x / Gamma(a).
+double log_gamma_prefactor(double a, double x) noexcept {
+    if (a < stirling_threshold) return a * std::log(x) - x - std::lgamma(a);
+    return -a * phi(x / a) + 0.5 * std::log(a) - half_log_two_pi - stirling_delta(a);
+}
+
+// lgamma(b + a) - lgamma(b) for b >= 15 without cancellation:
+// (b - 1/2) log1p(a/b) + a log(b + a) - a + delta(b + a) - delta(b).
+double log_gamma_ratio(double b, double a) noexcept {
+    return (b - 0.5) * std::log1p(a / b) + a * std::log(b + a) - a + stirling_delta(b + a) -
+           stirling_delta(b);
+}
+
+// log of x^a y^b / B(a, b), y = 1 - x.
+double log_beta_prefactor(double a, double b, double x, double y) noexcept {
+    const double s = a + b;
+    if (std::min(a, b) >= stirling_threshold)
+        return -a * phi(x * s / a) - b * phi(y * s / b) + 0.5 * std::log(a / s * b) -
+               half_log_two_pi - stirling_delta(a) - stirling_delta(b) + stirling_delta(s);
+    const double head = a * std::log(x) + b * std::log(y);
+    if (b >= stirling_threshold) return head + log_gamma_ratio(b, a) - std::lgamma(a);
+    if (a >= stirling_threshold) return head + log_gamma_ratio(a, b) - std::lgamma(b);
+    return head + std::lgamma(s) - std::lgamma(a) - std::lgamma(b);
+}
+
+// Power series of P(a, x) / prefactor, x < a + 1.
 double gamma_series(double a, double x) noexcept {
     double term = 1.0 / a, sum = term;
     for (int k = 1; k < max_terms; ++k) {
@@ -19,11 +73,11 @@ double gamma_series(double a, double x) noexcept {
         sum += term;
         if (std::abs(term) < std::abs(sum) * eps) break;
     }
-    return sum * std::exp(-x + a * std::log(x) - std::lgamma(a));
+    return sum;
 }
 
-// Continued fraction for Q(a,x) = 1 - P(a,x), x >= a+1.
-double gamma_continued_fraction(double a, double x) noexcept {
+// Continued fraction of Q(a, x) / prefactor, x >= a + 1.
+double gamma_fraction(double a, double x) noexcept {
     double b = x + 1.0 - a, c = 1.0 / tiny, d = 1.0 / b, h = d;
     for (int k = 1; k < max_terms; ++k) {
         const double an = -k * (k - a);
@@ -37,11 +91,11 @@ double gamma_continued_fraction(double a, double x) noexcept {
         h *= delta;
         if (std::abs(delta - 1.0) < eps) break;
     }
-    return std::exp(-x + a * std::log(x) - std::lgamma(a)) * h;
+    return h;
 }
 
-// Continued fraction of I_x(a,b) without its prefactor, x < (a+1)/(a+b+2).
-double beta_continued_fraction(double a, double b, double x) noexcept {
+// Continued fraction of I_x(a, b) without its prefactor, x < (a+1)/(a+b+2).
+double beta_fraction(double a, double b, double x) noexcept {
     const double qab = a + b, qap = a + 1.0, qam = a - 1.0;
     double c = 1.0, d = 1.0 - qab * x / qap;
     if (std::abs(d) < tiny) d = tiny;
@@ -69,59 +123,78 @@ double beta_continued_fraction(double a, double b, double x) noexcept {
     return h;
 }
 
-// Smallest x in [lo, hi] with cdf(x) >= p, for a nondecreasing cdf.
-template <typename Cdf>
-double invert(Cdf cdf, double p, double lo, double hi) noexcept {
-    for (int i = 0; i < 2000 && hi - lo > 2.0 * eps * hi; ++i) {
+// Both tails of the gamma: lower = P when lower is true, else Q.
+double gamma_tail(double a, double x, bool lower) noexcept {
+    if (!(a > 0.0) || !(x >= 0.0)) return nan_value;
+    if (x == 0.0) return lower ? 0.0 : 1.0;
+    if (std::isinf(x)) return lower ? 1.0 : 0.0;
+    const double front = std::exp(log_gamma_prefactor(a, x));
+    if (x < a + 1.0) {
+        const double p = front * gamma_series(a, x);
+        return lower ? p : 1.0 - p;
+    }
+    const double q = front * gamma_fraction(a, x);
+    return lower ? 1.0 - q : q;
+}
+
+bool valid_df(double df) noexcept { return df >= 0.5 && df <= 0x1p31; }
+
+// Bisection of a monotone tail on t in [lo, hi] until the bracket is a few
+// ulps wide: `below(t)` is true when the root lies above t.
+template <typename Below>
+double bisect(Below below, double lo, double hi) noexcept {
+    for (int i = 0; i < 4096; ++i) {
         const double mid = lo + 0.5 * (hi - lo);
         if (mid <= lo || mid >= hi) break;
-        if (cdf(mid) < p) lo = mid; else hi = mid;
+        if (below(mid)) lo = mid; else hi = mid;
     }
     return lo + 0.5 * (hi - lo);
 }
 }  // namespace
 
-double regularized_gamma_p(double a, double x) noexcept {
-    if (!(a > 0.0) || !(x >= 0.0)) return std::numeric_limits<double>::quiet_NaN();
-    if (x == 0.0) return 0.0;
-    if (x < a + 1.0) return gamma_series(a, x);
-    return 1.0 - gamma_continued_fraction(a, x);
-}
+double regularized_gamma_p(double a, double x) noexcept { return gamma_tail(a, x, true); }
+double regularized_gamma_q(double a, double x) noexcept { return gamma_tail(a, x, false); }
 
-double regularized_beta(double a, double b, double x) noexcept {
-    if (!(a > 0.0) || !(b > 0.0) || !(x >= 0.0) || !(x <= 1.0))
-        return std::numeric_limits<double>::quiet_NaN();
+double regularized_beta(double a, double b, double x, double y) noexcept {
+    if (!(a > 0.0) || !(b > 0.0) || !(x >= 0.0) || !(y >= 0.0)) return nan_value;
     if (x == 0.0) return 0.0;
-    if (x == 1.0) return 1.0;
-    const double front = std::exp(std::lgamma(a + b) - std::lgamma(a) - std::lgamma(b) +
-                                  a * std::log(x) + b * std::log1p(-x));
-    if (x < (a + 1.0) / (a + b + 2.0)) return front * beta_continued_fraction(a, b, x) / a;
-    return 1.0 - front * beta_continued_fraction(b, a, 1.0 - x) / b;
-}
-
-double chi2_cdf(double x, double df) noexcept {
-    return x <= 0.0 ? 0.0 : regularized_gamma_p(0.5 * df, 0.5 * x);
+    if (y == 0.0) return 1.0;
+    const double s = a + b;
+    if (x < (a + 1.0) / (s + 2.0))
+        return std::exp(log_beta_prefactor(a, b, x, y)) * beta_fraction(a, b, x) / a;
+    return 1.0 - std::exp(log_beta_prefactor(b, a, y, x)) * beta_fraction(b, a, y) / b;
 }
 
 double chi2_quantile(double p, double df) noexcept {
-    if (!(p > 0.0 && p < 1.0) || !(df > 0.0)) return std::numeric_limits<double>::quiet_NaN();
-    double hi = std::max(1.0, df);
-    while (chi2_cdf(hi, df) < p && hi < 1e300) hi *= 2.0;
-    return invert([df](double x) { return chi2_cdf(x, df); }, p, 0.0, hi);
-}
-
-double f_cdf(double x, double d1, double d2) noexcept {
-    if (x <= 0.0) return 0.0;
-    return regularized_beta(0.5 * d1, 0.5 * d2, d1 * x / (d1 * x + d2));
+    if (!(p > 0.0 && p < 1.0) || !valid_df(df)) return nan_value;
+    const double a = 0.5 * df;
+    // t = log(x): the lower tail P(a, x/2) increases with t, Q decreases.
+    const bool lower = p <= 0.5;
+    const double target = lower ? p : 1.0 - p;
+    const double lo = std::log(1e-300), hi = std::log(1e300);
+    auto below = [&](double t) {
+        const double x = 0.5 * std::exp(t);
+        return lower ? regularized_gamma_p(a, x) < target : regularized_gamma_q(a, x) > target;
+    };
+    if (!below(lo) || below(hi)) return nan_value;
+    return std::exp(bisect(below, lo, hi));
 }
 
 double f_quantile(double p, double d1, double d2) noexcept {
-    if (!(p > 0.0 && p < 1.0) || !(d1 > 0.0) || !(d2 > 0.0))
-        return std::numeric_limits<double>::quiet_NaN();
-    // Invert I_y(d1/2, d2/2) = p for y in (0,1), then F = d2 y / (d1 (1-y)).
-    const double y = invert(
-        [d1, d2](double v) { return regularized_beta(0.5 * d1, 0.5 * d2, v); }, p, 0.0, 1.0);
-    return d2 * y / (d1 * (1.0 - y));
+    if (!(p > 0.0 && p < 1.0) || !valid_df(d1) || !valid_df(d2)) return nan_value;
+    const double a = 0.5 * d1, b = 0.5 * d2;
+    // t = logit(Y) with Y ~ Beta(a, b) and F = (d2/d1) e^t: Y = 1/(1+e^-t),
+    // 1 - Y = 1/(1+e^t), both formed directly.
+    const bool lower = p <= 0.5;
+    const double target = lower ? p : 1.0 - p;
+    auto below = [&](double t) {
+        const double y = 1.0 / (1.0 + std::exp(-t)), z = 1.0 / (1.0 + std::exp(t));
+        return lower ? regularized_beta(a, b, y, z) < target
+                     : regularized_beta(b, a, z, y) > target;
+    };
+    const double lo = -700.0, hi = 700.0;
+    if (!below(lo) || below(hi)) return nan_value;
+    return d2 / d1 * std::exp(bisect(below, lo, hi));
 }
 
 }  // namespace n4m::core::distributions

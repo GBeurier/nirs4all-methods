@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "core/augmentation/aug_rng_utils.h"
+#include "core/common/centring.hpp"
 #include "core/common/context.hpp"
 #include "core/common/distributions.hpp"
 #include "core/common/matrix_view.hpp"
@@ -25,6 +26,8 @@ namespace vc = ::n4m::core::variance_components;
 namespace dist = ::n4m::core::distributions;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_bootstrap_work = 2500000000.0L;
+// Per replicate and feature: the group scan plus the grid and bisections.
+constexpr long double bootstrap_fit_work = 1024.0L;
 constexpr int32_t max_bootstrap = 100000;
 
 size_t sz(int64_t v) noexcept { return static_cast<size_t>(v); }
@@ -63,37 +66,57 @@ std::vector<int64_t> dense(const int64_t* ids, int64_t n, int64_t& levels) {
     return out;
 }
 
-// Groups observed in one feature, scaled by max |x|, sorted by (r, group).
+// Groups observed in one feature on an exact power-of-two scale chosen from
+// the centred variation: values are prescaled by 2^-e1 (raw magnitude),
+// centred without cancellation, then divided by 2^e2 bounding the centred
+// values, so |c| < 1 and x - mean(x) = c 2^exponent. Within-group residuals
+// carry their own exponent ew: m2 = sum (res 2^-ew)^2. Sorted by (r, group).
 struct Column {
     std::vector<vc::Group> groups;
     std::vector<int64_t> index;  // dense group index of each entry
-    double scale = 1.0;
+    int exponent = 0;
+    int within_exponent = 0;
 };
 
 int scan_column(const n4m_matrix_view_t& X, int64_t j, const std::vector<int64_t>& group,
                 int64_t n_groups, const uint8_t* mask, Column& out) {
     const auto* data = static_cast<const double*>(X.data);
-    auto valid = [&](int64_t i) {
-        return !mask || mask[sz(i) * sz(X.cols) + sz(j)] != 0;
-    };
-    double scale = 0.0;
+    std::vector<double> values;
+    std::vector<int64_t> owner;
     for (int64_t i = 0; i < X.rows; ++i) {
-        if (!valid(i)) continue;
+        if (mask && mask[sz(i) * sz(X.cols) + sz(j)] == 0) continue;
         const double x = data[i * X.row_stride + j * X.col_stride];
         if (!std::isfinite(x)) return 1;
-        scale = std::max(scale, std::abs(x));
+        values.push_back(x);
+        owner.push_back(group[sz(i)]);
     }
-    out.scale = scale > 0.0 ? scale : 1.0;
+    const int e1 = ::n4m::core::bounding_exponent(values);
+    for (double& v : values) v = std::ldexp(v, -e1);
+    ::n4m::core::center_in_place(values);
+    const int e2 = ::n4m::core::bounding_exponent(values);
+    for (double& v : values) v = std::ldexp(v, -e2);
+    out.exponent = e1 + e2;
     std::vector<vc::Group> all(sz(n_groups));
-    for (int64_t i = 0; i < X.rows; ++i) {
-        if (!valid(i)) continue;
-        auto& g = all[sz(group[sz(i)])];
-        const long double x = static_cast<long double>(data[i * X.row_stride + j * X.col_stride]) /
-                              static_cast<long double>(out.scale);
+    for (size_t i = 0; i < values.size(); ++i) {
+        auto& g = all[sz(owner[i])];
         ++g.r;
-        const long double delta = x - g.mean;
-        g.mean += delta / static_cast<long double>(g.r);
-        g.m2 += delta * (x - g.mean);
+        g.mean += static_cast<long double>(values[i]);
+    }
+    for (auto& g : all)
+        if (g.r > 0) g.mean /= static_cast<long double>(g.r);
+    // Residual-mean correction, then residuals at their own scale.
+    std::vector<long double> correction(sz(n_groups), 0.0L);
+    for (size_t i = 0; i < values.size(); ++i)
+        correction[sz(owner[i])] += static_cast<long double>(values[i]) - all[sz(owner[i])].mean;
+    for (int64_t k = 0; k < n_groups; ++k)
+        if (all[sz(k)].r > 0) all[sz(k)].mean += correction[sz(k)] / static_cast<long double>(all[sz(k)].r);
+    std::vector<double> residual(values.size());
+    for (size_t i = 0; i < values.size(); ++i)
+        residual[i] = static_cast<double>(static_cast<long double>(values[i]) - all[sz(owner[i])].mean);
+    out.within_exponent = ::n4m::core::bounding_exponent(residual);
+    for (size_t i = 0; i < values.size(); ++i) {
+        const auto r = static_cast<long double>(std::ldexp(residual[i], -out.within_exponent));
+        all[sz(owner[i])].m2 += r * r;
     }
     out.index.clear();
     for (int64_t k = 0; k < n_groups; ++k)
@@ -103,6 +126,13 @@ int scan_column(const n4m_matrix_view_t& X, int64_t j, const std::vector<int64_t
     out.groups.clear();
     for (int64_t k : out.index) out.groups.push_back(all[sz(k)]);
     return 0;
+}
+
+// A non-negative value v 2^shift as a double: false when it overflows, or
+// when a positive v underflows to zero.
+bool unscale(long double v, int shift, double& out) noexcept {
+    out = static_cast<double>(std::scalbn(v, shift));
+    return std::isfinite(out) && !(v > 0 && !(out > 0.0));
 }
 
 double type7(std::vector<double>& v, double q) {
@@ -132,24 +162,29 @@ N4M_API n4m_status_t n4m_stats_variance_components_reml(
         int64_t n_groups = 0;
         const auto group = dense(group_ids, X->rows, n_groups);
         Column column;
+        constexpr long double ln2 = 0.693147180559945309417232121458176568L;
         for (int64_t j = 0; j < X->cols; ++j) {
             if (scan_column(*X, j, group, n_groups, valid_mask, column))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked input");
-            const auto fit = vc::fit_reml(column.groups, nullptr);
-            const double s2 = column.scale * column.scale;
+            const auto fit = vc::fit_reml(column.groups, nullptr, column.within_exponent);
             double* row = out + 8 * j;
-            row[0] = fit.sigma2_between * s2;
-            row[1] = fit.sigma2_within * s2;
-            row[2] = fit.icc;
-            row[3] = fit.loglik - static_cast<double>(fit.n_obs - 1) * std::log(column.scale);
+            std::fill(row, row + 8, nan_value);
             row[4] = static_cast<double>(fit.n_groups);
             row[5] = static_cast<double>(fit.n_obs);
-            row[6] = static_cast<double>(fit.local_minima);
+            row[6] = static_cast<double>(fit.candidates);
             row[7] = static_cast<double>(fit.iterations);
             band_status[j] = fit.status;
-            if (usable(fit.status) && (!std::isfinite(row[0]) || !std::isfinite(row[1])))
-                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
-                            "variance component is not representable as f64");
+            if (!usable(fit.status)) continue;
+            const int e = 2 * column.exponent;
+            if (!unscale(fit.sigma2_between, e, row[0]) ||
+                !unscale(fit.sigma2_within, e + fit.within_shift, row[1])) {
+                row[0] = row[1] = nan_value;
+                band_status[j] = vc::not_representable;
+                continue;
+            }
+            row[2] = fit.icc;
+            row[3] = static_cast<double>(
+                fit.loglik - static_cast<long double>(fit.n_obs - 1) * column.exponent * ln2);
         }
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -160,11 +195,12 @@ N4M_API n4m_status_t n4m_stats_variance_components_reml(
 N4M_API n4m_status_t n4m_stats_variance_components_intervals(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
     const int64_t* cluster_ids, const uint8_t* valid_mask, double confidence,
-    int32_t n_bootstrap, uint64_t seed, double* out, int64_t* n_valid_replicates) {
+    int32_t n_bootstrap, uint64_t seed, double* out, int64_t* n_valid_replicates,
+    int32_t* interval_status) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
     const auto st = check_input(ctx, X);
     if (st != N4M_OK) return st;
-    if (!group_ids || !out || !n_valid_replicates)
+    if (!group_ids || !out || !n_valid_replicates || !interval_status)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null variance-components buffer");
     if (!(confidence > 0.0 && confidence < 1.0) || n_bootstrap < 0 || n_bootstrap > max_bootstrap)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid confidence or bootstrap count");
@@ -188,15 +224,25 @@ N4M_API n4m_status_t n4m_stats_variance_components_intervals(
         }
         const long double work = static_cast<long double>(n_bootstrap) *
                                  static_cast<long double>(X->cols) *
-                                 (static_cast<long double>(n_groups) + 512.0L);
+                                 (static_cast<long double>(n_groups) + bootstrap_fit_work);
         if (work > max_bootstrap_work)
             return fail(ctx, N4M_ERR_UNSUPPORTED, "bootstrap exceeds 2.5e9 operation budget");
         const double alpha = 1.0 - confidence;
-        std::map<double, double> chi_lo, chi_hi;
+        std::map<double, std::pair<double, double>> chi;
         std::map<std::pair<double, double>, double> f_upper;
-        auto cached = [](auto& cache, auto key, auto compute) {
-            auto it = cache.find(key);
-            if (it == cache.end()) it = cache.emplace(key, compute()).first;
+        auto chi_quantiles = [&](double df) {
+            auto it = chi.find(df);
+            if (it == chi.end())
+                it = chi.emplace(df, std::make_pair(dist::chi2_quantile(alpha / 2, df),
+                                                    dist::chi2_quantile(1 - alpha / 2, df)))
+                         .first;
+            return it->second;
+        };
+        auto f_quantile = [&](double d1, double d2) {
+            const auto key = std::make_pair(d1, d2);
+            auto it = f_upper.find(key);
+            if (it == f_upper.end())
+                it = f_upper.emplace(key, dist::f_quantile(1 - alpha / 2, d1, d2)).first;
             return it->second;
         };
         Column column;
@@ -208,75 +254,98 @@ N4M_API n4m_status_t n4m_stats_variance_components_intervals(
             double* row = out + 8 * j;
             std::fill(row, row + 8, nan_value);
             n_valid_replicates[j] = 0;
+            interval_status[j] = 0;
+            bool representable = true;
+            auto publish = [&](long double v, int shift, double& slot) {
+                if (!unscale(v, shift, slot)) {
+                    slot = nan_value;
+                    representable = false;
+                }
+            };
             const auto& gs = column.groups;
             const auto g = static_cast<int64_t>(gs.size());
+            const int ew = column.within_exponent, e = column.exponent;
             int64_t n = 0;
-            long double ssw = 0;
+            long double ssw_q = 0;  // units 2^(2 ew)
             for (const auto& grp : gs) {
                 n += grp.r;
-                ssw += std::max(0.0L, grp.m2);
+                ssw_q += grp.m2;
             }
-            const long double scale = static_cast<long double>(column.scale);
             if (n - g >= 1) {
                 const auto df = static_cast<double>(n - g);
-                const double qlo = cached(chi_lo, df, [&] { return dist::chi2_quantile(alpha / 2, df); });
-                const double qhi = cached(chi_hi, df, [&] { return dist::chi2_quantile(1 - alpha / 2, df); });
-                row[0] = static_cast<double>(scale * std::sqrt(ssw / static_cast<long double>(qhi)));
-                row[1] = static_cast<double>(scale * std::sqrt(ssw / static_cast<long double>(qlo)));
+                const auto q = chi_quantiles(df);
+                if (!std::isfinite(q.first) || !std::isfinite(q.second)) {
+                    representable = false;
+                } else {
+                    publish(std::sqrt(ssw_q / static_cast<long double>(q.second)), ew + e, row[0]);
+                    publish(std::sqrt(ssw_q / static_cast<long double>(q.first)), ew + e, row[1]);
+                }
                 const int64_t r = gs.front().r;
                 if (g >= 2 && r >= 2 && gs.back().r == r) {
                     long double mean = 0, ssb = 0;
                     for (const auto& grp : gs) mean += grp.mean / static_cast<long double>(g);
                     for (const auto& grp : gs) ssb += (grp.mean - mean) * (grp.mean - mean);
-                    const long double msb = static_cast<long double>(r) * ssb / static_cast<long double>(g - 1);
-                    const long double msw = ssw / static_cast<long double>(n - g);
+                    const auto rr = static_cast<long double>(r);
+                    const long double msb = rr * ssb / static_cast<long double>(g - 1);
+                    const long double msw_q = ssw_q / static_cast<long double>(n - g);
                     const auto d1 = static_cast<double>(g - 1);
-                    if (msw > 0) {
-                        const long double F = msb / msw;
-                        const long double lower = F / static_cast<long double>(cached(
-                            f_upper, std::make_pair(d1, df),
-                            [&] { return dist::f_quantile(1 - alpha / 2, d1, df); }));
-                        const long double upper = F * static_cast<long double>(cached(
-                            f_upper, std::make_pair(df, d1),
-                            [&] { return dist::f_quantile(1 - alpha / 2, df, d1); }));
-                        const auto rr = static_cast<long double>(r);
-                        row[2] = static_cast<double>((lower - 1) / (lower + rr - 1));
-                        row[3] = static_cast<double>((upper - 1) / (upper + rr - 1));
-                    } else if (msb > 0) {
-                        row[2] = row[3] = 1.0;
+                    if (msw_q <= 0) {
+                        if (msb > 0) row[2] = row[3] = 1.0;
+                    } else {
+                        // log2 F, then F only when it cannot overflow; beyond
+                        // 2^200 both bounds round to 1.
+                        const long double log2_f = msb > 0
+                            ? std::log2(msb) - std::log2(msw_q) - 2.0L * ew
+                            : -std::numeric_limits<long double>::infinity();
+                        const double fl = f_quantile(d1, df), fu = f_quantile(df, d1);
+                        if (!std::isfinite(fl) || !std::isfinite(fu)) {
+                            representable = false;
+                        } else if (log2_f > 200) {
+                            row[2] = row[3] = 1.0;
+                        } else {
+                            const long double F = std::scalbn(msb / msw_q, -2 * ew);
+                            const long double lower = F / static_cast<long double>(fl);
+                            const long double upper = F * static_cast<long double>(fu);
+                            row[2] = static_cast<double>((lower - 1) / (lower + rr - 1));
+                            row[3] = static_cast<double>((upper - 1) / (upper + rr - 1));
+                        }
                     }
                 }
             }
-            if (n_bootstrap == 0) continue;
-            n4m_rng_pcg64 rng{};
-            n4m_pcg64_engine_seed(&rng, seed);
-            multiplicity.assign(gs.size(), 0);
-            sd_draws.clear();
-            icc_draws.clear();
-            for (int32_t b = 0; b < n_bootstrap; ++b) {
-                std::fill(counts.begin(), counts.end(), 0);
-                for (int64_t u = 0; u < n_units; ++u)
-                    ++counts[sz(static_cast<int64_t>(
-                        n4m_aug_rng_bounded(&rng, static_cast<uint64_t>(n_units - 1))))];
-                long double rssw = 0, rn = 0, rg = 0;
-                for (size_t k = 0; k < gs.size(); ++k) {
-                    const int64_t m = counts[sz(unit_of[sz(column.index[k])])];
-                    multiplicity[k] = m;
-                    rssw += static_cast<long double>(m) * std::max(0.0L, gs[k].m2);
-                    rn += static_cast<long double>(m * gs[k].r);
-                    rg += static_cast<long double>(m);
+            if (n_bootstrap > 0) {
+                n4m_rng_pcg64 rng{};
+                n4m_pcg64_engine_seed(&rng, seed);
+                multiplicity.assign(gs.size(), 0);
+                sd_draws.clear();
+                icc_draws.clear();
+                for (int32_t b = 0; b < n_bootstrap; ++b) {
+                    std::fill(counts.begin(), counts.end(), 0);
+                    for (int64_t u = 0; u < n_units; ++u)
+                        ++counts[sz(static_cast<int64_t>(
+                            n4m_aug_rng_bounded(&rng, static_cast<uint64_t>(n_units - 1))))];
+                    long double rssw = 0, rn = 0, rg = 0;
+                    for (size_t k = 0; k < gs.size(); ++k) {
+                        const int64_t m = counts[sz(unit_of[sz(column.index[k])])];
+                        multiplicity[k] = m;
+                        rssw += static_cast<long double>(m) * gs[k].m2;
+                        rn += static_cast<long double>(m * gs[k].r);
+                        rg += static_cast<long double>(m);
+                    }
+                    const auto fit = vc::fit_reml(gs, multiplicity.data(), ew);
+                    if (!usable(fit.status)) continue;
+                    // Pooled SD in units of 2^ew, mapped back after the percentiles.
+                    sd_draws.push_back(static_cast<double>(std::sqrt(rssw / (rn - rg))));
+                    icc_draws.push_back(fit.icc);
                 }
-                const auto fit = vc::fit_reml(gs, multiplicity.data());
-                if (!usable(fit.status)) continue;
-                sd_draws.push_back(static_cast<double>(scale * std::sqrt(rssw / (rn - rg))));
-                icc_draws.push_back(fit.icc);
+                n_valid_replicates[j] = static_cast<int64_t>(sd_draws.size());
+                if (!sd_draws.empty()) {
+                    publish(static_cast<long double>(type7(sd_draws, alpha / 2)), ew + e, row[4]);
+                    publish(static_cast<long double>(type7(sd_draws, 1 - alpha / 2)), ew + e, row[5]);
+                    row[6] = type7(icc_draws, alpha / 2);
+                    row[7] = type7(icc_draws, 1 - alpha / 2);
+                }
             }
-            n_valid_replicates[j] = static_cast<int64_t>(sd_draws.size());
-            if (sd_draws.empty()) continue;
-            row[4] = type7(sd_draws, alpha / 2);
-            row[5] = type7(sd_draws, 1 - alpha / 2);
-            row[6] = type7(icc_draws, alpha / 2);
-            row[7] = type7(icc_draws, 1 - alpha / 2);
+            if (!representable) interval_status[j] = vc::not_representable;
         }
         return N4M_OK;
     } catch (const std::bad_alloc&) {

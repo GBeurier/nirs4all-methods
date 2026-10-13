@@ -9,13 +9,17 @@
 //    s2w = sample variance otherwise);
 //  * SciPy chi2.ppf / f.ppf for the exact intervals; the bootstrap reference
 //    redraws numpy.random.default_rng(seed).integers(0, U, (B, U)), refits
-//    each replicate with the dense REML and takes numpy.quantile(linear).
+//    each replicate with the dense REML and takes numpy.quantile(linear);
+//  * exact ANOVA from the actual doubles with fractions.Fraction (1e155
+//    offsets), the multimodal witness of review b9 (dense REML), and
+//    magnitude/translation sweeps checked against exact 2^k identities.
 // Generator: parity/generators/variance_components_v1.py (Python 3.14.3).
 #include "n4m/metrics.h"
 
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <initializer_list>
 #include <limits>
 #include <stdexcept>
 #include <vector>
@@ -43,14 +47,17 @@ static Reml reml(n4m_context_t* ctx, std::vector<double> y, const std::vector<in
 static std::vector<double> intervals(n4m_context_t* ctx, std::vector<double> y,
                                      const std::vector<int64_t>& g, double confidence,
                                      const int64_t* clusters = nullptr, int32_t b = 0,
-                                     uint64_t seed = 0, int64_t* valid = nullptr) {
+                                     uint64_t seed = 0, int64_t* valid = nullptr,
+                                     int32_t* status = nullptr) {
     std::vector<double> out(8);
     int64_t n_valid = -1;
+    int32_t interval_status = -1;
     auto v = column(y);
     REQUIRE(n4m_stats_variance_components_intervals(ctx, &v, g.data(), clusters, nullptr,
                                                     confidence, b, seed, out.data(),
-                                                    &n_valid) == N4M_OK);
+                                                    &n_valid, &interval_status) == N4M_OK);
     if (valid) *valid = n_valid;
+    if (status) *status = interval_status;
     return out;
 }
 
@@ -92,10 +99,11 @@ int main() {
         std::vector<int64_t> bad = ca;
         bad[2] = 9;  // group 1 would span clusters 7 and 9
         std::vector<double> out(8);
+        int32_t ist = 0;
         std::vector<double> ya_copy = ya;
         auto v = column(ya_copy);
         REQUIRE(n4m_stats_variance_components_intervals(ctx, &v, ga.data(), bad.data(), nullptr,
-                                                        0.95, 10, 1, out.data(), &valid) ==
+                                                        0.95, 10, 1, out.data(), &valid, &ist) ==
                 N4M_ERR_INVALID_ARGUMENT);
 
         // B: balanced 4 x 3, MSB = 547/300, MSW = 17/600: REML = ANOVA.
@@ -209,6 +217,108 @@ int main() {
         }
         REQUIRE(st[0] == bm.status && st[1] == am.status && two[13] == 11);
 
+
+        // P0-1 regression, multimodal witness: sizes [1,152,350,363], every
+        // group its mean +/- h, SSW = 3333.5. The grid's best point is the
+        // boundary, but a narrower interior maximum near gamma = 2.80032 has
+        // a larger restricted likelihood (dense REML: -1823.36111 against
+        // -1823.36716 at s2b = 0).
+        {
+            const int64_t sizes[4] = {1, 152, 350, 363};
+            const double means[4] = {7.763121181, -0.196654690, -0.399240353, -0.241778259};
+            const double h = 1.9642346073197552;  // sqrt(3333.5 / 864)
+            std::vector<double> wy;
+            std::vector<int64_t> wg;
+            for (int i = 0; i < 4; ++i)
+                for (int64_t j = 0; j < sizes[i]; ++j) {
+                    wg.push_back(i);
+                    if (sizes[i] % 2 == 1 && j == sizes[i] - 1) wy.push_back(means[i]);
+                    else wy.push_back(j % 2 == 0 ? means[i] + h : means[i] - h);
+                }
+            auto wit = reml(ctx, wy, wg);
+            REQUIRE(wit.status == 0 && wit.out[6] >= 2);
+            REQUIRE(relative(wit.out[0], 10.836000702299083, 1e-8));
+            REQUIRE(relative(wit.out[1], 3.8695580318538783, 1e-8));
+            REQUIRE(relative(wit.out[2], 0.7368642632484943, 1e-8));
+            REQUIRE(rel(wit.out[3], -1823.3611104854415, 1e-12));
+            REQUIRE(wit.out[3] > -1823.3671591194206);
+        }
+
+        // P1-6 regression: 1e155 offsets, within spread 1e145. The variances
+        // (~1e290) are representable although (max |x|)^2 is not. Exact
+        // ANOVA from the actual doubles (Fraction): REML = ANOVA here.
+        {
+            const std::vector<double> yh{1e155 - 3e145, 1e155 - 1e145, 1e155 + 1e145, 1e155 + 3e145};
+            const std::vector<int64_t> gh{0, 0, 1, 1};
+            auto hv = reml(ctx, yh, gh);
+            REQUIRE(hv.status == 0);
+            REQUIRE(relative(hv.out[0], 7.000004539241947e+290, 1e-9));
+            REQUIRE(relative(hv.out[1], 1.9999999359517287e+290, 1e-9));
+            REQUIRE(relative(hv.out[2], 0.7777778953928032, 1e-9));
+            int32_t s6 = -1;
+            auto ih = intervals(ctx, yh, gh, 0.95, nullptr, 0, 0, nullptr, &s6);
+            REQUIRE(s6 == 0 && ih[0] > 0 && std::isfinite(ih[1]) && std::isfinite(ih[3]));
+            // Variances beyond DBL_MAX: explicit status 6, NaN values; the SD
+            // interval (~1e300) stays representable.
+            const std::vector<double> yo{-1e300, -9e299, 9e299, 1e300};
+            auto ov = reml(ctx, yo, gh);
+            REQUIRE(ov.status == 6 && std::isnan(ov.out[0]) && std::isnan(ov.out[2]));
+            auto io = intervals(ctx, yo, gh, 0.95, nullptr, 0, 0, nullptr, &s6);
+            REQUIRE(s6 == 0 && std::isfinite(io[0]) && io[0] > 0);
+            // Positive variances that underflow: explicit status 6.
+            const double tiny = std::ldexp(1.0, -1060);
+            auto uv = reml(ctx, {tiny, 3 * tiny, 9 * tiny, 15 * tiny}, gh);
+            REQUIRE(uv.status == 6 && std::isnan(uv.out[1]));
+        }
+
+        // Magnitude sweep (robustness rule): scaling by 2^k multiplies the
+        // variances by 2^2k, leaves the ICC unchanged and shifts the REML
+        // log-likelihood by -(N-1) k ln 2; unrepresentable variances give
+        // status 6, never a silent value. Translation by 2^52 (integer data)
+        // changes nothing.
+        {
+            std::vector<double> ia_data;
+            for (double value : ya) ia_data.push_back(10.0 * value);  // integers 3..31
+            const auto base = reml(ctx, ia_data, ga);
+            REQUIRE(base.status == 0);
+            for (int k : {-1022, -500, -100, 0, 100, 500, 1000}) {
+                std::vector<double> scaled;
+                for (double value : ia_data) scaled.push_back(std::ldexp(value, k));
+                auto sk = reml(ctx, scaled, ga);
+                const double s2b = std::ldexp(base.out[0], 2 * k), s2w = std::ldexp(base.out[1], 2 * k);
+                if (std::isfinite(s2b) && s2w > 0 && std::isfinite(s2w) && std::fpclassify(s2w) == FP_NORMAL) {
+                    REQUIRE(sk.status == 0);
+                    REQUIRE(relative(sk.out[0], s2b, 1e-12) && relative(sk.out[1], s2w, 1e-12));
+                    REQUIRE(relative(sk.out[2], base.out[2], 1e-12));
+                    REQUIRE(rel(sk.out[3], base.out[3] - 11.0 * k * std::log(2.0), 1e-12));
+                } else {
+                    REQUIRE(sk.status == 6 && std::isnan(sk.out[0]));
+                }
+                int32_t sst = -1;
+                auto ik = intervals(ctx, scaled, ga, 0.95, nullptr, 0, 0, nullptr, &sst);
+                const double lo = std::ldexp(0.24570003389152809 * 10.0, k);
+                if (std::isfinite(lo) && std::fpclassify(lo) == FP_NORMAL)
+                    REQUIRE(sst == 0 && relative(ik[0], lo, 1e-10));
+                else
+                    REQUIRE(sst == 6);
+            }
+            for (double offset : {std::ldexp(1.0, 52), -std::ldexp(1.0, 52)}) {
+                std::vector<double> shifted;
+                for (double value : ia_data) shifted.push_back(value + offset);
+                auto t = reml(ctx, shifted, ga);
+                REQUIRE(t.status == 0 && relative(t.out[0], base.out[0], 1e-12) &&
+                        relative(t.out[1], base.out[1], 1e-12) && relative(t.out[2], base.out[2], 1e-12));
+            }
+            // Offset 2^996 with integer multiples of 2^944 (exact sums): the
+            // variances (~2^1890) overflow -> status 6; the ICC of the scaled
+            // problem is still the base ICC, checked through the SD interval.
+            std::vector<double> far;
+            for (double value : ia_data) far.push_back(std::ldexp(1.0, 996) + std::ldexp(value, 944));
+            REQUIRE(reml(ctx, far, ga).status == 6);
+            int32_t fst = -1;
+            auto fi = intervals(ctx, far, ga, 0.95, nullptr, 0, 0, nullptr, &fst);
+            REQUIRE(fst == 0 && relative(fi[0], std::ldexp(2.4570003389152809, 944), 1e-10));
+        }
         // Invalid arguments.
         std::vector<double> bad_x{1.0, std::numeric_limits<double>::quiet_NaN(), 2.0, 3.0};
         auto bv = column(bad_x);
@@ -220,17 +330,18 @@ int main() {
         REQUIRE(n4m_stats_variance_components_reml(ctx, &bv, nullptr, nullptr, out.data(), st) ==
                 N4M_ERR_NULL_POINTER);
         REQUIRE(n4m_stats_variance_components_intervals(ctx, &bv, g4.data(), nullptr, hide, 1.0, 0,
-                                                        0, out.data(), &valid) ==
+                                                        0, out.data(), &valid, st) ==
                 N4M_ERR_INVALID_ARGUMENT);
         std::vector<double> wide(2 * 100, 1.0);
         n4m_matrix_view_t wv{};
         REQUIRE(n4m_matrix_view_init_rowmajor(&wv, wide.data(), 2, 100, N4M_DTYPE_F64) == N4M_OK);
         std::vector<double> wide_out(800);
         std::vector<int64_t> wide_valid(100);
+        std::vector<int32_t> wide_status(100);
         const int64_t g2[2] = {0, 0};
         REQUIRE(n4m_stats_variance_components_intervals(ctx, &wv, g2, nullptr, nullptr, 0.95,
                                                         100000, 0, wide_out.data(),
-                                                        wide_valid.data()) == N4M_ERR_UNSUPPORTED);
+                                                        wide_valid.data(), wide_status.data()) == N4M_ERR_UNSUPPORTED);
         n4m_context_destroy(ctx);
         std::puts("variance components: ok");
         return 0;
