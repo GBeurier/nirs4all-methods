@@ -10000,6 +10000,174 @@ methods:
           type: int
           default: 10
           min: 1
+  - method_id: "diagnostics.preflight_qualification"
+    family: "diagnostics.preflight"
+    category: "diagnostics"
+    subcategory: "preflight"
+    since_abi: "2.18.0"
+    abi_symbols:
+      - "n4m_preflight_factor_association"
+      - "n4m_preflight_local_contrast"
+      - "n4m_preflight_nearest_neighbors"
+      - "n4m_preflight_noise_proxy_compute"
+      - "n4m_preflight_pairs_within_tolerance"
+      - "n4m_preflight_pca_compute"
+      - "n4m_preflight_repeatability_compute"
+      - "n4m_preflight_summary_compute"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/pca_helper.c"
+      - "cpp/src/core/common/rng_pcg64.c"
+      - "cpp/src/core/preprocessing/derivatives/savitzky_golay.c"
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.preflight_qualification"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications: []
+    notes: "Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts."
+    namespace: "metrics.preflight"
+    leaf: "qualification"
+    fq_name: "n4m.metrics.preflight.qualification"
+    c_surface:
+      - "n4m_preflight_factor_association"
+      - "n4m_preflight_local_contrast"
+      - "n4m_preflight_nearest_neighbors"
+      - "n4m_preflight_noise_proxy_compute"
+      - "n4m_preflight_pairs_within_tolerance"
+      - "n4m_preflight_pca_compute"
+      - "n4m_preflight_repeatability_compute"
+      - "n4m_preflight_summary_compute"
+    legacy_ids:
+      - "diagnostics.preflight_qualification"
+  - method_id: "diagnostics.holm_adjust"
+    family: "diagnostics.preflight"
+    category: "diagnostics"
+    subcategory: "preflight"
+    since_abi: "2.19.0"
+    abi_symbols:
+      - "n4m_preflight_holm_adjust"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.holm_adjust"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications: []
+    notes: "Holm step-down adjusted p-values for one hypothesis family, matching R p.adjust(method = \"holm\") with a stable ascending order."
+    namespace: "metrics.multiple_testing"
+    leaf: "holm_adjust"
+    fq_name: "n4m.metrics.multiple_testing.holm_adjust"
+    c_surface:
+      - "n4m_preflight_holm_adjust"
+    legacy_ids:
+      - "diagnostics.holm_adjust"
+  - method_id: "diagnostics.adjusted_rand_index"
+    family: "diagnostics.clustering"
+    category: "diagnostics"
+    subcategory: "clustering"
+    since_abi: "2.19.0"
+    abi_symbols:
+      - "n4m_preflight_adjusted_rand_index"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.adjusted_rand_index"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings: {}
+    publications: []
+    notes: "Hubert-Arabie adjusted Rand index between two int64 label vectors, computed like scikit-learn adjusted_rand_score from pair-confusion counts; NaN (not 1.0) for n < 2 or identical trivial partitions."
+    namespace: "metrics.clustering"
+    leaf: "adjusted_rand_index"
+    fq_name: "n4m.metrics.clustering.adjusted_rand_index"
+    c_surface:
+      - "n4m_preflight_adjusted_rand_index"
+    legacy_ids:
+      - "diagnostics.adjusted_rand_index"
+  - method_id: "diagnostics.hdbscan"
+    family: "diagnostics.clustering"
+    category: "diagnostics"
+    subcategory: "clustering"
+    since_abi: "2.19.0"
+    abi_symbols:
+      - "n4m_cluster_hdbscan"
+    tu:
+      - "cpp/src/c_api/c_api_preflight.cpp"
+      - "cpp/src/core/clustering/_vendored/hdbscan.cpp"
+    headers:
+      - "cpp/include/n4m/metrics.h"
+    carry_along_tu:
+      - "cpp/src/core/common/context.cpp"
+      - "cpp/src/core/common/status.cpp"
+      - "cpp/src/core/common/matrix_view.cpp"
+      - "cpp/src/core/common/version.cpp"
+    parity:
+      fixtures:
+        - "parity/fixtures/hdbscan_v1.json"
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: "diagnostics.hdbscan"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses:
+      - "scikit-learn-hdbscan (BSD-3-Clause)"
+    bindings: {}
+    publications: []
+    notes: "Euclidean HDBSCAN* ported from scikit-learn 1.9.1 sklearn.cluster.HDBSCAN, with GLOSH outlier scores and cluster persistence from scikit-learn-contrib/hdbscan 0.8.44 (BSD-3-Clause, cpp/src/core/clustering/_vendored). Reference gate: parity/generators/hdbscan_v1.py -> parity/fixtures/hdbscan_v1.json, cpp/tests/test_hdbscan.cpp; reuse assessment in docs/dev/hdbscan.md."
+    namespace: "cluster"
+    leaf: "hdbscan"
+    fq_name: "n4m.cluster.hdbscan"
+    c_surface:
+      - "n4m_cluster_hdbscan"
+    legacy_ids:
+      - "diagnostics.hdbscan"
   - method_id: "filters.correlation"
     family: "filters.feature"
     category: "filters"

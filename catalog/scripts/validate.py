@@ -52,7 +52,15 @@ NIRS4ALL_DONOR_CATEGORIES = {
 # nirs4all-donor methods that live inside an otherwise registry-covered category
 # (diagnostics mixes registry-backed PLS diagnostics with nirs4all metric helpers;
 # models mixes reference-backed PLS variants with direct native heads).
+# The Preflight diagnostics (ABI 2.18/2.19) are not registry-wired: their
+# NumPy/SciPy, scikit-learn and R p.adjust reference values are pinned in the
+# native contract tests (cpp/tests/test_preflight.cpp, cpp/tests/test_hdbscan.cpp)
+# and parity/fixtures/hdbscan_v1.json.
 NIRS4ALL_DONOR_METHODS = {
+    "diagnostics.adjusted_rand_index",
+    "diagnostics.hdbscan",
+    "diagnostics.holm_adjust",
+    "diagnostics.preflight_qualification",
     "diagnostics.regression_metrics",
     "models.ensembles.moment_stack",
     "models.regularized.ridge",

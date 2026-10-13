@@ -57,6 +57,12 @@ excludes:
   patterns:
     - "utilities.signal_type_detector"
     - "utilities.transfer_metrics"
+    # Preflight dataset-qualification and clustering diagnostics are not
+    # PLS-specific; they ship in the full nirs4all-methods package only.
+    - "diagnostics.preflight_qualification"
+    - "diagnostics.holm_adjust"
+    - "diagnostics.adjusted_rand_index"
+    - "diagnostics.hdbscan"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |

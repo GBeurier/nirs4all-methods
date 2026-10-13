@@ -1,0 +1,40 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.adjusted_rand_index"
+family: "diagnostics.clustering"
+category: "diagnostics"
+subcategory: "clustering"
+since_abi: "2.19.0"
+abi_symbols:
+  - "n4m_preflight_adjusted_rand_index"
+tu:
+  - "cpp/src/c_api/c_api_preflight.cpp"
+headers:
+  - "cpp/include/n4m/metrics.h"
+carry_along_tu:
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.adjusted_rand_index"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Hubert-Arabie adjusted Rand index between two int64 label vectors, computed like scikit-learn adjusted_rand_score from pair-confusion counts; NaN (not 1.0) for n < 2 or identical trivial partitions."
+c_surface:
+  - "n4m_preflight_adjusted_rand_index"
+fq_name: "n4m.metrics.clustering.adjusted_rand_index"
+leaf: "adjusted_rand_index"
+legacy_ids:
+  - "diagnostics.adjusted_rand_index"
+namespace: "metrics.clustering"
