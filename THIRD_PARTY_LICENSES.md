@@ -99,8 +99,9 @@ repository LICENSE); BSD-3 is permissive and compatible.
 
 **Upstream**: https://github.com/scipy/scipy (1.18.1, `scipy/optimize/rectangular_lsap/rectangular_lsap.cpp`, author PM Larsen)
 **Vendored at**: `cpp/src/core/optimization/_vendored` (full notice in `LICENSE.scipy.txt` there)
-**Notes**: C++17 port keeping the upstream control flow, tie rules and floating-point order; only
-index types, the -1 sentinels and casts were adapted. The two vendored files keep the BSD-3-Clause
+**Notes**: C++17 port keeping the upstream control flow and tie rules; index types, the -1 sentinels
+and casts were adapted, and duals and path costs are exact sums of the input doubles (floating-point
+expansions), so the result is an exact optimum. The two vendored files keep the BSD-3-Clause
 SPDX identifier. Algorithm: D. F. Crouse (2016), doi:10.1109/TAES.2016.140952.
 
 ```

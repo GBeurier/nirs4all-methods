@@ -9,15 +9,23 @@
 //     52(4):1679-1696, August 2016. doi: 10.1109/TAES.2016.140952
 // Redistribution and use are subject to the BSD-3-Clause conditions in
 // LICENSE.scipy.txt in this directory. Changes from upstream: unsigned index
-// types with a `none` sentinel in place of -1, a const input copied once, and
-// an enum status; the control flow and operation order are unchanged.
+// types with a `none` sentinel in place of -1, a const input copied once, an
+// enum status, and exact arithmetic: the dual variables, reduced costs and
+// path costs are exact sums of the input doubles (floating-point expansions),
+// so every comparison is decided on exact values. SciPy's double arithmetic
+// can lose small cost differences next to large ones and return a
+// suboptimal assignment; this port returns an exact optimum. The control flow
+// and the tie rules are unchanged.
 #include "core/optimization/_vendored/rectangular_lsap.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <numeric>
 #include <utility>
 #include <vector>
+
+#include "core/common/expansion.hpp"
 
 namespace n4m::core::lsap {
 namespace {
@@ -33,13 +41,40 @@ std::vector<std::size_t> argsort_iter(const std::vector<std::size_t>& values) {
     return index;
 }
 
-std::size_t augmenting_path(std::size_t nc, const double* cost, std::vector<double>& u,
-                            std::vector<double>& v, std::vector<std::size_t>& path,
+// An exact value: +infinity (a forbidden pair) or an exact sum of doubles.
+struct Exact {
+    bool infinite = false;
+    expansion::Expansion value;
+};
+
+Exact exact(double v) {
+    if (std::isinf(v)) return {true, {}};
+    return {false, v == 0.0 ? expansion::Expansion{} : expansion::Expansion{v}};
+}
+
+Exact plus(const Exact& a, const Exact& b) {
+    if (a.infinite || b.infinite) return {true, {}};
+    return {false, expansion::add(a.value, b.value)};
+}
+
+// a - b for a finite b.
+Exact minus(const Exact& a, const Exact& b) {
+    if (a.infinite) return {true, {}};
+    return {false, expansion::subtract(a.value, b.value)};
+}
+
+int compare(const Exact& a, const Exact& b) {
+    if (a.infinite || b.infinite) return a.infinite == b.infinite ? 0 : (a.infinite ? 1 : -1);
+    return expansion::sign(expansion::subtract(a.value, b.value));
+}
+
+std::size_t augmenting_path(std::size_t nc, const double* cost, std::vector<Exact>& u,
+                            std::vector<Exact>& v, std::vector<std::size_t>& path,
                             std::vector<std::size_t>& row4col,
-                            std::vector<double>& shortest_path_costs, std::size_t i,
+                            std::vector<Exact>& shortest_path_costs, std::size_t i,
                             std::vector<bool>& SR, std::vector<bool>& SC,
-                            std::vector<std::size_t>& remaining, double* p_min_val) {
-    double min_val = 0;
+                            std::vector<std::size_t>& remaining, Exact* p_min_val) {
+    Exact min_val;
 
     // Crouse's pseudocode uses set complements to keep track of remaining
     // nodes; a vector is more efficient.
@@ -52,35 +87,35 @@ std::size_t augmenting_path(std::size_t nc, const double* cost, std::vector<doub
 
     std::fill(SR.begin(), SR.end(), false);
     std::fill(SC.begin(), SC.end(), false);
-    std::fill(shortest_path_costs.begin(), shortest_path_costs.end(), infinity);
+    std::fill(shortest_path_costs.begin(), shortest_path_costs.end(), Exact{true, {}});
 
     // Find the shortest augmenting path.
     std::size_t sink = none;
     while (sink == none) {
         std::size_t index = none;
-        double lowest = infinity;
+        Exact lowest{true, {}};
         SR[i] = true;
 
         for (std::size_t it = 0; it < num_remaining; it++) {
             const std::size_t j = remaining[it];
 
-            const double r = min_val + cost[i * nc + j] - u[i] - v[j];
-            if (r < shortest_path_costs[j]) {
+            const Exact r = minus(plus(min_val, exact(cost[i * nc + j])), plus(u[i], v[j]));
+            if (compare(r, shortest_path_costs[j]) < 0) {
                 path[j] = i;
                 shortest_path_costs[j] = r;
             }
 
             // When multiple nodes have the minimum cost, select one which
             // gives a new sink node (important for small integer costs).
-            if (shortest_path_costs[j] < lowest ||
-                (shortest_path_costs[j] == lowest && row4col[j] == none)) {
+            const int order = compare(shortest_path_costs[j], lowest);
+            if (order < 0 || (order == 0 && row4col[j] == none)) {
                 lowest = shortest_path_costs[j];
                 index = it;
             }
         }
 
         min_val = lowest;
-        if (min_val == infinity) {  // infeasible cost matrix
+        if (min_val.infinite) {  // infeasible cost matrix
             return none;
         }
 
@@ -138,9 +173,9 @@ Status solve(std::size_t nr, std::size_t nc, const double* input_cost, bool maxi
     }
 
     // Initialize variables.
-    std::vector<double> u(nr, 0);
-    std::vector<double> v(nc, 0);
-    std::vector<double> shortest_path_costs(nc);
+    std::vector<Exact> u(nr);
+    std::vector<Exact> v(nc);
+    std::vector<Exact> shortest_path_costs(nc);
     std::vector<std::size_t> path(nc, none);
     std::vector<std::size_t> col4row(nr, none);
     std::vector<std::size_t> row4col(nc, none);
@@ -150,7 +185,7 @@ Status solve(std::size_t nr, std::size_t nc, const double* input_cost, bool maxi
 
     // Iteratively build the solution.
     for (std::size_t cur_row = 0; cur_row < nr; cur_row++) {
-        double min_val = 0;
+        Exact min_val;
         const std::size_t sink = augmenting_path(nc, cost.data(), u, v, path, row4col,
                                                  shortest_path_costs, cur_row, SR, SC,
                                                  remaining, &min_val);
@@ -159,16 +194,16 @@ Status solve(std::size_t nr, std::size_t nc, const double* input_cost, bool maxi
         }
 
         // Update dual variables.
-        u[cur_row] += min_val;
+        u[cur_row] = plus(u[cur_row], min_val);
         for (std::size_t i = 0; i < nr; i++) {
             if (SR[i] && i != cur_row) {
-                u[i] += min_val - shortest_path_costs[col4row[i]];
+                u[i] = plus(u[i], minus(min_val, shortest_path_costs[col4row[i]]));
             }
         }
 
         for (std::size_t j = 0; j < nc; j++) {
             if (SC[j]) {
-                v[j] -= min_val - shortest_path_costs[j];
+                v[j] = minus(v[j], minus(min_val, shortest_path_costs[j]));
             }
         }
 

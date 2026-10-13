@@ -167,12 +167,15 @@ N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
  * last to first, an unassigned column wins equal reduced costs; a constant
  * matrix gives the identity). Caller-owned row_ind/col_ind receive
  * min(rows, cols) pairs in increasing row order; *n_assigned their count.
- * rows * cols * min(rows, cols) must not exceed 2.5e9 and rows * cols 5e7.
- * Domain of validity: the finite costs are centred on their minimum and, when
- * the largest centred cost is outside [2^-500, 2^500], scaled by an exact
- * power of two before the search; the optimum is invariant to both, so costs
- * up to DBL_MAX and large common offsets are handled. A nonzero centred cost
- * that would leave the normal range in that scale returns
+ * rows * cols * min(rows, cols) must not exceed 1e8 and rows * cols 5e7.
+ * Domain of validity: dual variables, reduced and path costs are exact sums
+ * of the input doubles (floating-point expansions), so the result is an
+ * exact optimum of the given costs, including mixed signs and widely spread
+ * exponents where SciPy's double arithmetic can return a suboptimal
+ * assignment; ties follow SciPy's order on exact values. No value is
+ * subtracted from the costs. When 4 * (min(rows, cols) + 1) * max|cost|
+ * could reach 2^1020, costs are scaled down by the smallest sufficient power
+ * of two; a cost that this scaling would not keep exact returns
  * N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_linear_sum_assignment(
     n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind,

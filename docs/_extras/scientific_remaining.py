@@ -1594,11 +1594,13 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "variables. A $+\\infty$ cost forbids a pair.",
         "Matching clusters across partitions by maximum total Jaccard overlap, and other "
         "one-to-one assignment problems.",
-        "Among optimal assignments, the returned one follows SciPy's tie order (columns scanned "
+        "Duals and path costs are exact sums of the input doubles, so the result is an exact "
+        "optimum even where SciPy's double arithmetic loses small differences next to large "
+        "costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned "
         "from last to first, unassigned columns first on equal reduced cost), so equal-cost "
         "solutions are reproducible but arbitrary. NaN and $-\\infty$ costs are invalid; a "
         "matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is "
-        "$O(rc\\min(r,c))$ and is limited to 2.5e9.",
+        "$O(rc\\min(r,c))$ exact-arithmetic operations and is limited to 1e8.",
         "The ABI-2 symbol `n4m_linear_sum_assignment` in `n4m/metrics.h` is a port of SciPy "
         "1.18.1 `scipy.optimize.linear_sum_assignment` (BSD-3-Clause) in "
         "`cpp/src/core/optimization/_vendored/rectangular_lsap.cpp`, wrapped in JS/WASM by "

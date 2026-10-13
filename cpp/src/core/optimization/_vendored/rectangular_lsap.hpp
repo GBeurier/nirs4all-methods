@@ -5,7 +5,9 @@
 // the shortest augmenting path algorithm of Crouse (2016). See
 // LICENSE.scipy.txt in this directory for the upstream licence.
 //
-// Frozen semantics (scipy.optimize.linear_sum_assignment):
+// Frozen semantics (scipy.optimize.linear_sum_assignment, evaluated in exact
+// arithmetic: duals and path costs are exact sums of the input doubles, so
+// the result is an exact optimum):
 //   * a tall matrix (cols < rows) is solved on its transpose and the pairs are
 //     returned sorted by row; maximize negates the costs first;
 //   * NaN or -inf costs (after negation) are invalid; +inf marks a forbidden

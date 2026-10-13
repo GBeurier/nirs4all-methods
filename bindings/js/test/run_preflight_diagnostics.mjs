@@ -217,9 +217,52 @@ assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), row
         assert.deepEqual(linearSumAssignment({data: new Float64Array(base.map((v) => v * scale / 16)), rows: 5, cols: 7}).colInd,
             want.colInd);
     }
-    const span = base.map((v) => v * 1e-300);
-    span[0] = 1e300;
+    // Costs near DBL_MAX next to subnormal costs cannot be scaled exactly.
+    const span = base.map((v) => v * 1e-310);
+    span[0] = 1.7e308;
     assert.equal(status(() => linearSumAssignment({data: new Float64Array(span), rows: 5, cols: 7})), 10);
+    // Exact oracle: a double is an integer multiple of 2^-1074 (BigInt sums).
+    const exactBig = (x) => {
+        if (x === 0) return 0n;
+        const dv = new DataView(new ArrayBuffer(8));
+        dv.setFloat64(0, x);
+        const bits = dv.getBigUint64(0);
+        const exponent = (bits >> 52n) & 0x7ffn;
+        let mantissa = bits & ((1n << 52n) - 1n);
+        if (exponent !== 0n) mantissa = (mantissa | (1n << 52n)) << (exponent - 1n);
+        return bits >> 63n ? -mantissa : mantissa;
+    };
+    const optimal = (cost, rows, cols) => {
+        const got = linearSumAssignment({data: new Float64Array(cost), rows, cols}).colInd;
+        const total = (columns) => columns.reduce((acc, j, i) => acc + exactBig(cost[i * cols + j]), 0n);
+        let best = null;
+        const visit = (prefix) => {
+            if (prefix.length === rows) {
+                const t = total(prefix);
+                if (best === null || t < best) best = t;
+                return;
+            }
+            for (let j = 0; j < cols; ++j) if (!prefix.includes(j)) visit([...prefix, j]);
+        };
+        visit([]);
+        assert.equal(total(got), best);
+        return got;
+    };
+    // Review 2026-10-13 P0: global centring returned [0, 1, 2] here and
+    // declared the +-1e308 matrix infeasible.
+    assert.deepEqual(optimal([-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1], 3, 3), [0, 2, 1]);
+    optimal([-1e308, 1e308, -1e308, 1e308], 2, 2);
+    let state = 12345;
+    const random = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648; };
+    for (let trial = 0; trial < 150; ++trial) {
+        const rows = 2 + Math.floor(random() * 3), cols = rows + Math.floor(random() * 3);
+        const spread = [60, 300, 1000][trial % 3];
+        const cost = Array.from({length: rows * cols}, () => {
+            const exponent = Math.min(1022, Math.floor(random() * 2 * spread) - spread);
+            return (random() < 0.5 ? -1 : 1) * (1 + Math.floor(random() * 4096) / 4096) * 2 ** exponent;
+        });
+        optimal(cost, rows, cols);
+    }
     const cov = [2.0, 0.3, 0.1, 0.3, 1.0, -0.2, 0.1, -0.2, 0.5];
     const unitDraw = randomMultivariateNormal(new Float64Array(3), {data: new Float64Array(cov), rows: 3, cols: 3}, 6, 42n);
     for (const k of [-509, 511]) {

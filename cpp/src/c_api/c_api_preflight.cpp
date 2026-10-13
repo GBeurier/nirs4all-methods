@@ -740,41 +740,38 @@ N4M_API n4m_status_t n4m_linear_sum_assignment(
     if (maximize != 0 && maximize != 1)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "maximize must be 0 or 1");
     const int64_t rows = cost->rows, cols = cost->cols;
-    if (static_cast<long double>(rows) * cols * std::min(rows, cols) > max_hdbscan_products ||
+    if (static_cast<long double>(rows) * cols * std::min(rows, cols) > 100000000.0L ||
         static_cast<long double>(rows) * cols > max_buffer_doubles)
-        return fail(ctx, N4M_ERR_UNSUPPORTED, "assignment exceeds 2.5 billion operations");
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "assignment exceeds 1e8 exact operations");
     try {
         std::vector<double> data(static_cast<size_t>(rows) * static_cast<size_t>(cols));
         for (int64_t i = 0; i < rows; ++i) for (int64_t j = 0; j < cols; ++j)
             data[static_cast<size_t>(i) * static_cast<size_t>(cols) + static_cast<size_t>(j)] =
                 at(*cost, i, j);
-        // Every assignment uses min(rows, cols) entries, so subtracting the
-        // smallest finite cost and scaling by a power of two leave the optimum
-        // unchanged. Costs are centred that way, then scaled when the largest
-        // centred cost lies outside [2^-500, 2^500], so neither large offsets
-        // nor huge magnitudes reach the dual sums of the augmenting-path
-        // search. A nonzero centred cost that would leave the normal range is
-        // refused instead of being merged with zero.
-        double lowest = std::numeric_limits<double>::infinity();
-        for (const double v : data)
-            if (std::isfinite(v)) lowest = std::min(lowest, v);
+        // The solver sums costs exactly (floating-point expansions), which is
+        // exact as long as no partial sum exceeds DBL_MAX. Dual values and
+        // path costs are sums of at most 4 * (min(rows, cols) + 1) costs, so
+        // when that many times the largest finite magnitude could reach
+        // 2^1020 the costs are scaled down by the smallest sufficient power of
+        // two. No value is subtracted. A cost that this scaling would not keep
+        // exact (it would fall below the normal range) is refused.
         double largest = 0.0;
-        if (std::isfinite(lowest)) {
-            for (double& v : data) {
-                if (!std::isfinite(v)) continue;
-                v -= lowest;
-                largest = std::max(largest, v);
-            }
-        }
-        if (largest > std::ldexp(1.0, 500) || (largest > 0.0 && largest < std::ldexp(1.0, -500))) {
-            int exponent = 0;
+        for (const double v : data)
+            if (std::isfinite(v)) largest = std::max(largest, std::fabs(v));
+        if (largest > 0.0) {
+            int exponent = 0, terms = 0;
             std::frexp(largest, &exponent);
-            for (double& v : data) {
-                if (!std::isfinite(v) || v == 0.0) continue;
-                v = std::ldexp(v, -exponent);
-                if (!(v >= DBL_MIN))
-                    return fail(ctx, N4M_ERR_UNSUPPORTED,
-                                "assignment costs span more than the double exponent range");
+            std::frexp(4.0 * static_cast<double>(std::min(rows, cols) + 1), &terms);
+            const int shift = std::max(0, exponent + terms - 1020);
+            if (shift > 0) {
+                for (double& v : data) {
+                    if (!std::isfinite(v) || v == 0.0) continue;
+                    const double scaled = std::ldexp(v, -shift);
+                    if (std::ldexp(scaled, shift) != v)
+                        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                                    "assignment costs span more than the exact double range");
+                    v = scaled;
+                }
             }
         }
         *n_assigned = 0;

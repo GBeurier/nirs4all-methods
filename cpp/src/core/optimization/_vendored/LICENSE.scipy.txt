@@ -5,8 +5,11 @@ rectangular_lsap.{hpp,cpp} in this directory are a C++17 port of
 scipy/optimize/rectangular_lsap/rectangular_lsap.cpp from SciPy 1.18.1
 (BSD-3-Clause, author PM Larsen), https://github.com/scipy/scipy. The
 control flow, tie rules and floating-point operation order are kept so the
-result equals scipy.optimize.linear_sum_assignment; only index types, the
--1 sentinels and the C++ casts were adapted to the n4m warning profile.
+algorithm and its tie rules are those of scipy.optimize.linear_sum_assignment;
+index types, the -1 sentinels and the C++ casts were adapted to the n4m
+warning profile, and the dual variables and path costs are kept as exact sums
+of the input doubles (floating-point expansions, see
+cpp/src/core/common/expansion.hpp), so every comparison is exact.
 
 Reference:
   D. F. Crouse. On implementing 2D rectangular assignment algorithms.
