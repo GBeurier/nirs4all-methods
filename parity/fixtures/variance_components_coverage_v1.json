@@ -1,0 +1,173 @@
+{
+ "nominal": 0.95,
+ "replicates": 999,
+ "nsim": 1000,
+ "monte_carlo_se": 0.006892024376045111,
+ "numpy": "2.5.4",
+ "python": "3.14.3",
+ "rows": [
+  {
+   "scenario": "balanced_20x2",
+   "groups": 20,
+   "observations": 40,
+   "icc": 0.0,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.901,
+   "coverage_icc": 0.973
+  },
+  {
+   "scenario": "balanced_20x2",
+   "groups": 20,
+   "observations": 40,
+   "icc": 0.1,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.894,
+   "coverage_icc": 0.915
+  },
+  {
+   "scenario": "balanced_20x2",
+   "groups": 20,
+   "observations": 40,
+   "icc": 0.5,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.862,
+   "coverage_icc": 0.921
+  },
+  {
+   "scenario": "balanced_20x2",
+   "groups": 20,
+   "observations": 40,
+   "icc": 0.9,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.869,
+   "coverage_icc": 0.918
+  },
+  {
+   "scenario": "unbalanced_24_sizes_1to4_singletons",
+   "groups": 24,
+   "observations": 60,
+   "icc": 0.1,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.907,
+   "coverage_icc": 0.915
+  },
+  {
+   "scenario": "unbalanced_60_sizes_1to4_singletons",
+   "groups": 60,
+   "observations": 150,
+   "icc": 0.1,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.93,
+   "coverage_icc": 0.923
+  },
+  {
+   "scenario": "balanced_50x3",
+   "groups": 50,
+   "observations": 150,
+   "icc": 0.1,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.929,
+   "coverage_icc": 0.921
+  },
+  {
+   "scenario": "unbalanced_24_sizes_1to4_singletons",
+   "groups": 24,
+   "observations": 60,
+   "icc": 0.5,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.91,
+   "coverage_icc": 0.898
+  },
+  {
+   "scenario": "unbalanced_60_sizes_1to4_singletons",
+   "groups": 60,
+   "observations": 150,
+   "icc": 0.5,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.928,
+   "coverage_icc": 0.932
+  },
+  {
+   "scenario": "balanced_50x3",
+   "groups": 50,
+   "observations": 150,
+   "icc": 0.5,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.927,
+   "coverage_icc": 0.922
+  },
+  {
+   "scenario": "unbalanced_24_sizes_1to4_singletons",
+   "groups": 24,
+   "observations": 60,
+   "icc": 0.9,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.892,
+   "coverage_icc": 0.913
+  },
+  {
+   "scenario": "unbalanced_60_sizes_1to4_singletons",
+   "groups": 60,
+   "observations": 150,
+   "icc": 0.9,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.92,
+   "coverage_icc": 0.918
+  },
+  {
+   "scenario": "balanced_50x3",
+   "groups": 50,
+   "observations": 150,
+   "icc": 0.9,
+   "unit_size": 1,
+   "evaluated": 1000,
+   "coverage_sd": 0.928,
+   "coverage_icc": 0.936
+  },
+  {
+   "scenario": "dependent_pairs_24_units_of_2_groups_x3",
+   "groups": 48,
+   "observations": 144,
+   "icc": 0.5,
+   "unit_size": 2,
+   "evaluated": 1000,
+   "coverage_sd": 0.916,
+   "coverage_icc": 0.899
+  }
+ ],
+ "bca_check": [
+  {
+   "icc": 0.1,
+   "groups": 20,
+   "repeats": 2,
+   "coverage_percentile": 0.901,
+   "coverage_bca": 0.744
+  },
+  {
+   "icc": 0.5,
+   "groups": 20,
+   "repeats": 2,
+   "coverage_percentile": 0.904,
+   "coverage_bca": 0.891
+  },
+  {
+   "icc": 0.9,
+   "groups": 20,
+   "repeats": 2,
+   "coverage_percentile": 0.906,
+   "coverage_bca": 0.912
+  }
+ ]
+}
