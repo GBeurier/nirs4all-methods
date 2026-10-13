@@ -66,6 +66,7 @@ excludes:
     - "diagnostics.correlation_test"
     - "diagnostics.bh_adjust"
     - "diagnostics.factor_association_exact"
+    - "diagnostics.group_means"
     - "diagnostics.permanova"
     - "diagnostics.permdisp"
     - "preprocessing.signal_conversion.*"

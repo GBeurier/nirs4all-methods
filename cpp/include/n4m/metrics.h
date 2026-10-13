@@ -371,6 +371,18 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     int32_t n_permutations, uint64_t seed, double* distances,
     double* group_mean_distances, double* out_six, int64_t* out_two);
 
+/* Equal-weight per-group column means of the rows of X (n x k, any positive
+ * strides). group_codes has n entries in [0, n_groups); every group needs at
+ * least one row (n_groups <= n). Means are running means of the values
+ * divided by each column's largest magnitude, in extended precision, then
+ * scaled back: finite inputs never overflow and each mean lies within its
+ * column's range. Nonfinite values fail (no mask; select complete rows).
+ * out_means is n_groups x k row-major; out_counts receives the rows per
+ * group. Generic aggregation of homogeneous technical repeats. */
+N4M_API n4m_status_t n4m_stats_group_means(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int64_t n_groups, double* out_means, int64_t* out_counts);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,

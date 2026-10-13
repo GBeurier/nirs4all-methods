@@ -86,6 +86,7 @@ method_prefix:
   diagnostics.correlation_test: n4m_stats_correlation
   diagnostics.factor_association_exact: n4m_stats_factor_association_exact
   diagnostics.bh_adjust: n4m_stats_bh_adjust
+  diagnostics.group_means: n4m_stats_group_means
   diagnostics.permanova: n4m_stats_permanova
   diagnostics.permdisp: n4m_stats_permdisp
 

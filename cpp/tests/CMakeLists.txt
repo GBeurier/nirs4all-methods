@@ -84,6 +84,10 @@ target_include_directories(n4m_hdbscan_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 target_compile_definitions(n4m_hdbscan_tests PRIVATE
     N4M_PARITY_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/parity/fixtures")
 add_test(NAME n4m_hdbscan_tests COMMAND n4m_hdbscan_tests)
+add_executable(n4m_group_means_tests test_group_means.cpp)
+target_link_libraries(n4m_group_means_tests PRIVATE n4m_c)
+add_test(NAME n4m_group_means_tests COMMAND n4m_group_means_tests)
+
 add_executable(n4m_permanova_tests test_permanova.cpp)
 target_link_libraries(n4m_permanova_tests PRIVATE n4m_c)
 target_include_directories(n4m_permanova_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

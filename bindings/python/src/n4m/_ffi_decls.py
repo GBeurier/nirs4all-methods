@@ -640,6 +640,7 @@ SYMBOLS = (
     ("n4m_stats_correlation_exact", (c_void_p, POINTER(c_double), POINTER(c_double), c_int64, c_int32, c_int64, POINTER(c_double)), c_int),
     ("n4m_stats_correlation_test", (c_void_p, POINTER(c_double), POINTER(c_double), c_int64, c_int32, c_int32, c_uint64, POINTER(c_double), POINTER(c_int64)), c_int),
     ("n4m_stats_factor_association_exact", (c_void_p, POINTER(c_int64), POINTER(c_double), c_int64, c_int32, c_int64, POINTER(c_double)), c_int),
+    ("n4m_stats_group_means", (c_void_p, POINTER(MatrixView), POINTER(c_int64), c_int64, POINTER(c_double), POINTER(c_int64)), c_int),
     ("n4m_stats_permanova", (c_void_p, POINTER(MatrixView), POINTER(c_int64), POINTER(c_int64), c_int32, c_uint64, POINTER(c_double), POINTER(c_int64)), c_int),
     ("n4m_stats_permanova_freedman_lane", (c_void_p, POINTER(MatrixView), POINTER(c_int64), POINTER(c_int64), c_int32, c_int32, c_uint64, POINTER(c_double), POINTER(c_int64)), c_int),
     ("n4m_stats_permdisp", (c_void_p, POINTER(MatrixView), POINTER(c_int64), c_int32, c_uint64, POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_int64)), c_int),

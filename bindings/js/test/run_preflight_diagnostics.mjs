@@ -8,7 +8,7 @@ import {
     statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, N4mError,
+    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, statsGroupMeans, regressionMetrics, N4mError,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -342,3 +342,20 @@ for (const c of permanovaFixture.cases) {
     }
 }
 console.log("JS/WASM Preflight diagnostics passed");
+
+// Group means: hand values (same case as test_group_means.cpp), extreme magnitudes.
+const gm = statsGroupMeans({data: new Float64Array([1, 2, 3, 6, 10, -4, 0, 0, 1, 1, 2, 8]),
+    rows: 6, cols: 2}, [1, 1, 0, 2, 2, 2], 3);
+assert.deepEqual(Array.from(gm.means.data), [10, -4, 2, 4, 1, 3]);
+assert.deepEqual(gm.counts, [1, 2, 3]);
+const huge = statsGroupMeans({data: new Float64Array([Number.MAX_VALUE, Number.MAX_VALUE]),
+    rows: 2, cols: 1}, [0, 0], 1);
+assert.equal(huge.means.data[0], Number.MAX_VALUE);
+assert.throws(() => statsGroupMeans({data: new Float64Array([1, 2]), rows: 2, cols: 1}, [0, 2], 3));
+assert.throws(() => statsGroupMeans({data: new Float64Array([1, 2]), rows: 2, cols: 1}, [0, 0], 2), N4mError);
+// Regression metrics: y = (1, 2, 3, 4), prediction (1, 3, 3, 2): SSE = 5, SST = 5.
+const rm = regressionMetrics(new Float64Array([1, 2, 3, 4]), new Float64Array([1, 3, 3, 2]));
+near(rm.rmse, Math.sqrt(5 / 4));
+near(rm.mae, 3 / 4);
+near(rm.r2, 0);
+

@@ -10,6 +10,16 @@ ABI 2.20.0. No model-state serialization format changes.
 
 ### Added
 
+- Public ABI 2.20.0 `n4m_stats_group_means`: equal-weight per-group column
+  means of a strided matrix, computed as running means of the values divided
+  by each column's largest magnitude in extended precision, so finite inputs
+  never overflow. Codes lie in `[0, n_groups)`, every group is nonempty, and
+  nonfinite values are refused. It is used by nirs4all-preflight to aggregate
+  homogeneous technical repeats before its validation probe. JS/WASM gets
+  `statsGroupMeans`, and a new `regressionMetrics` wrapper (RMSE, MAE, R²)
+  over the existing `n4m_metrics_regression_metrics_*` exports. Catalog
+  entry `diagnostics.group_means`, hand-value C++ test
+  `n4m_group_means_tests`, and the matching JS test.
 - Public ABI 2.20.0 generic statistics: `n4m_stats_correlation_test`
   (Pearson or Spearman correlation with a seeded two-sided permutation
   p-value, NumPy `default_rng` permutation parity) and `n4m_stats_bh_adjust`

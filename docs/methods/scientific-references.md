@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **232**
+- Curated records: **233**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `eaf0b22a4056f27f6569842724953b7b824c08f050ff721d6f11158f7ce1fd71`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `1d490f7324e8621657085661bab03c0cf66feae79a898f175edeec8ed75c6eb9`
 
 ## References by documentation page
 
@@ -447,6 +447,12 @@ Pearson (1895), *Note on regression and inheritance in the case of two parents*,
 No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.
 
 **Provenance:** https://doi.org/10.1007/b138696; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_group_means`](diagnostics_group_means.md) — Equal-weight per-group column means
+
+Arithmetic mean of replicate measurements; Welford (1962), *Note on a method for calculating corrected sums of squares and products*, Technometrics 4, 419–420, https://doi.org/10.1080/00401706.1962.10490022.
+
+**Provenance:** https://doi.org/10.1080/00401706.1962.10490022; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_group_means.cpp
 
 ### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
 
