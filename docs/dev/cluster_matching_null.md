@@ -37,14 +37,16 @@ covariance regularization and the null protocol belong to the caller.
   Cholesky factor of the lower triangle of `cov`, and `x_ij = sum_k z_ik L_jk + mean_j`.
   This is NumPy `Generator.multivariate_normal(mean, cov, size=n, method="cholesky")`;
   NumPy's default `method="svd"` uses another factor and gives other draws. A covariance
-  that is not numerically positive definite fails instead of being repaired.
+  that is not numerically positive definite fails instead of being repaired. Storage
+  and cost are checked before any allocation, independently of `n`: `d·d` and `n·d`
+  at most 5e7 values, `d^3/6` and `n·d·d` at most 2.5e9 operations.
 
 ## Reference gate
 
 `parity/generators/cluster_matching_null_v1.py` (test-only; pins NumPy 2.4.6, SciPy
 1.18.1, scikit-learn 1.9.1 and hdbscan 0.8.44) writes
 `parity/fixtures/cluster_matching_null_v1.json`. Its SHA-256 at generation is
-`0f3a2efb31e6e81e88d60057262d43efd4507bcc802412cdf91e7012aaa9987d`. The cases are:
+`e327755133f91bb10f4d0db9168bf17e7ecf4a1a8e4405ce5cd37c788ef18e56`. The cases are:
 
 - twelve assignment matrices: square, wide, tall (transposed path), small-integer ties,
   constant (identity), tall constant maximized, forbidden `+inf` pairs, a maximized
@@ -61,9 +63,13 @@ covariance regularization and the null protocol belong to the caller.
   ARI is recorded for information (1, 1 and 0: stock scikit-learn finds clusters in the
   third dataset because of its unspecified MST tie order).
 
+Five multi-magnitude HDBSCAN cases (see `docs/dev/hdbscan.md`) use scikit-learn
+`HDBSCAN(metric="precomputed")` on exact `math.dist` distances.
+
 `n4m_cluster_matching_null_tests` checks the assignments, Jaccard values and permutations
 exactly, the draws within 1e-12 relative, the HDBSCAN partitions of the Methods draws up to label
-permutation, column-major cost storage, the lower-triangle-only covariance read, and the
-argument errors. The JS/WASM test replays the same fixture through
+permutation, column-major cost storage, the lower-triangle-only covariance read, the
+argument errors, and the review's overlapping 65536 × 65536 covariance view with zero
+draws, which is refused before any allocation (natively and in WASM). The JS/WASM test replays the same fixture through
 `linearSumAssignment`, `clusterJaccardMatrix`, `randomPermutations`,
 `randomMultivariateNormal` and `clusterHdbscan`.

@@ -43,13 +43,29 @@ struct Row {
     std::size_t size;
 };
 
+// Not in scikit-learn: when the plain sum of squares overflows, or is small
+// enough for squared differences to lose precision in the subnormal range
+// (below 2^-968), the distance is recomputed as scale * sqrt(sum((t/scale)^2))
+// with scale = max|t|, which neither overflows nor underflows. Otherwise the
+// scikit-learn operation order is kept, so ordinary distances stay
+// bit-identical to the reference. A distance above DBL_MAX is +inf and is
+// refused by fit().
 double euclidean(const double* x, const double* y, std::size_t p) noexcept {
     double d = 0.0;
     for (std::size_t k = 0; k < p; ++k) {
         const double t = x[k] - y[k];
         d += t * t;
     }
-    return std::sqrt(d);
+    if (std::isfinite(d) && d >= std::ldexp(1.0, -968)) return std::sqrt(d);
+    double scale = 0.0;
+    for (std::size_t k = 0; k < p; ++k) scale = std::max(scale, std::fabs(x[k] - y[k]));
+    if (scale == 0.0 || !std::isfinite(scale)) return scale;
+    double sum = 0.0;
+    for (std::size_t k = 0; k < p; ++k) {
+        const double t = (x[k] - y[k]) / scale;
+        sum += t * t;
+    }
+    return scale * std::sqrt(sum);
 }
 
 // Distance to the k-th nearest row, the row itself counted (sklearn
@@ -68,8 +84,10 @@ std::vector<double> core_distances(const double* x, std::size_t n, std::size_t p
 
 // Prim's algorithm on the implicit mutual-reachability graph
 // (`mst_from_data_matrix`, alpha = 1).
+// Every unordered pair is evaluated once, when the first of its rows becomes
+// `current`; `unrepresentable` records a distance above DBL_MAX.
 std::vector<Edge> prim_mst(const double* x, std::size_t n, std::size_t p,
-                           const std::vector<double>& core) {
+                           const std::vector<double>& core, bool& unrepresentable) {
     std::vector<Edge> mst(n - 1);
     std::vector<unsigned char> in_tree(n, 0);
     std::vector<double> min_reachability(n, infinity);
@@ -85,6 +103,7 @@ std::vector<Edge> prim_mst(const double* x, std::size_t n, std::size_t p,
             const double next_min = min_reachability[j];
             const std::size_t next_source = sources[j];
             const double pair = euclidean(x + current * p, x + j * p, p);
+            if (!std::isfinite(pair)) unrepresentable = true;
             const double mutual = std::max(std::max(current_core, core[j]), pair);
             if (mutual < next_min) {
                 min_reachability[j] = mutual;
@@ -199,34 +218,17 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
     const auto n = static_cast<std::size_t>(n_rows);
     const auto p = static_cast<std::size_t>(n_cols);
     const auto min_size = static_cast<std::size_t>(params.min_cluster_size);
-    // Overflow guard (not in scikit-learn). Data whose largest magnitude is
-    // outside [2^-480, 2^480] is scaled by an exact power of two so that every
-    // sum of squared differences stays finite; MST weights are scaled back
-    // exactly. Ordinary data are not scaled, so results stay bit-identical to
-    // the reference. A distance that is not representable after scaling back
-    // is refused rather than turned into infinity.
-    double largest = 0.0;
-    for (std::size_t i = 0; i < n * p; ++i) largest = std::max(largest, std::fabs(data[i]));
-    int exponent = 0;
-    if (largest > 0.0 && (largest > std::ldexp(1.0, 480) || largest < std::ldexp(1.0, -480)))
-        std::frexp(largest, &exponent);
-    std::vector<double> scaled;
-    const double* x = data;
-    if (exponent != 0) {
-        scaled.assign(data, data + n * p);
-        for (double& v : scaled) v = std::ldexp(v, -exponent);
-        x = scaled.data();
-    }
     const std::vector<double> core =
-        core_distances(x, n, p, static_cast<std::size_t>(params.min_samples));
-    std::vector<Edge> mst = prim_mst(x, n, p, core);
+        core_distances(data, n, p, static_cast<std::size_t>(params.min_samples));
+    bool unrepresentable = false;
+    std::vector<Edge> mst = prim_mst(data, n, p, core, unrepresentable);
     const auto failure = [](Error error) {
         Result failed;
         failed.error = error;
         return failed;
     };
-    for (Edge& e : mst) {
-        e.distance = std::ldexp(e.distance, exponent);
+    if (unrepresentable) return failure(Error::unrepresentable_distance);
+    for (const Edge& e : mst) {
         if (!std::isfinite(e.distance)) return failure(Error::unrepresentable_distance);
         if (e.current >= n || e.next >= n || e.current == e.next)
             return failure(Error::invalid_tree);

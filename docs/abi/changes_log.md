@@ -18,10 +18,12 @@ writes successive `default_rng(seed).permutation(n)` draws of one PCG64 stream.
 
 Behaviour fix in `n4m_cluster_hdbscan` (signature unchanged): finite inputs whose
 squared distances overflowed made Prim emit self-edges and a condensed tree larger
-than the documented `X.rows` capacity, so the call wrote past caller buffers. Data
-with `max|X|` outside `[2^-480, 2^480]` are now scaled by an exact power of two,
-unrepresentable MST distances return `N4M_ERR_UNSUPPORTED`, and size invariants are
-checked before any output is written.
+than the documented `X.rows` capacity, so the call wrote past caller buffers. A pair
+whose plain sum of squares overflows or falls below `2^-968` is now recomputed by a
+scaled accumulation; other distances are unchanged. Distances above `DBL_MAX` return
+`N4M_ERR_UNSUPPORTED`, working copies above 5e7 values too, and size invariants are
+checked before any output is written. `n4m_random_multivariate_normal` checks its
+Cholesky and draw limits before any allocation, also for `n = 0`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

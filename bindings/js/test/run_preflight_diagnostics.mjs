@@ -8,7 +8,7 @@ import {
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex, clusterJaccardMatrix, linearSumAssignment,
-    randomMultivariateNormal, randomPermutations,
+    randomMultivariateNormal, randomPermutations, getModule, makeMatrixView, Context,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -168,6 +168,27 @@ assert.ok(huge.tree.length <= 4);
 assert.deepEqual(huge.labels, unit.labels);
 assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), rows: 2, cols: 1},
     {minClusterSize: 2, minSamples: 2}));
+// Review 2026-10-13 P0: a 65536 x 65536 overlapping covariance view with n = 0
+// made d*d wrap to 0 in WASM32 and the Cholesky factor be written into an empty
+// vector. The limits are now checked first and the call is refused.
+{
+    const m = getModule(), ctx = Context.create();
+    const backing = makeMatrixView(new Float64Array(131071).fill(1), 131071, 1);
+    const mean = m._malloc(65536 * 8);
+    try {
+        m.HEAPF64.fill(0, mean / 8, mean / 8 + 65536);
+        assert.equal(m.ccall("n4m_matrix_view_init_strided", "number",
+            ["number", "number", "i64", "i64", "i64", "i64", "number"],
+            [backing.viewPtr, backing.dataPtr, 65536n, 65536n, 1n, 1n, 1]), 0);
+        const before = m.HEAPF64[0];
+        assert.equal(m.ccall("n4m_random_multivariate_normal", "number",
+            ["number", "i64", "number", "number", "i64", "number"],
+            [ctx.handle, 1n, mean, backing.viewPtr, 0n, 0]), 10 /* N4M_ERR_UNSUPPORTED */);
+        assert.equal(m.HEAPF64[0], before);
+    } finally {
+        m._free(mean); backing.free(); ctx.destroy();
+    }
+}
 // Same assignment, Jaccard, normal-draw and Gaussian HDBSCAN gate as the
 // native n4m_cluster_matching_null_tests (NumPy 2.4.6, SciPy 1.18.1).
 const samePartition = (got, want, name) => {
@@ -203,6 +224,11 @@ for (const c of nullFixture.cases) {
         const got = randomMultivariateNormal(new Float64Array(c.mean_hex.map(hex)),
             {data: new Float64Array(c.cov_hex.map(hex)), rows: c.d, cols: c.d}, c.n, BigInt(c.seed));
         c.draws_hex.map(hex).forEach((v, i) => relativeNear(got.data[i], v));
+    } else if (c.kind === "multiscale_hdbscan") {
+        const got = clusterHdbscan({data: new Float64Array(c.input_hex.map(hex)), rows: c.rows, cols: c.cols},
+            {minClusterSize: c.min_cluster_size, minSamples: c.min_samples});
+        samePartition(got.labels, c.labels, c.name);
+        c.membership_hex.map(hex).forEach((v, i) => relativeNear(got.membership[i], v));
     } else if (c.kind === "permutations") {
         assert.deepEqual(randomPermutations(BigInt(c.seed), c.n, c.n_permutations), c.draws, c.name);
     } else {

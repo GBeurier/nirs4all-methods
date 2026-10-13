@@ -19,6 +19,9 @@ hdbscan==0.8.44 (all BSD-3-Clause); none of them enters libn4m.
 - Permutations: successive numpy.random.default_rng(seed).permutation(n) draws
   from one generator (the 50 subsampling plans of 40 units with seed 7, among
   others).
+- HDBSCAN on multi-magnitude data (squared differences that overflow or
+  underflow), against scikit-learn HDBSCAN(metric="precomputed") on exact
+  math.dist distances.
 - HDBSCAN on Gaussian draws: the stable-tie scikit-learn reference of
   hdbscan_v1.py (same single-linkage path), and the stock scikit-learn ARI for
   information.
@@ -157,6 +160,44 @@ def permutation_cases() -> list[dict]:
     return cases
 
 
+def multiscale_hdbscan_cases() -> list[dict]:
+    """HDBSCAN on data whose squared differences overflow or underflow.
+
+    The reference runs scikit-learn HDBSCAN(metric="precomputed") on exact
+    distances from math.dist (scaled, overflow-safe). Every case has distinct
+    pairwise distances, so the MST and the partition do not depend on ties,
+    except the review case, whose expected partition [0,0,0,1,1,1,-1] does not
+    depend on its tie order, and the equal distances to one far outlier.
+    """
+    rng = np.random.default_rng(20261015)
+    blobs = np.vstack([rng.normal(0.0, 1.0, (8, 2)), rng.normal(30.0, 1.0, (8, 2))])
+    specs = [
+        ("review_1d_with_1e200", np.array([[0.0], [1.0], [3.0], [10.0], [11.0], [14.0], [1e200]]), 2, 2),
+        ("tiny_scale_1e-200", blobs * 1e-200, 4, 3),
+        ("huge_scale_1e170", blobs * 1e170, 4, 3),
+        ("unit_blobs_with_far_outlier", np.vstack([blobs, [[1e300, -1e300]]]), 4, 3),
+        ("tiny_columns_of_two_scales", np.c_[blobs[:, :1] * 1e-200, blobs[:, 1:] * 1e-250], 4, 3),
+    ]
+    cases = []
+    for name, x, mcs, ms in specs:
+        n = len(x)
+        d = np.array([[math.dist(x[i], x[j]) for j in range(n)] for i in range(n)])
+        off = d[np.triu_indices(n, 1)]
+        assert np.all(np.isfinite(off)), name
+        # Ties are allowed only among the distances to a single far point,
+        # which joins last whatever their order.
+        near = off[off < 1e299]
+        assert name.startswith("review") or len(np.unique(near)) == len(near), name
+        model = HDBSCAN(metric="precomputed", min_cluster_size=mcs, min_samples=ms, copy=True).fit(d)
+        if name.startswith("review"):
+            assert model.labels_.tolist() == [0, 0, 0, 1, 1, 1, -1], model.labels_
+        cases.append({"name": name, "rows": n, "cols": x.shape[1], "input_hex": hexd(x),
+                      "min_cluster_size": mcs, "min_samples": ms,
+                      "labels": model.labels_.astype(np.int64).tolist(),
+                      "membership_hex": hexd(model.probabilities_)})
+    return cases
+
+
 def gaussian_hdbscan_cases() -> list[dict]:
     eig = np.array([6.0, 2.5, 1.0, 0.4, 0.1])
     cov = np.diag(eig + 1e-6 * eig.mean())
@@ -191,7 +232,8 @@ def main() -> None:
                   [{"kind": "jaccard", **c} for c in jaccard_cases(rng)] +
                   [{"kind": "normal", **c} for c in normal_cases()] +
                   [{"kind": "permutations", **c} for c in permutation_cases()] +
-                  [{"kind": "gaussian_hdbscan", **c} for c in gaussian_hdbscan_cases()]),
+                  [{"kind": "gaussian_hdbscan", **c} for c in gaussian_hdbscan_cases()] +
+                  [{"kind": "multiscale_hdbscan", **c} for c in multiscale_hdbscan_cases()]),
     }
     out = (Path(sys.argv[1]) if len(sys.argv) > 1 else
            Path(__file__).resolve().parents[1] / "fixtures" / "cluster_matching_null_v1.json")

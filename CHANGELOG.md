@@ -32,12 +32,19 @@ ABI 2.20.0. No model-state serialization format changes.
 - `n4m_cluster_hdbscan` (since ABI 2.19.0, Methods 1.3.6) could write past
   the caller's buffers: with finite inputs whose squared distances overflow
   (for example `[0, 1e155, 2e155, 3e155]`), Prim produced self-edges and the
-  condensed tree had more nodes than rows. Data whose magnitude is outside
-  `[2^-480, 2^480]` are now scaled by an exact power of two (ordinary data are
-  untouched, so results stay bit-identical), unrepresentable MST distances
-  return `N4M_ERR_UNSUPPORTED`, MST edges and tree sizes are validated, and
-  nothing is written when an invariant fails. Sentinel regression tests run
-  natively and in WASM.
+  condensed tree had more nodes than rows. Each pair whose plain sum of
+  squares overflows or falls below `2^-968` is now recomputed with a scaled
+  accumulation (ordinary distances unchanged and bit-identical), so small
+  representable distances are no longer flushed to zero
+  (`[0, 1, 3, 10, 11, 14, 1e200]` gives `[0, 0, 0, 1, 1, 1, -1]`). Distances
+  above `DBL_MAX` return `N4M_ERR_UNSUPPORTED`, MST edges and tree sizes are
+  validated, and nothing is written when an invariant fails. Sentinel and
+  multi-magnitude regression tests run natively and in WASM.
+- `n4m_random_multivariate_normal` (new in this release) checks the Cholesky
+  storage and cost (`d*d <= 5e7`, `d^3/6 <= 2.5e9`) and the draws
+  (`n*d <= 5e7`, `n*d*d <= 2.5e9`) before any allocation, including `n = 0`;
+  `n4m_linear_sum_assignment` and `n4m_cluster_hdbscan` bound their working
+  copies to 5e7 values.
 
 ## [1.3.6] - 2026-10-13
 

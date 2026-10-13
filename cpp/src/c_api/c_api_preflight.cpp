@@ -25,6 +25,9 @@ using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
 constexpr long double max_hdbscan_products = 2500000000.0L;
+// Internal working copies stay below 50 million doubles (400 MB), which also
+// keeps every byte count representable in a 32-bit size_t (WASM32).
+constexpr long double max_buffer_doubles = 50000000.0L;
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -562,7 +565,8 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
     if ((selection_method != 0 && selection_method != 1) ||
         (allow_single_cluster != 0 && allow_single_cluster != 1))
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid HDBSCAN selection flags");
-    if (static_cast<long double>(n) * n * p > max_hdbscan_products)
+    if (static_cast<long double>(n) * n * p > max_hdbscan_products ||
+        static_cast<long double>(n) * p > max_buffer_doubles)
         return fail(ctx, N4M_ERR_UNSUPPORTED, "HDBSCAN exceeds 2.5 billion distance-product budget");
     try {
         std::vector<double> data(static_cast<size_t>(n) * static_cast<size_t>(p));
@@ -701,7 +705,8 @@ N4M_API n4m_status_t n4m_linear_sum_assignment(
     if (maximize != 0 && maximize != 1)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "maximize must be 0 or 1");
     const int64_t rows = cost->rows, cols = cost->cols;
-    if (static_cast<long double>(rows) * cols * std::min(rows, cols) > max_hdbscan_products)
+    if (static_cast<long double>(rows) * cols * std::min(rows, cols) > max_hdbscan_products ||
+        static_cast<long double>(rows) * cols > max_buffer_doubles)
         return fail(ctx, N4M_ERR_UNSUPPORTED, "assignment exceeds 2.5 billion operations");
     try {
         std::vector<double> data(static_cast<size_t>(rows) * static_cast<size_t>(cols));
@@ -750,8 +755,14 @@ N4M_API n4m_status_t n4m_random_multivariate_normal(
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "covariance must be square and n >= 0");
     if (!mean || (n > 0 && !out))
         return fail(ctx, N4M_ERR_NULL_POINTER, "null multivariate normal buffer");
-    if (static_cast<long double>(n) * d * d > max_hdbscan_products)
-        return fail(ctx, N4M_ERR_UNSUPPORTED, "multivariate normal exceeds 2.5 billion products");
+    // Checked before any size_t product: the Cholesky factor (d*d doubles)
+    // and its d^3/6 cost are bounded independently of n, then the draws.
+    const long double dd = static_cast<long double>(d) * static_cast<long double>(d);
+    const long double draws = static_cast<long double>(n) * static_cast<long double>(d);
+    if (dd > max_buffer_doubles || dd * static_cast<long double>(d) / 6.0L > max_hdbscan_products ||
+        draws > max_buffer_doubles || draws * static_cast<long double>(d) > max_hdbscan_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "multivariate normal exceeds its storage or 2.5 billion operation budget");
     try {
         const auto p = static_cast<size_t>(d);
         std::vector<double> L(p * p, 0.0);
