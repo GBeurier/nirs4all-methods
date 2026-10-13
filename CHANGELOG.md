@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Public ABI 2.18.0 clustering for Preflight: `n4m_preflight_hdbscan`, a
+  Euclidean HDBSCAN* ported from scikit-learn 1.9.1 (BSD-3) with GLOSH outlier
+  scores and cluster persistence from scikit-learn-contrib/hdbscan 0.8.44,
+  returning labels, membership strengths, outlier scores, persistence and the
+  condensed cluster tree into caller buffers; and
+  `n4m_preflight_adjusted_rand_index`. Equal-weight MST edges are stably
+  sorted, a documented tie rule. A frozen reference gate
+  (`parity/fixtures/hdbscan_v1.json`, `n4m_hdbscan_tests`) covers separated
+  blobs, varying densities, pure noise, a continuum, duplicates/ties and
+  `min_samples` different from `min_cluster_size`, with EOM, leaf and
+  `allow_single_cluster`. Both calls are exported through WASM and thin
+  TypeScript wrappers.
 - Public ABI 2.18.0 diagnostics for Preflight: centered PCA scores, loadings,
   retained eigenvalues and exact full covariance moments; masked pooled
   repeatability with balanced ICC(1,1); finite summaries with quartiles; and

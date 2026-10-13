@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: CECILL-2.1
 // Verify the public WASM diagnostic wrappers against hand-computed results.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
+    preflightHdbscan, preflightAdjustedRandIndex,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -74,4 +76,43 @@ const categorical = preflightLocalContrast(new Float64Array([0, 0, 1, 1]),
 near(categorical.contrast, 0.4);
 near(categorical.observedSameClassFraction, 0.5);
 near(categorical.expectedSameClassFraction, 1 / 6);
+const blobs = preflightHdbscan({data: new Float64Array([0, 0, 1, 1, 5, 5, 6, 6]), rows: 4, cols: 2},
+    {minClusterSize: 2, minSamples: 2});
+assert.equal(blobs.nClusters, 2);
+assert.equal(blobs.labels[0], blobs.labels[1]);
+assert.equal(blobs.labels[2], blobs.labels[3]);
+assert.notEqual(blobs.labels[0], blobs.labels[2]);
+assert.equal(blobs.tree[0].parent, -1);
+assert.equal(blobs.tree[0].size, 4);
+assert.equal(blobs.persistence.length, 2);
+assert.equal(blobs.membership.length, 4);
+assert.throws(() => preflightHdbscan({data: new Float64Array([0, 1]), rows: 2, cols: 1},
+    {minClusterSize: 1, minSamples: 1}), RangeError);
+near(preflightAdjustedRandIndex([0, 0, 1, 2], [0, 0, 1, 1]), 0.5714285714285714);
+near(preflightAdjustedRandIndex([0, 0, 1, 1], [0, 1, 0, 1]), -0.5);
+assert.ok(Number.isNaN(preflightAdjustedRandIndex([3, 3, 3], [1, 1, 1])));
+// Same frozen HDBSCAN reference gate as the native n4m_hdbscan_tests.
+const hex = (h) => Buffer.from(h, "hex").readDoubleBE(0);
+const same = (a, b) => Number.isNaN(b) ? Number.isNaN(a) : a === b ||
+    Math.abs(a - b) <= 1e-12 * Math.max(1, Math.abs(b));
+const fixture = JSON.parse(readFileSync(
+    new URL("../../../parity/fixtures/hdbscan_v1.json", import.meta.url), "utf8"));
+for (const c of fixture.cases) {
+    const got = preflightHdbscan({data: new Float64Array(c.input_hex.map(hex)), rows: c.rows, cols: c.cols}, {
+        minClusterSize: c.params.min_cluster_size, minSamples: c.params.min_samples,
+        selection: c.params.selection_method === 1 ? "leaf" : "eom",
+        allowSingleCluster: c.params.allow_single_cluster === 1,
+    });
+    const map = new Map();
+    got.labels.forEach((label, i) => {
+        assert.equal(label < 0, c.labels[i] < 0, c.name);
+        if (label >= 0) assert.equal(map.get(label) ?? c.labels[i], c.labels[i], c.name);
+        if (label >= 0) map.set(label, c.labels[i]);
+    });
+    assert.equal(new Set(map.values()).size, map.size, c.name);
+    assert.equal(got.nClusters, c.n_clusters, c.name);
+    c.membership_hex.map(hex).forEach((v, i) => assert.ok(same(got.membership[i], v), c.name));
+    c.outlier_scores_hex.map(hex).forEach((v, i) => assert.ok(same(got.outlierScores[i], v), c.name));
+    assert.deepEqual(got.tree.map((node) => node.parent), c.tree_parent, c.name);
+}
 console.log("JS/WASM Preflight diagnostics passed");

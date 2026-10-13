@@ -71,6 +71,7 @@ dev/readthedocs
 dev/testing
 dev/documentation
 dev/documentation-restoration
+dev/hdbscan
 dev/style
 dev/release_process
 ```
