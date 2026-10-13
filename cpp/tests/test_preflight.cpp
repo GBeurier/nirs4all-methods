@@ -277,6 +277,68 @@ int main() {
             REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&TQ,&TR,nullptr,nullptr,1.0,1,
                                                          hi,hd,qflag,rflag,pcounts)==N4M_OK);
             REQUIRE(pcounts[0]==1 && relative_near(hd[0],1e-170/std::sqrt(2.0)));
+            // Review b1fix #2: the distance does not depend on the tolerance
+            // (1e-170 / 1e200 underflowed to a zero distance).
+            for (double tol : {1e-170, 1.0, 1e200, 1e308}) {
+                REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&TQ,&TR,nullptr,nullptr,tol,1,
+                                                             hi,hd,qflag,rflag,pcounts)==N4M_OK);
+                REQUIRE(pcounts[0]==1 && relative_near(hd[0],1e-170/std::sqrt(2.0)));
+            }
+            REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&TQ,&TR,nullptr,nullptr,7e-171,1,
+                                                         hi,hd,qflag,rflag,pcounts)==N4M_OK);
+            REQUIRE(pcounts[0]==0);
+            double sq[2]={std::ldexp(1.0,-1074),0}, sr[2]={0,0};
+            auto SQ=view(sq,1,2), SR=view(sr,1,2);
+            REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&SQ,&SR,nullptr,nullptr,1e300,1,
+                                                         hi,hd,qflag,rflag,pcounts)==N4M_OK);
+            REQUIRE(pcounts[0]==1 && hd[0]>0.0 && hd[0]<=std::ldexp(1.0,-1074));
+            REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&HQ,&HR,nullptr,nullptr,1e308,1,
+                                                         hi,hd,qflag,rflag,pcounts)==N4M_OK);
+            REQUIRE(pcounts[0]==0);
+        }
+        // SNV with per-row rounding bounds (ABI 2.20). Rows: constant (exact
+        // zeros, bound 0), [a,0,-a] at the smallest subnormal and at 1e308
+        // (both [sqrt(1.5),0,-sqrt(1.5)]), and [1,2,3,4] (z = (j-2.5)/sqrt(1.25)).
+        {
+            const double tiny=std::ldexp(1.0,-1074);
+            double sx[16]={0.1,0.1,0.1,0.1, tiny,0,-tiny,0, 1e308,0,-1e308,0, 1,2,3,4};
+            // Rows 1-2 have 4 columns: [a,0,-a,0] has mean 0 and SD a/sqrt(2).
+            double so[16]={}, sb[4]={};
+            auto SX=view(sx,4,4), SO=view(so,4,4);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&SX,&SO,sb)==N4M_OK);
+            for (int j=0;j<4;++j) REQUIRE(so[j]==0.0);
+            REQUIRE(sb[0]==0.0);
+            for (int i : {1,2}) {
+                REQUIRE(relative_near(so[4*i],std::sqrt(2.0)) && so[4*i+1]==0.0 &&
+                        relative_near(so[4*i+2],-std::sqrt(2.0)) && so[4*i+3]==0.0);
+                REQUIRE(sb[i]>0.0 && sb[i]<1e-14);
+            }
+            for (int j=0;j<4;++j) REQUIRE(relative_near(so[12+j],(j+1-2.5)/std::sqrt(1.25)));
+            REQUIRE(sb[3]>0.0 && sb[3]<1e-14);
+            // The bound covers the actual error of an offset row of 100,000
+            // bands (99,999 values then one larger), whose exact SNV is
+            // -1/sqrt(99999) and sqrt(99999) (review b1fix #3).
+            const int64_t wide=100000;
+            std::vector<double> wx(static_cast<size_t>(2*wide)), wo(wx.size()); double wb[2];
+            for (int64_t j=0;j<wide;++j) {
+                const double v = j+1<wide ? 1.0 : 2.0;
+                wx[static_cast<size_t>(j)] = 1.0*v + 0.0;
+                wx[static_cast<size_t>(wide+j)] = 1.1*v + 100.0;
+            }
+            auto WX=view(wx.data(),2,wide), WO=view(wo.data(),2,wide);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&WX,&WO,wb)==N4M_OK);
+            const double lo=-1.0/std::sqrt(99999.0), hi_z=std::sqrt(99999.0);
+            for (int i=0;i<2;++i) {
+                double err=0;
+                for (int64_t j=0;j<wide;++j)
+                    err=std::max(err,std::abs(wo[static_cast<size_t>(i*wide+j)]-(j+1<wide?lo:hi_z)));
+                REQUIRE(err<=wb[i] && wb[i]<1e-9);
+            }
+            double bad[2]={1,std::nan("")};
+            auto BX=view(bad,1,2), BO=view(so,1,2);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&BX,&BO,sb)==N4M_ERR_INVALID_ARGUMENT);
+            auto narrow1=view(sx,4,1), nout=view(so,4,1);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&narrow1,&nout,sb)==N4M_ERR_INVALID_ARGUMENT);
         }
         // Regression (review b1 #2): orders outside the validated domain are
         // refused (window 41 / order 38 gave a constant-row residual of 0.83),

@@ -7,7 +7,7 @@ import {
     preflightFactorAssociation, preflightHolmAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex, ppCreate, ppTransform, ppDestroy,
+    clusterHdbscan, preflightAdjustedRandIndex, ppCreate, ppTransform, ppDestroy, preflightSnv,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -16,7 +16,7 @@ const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 19, 0]);
+assert.deepEqual(abiVersion(), [2, 20, 0]);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);
@@ -127,6 +127,20 @@ const huge = preflightPairsWithinTolerance({data: new Float64Array([1e308, 0]), 
     1.5e308, 1, {data: new Float64Array([-1e308, 0]), rows: 1, cols: 2});
 assert.equal(huge.totalPairs, 1);
 relativeNear(huge.distances[0], Math.SQRT2 * 1e308);
+// Review b1fix #2: the distance does not depend on the tolerance.
+for (const tol of [1e-170, 1, 1e200, 1e308]) {
+    const tiny = preflightPairsWithinTolerance({data: new Float64Array([1e-170, 0]), rows: 1, cols: 2},
+        tol, 1, {data: new Float64Array([0, 0]), rows: 1, cols: 2});
+    assert.equal(tiny.totalPairs, 1);
+    relativeNear(tiny.distances[0], 1e-170 / Math.SQRT2);
+}
+// Review b1fix #1/#3: SNV at the smallest subnormal and per-row rounding bounds.
+const tinyA = 2 ** -1074;
+const snvRows = preflightSnv({data: new Float64Array([tinyA, 0, -tinyA, 0.1, 0.1, 0.1]), rows: 2, cols: 3});
+relativeNear(snvRows.matrix.data[0], Math.sqrt(1.5));
+relativeNear(snvRows.matrix.data[2], -Math.sqrt(1.5));
+assert.ok(snvRows.matrix.data.slice(3).every((v) => v === 0) && snvRows.rowErrorBounds[1] === 0);
+assert.ok(snvRows.rowErrorBounds[0] > 0 && snvRows.rowErrorBounds[0] < 1e-14);
 // Review b1 #1: the registry SNV keeps a constant row flat and resists overflow.
 const snvOp = ppCreate("StandardNormalVariate");
 try {
@@ -134,6 +148,8 @@ try {
     const extreme = ppTransform(snvOp, new Float64Array([1e200, 0, -1e200]), 1, 3);
     relativeNear(extreme[0], Math.sqrt(1.5));
     relativeNear(extreme[2], -Math.sqrt(1.5));
+    const subnormal = ppTransform(snvOp, new Float64Array([2 ** -1074, 0, -(2 ** -1074)]), 1, 3);
+    relativeNear(subnormal[0], Math.sqrt(1.5));
 } finally {
     ppDestroy(snvOp);
 }

@@ -102,7 +102,8 @@ void test_snv_numerical_guards() {
     // standardize into eleven 1.0; SNV of a flat row is exactly zero.
     for (double v : apply(std::vector<double>(11, 0.1), 1, 11)) N4M_TEST_REQUIRE(v == 0.0);
     const double r32 = std::sqrt(1.5);  // [a, 0, -a]: population SD a*sqrt(2/3)
-    for (double a : {1e200, 1e-200, 1e-310}) {
+    // 2^-1074 is the smallest subnormal: halving it gives zero (review b1fix #1).
+    for (double a : {1e200, 1e-200, 1e-310, std::ldexp(1.0, -1074), std::ldexp(1.0, -1073)}) {
         const auto y = apply({a, 0.0, -a}, 1, 3);
         N4M_TEST_REQUIRE(std::fabs(y[0] - r32) < 1e-12 && y[1] == 0.0 &&
                          std::fabs(y[2] + r32) < 1e-12);
