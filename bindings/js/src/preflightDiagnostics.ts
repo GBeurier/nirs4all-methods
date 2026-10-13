@@ -34,7 +34,7 @@ export interface PreflightLocalContrastResult {
     expectedSameClassFraction: number;
 }
 
-export interface PreflightHdbscanOptions {
+export interface HdbscanOptions {
     minClusterSize: number;
     /** Neighbors defining the core distance, the row itself included (scikit-learn). */
     minSamples: number;
@@ -42,7 +42,7 @@ export interface PreflightHdbscanOptions {
     allowSingleCluster?: boolean;
 }
 
-export interface PreflightHdbscanTreeNode {
+export interface HdbscanTreeNode {
     /** Parent node index, -1 for the root (node 0). */
     parent: number;
     size: number;
@@ -53,7 +53,7 @@ export interface PreflightHdbscanTreeNode {
     stability: number;
 }
 
-export interface PreflightHdbscanResult {
+export interface HdbscanResult {
     /** -1 = noise; clusters 0..nClusters-1. */
     labels: number[];
     /** scikit-learn probabilities_: a membership strength, not a probability. */
@@ -63,7 +63,24 @@ export interface PreflightHdbscanResult {
     nClusters: number;
     /** scikit-learn-contrib/hdbscan cluster_persistence_, one value per label. */
     persistence: Float64Array;
-    tree: PreflightHdbscanTreeNode[];
+    tree: HdbscanTreeNode[];
+}
+
+export interface PreflightFactorAssociationResult {
+    /** eta^2 (continuous) or Cramer's V (categorical); NaN when undefined. */
+    effectSize: number;
+    /** One-way ANOVA F or Pearson chi-square; NaN when undefined. */
+    statistic: number;
+    df1: number;
+    df2: number;
+    nLevels: number;
+    nTargetValues: number;
+    /** log10 upper bound on distinct permutation outcomes. */
+    log10DistinctPermutations: number;
+    /** Monte Carlo (1+b)/(1+B); NaN without permutations. */
+    pValue: number;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
 }
 
 function validateMatrix(X: Matrix): void {
@@ -279,7 +296,7 @@ export function preflightLocalContrast(targets: Float64Array,
 }
 
 /** Euclidean HDBSCAN* (scikit-learn 1.9.1 semantics, stable MST tie order). */
-export function preflightHdbscan(X: Matrix, options: PreflightHdbscanOptions): PreflightHdbscanResult {
+export function clusterHdbscan(X: Matrix, options: HdbscanOptions): HdbscanResult {
     validateMatrix(X);
     const {minClusterSize, minSamples} = options;
     if (X.rows < 2 || !Number.isSafeInteger(minClusterSize) || minClusterSize < 2 ||
@@ -295,7 +312,7 @@ export function preflightHdbscan(X: Matrix, options: PreflightHdbscanOptions): P
         const persistence = perRow(), parent = perRow(), size = perRow(), label = perRow();
         const birth = perRow(), death = perRow(), stability = perRow();
         const nClusters = scope.alloc(8), nNodes = scope.alloc(8);
-        const st = m.ccall("n4m_preflight_hdbscan", "number",
+        const st = m.ccall("n4m_cluster_hdbscan", "number",
             ["number", "number", "i64", "i64", "number", "number", ...Array(12).fill("number")],
             [ctx.handle, x.viewPtr, BigInt(minClusterSize), BigInt(minSamples),
                 options.selection === "leaf" ? 1 : 0, options.allowSingleCluster ? 1 : 0,
@@ -446,6 +463,65 @@ export function preflightPairsWithinTolerance(query: Matrix, tolerance: number,
             totalPairs: total,
             candidatePairs: Number(dv.getBigInt64(counts + 8, true)),
         };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Factor-target association over exchangeable units with seeded permutations.
+ * The seed is an unsigned 64-bit integer; pass a bigint above 2^53. */
+export function preflightFactorAssociation(factorCodes: readonly (number | bigint)[],
+    targets: Float64Array, categorical: boolean, nPermutations: number,
+    seed: number | bigint): PreflightFactorAssociationResult {
+    if (factorCodes.length !== targets.length || targets.length < 2 ||
+        !Number.isInteger(nPermutations) || nPermutations < 0 || nPermutations > 1_000_000) {
+        throw new RangeError("invalid association dimensions or permutation count");
+    }
+    validateGroupIds(factorCodes);
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const codes = scope.i64(factorCodes);
+        const y = scope.alloc(targets.length * 8);
+        const out = scope.alloc(64), counts = scope.alloc(16);
+        m.HEAPF64.set(targets, y / 8);
+        const st = m.ccall("n4m_preflight_factor_association", "number",
+            ["number", "number", "number", "i64", "number", "number", "i64", "number", "number"],
+            [ctx.handle, codes, y, BigInt(targets.length), categorical ? 1 : 0,
+                nPermutations, seed64, out, counts]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 8);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            effectSize: r[0]!, statistic: r[1]!, df1: r[2]!, df2: r[3]!,
+            nLevels: r[4]!, nTargetValues: r[5]!, log10DistinctPermutations: r[6]!,
+            pValue: r[7]!,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Holm step-down adjusted p-values for one hypothesis family. */
+export function preflightHolmAdjust(pValues: Float64Array): Float64Array {
+    if (pValues.length < 1) throw new RangeError("Holm family must not be empty");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const input = scope.alloc(pValues.length * 8), out = scope.alloc(pValues.length * 8);
+        m.HEAPF64.set(pValues, input / 8);
+        const st = m.ccall("n4m_preflight_holm_adjust", "number",
+            ["number", "number", "i64", "number"],
+            [ctx.handle, input, BigInt(pValues.length), out]) as number;
+        checkStatus(st, ctx.handle);
+        return copyF64(out, pValues.length);
     } finally {
         scope.close();
     }

@@ -110,6 +110,64 @@ int main() {
         REQUIRE(near(contrast[2],0.5) && near(contrast[3],1.0/6.0));
         double one_class[3]={1,1,1};
         REQUIRE(n4m_preflight_local_contrast(ctx,one_class,local_idx,nullptr,3,1,1,contrast)==N4M_OK);
+        // Factor association. Hand values: groups {1,2,3},{7,8,9}: SST=58,
+        // SSB=54, eta^2=27/29, SSW=4, F=54 on (1,4); 6!/(3!3!)=20 splits.
+        // Permutation counts b are test-only goldens from an independent
+        // NumPy 2.2.6 / SciPy 1.15.3 reference: rng=np.random.default_rng(seed);
+        // b = #{rng.permutation(n) draws with eta^2 (scipy.stats.f_oneway) or
+        // Cramer V^2 (chi2_contingency, correction=False) >= observed-sqrt(eps)}.
+        int64_t fa[6]={4,4,4,-9,-9,-9}; double ya[6]={1,2,3,7,8,9};
+        double assoc[8]; int64_t perm_counts[2];
+        REQUIRE(n4m_preflight_factor_association(ctx,fa,ya,6,0,999,17,assoc,perm_counts)==N4M_OK);
+        REQUIRE(near(assoc[0],27.0/29.0) && near(assoc[1],54) && near(assoc[2],1) && near(assoc[3],4));
+        REQUIRE(near(assoc[4],2) && near(assoc[5],6) && near(assoc[6],std::log10(20.0)));
+        REQUIRE(perm_counts[0]==93 && perm_counts[1]==999 && near(assoc[7],94.0/1000.0));
+        REQUIRE(n4m_preflight_factor_association(ctx,fa,ya,6,0,999,
+                    UINT64_C(18446744073709551557),assoc,perm_counts)==N4M_OK);
+        REQUIRE(perm_counts[0]==88);
+        REQUIRE(n4m_preflight_factor_association(ctx,fa,ya,6,0,0,17,assoc,perm_counts)==N4M_OK);
+        REQUIRE(near(assoc[0],27.0/29.0) && std::isnan(assoc[7]) && perm_counts[1]==0);
+        // 2x2 table [[2,1],[1,3]]: chi2=175/144, V=5/12, df=1.
+        int64_t fc[7]={0,0,0,1,1,1,1}; double yc[7]={0,0,1,1,1,1,0};
+        REQUIRE(n4m_preflight_factor_association(ctx,fc,yc,7,1,999,17,assoc,perm_counts)==N4M_OK);
+        REQUIRE(near(assoc[0],5.0/12.0) && near(assoc[1],175.0/144.0) && near(assoc[2],1));
+        REQUIRE(std::isnan(assoc[3]) && near(assoc[5],2) && perm_counts[0]==477);
+        REQUIRE(near(assoc[6],std::log10(35.0)));
+        // Three levels with ties-free continuous values; F from SciPy.
+        int64_t fd[12]={0,0,0,0,1,1,1,1,2,2,2,2};
+        double yd[12]={-0.79,0.24,-1.9,1.4,1.44,0.51,0.49,1.1,1.33,1.37,2.32,2.11};
+        REQUIRE(n4m_preflight_factor_association(ctx,fd,yd,12,0,999,5,assoc,perm_counts)==N4M_OK);
+        REQUIRE(near(assoc[0],0.5318805854300557) && near(assoc[1],5.112931786078764));
+        REQUIRE(perm_counts[0]==18 && near(assoc[7],19.0/1000.0));
+        // Undefined effects run no permutation: one level, constant target.
+        int64_t one_level[3]={1,1,1}; double spread[3]={1,2,3};
+        REQUIRE(n4m_preflight_factor_association(ctx,one_level,spread,3,0,99,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(std::isnan(assoc[0]) && near(assoc[4],1) && perm_counts[1]==0);
+        int64_t two_levels[4]={1,1,2,2}; double zeros[4]={0.0,-0.0,0.0,-0.0};
+        REQUIRE(n4m_preflight_factor_association(ctx,two_levels,zeros,4,0,99,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(std::isnan(assoc[0]) && near(assoc[5],1) && std::isnan(assoc[7]));
+        double fractional[4]={0,1,0.5,1};
+        REQUIRE(n4m_preflight_factor_association(ctx,two_levels,fractional,4,1,0,1,assoc,perm_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_preflight_factor_association(ctx,two_levels,spread,1,0,0,1,assoc,perm_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        // Extreme magnitudes are scaled before sums: eta^2 stays 27/29.
+        double yh[6]={1e307,2e307,3e307,7e307,8e307,9e307};
+        REQUIRE(n4m_preflight_factor_association(ctx,fa,yh,6,0,0,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(near(assoc[0],27.0/29.0) && near(assoc[1],54));
+        // Holm (R p.adjust "holm", hand-computed): sorted 0.005,0.01,0.03,0.04
+        // -> 0.02, 0.03, 0.06, max(0.04,0.06).
+        double pv[4]={0.01,0.04,0.03,0.005}, adj[4];
+        REQUIRE(n4m_preflight_holm_adjust(ctx,pv,4,adj)==N4M_OK);
+        REQUIRE(near(adj[0],0.03) && near(adj[1],0.06) && near(adj[2],0.06) && near(adj[3],0.02));
+        double tied[3]={0.02,0.02,0.9}, adj3[3];
+        REQUIRE(n4m_preflight_holm_adjust(ctx,tied,3,adj3)==N4M_OK);
+        REQUIRE(near(adj3[0],0.06) && near(adj3[1],0.06) && near(adj3[2],0.9));
+        double capped[2]={0.7,0.8};
+        REQUIRE(n4m_preflight_holm_adjust(ctx,capped,2,adj)==N4M_OK);
+        REQUIRE(near(adj[0],1) && near(adj[1],1));
+        double invalid_p[1]={1.5};
+        REQUIRE(n4m_preflight_holm_adjust(ctx,invalid_p,1,adj)==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(std::isnan(contrast[0]) && near(contrast[2],1) && near(contrast[3],1));
         // Noise proxy, window 5 / quadratic: SG weights (-3,12,17,12,-3)/35,
         // white-noise residual gain^2 = (18/35)^2 + 2(12/35)^2 + 2(3/35)^2

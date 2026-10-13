@@ -6,9 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-10-13
+
+ABI 2.19.0. No model-state serialization format changes.
+
 ### Added
 
-- Public ABI 2.19.0 clustering for Preflight: `n4m_preflight_hdbscan`, a
+- Public ABI 2.19.0 generic clustering: `n4m_cluster_hdbscan`, a
   Euclidean HDBSCAN* ported from scikit-learn 1.9.1 (BSD-3) with GLOSH outlier
   scores and cluster persistence from scikit-learn-contrib/hdbscan 0.8.44,
   returning labels, membership strengths, outlier scores, persistence and the
@@ -19,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   blobs, varying densities, pure noise, a continuum, duplicates/ties and
   `min_samples` different from `min_cluster_size`, with EOM, leaf and
   `allow_single_cluster`. Both calls are exported through WASM and thin
-  TypeScript wrappers.
+  TypeScript wrappers (`clusterHdbscan`, `preflightAdjustedRandIndex`).
 - Public ABI 2.19.0 Preflight diagnostics: a Savitzky-Golay smoothing-residual
   noise proxy (interior features only, masked windows skipped, normalized by
   the filter's white-noise residual gain; never an SNR) and row pairs whose
@@ -28,6 +32,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   Both reuse existing Methods code (the Savitzky-Golay engine; matrix-view
   validation) and are exported through WASM with thin TypeScript wrappers.
   Binding ABI constants and README examples move to 2.19.0.
+- Public ABI 2.19.0 Preflight association kernels:
+  `n4m_preflight_factor_association` (eta^2 and one-way F, or Cramer's V and
+  Pearson chi-square, over exchangeable units, with a seeded Monte Carlo
+  permutation p-value `(1+b)/(1+B)` and a log10 bound on distinct permutation
+  outcomes) and `n4m_preflight_holm_adjust`. Permutations reuse the PCG64
+  engine through a new NumPy-parity `random_interval`/`permutation` helper, so
+  `numpy.random.default_rng(seed).permutation(n)` reproduces every draw. Thin
+  TypeScript wrappers `preflightFactorAssociation` and `preflightHolmAdjust`.
+- Native and WASM cases compare hand-computed effects and NumPy 2.2.6 / SciPy
+  1.15.3 permutation counts recorded as test-only goldens.
+
+The project and npm package version is prepared as 1.3.5. No model-state
+serialization format changes.
+
+## [1.3.5] - 2026-10-12
+
+ABI 2.18.0, published to npm only. No model-state serialization format changes.
+
+### Added
+
 - Public ABI 2.18.0 diagnostics for Preflight: centered PCA scores, loadings,
   retained eigenvalues and exact full covariance moments; masked pooled
   repeatability with balanced ICC(1,1); finite summaries with quartiles; and
@@ -38,9 +62,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   ICC, strided views, quantiles, neighbor exclusions, and finite extreme-value
   summaries and distances. Scaled variance and distance calculations retain
   representable f64 results and reject unrepresentable results explicitly.
-
-The project and npm package version is prepared as 1.3.5. No model-state
-serialization format changes.
 
 ## [1.3.3] - 2026-10-06
 
