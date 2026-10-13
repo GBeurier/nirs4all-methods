@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- Public ABI 2.18.0 clustering for Preflight: `n4m_preflight_hdbscan`, a
+- Public ABI 2.19.0 clustering for Preflight: `n4m_preflight_hdbscan`, a
   Euclidean HDBSCAN* ported from scikit-learn 1.9.1 (BSD-3) with GLOSH outlier
   scores and cluster persistence from scikit-learn-contrib/hdbscan 0.8.44,
   returning labels, membership strengths, outlier scores, persistence and the
