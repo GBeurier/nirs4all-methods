@@ -17,6 +17,7 @@
 #include "core/common/context.hpp"
 #include "core/common/distributions.hpp"
 #include "core/common/matrix_view.hpp"
+#include "core/common/numerical_domain.hpp"
 #include "core/common/rng_pcg64.h"
 #include "core/variance_components.hpp"
 
@@ -29,14 +30,9 @@ constexpr long double max_bootstrap_work = 2500000000.0L;
 // Per replicate and feature: the group scan plus the grid and bisections.
 constexpr long double bootstrap_fit_work = 1024.0L;
 constexpr int32_t max_bootstrap = 100000;
-// Supported numerical domain (lead rules 13/15): every nonzero |x| in
-// [2^-256, 2^256], and max/min nonzero |x| <= 2^32 over the raw values and
-// over the centred values of each feature. Outside it the call is refused.
-constexpr int domain_exponent = N4M_DOMAIN_MAX_MAGNITUDE_LOG2;
-constexpr int domain_spread = N4M_DOMAIN_MAX_SPREAD_LOG2;
-constexpr const char* domain_message =
-    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^32)";
+// Supported numerical domain D (core/common/numerical_domain.hpp), checked
+// over the raw values and over the gaps between the values of each feature.
+using ::n4m::core::domain_message;
 
 
 size_t sz(int64_t v) noexcept { return static_cast<size_t>(v); }
@@ -152,18 +148,6 @@ void scan_column(const n4m_matrix_view_t& X, int64_t j, const std::vector<int64_
     for (int64_t k : out.index) out.groups.push_back(all[sz(k)]);
 }
 
-// Spread max/min of the nonzero magnitudes within 2^32; zeros are allowed.
-bool spread_ok(const std::vector<double>& values) noexcept {
-    double lo = 0.0, hi = 0.0;
-    for (double v : values) {
-        const double m = std::abs(v);
-        if (m == 0.0) continue;
-        lo = lo == 0.0 ? m : std::min(lo, m);
-        hi = std::max(hi, m);
-    }
-    return hi == 0.0 || hi <= std::ldexp(lo, domain_spread);
-}
-
 // Spread of the pairwise differences the statistic depends on, measured on
 // the raw values themselves: (max - min) over the smallest nonzero gap
 // between sorted values must stay within 2^32. Gaps of nearby doubles are
@@ -176,7 +160,7 @@ bool differences_ok(std::vector<double> values) {
         const double d = values[i] - values[i - 1];
         if (d > 0.0) gap = gap == 0.0 ? d : std::min(gap, d);
     }
-    return gap == 0.0 || values.back() - values.front() <= std::ldexp(gap, domain_spread);
+    return gap == 0.0 || values.back() - values.front() <= gap * ::n4m::core::domain_spread;
 }
 
 // Rule 13/15 pre-pass over every feature, before any computation: unmasked
@@ -188,22 +172,19 @@ n4m_status_t check_domain(n4m_context_t* ctx, const n4m_matrix_view_t& X,
     if (X.rows > (int64_t{1} << 31))
         return fail(ctx, N4M_ERR_UNSUPPORTED, "more than 2^31 rows (quantile domain)");
     const auto* data = static_cast<const double*>(X.data);
-    const double lowest = std::ldexp(1.0, -domain_exponent);
-    const double highest = std::ldexp(1.0, domain_exponent);
     std::vector<double> values;
     for (int64_t j = 0; j < X.cols; ++j) {
         values.clear();
+        ::n4m::core::DomainRange range;
         for (int64_t i = 0; i < X.rows; ++i) {
             if (mask && mask[sz(i) * sz(X.cols) + sz(j)] == 0) continue;
             const double x = data[i * X.row_stride + j * X.col_stride];
             if (!std::isfinite(x))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked input");
-            const double a = std::abs(x);
-            if (a != 0.0 && (a < lowest || a > highest))
-                return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+            range.add(x);
             values.push_back(x);
         }
-        if (!spread_ok(values) || !differences_ok(values))
+        if (!range.inside() || !differences_ok(values))
             return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     }
     return N4M_OK;
