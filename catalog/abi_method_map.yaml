@@ -80,6 +80,8 @@ method_prefix:
   # and ARI symbols leave the generic n4m_preflight bundle.
   diagnostics.preflight_qualification: n4m_preflight
   diagnostics.holm_adjust: n4m_preflight_holm_adjust
+  diagnostics.energy_distance: n4m_stats_energy_distance
+  diagnostics.pca_monitor: n4m_stats_pca_monitor
   diagnostics.adjusted_rand_index: n4m_preflight_adjusted_rand_index
   diagnostics.hdbscan: n4m_cluster_hdbscan
   # Generic statistics (ABI 2.20).
