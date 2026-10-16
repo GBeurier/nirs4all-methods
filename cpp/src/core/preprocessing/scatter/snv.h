@@ -10,9 +10,12 @@
  * Numerical contract:
  *   - mean is the arithmetic mean across cols of each row.
  *   - std is the population (ddof=0) or sample (ddof>0) standard deviation.
- *   - When std < 1e-15 (flat row), it is treated as 1.0 to avoid div-by-0;
- *     this matches NumPy's behaviour after the nirs4all-side `std[std == 0]
- *     = 1.0` guard with a slack to tolerate floating-point fuzz.
+ *   - A zero std leaves the row unscaled (nirs4all `std[std == 0] = 1.0`).
+ *   - A constant finite row maps to exact zeros when centred and is never
+ *     scaled; finite rows are computed on power-of-two rescaled values with
+ *     compensated sums (no overflow or underflow); a non-finite result for a
+ *     finite row is N4M_ERR_NUMERICAL_FAILURE; rows with NaN/Inf propagate
+ *     them (see snv.c).
  */
 #ifndef N4M_CORE_PP_SCATTER_SNV_H
 #define N4M_CORE_PP_SCATTER_SNV_H
@@ -38,6 +41,13 @@ void n4m_pp_snv_state_free(n4m_pp_snv_state_t* state);
 n4m_status_t n4m_pp_snv_apply(const n4m_pp_snv_state_t* state,
                               const double* X, int64_t rows, int64_t cols,
                               double* out);
+
+/* Same, and, when row_bounds is non-NULL, one first-order rounding bound per
+ * row on the absolute error of every output entry (see snv.c): 0 for constant
+ * rows, NaN for rows with NaN/Inf or when the state does not centre and scale. */
+n4m_status_t n4m_pp_snv_apply_bounded(const n4m_pp_snv_state_t* state,
+                                      const double* X, int64_t rows, int64_t cols,
+                                      double* out, double* row_bounds);
 
 #ifdef __cplusplus
 }

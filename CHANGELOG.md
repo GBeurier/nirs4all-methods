@@ -194,6 +194,103 @@ ABI 2.20.0. No model-state serialization format changes.
   [2^-256, 2^256], spread <= 2^32; other inputs return `N4M_ERR_UNSUPPORTED`.
   Reference gate `parity/fixtures/domain_shift_v1.json` (NumPy 2.2.6,
   SciPy 1.15.3, exact rational oracles).
+ABI 2.20.0 (project version unchanged until release).
+
+### Added
+
+- `n4m_preflight_snv_compute` (ABI 2.20.0) and the JS wrapper
+  `preflightSnv`: SNV with an optional compensated equal-weight aggregation
+  by group. Each output row carries a first-order bound on the rounding error
+  of its entries, so callers can tell rounding residue from structure.
+- Property and oracle tests for SNV, the noise proxy and tolerance pairs on
+  the supported domain: scales 2^-256..2^248 and their out-of-domain
+  neighbours, exact offsets near 1e16 and 2^200, constant columns up to the
+  spread limit, mixed exponents within a row, exact rational and 400-digit
+  references. Each result is correct within its stated error, or the input is
+  refused with `N4M_ERR_UNSUPPORTED` outside the domain.
+
+### Changed
+
+- Supported numerical domain of the Preflight kernels (`n4m_preflight_snv_compute`,
+  `n4m_preflight_noise_proxy_compute`, `n4m_preflight_pairs_within_tolerance`):
+  every nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero
+  |x| <= 2^32 (`N4M_DOMAIN_MAX_SPREAD_LOG2`, lead rule 15). Inputs outside are refused before computing with
+  `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain").
+  Inside, results are correct to the documented precision. The machinery that
+  only served out-of-domain inputs (halved differences, 1/8 prescaling,
+  subnormal clamps) is removed. The same domain now applies to
+  `n4m_preflight_local_contrast` (continuous targets).
+  `n4m_preflight_summary_compute` and `n4m_preflight_nearest_neighbors` keep
+  only the magnitude bound: compensated moments and quartiles, compensated
+  distances and exact ordering near ties need no spread bound, so
+  rounding-level PCA score components are accepted.
+
+- Noise proxy precision contract made honest. Each residual has an absolute
+  error of at most `2 W eps sum|c_k| max|w_k|` against the exact
+  Savitzky-Golay residual, which includes the coefficient errors and the
+  final binary64 rounding. The former `2^-95 sum|w_k||c_k|` claim did not
+  hold: a zero exact weight gave a 2e-33 proxy, and the residual is rounded
+  to binary64. Tests compare with exact rational SG residuals (windows 3,
+  13 and 31) and check that no window/order pair of the validated SG domain
+  is refused inside D.
+
+### Fixed (ABI 2.18 Preflight kernels)
+
+- Summary: the `long double` running mean, whose precision differed between
+  x86 (64-bit significand) and WASM (113-bit), is replaced by a double-double
+  mean from an unevaluated Neumaier pair. It has no refinement pass, which
+  would add `u mean|x - m|` on cancelling values such as
+  `[-2^200, 2^200, 2^150, -2^140, 7·2^180]`. The SD is a compensated sum of
+  squared deviations, and the quartiles keep `b - a` exactly.
+- Nearest neighbours: compensated distances. Candidates within 2^-45 of each
+  other are ordered exactly (exact accumulator), so rounding can no longer
+  swap distinct distances or break equal ones out of index order.
+- Local contrast: double-double variance and compensated sums, no
+  `long double`.
+- SNV: the same mean (no refinement pass); bound
+  `(3uA + n^2 u^2 mean|y| + 2u^2|m|)/sd_y + 8u max|z|`.
+
+### Fixed
+
+- SNV numerical scheme: each finite row is rescaled by a power of two. The
+  mean is a compensated double-double, so offsets no longer leak into the
+  deviations, and the deviations are rescaled again before squaring. `[a, 0, -a]` at the
+  smallest subnormal now gives `[sqrt(1.5), 0, -sqrt(1.5)]` instead of
+  returning the row unchanged. Rows with 100,000 offset bands no longer carry
+  a mean error of about 1e-8 SD. Agreement with numpy remains within the
+  1e-12 parity tolerance, but is no longer bit-for-bit.
+- Tolerance-pair distances are computed on rescaled differences independently
+  of the tolerance: `[2^-200, 0]` against `[0, 0]` lists 2^-200/sqrt(2) at any
+  tolerance instead of 0. Pairs within 2^-45 (relative) of the
+  tolerance are decided exactly from `sum (q - r)^2` against `cols tol^2`,
+  using a fixed-point accumulator of exact products. `[2^-255, 0]` against
+  `[0, 0]` at 2^-256, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
+  `[1, 1, 2^-26]` against 0 at `sqrt(2/3)` are far.
+- Noise proxy: each window's residual is computed from the window alone.
+  Its second differences are kept exactly until a double-double weighted sum
+  with double-double Savitzky-Golay weights. A huge value outside the
+  evaluable windows, masked or not, no longer erases the noise, and
+  `[-2^60, 2^60, 1, 0, 0]` gives its analytic `sqrt(4/5)`. The gain no longer
+  uses `long double`, which differed between x86 and WASM.
+
+- SNV (`n4m_transform_snv_*`, the registry `StandardNormalVariate` and the
+  pipelines using it): a constant finite row now maps to exact zeros when
+  centred instead of standardizing the rounding residue of its mean (eleven
+  `0.1` gave eleven `1.0`). `[1e200, 0, -1e200]` no longer gives a zero row.
+  A non-finite result for a finite row returns `N4M_ERR_NUMERICAL_FAILURE`.
+  Rows with NaN/Inf propagate them as before.
+- `n4m_preflight_noise_proxy_compute` accepts only the verified
+  Savitzky-Golay domain (odd window 3..1001, polyorder <= min(10, window-2))
+  and checks the polynomial reproduction moments of the weights; window 41 /
+  polyorder 38 previously returned a residual of 0.83 on a constant row.
+- `n4m_preflight_pairs_within_tolerance` no longer drops pairs whose raw
+  difference overflows: such a pair is measured on exact halves
+  (`q=[1e308,0]`, `r=[-1e308,0]`, tolerance `1.5e308` is now a pair).
+- JS: `preflightNoiseProxy`, `preflightPca`, `preflightNearestNeighbors`,
+  `preflightLocalContrast` and `preflightFactorAssociation` range-check every
+  `int32_t` argument before the Emscripten call (4294967301 was wrapped to a
+  window of 5); the noise proxy also checks the Savitzky-Golay domain and
+  `windowLength <= cols`.
 
 ## [1.3.6] - 2026-10-13
 

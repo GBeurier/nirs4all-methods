@@ -247,6 +247,84 @@ df in [1/2, 2^31]. Measured relative error on the test grids (SciPy, mpmath,
 closed forms of chi-square(2) and F(2, nu), F(nu, 2) up to nu = 2^31): worst
 5e-12, tests assert 1e-10; no bound is proven elsewhere. Bootstrap work above 2.5e9 operations,
 `B x features x (groups + 1024)`, returns `N4M_ERR_UNSUPPORTED`.
+## 2026-10-13 — ABI 2.20.0: SNV with rounding bounds (unreleased)
+
+Add `n4m_preflight_snv_compute(ctx, X, group_ids, n_groups, out,
+error_bounds)` in `n4m/metrics.h`. It applies SNV (centring and population
+SD) to each row of a finite matrix. With `group_ids` it also returns the
+equal-weight mean of the SNV rows of each group (compensated per band). It
+writes one first-order rounding bound per output row:
+
+- for one row, `(3uA + n^2 u^2 mean|y| + 2u^2 |m|) / sd_y + 8 u max|z|`;
+- for a group of r rows, the largest member bound plus
+  `(4u + 2 r u^2) max|z|`.
+
+A constant row gives exact zeros and a bound of 0. The SNV engine behind
+`n4m_transform_snv_*` now rescales each finite row by a power of two. Its
+mean is a compensated double-double, and deviations are rescaled before
+squaring. Rows at the smallest subnormal, rows that overflow, rows offset by
+2^60 or 1e300 and rows with 100,000 offset bands are standardized within
+their bound.
+
+The ABI 2.18 kernel `n4m_preflight_local_contrast` (for continuous targets)
+also follows D. `n4m_preflight_summary_compute` and
+`n4m_preflight_nearest_neighbors` apply only the magnitude bound. Their
+results stay correct for any spread inside it: compensated moments and
+quartiles for the summary; compensated distances and exact ordering near
+ties for the neighbours. Rounding-level PCA score components next to large
+ones are therefore accepted. Their computations change as follows:
+
+- summary: the mean is a double-double from an unevaluated Neumaier pair,
+  the SD a compensated sum of squared deviations, and the quartiles exact
+  differences (`long double` removed, so x86 and WASM agree);
+- nearest neighbours: compensated distances, and orders within 2^-45 decided
+  exactly from squared-distance differences in the exact accumulator;
+- local contrast: double-double variance and compensated sums.
+
+Tests use independent rational and 400-digit oracles for all three.
+
+The three Preflight kernels follow one supported numerical domain D: every
+nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^32
+(public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` = 256 and
+`N4M_DOMAIN_MAX_SPREAD_LOG2` = 32, lead rule 15; the summary keeps only the
+magnitude bound).
+Inputs outside D are refused before computing with `N4M_ERR_UNSUPPORTED`
+("input outside the supported numerical domain"). Inside D, results are
+correct to the documented precision.
+
+`n4m_preflight_pairs_within_tolerance` decides exactly. A fast estimate on
+power-of-two rescaled differences settles pairs farther than 2^-45 (relative)
+from the tolerance. The other pairs use the exact sign of
+`sum (q - r)^2 - cols tol^2`, computed in a fixed-point accumulator of exact
+products (`core/common/exact_sum.hpp`). With that rule, `[2^-255, 0]` against
+`[0, 0]` at 2^-256, `[1, 1]` against `[-2^-54, -2^-54]` at 1, and
+`[1, 1, 2^-26]` against 0 at `sqrt(2/3)` are all far. An accepted pair
+publishes min(RMS, tolerance).
+
+`n4m_preflight_noise_proxy_compute` computes each window's residual from that
+window alone. The second differences are kept exactly, as three doubles each,
+and multiplied by double-double Savitzky-Golay weights (Gram polynomials,
+cross-checked against the SG engine). The double-double sum is rounded once
+to binary64. The documented precision is the honest bound
+`|r_hat - r| <= 2 W eps sum|c_k| max|w_k|`, which includes the coefficient
+errors and that rounding.
+Values outside every evaluable window, masked or not, cannot change the
+results: the masked `[H, 0, 0, 0, 0, 1, ...]` gives `sqrt(2/3)` and
+`1/sqrt(7)` for any H. The spread-2^32 window `[-2^32, 2^32, 1, 0, 0]`
+(window 5, order 1) gives its analytic `sqrt(4/5)`. `[-2^100, 2^100, 1, 0, 0]`
+and `[-DBL_MAX, 2^-1074, DBL_MAX]` lie outside D and are refused.
+
+The magnitude-sweep tests (`cpp/tests/test_preflight_robustness.cpp`, JS
+`run_preflight_diagnostics.mjs`) cover:
+
+- scales 2^k for k from -256 to 248 and their out-of-D neighbours, exact
+  offsets near 1e16 and 2^200, and constant columns up to the spread
+  limit;
+- mixed exponents within one row: signed huge and tiny values, masked huge
+  values;
+- independent oracles: exact rational pair decisions and 400-digit SNV
+  references.
+Existing symbol signatures are unchanged, and no serialized format changes.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

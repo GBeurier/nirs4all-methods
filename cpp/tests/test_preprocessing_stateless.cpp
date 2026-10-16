@@ -87,6 +87,43 @@ void test_snv_smoke() {
     n4m_transform_snv_destroy(nullptr);  // null-safe
 }
 
+// Numerical guards with analytic references: constant rows stay flat, and
+// extreme amplitudes standardize to the scale-free pattern of the row.
+void test_snv_numerical_guards() {
+    n4m_pp_snv_handle_t* h = nullptr;
+    N4M_TEST_REQUIRE(n4m_transform_snv_create(&h, 1, 1, 0) == N4M_OK);
+    const auto apply = [&](std::vector<double> x, std::int64_t rows, std::int64_t cols) {
+        std::vector<double> y(x.size(), -7.0);
+        N4M_TEST_REQUIRE(n4m_transform_snv_transform(h, make_rowmajor_view(x.data(), rows, cols),
+            make_rowmajor_view(y.data(), rows, cols)) == N4M_OK);
+        return y;
+    };
+    // Eleven 0.1: the naive mean leaves a rounding residue that numpy would
+    // standardize into eleven 1.0; SNV of a flat row is exactly zero.
+    for (double v : apply(std::vector<double>(11, 0.1), 1, 11)) N4M_TEST_REQUIRE(v == 0.0);
+    const double r32 = std::sqrt(1.5);  // [a, 0, -a]: population SD a*sqrt(2/3)
+    // 2^-1074 is the smallest subnormal: halving it gives zero (review b1fix #1).
+    for (double a : {1e200, 1e-200, 1e-310, std::ldexp(1.0, -1074), std::ldexp(1.0, -1073)}) {
+        const auto y = apply({a, 0.0, -a}, 1, 3);
+        N4M_TEST_REQUIRE(std::fabs(y[0] - r32) < 1e-12 && y[1] == 0.0 &&
+                         std::fabs(y[2] + r32) < 1e-12);
+    }
+    // Overflowing sum: [M, M, -M] has mean M/3 and SD M*sqrt(8/9).
+    const double M = 1e308;
+    const auto big = apply({M, M, -M}, 1, 3);
+    N4M_TEST_REQUIRE(std::fabs(big[0] - std::sqrt(0.5)) < 1e-12 &&
+                     std::fabs(big[1] - std::sqrt(0.5)) < 1e-12 &&
+                     std::fabs(big[2] + std::sqrt(2.0)) < 1e-12);
+    // Non-finite rows keep propagating (unchanged contract).
+    const auto nan_row = apply({1.0, std::nan(""), 3.0}, 1, 3);
+    N4M_TEST_REQUIRE(std::isnan(nan_row[0]) && std::isnan(nan_row[2]));
+    n4m_transform_snv_destroy(h);
+    // Without centring a constant row is left unscaled.
+    N4M_TEST_REQUIRE(n4m_transform_snv_create(&h, 0, 1, 0) == N4M_OK);
+    for (double v : apply(std::vector<double>(4, 0.1), 1, 4)) N4M_TEST_REQUIRE(v == 0.1);
+    n4m_transform_snv_destroy(h);
+}
+
 void test_lsnv_smoke() {
     double X[10] = {1.0, 1.0, 2.0, 5.0, 3.0, 2.0, 4.0, 6.0, 5.0, 3.0};
     double Y[10] = {0};
@@ -372,6 +409,7 @@ void verify_log_parity() {
 void register_preprocessing_stateless_tests(n4m_testing::Runner& r);
 void register_preprocessing_stateless_tests(n4m_testing::Runner& r) {
     r.run("pp_snv_smoke",                  test_snv_smoke);
+    r.run("pp_snv_numerical_guards",       test_snv_numerical_guards);
     r.run("pp_snv_parity",                 verify_snv_parity);
     r.run("pp_lsnv_smoke",                 test_lsnv_smoke);
     r.run("pp_lsnv_parity",                verify_lsnv_parity);
