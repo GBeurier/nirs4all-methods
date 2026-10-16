@@ -106,6 +106,98 @@ export interface StatsExactPermutationResult {
     maximumStatistic: number;
 }
 
+export interface PermanovaResult {
+    /** Sums of squares are ss* x 2^ssExponent; 0 when they are normal doubles. */
+    ssExponent: number;
+    ssTotal: number;
+    /** Between-strata SS (0 without strata). */
+    ssStrata: number;
+    /** SS of the term given the strata (additive strata + term model). */
+    ssTerm: number;
+    ssResidual: number;
+    r2: number;
+    partialR2: number;
+    pseudoF: number;
+    /** Identifiable term df: levels - connected components; 0 when aliased. */
+    dfTerm: number;
+    dfResidual: number;
+    nLevels: number;
+    nStrata: number;
+    /** log10 of the distinct within-strata level assignments. */
+    log10DistinctPermutations: number;
+    /** Monte Carlo (1+b)/(1+B); NaN without an executed test. */
+    pValue: number;
+    /** Error estimate of the residual SS divided by it (+Infinity when the
+     * residual SS is 0; NaN when the pseudo-F has no df). */
+    residualResolution: number;
+    /** True when the residual SS is not resolved above rounding
+     * (residualResolution >= 1): the pseudo-F is published but unresolved. */
+    fNumericallyUnresolved: boolean;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
+export interface FreedmanLaneResult {
+    /** Sums of squares are ss* x 2^ssExponent; 0 when they are normal doubles. */
+    ssExponent: number;
+    ssTotal: number;
+    /** Model SS of the reduced design (intercept + condition main effects). */
+    ssReduced: number;
+    /** SS(full) - SS(reduced). */
+    ssTerm: number;
+    ssResidual: number;
+    r2: number;
+    partialR2: number;
+    pseudoF: number;
+    /** rank(full) - rank(reduced); 0 when aliased with the conditions. */
+    dfTerm: number;
+    dfResidual: number;
+    rankReduced: number;
+    log10DistinctPermutations: number;
+    pValue: number;
+    /** Error estimate of the residual SS divided by it (+Infinity when the
+     * residual SS is 0; NaN when the pseudo-F has no df). */
+    residualResolution: number;
+    /** True when the residual SS is not resolved above rounding
+     * (residualResolution >= 1): the pseudo-F is published but unresolved. */
+    fNumericallyUnresolved: boolean;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
+export interface PermdispResult {
+    /** Distances are distances x 2^distanceExponent; 0 when normal doubles. */
+    distanceExponent: number;
+    /** Euclidean distance of each row to its group centroid. */
+    distances: Float64Array;
+    /** Mean distance per group, in ascending group-code order. */
+    groupMeanDistances: Float64Array;
+    f: number;
+    df1: number;
+    df2: number;
+    nGroups: number;
+    log10DistinctPermutations: number;
+    pValue: number;
+    /** Error estimate of the within SS of the distances divided by it. */
+    residualResolution: number;
+    /** True when F is published but not resolved above rounding. */
+    fNumericallyUnresolved: boolean;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+}
+
+function validatePermutation(nPermutations: number, seed: number | bigint): bigint {
+    if (!Number.isInteger(nPermutations) || nPermutations < 0 || nPermutations > 1_000_000) {
+        throw new RangeError("permutation count must be an integer in [0, 1000000]");
+    }
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    return seed64;
+}
+
 function validateMatrix(X: Matrix): void {
     if (!Number.isSafeInteger(X.rows) || !Number.isSafeInteger(X.cols) ||
         X.rows < 1 || X.cols < 1 || X.data.length !== X.rows * X.cols) {
@@ -659,6 +751,131 @@ export function statsCorrelationExact(x: Float64Array, y: Float64Array,
                 BigInt(maxArrangements), out]) as number;
         checkStatus(st, ctx.handle);
         return exactResult(out);
+    } finally {
+        scope.close();
+    }
+}
+
+/** PERMANOVA of one categorical term on Euclidean distances between rows,
+ * optionally given strata (permutations stay inside each stratum). */
+export function statsPermanova(X: Matrix, termCodes: readonly (number | bigint)[],
+    strataCodes: readonly (number | bigint)[] | undefined, nPermutations: number,
+    seed: number | bigint): PermanovaResult {
+    validateMatrix(X);
+    if (X.rows < 2 || termCodes.length !== X.rows ||
+        (strataCodes !== undefined && strataCodes.length !== X.rows)) {
+        throw new RangeError("invalid PERMANOVA dimensions");
+    }
+    validateGroupIds(termCodes);
+    if (strataCodes) validateGroupIds(strataCodes);
+    const seed64 = validatePermutation(nPermutations, seed);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const term = scope.i64(termCodes);
+        const strata = strataCodes ? scope.i64(strataCodes) : 0;
+        const out = scope.alloc(15 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
+        const st = m.ccall("n4m_stats_permanova", "number",
+            ["number", "number", "number", "number", "number", "i64", "number", "number", "number"],
+            [ctx.handle, x.viewPtr, term, strata, nPermutations, seed64, out, counts,
+                exponent]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 15);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            ssExponent: dv.getInt32(exponent, true),
+            ssTotal: r[0]!, ssStrata: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!,
+            r2: r[4]!, partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!,
+            nLevels: r[9]!, nStrata: r[10]!, log10DistinctPermutations: r[11]!, pValue: r[12]!,
+            residualResolution: r[13]!, fNumericallyUnresolved: r[14] === 1,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** PERMDISP (betadisper type "centroid"): distances to group centroids, their
+ * one-way ANOVA F and a residual-permutation test. Not an exchangeability check. */
+export function statsPermdisp(X: Matrix, groupCodes: readonly (number | bigint)[],
+    nPermutations: number, seed: number | bigint): PermdispResult {
+    validateMatrix(X);
+    if (X.rows < 2 || groupCodes.length !== X.rows) {
+        throw new RangeError("invalid PERMDISP dimensions");
+    }
+    validateGroupIds(groupCodes);
+    const seed64 = validatePermutation(nPermutations, seed);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const groups = scope.i64(groupCodes);
+        const distances = scope.alloc(X.rows * 8), means = scope.alloc(X.rows * 8);
+        const out = scope.alloc(8 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
+        const st = m.ccall("n4m_stats_permdisp", "number",
+            ["number", "number", "number", "number", "i64", "number", "number", "number", "number",
+                "number"],
+            [ctx.handle, x.viewPtr, groups, nPermutations, seed64, distances, means, out,
+                counts, exponent]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 8);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            distanceExponent: dv.getInt32(exponent, true),
+            distances: copyF64(distances, X.rows),
+            groupMeanDistances: copyF64(means, r[3]!),
+            f: r[0]!, df1: r[1]!, df2: r[2]!, nGroups: r[3]!, log10DistinctPermutations: r[4]!,
+            pValue: r[5]!, residualResolution: r[6]!, fNumericallyUnresolved: r[7] === 1,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Partial PERMANOVA of a term given the additive main effects of condition
+ * factors (one code array per factor), tested by Freedman-Lane permutation of
+ * the reduced-model residuals. */
+export function statsPermanovaFreedmanLane(X: Matrix, termCodes: readonly (number | bigint)[],
+    conditionCodes: readonly (readonly (number | bigint)[])[], nPermutations: number,
+    seed: number | bigint): FreedmanLaneResult {
+    validateMatrix(X);
+    if (X.rows < 2 || termCodes.length !== X.rows || conditionCodes.length > 64 ||
+        conditionCodes.some((c) => c.length !== X.rows)) {
+        throw new RangeError("invalid Freedman-Lane PERMANOVA dimensions");
+    }
+    validateGroupIds(termCodes);
+    conditionCodes.forEach(validateGroupIds);
+    const seed64 = validatePermutation(nPermutations, seed);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const term = scope.i64(termCodes);
+        const rowMajor: (number | bigint)[] = [];
+        for (let i = 0; i < X.rows; i++) for (const c of conditionCodes) rowMajor.push(c[i]!);
+        const conditions = conditionCodes.length ? scope.i64(rowMajor) : 0;
+        const out = scope.alloc(14 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
+        const st = m.ccall("n4m_stats_permanova_freedman_lane", "number",
+            ["number", "number", "number", "number", "number", "number", "i64", "number", "number",
+                "number"],
+            [ctx.handle, x.viewPtr, term, conditions, conditionCodes.length, nPermutations, seed64,
+                out, counts, exponent]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 14);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            ssExponent: dv.getInt32(exponent, true),
+            ssTotal: r[0]!, ssReduced: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!, r2: r[4]!,
+            partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!, rankReduced: r[9]!,
+            log10DistinctPermutations: r[10]!, pValue: r[11]!,
+            residualResolution: r[12]!, fNumericallyUnresolved: r[13] === 1,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+        };
     } finally {
         scope.close();
     }

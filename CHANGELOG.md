@@ -22,6 +22,75 @@ ABI 2.20.0. No model-state serialization format changes.
   p-value and the minimal attainable exact p-value (JS
   `statsFactorAssociationExact`, `statsCorrelationExact`). Brute-force SciPy
   references are pinned in the native and JS tests.
+- Public ABI 2.20.0 multivariate tests in `n4m/metrics.h`:
+  `n4m_stats_permanova` (PERMANOVA of one categorical term on Euclidean
+  distances, optionally given strata, with the vegan
+  `adonis2(by = "margin")` sums of squares for one other factor, the exact
+  identifiable term df from the connected components of the level-stratum
+  graph, so an aliased term reports df 0, and a seeded within-strata Monte
+  Carlo test) and `n4m_stats_permdisp` (vegan `betadisper(type =
+  "centroid")` + `permutest` residual permutation). Both reuse the PCG64
+  permutation helper (`numpy.random.default_rng` parity) and are wrapped in
+  JS/WASM as `statsPermanova` and `statsPermdisp`. As in vegan, both count
+  permuted `F >= F_obs - sqrt(DBL_EPSILON)` on the F scale. Inputs are scaled
+  by an exact power of two and centred per column; sums of squares are mapped
+  back with `scalbn`, so subnormal and near-`DBL_MAX` results stay
+  representable.
+- `n4m_stats_permanova_freedman_lane` (ABI 2.20.0): partial PERMANOVA of a
+  term given the additive main effects of condition factors, tested by
+  Freedman-Lane permutation of the reduced-model residuals (refit of both
+  designs, `F_perm >= F_obs - sqrt(DBL_EPSILON)`, numerical ranks so an
+  aliased term or a saturated design gives no test). JS/WASM
+  `statsPermanovaFreedmanLane`. It complements the within-strata test, whose
+  null also excludes interactions with the conditions. The reduced-model
+  residuals are projected off the reduced design twice, and the partial R^2
+  is SS_term / (SS_term + SS_residual) of one projection (24- and 32-row
+  dyadic references: R^2 = 0.5, F = 21 and 29).
+- Numerical domain of `n4m_stats_permanova`, `n4m_stats_permanova_freedman_lane`
+  and `n4m_stats_permdisp`: the shared supported domain D (finite X, every
+  nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^32 over the whole
+  matrix, `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`, zeros allowed) is checked in one
+  O(n k) pre-pass; outside D the kernels return `N4M_ERR_UNSUPPORTED` before any
+  computation with the message "input outside the supported numerical domain
+  (...)". Inside D columns are centred before scaling and the common
+  power-of-two unit comes from the centred variation, so constant columns and
+  offsets change nothing, and the rescaling is exact (no varying column is
+  erased, no squared term underflows); every sum of squares (including each
+  permutation's residual SS) is a sum of squared terms of explicit residuals,
+  never a difference of totals; centring rounds each value by about n
+  DBL_EPSILON times its column's range; a pseudo-F is NaN only for an
+  exactly zero residual SS, and is otherwise published with a resolution
+  ratio (a conservative first-order error estimate of the residual SS over
+  it) and a "numerically unresolved" flag when that ratio is >= 1; sums of
+  squares and
+  distances carry a binary exponent output (`ss_exponent`,
+  `distance_exponent`): 0 with true values when all positive values are
+  normal doubles, otherwise scaled values with the unit's exponent, so a
+  positive quantity is never published as 0; design sizes and budgets are
+  checked before any level-dependent allocation. Native and WASM property
+  tests cover both sides of D: magnitudes 2^k (k in [-256, 251] inside;
+  -1069, -257, 252, 1000 refused), offsets (1e16 and 2^200 inside; 2^300 and
+  1e300 refused), constant columns (2^28 inside; 2^30 and 1e308 refused),
+  mixed exponents (2^13 next to -2^-13 inside, 2^28 next to -2^-28
+  refused), the value-range edges 2^+-256 (inside) and 2^+-257 (refused),
+  exact dyadic cases at the spread boundary (columns 2^16 B and 2^-17
+  (A + r), 16/24/32 rows: SS = n 2^-34, F = n - 3) whose 2^33- and
+  2^64-spread variants are refused, an offset stratum (2^31 next to 1..4:
+  SS_A = 2, SS_res = 3, F = 10/3; 2^60 refused), and resolution cases (F =
+  14 2^62 resolved; one-ulp residuals flagged unresolved; a zero residual SS
+  gives NaN).
+- Reference gate `parity/fixtures/permanova_v1.json`
+  (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
+  least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
+  scikit-bio 0.7.4 `permanova`/`permdisp` and NumPy permutation counts, on
+  free, conditional, partially aliased, fully aliased, singleton-stratum,
+  dispersion-only and PERMDISP F-boundary cases (vegan `permutest.betadisper`
+  transcribed as the counting oracle), plus hand-derived closed forms; the
+  former 1e-162 / 1e150 / 1e155-offset scale cases are now refused. Freedman-Lane goldens come from an
+  independent lstsq refit oracle (one, two and zero condition factors,
+  aliased and saturated designs); vegan's own margin and partial-permutest
+  schemes, which are not Freedman-Lane, are transcribed for information only.
+  The reference packages are test-only.
 
 ### Fixed
 

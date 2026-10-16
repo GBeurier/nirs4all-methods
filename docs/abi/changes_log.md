@@ -26,6 +26,85 @@ the between-group sum (two identical groups `1e16 + {0, 2, 4}` gave eta^2 =
 0.27, F = 1.5). Targets are now centered after an exact power-of-two scaling,
 a shift to the first target and a residual-mean correction; eta^2 and F are
 translation invariant. Permutation draws and counts are unchanged.
+## 2026-10-13 — ABI 2.20.0 (continued): PERMANOVA and PERMDISP (unreleased)
+
+Add two more generic caller-buffer operations in `n4m/metrics.h` to the same
+unreleased 2.20.0 surface; no serialized format changes.
+
+`n4m_stats_permanova` runs PERMANOVA (Anderson 2001) of one categorical term on
+Euclidean distances between the rows of a coordinate matrix, optionally given
+strata. It returns the total, between-strata, term-given-strata and residual
+sums of squares of the additive model strata + term (the vegan
+`adonis2(by = "margin")` SS for one other factor), R², partial R², pseudo-F,
+the identifiable term df (levels minus the connected components of the
+level-stratum occupancy graph; 0 when the term is aliased with the strata),
+the residual df, the log10 count of distinct within-strata assignments and a
+seeded Monte Carlo p-value whose draws permute rows only inside their stratum
+(PCG64, `numpy.random.default_rng` parity). `n4m_stats_permdisp` runs PERMDISP
+as vegan `betadisper(type = "centroid")` + `permutest`: distances to group
+centroids, per-group mean distances, one-way ANOVA F and a residual
+permutation test. Both count permuted `F >= F_obs - sqrt(DBL_EPSILON)` (vegan
+convention, on the F scale), and rescale results with `scalbn` after exact
+power-of-two scaling and per-column centring. `n4m_stats_permanova_freedman_lane` adds the partial test of a term
+given the additive main effects of condition factors (row-major
+`n x n_conditions` codes), by Freedman-Lane permutation of the reduced-model
+residuals, with numerical design ranks, `df_term = 0` for an aliased term and
+no test when either design is saturated; its reduced-model residuals are
+projected off the reduced design twice and the partial R^2 is SS_term /
+(SS_term + SS_residual) of one projection. Numerical domain of the three
+kernels: the shared supported domain D (finite X, nonzero |x| in
+[2^-256, 2^256], max/min nonzero |x| <= 2^32 over the whole matrix,
+`N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`, zeros allowed) is checked before
+computing; outside D they return `N4M_ERR_UNSUPPORTED` with "input outside
+the supported numerical domain (...)". Inside D: centring before scaling
+(rounding about n DBL_EPSILON times each column's range), a common
+power-of-two unit from the centred variation (constant columns and offsets
+are invisible; the rescaling is exact), explicit residual sums of squares for
+the observation and every draw, a pseudo-F that is NaN only for an exactly
+zero residual SS and is otherwise published with a resolution ratio (error
+estimate of the residual SS over it, a conservative first-order estimate)
+and a "numerically unresolved" flag when that ratio is >= 1 (out_fifteen
+[13..14], out_fourteen [12..13], out_eight [6..7]), an `int32_t*` exponent
+output on each function (true value = out
+x 2^exponent; 0 when every positive value is a normal double) instead of
+rounding a positive quantity to 0, and size/budget checks before
+level-dependent allocations (the Freedman-Lane basis is limited to 32 Mi
+values). Terms above 2048 levels and workloads above 250 million operations
+return `N4M_ERR_UNSUPPORTED`.
+
+Final ABI 2.20.0 signatures of the operations added by this unreleased
+version (2.19 signatures unchanged):
+
+```c
+n4m_status_t n4m_stats_correlation_test(n4m_context_t* ctx, const double* x,
+    const double* y, int64_t n, int32_t method, int32_t n_permutations,
+    uint64_t seed, double* out_five, int64_t* out_two);
+n4m_status_t n4m_stats_bh_adjust(n4m_context_t* ctx, const double* p_values,
+    int64_t m, double* adjusted);
+n4m_status_t n4m_stats_factor_association_exact(n4m_context_t* ctx,
+    const int64_t* factor_codes, const double* targets, int64_t n,
+    int32_t categorical, int64_t max_arrangements, double* out_four);
+n4m_status_t n4m_stats_correlation_exact(n4m_context_t* ctx, const double* x,
+    const double* y, int64_t n, int32_t method, int64_t max_arrangements,
+    double* out_four);
+n4m_status_t n4m_stats_permanova(n4m_context_t* ctx, const n4m_matrix_view_t* X,
+    const int64_t* term_codes, const int64_t* strata_codes,
+    int32_t n_permutations, uint64_t seed, double* out_fifteen,
+    int64_t* out_two, int32_t* ss_exponent);
+n4m_status_t n4m_stats_permanova_freedman_lane(n4m_context_t* ctx,
+    const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* condition_codes, int32_t n_conditions,
+    int32_t n_permutations, uint64_t seed, double* out_fourteen,
+    int64_t* out_two, int32_t* ss_exponent);
+n4m_status_t n4m_stats_permdisp(n4m_context_t* ctx, const n4m_matrix_view_t* X,
+    const int64_t* group_codes, int32_t n_permutations, uint64_t seed,
+    double* distances, double* group_mean_distances, double* out_eight,
+    int64_t* out_two, int32_t* distance_exponent);
+```
+
+Earlier drafts of this unreleased version had no exponent outputs and
+shorter output arrays (no resolution ratio or unresolved flag); they were
+never published, so only the signatures above exist.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The
 centered copy is rescaled by exact powers of two chosen from max|y| and then

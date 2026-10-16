@@ -53,17 +53,28 @@ bool p_values_in_domain(const double* p, size_t n) noexcept {
     return true;
 }
 
-// One O(n) pre-pass; inputs are already known to be finite.
-bool in_numerical_domain(const double* values, size_t n) noexcept {
+// Smallest and largest nonzero |x| of finite values, tested against D.
+struct DomainRange {
     double low = domain_high, high = 0.0;
-    for (size_t i = 0; i < n; ++i) {
-        const double a = std::abs(values[i]);
-        if (a == 0.0) continue;
+    void add(double x) noexcept {
+        const double a = std::abs(x);
+        if (a == 0.0) return;
         low = std::min(low, a);
         high = std::max(high, a);
     }
-    if (high == 0.0) return true;
-    return low >= domain_low && high <= domain_high && high <= low * domain_spread;
+    bool magnitudes_inside() const noexcept {
+        return high == 0.0 || (low >= domain_low && high <= domain_high);
+    }
+    bool inside() const noexcept {
+        return magnitudes_inside() && (high == 0.0 || high <= low * domain_spread);
+    }
+};
+
+// One O(n) pre-pass; inputs are already known to be finite.
+bool in_numerical_domain(const double* values, size_t n) noexcept {
+    DomainRange range;
+    for (size_t i = 0; i < n; ++i) range.add(values[i]);
+    return range.inside();
 }
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
@@ -425,6 +436,274 @@ n4m_status_t exact_distribution(n4m_context_t* ctx, std::vector<int64_t> side,
     out_four[2] = static_cast<double>(at_max) / static_cast<double>(count);
     out_four[3] = maximum;
     return N4M_OK;
+}
+// Explicit double -> long double promotion (clang -Wdouble-promotion).
+inline long double ld(double x) noexcept { return static_cast<long double>(x); }
+
+// Error estimate of a residual sum of squares computed from n x k centred
+// data by an explicit projection off a design of the given rank (or, for
+// PERMDISP, an ANOVA of distances on k coordinates): every residual is off by
+// about gamma times the range of its column (centring rounds relative to the
+// shifted values, the projection relative to the centred data), gamma = 4
+// (rank + k + 2) n DBL_EPSILON, so the residual SS is uncertain by about
+// gamma^2 * range_ss, range_ss = n * sum_j (max_i x_ij - min_i x_ij)^2 in
+// the scaled unit. This is a conservative first-order estimate for a
+// well-conditioned design, not a proof. A residual SS at or below it is
+// "numerically unresolved": the statistic is still computed and published,
+// flagged, with the ratio estimate / residual SS (relative error of a
+// resolved residual SS about 2 sqrt(ratio)).
+long double residual_error_estimate(long double range_ss, size_t rank, size_t n, size_t k) {
+    const long double gamma = 4.0L * static_cast<long double>(rank + k + 2) *
+                              static_cast<long double>(n) *
+                              static_cast<long double>(std::numeric_limits<double>::epsilon());
+    return gamma * gamma * range_ss;
+}
+
+// Writes the resolution ratio estimate / residual SS (+inf for a zero
+// residual SS) and the flag 1 (unresolved, ratio >= 1) or 0.
+void write_resolution(long double estimate, long double residual, double* ratio, double* flag) {
+    const long double r = residual > 0.0L ? estimate / residual
+                                          : std::numeric_limits<long double>::infinity();
+    *ratio = static_cast<double>(r);
+    *flag = r >= 1.0L ? 1.0 : 0.0;
+}
+
+// D for a coordinate matrix: one input array, so the spread is over all its
+// entries. One O(n k) pre-pass without a copy; nonfinite values are left to
+// the caller's own validation.
+bool in_numerical_domain(const n4m_matrix_view_t& v) noexcept {
+    DomainRange range;
+    for (int64_t j = 0; j < v.cols; ++j)
+        for (int64_t i = 0; i < v.rows; ++i) {
+            const double x = at(v, i, j);
+            if (!std::isfinite(x)) return true;
+            range.add(x);
+        }
+    return range.inside();
+}
+
+// Centred copy of X (row-major n x k) in a common power-of-two unit chosen
+// from the CENTRED variation, never from raw magnitudes. Each column reuses
+// the association helpers: exact prescale by 2^-e1 (bounding_exponent of the
+// raw column), center_in_place (shift, mean, residual mean), then the
+// exponent e2 bounding the centred column, C_j = e1 + e2. The common
+// exponent is G = max_j C_j and y_ij = c_ij 2^(e1_j - G), so |y| < 1 and a
+// constant column, whatever its amplitude, is exactly zero.
+// Inside D (spread at most 2^32 over X) the rescaling is exact. Let m be the
+// smallest nonzero |x|; every value is a multiple of g = ulp(m) >= 2^-53 m
+// and at most 2^32 m, so every centred value is at most 2^33 m and a nonzero
+// computed centred value is at least 2^-107 m / n (a rounded mean of
+// multiples of g, or a difference with a mean rounded in the same binade):
+// the rescaling spans at most 2^(140 + log2 n), the smallest nonzero y and
+// its square stay normal doubles, no varying column is erased and no squared
+// term underflows, even where long double is double. Rounding: the shift to
+// the first row is rounded relative to the shifted value, so each centred
+// value is off by about (n + 2) DBL_EPSILON times the range of its column,
+// whatever the offset; the spread bound keeps that range below 2^33 m, so
+// a difference of the inputs is kept to about n 2^-20 m. range_ss = n sum_j
+// (max_i y_ij - min_i y_ij)^2 feeds residual_error_estimate. exponent = G
+// (0 for all-constant X). False on nonfinite X.
+bool centred_rows(const n4m_matrix_view_t& v, std::vector<double>& y, int& exponent,
+                  long double& range_ss) {
+    const auto n = static_cast<size_t>(v.rows), k = static_cast<size_t>(v.cols);
+    std::vector<std::vector<double>> columns(k, std::vector<double>(n));
+    std::vector<int> raw_exponent(k, 0), centred_exponent(k, 0);
+    std::vector<bool> varies(k, false);
+    for (size_t j = 0; j < k; ++j) {
+        auto& col = columns[j];
+        for (size_t i = 0; i < n; ++i) {
+            col[i] = at(v, static_cast<int64_t>(i), static_cast<int64_t>(j));
+            if (!std::isfinite(col[i])) return false;
+        }
+        raw_exponent[j] = bounding_exponent(col);
+        for (double& x : col) x = std::ldexp(x, -raw_exponent[j]);
+        center_in_place(col);
+        for (double x : col)
+            if (x != 0.0) varies[j] = true;
+        if (varies[j]) centred_exponent[j] = raw_exponent[j] + bounding_exponent(col);
+    }
+    bool any = false;
+    exponent = 0;
+    for (size_t j = 0; j < k; ++j)
+        if (varies[j]) {
+            exponent = any ? std::max(exponent, centred_exponent[j]) : centred_exponent[j];
+            any = true;
+        }
+    y.assign(n * k, 0.0);
+    range_ss = 0.0L;
+    for (size_t j = 0; j < k; ++j)
+        if (varies[j]) {
+            double low = 0.0, high = 0.0;
+            for (size_t i = 0; i < n; ++i) {
+                const double value = std::ldexp(columns[j][i], raw_exponent[j] - exponent);
+                y[i * k + j] = value;
+                low = std::min(low, value);
+                high = std::max(high, value);
+            }
+            const long double range = ld(high) - ld(low);
+            range_ss += static_cast<long double>(n) * range * range;
+        }
+    return true;
+}
+
+// Publishes non-negative values computed in the scaled unit (true value =
+// scaled 2^shift). When every positive true value is a normal double, the
+// true values are written and *exponent = 0. Otherwise (overflow, or a
+// positive value below DBL_MIN, including one that would underflow to 0)
+// the scaled values are written and *exponent = shift, so the true value is
+// out * 2^exponent: a positive quantity is never published as 0. False only
+// when a positive value is not representable even in the scaled unit (it is
+// below 2^-1074 of the largest), which the caller reports as an error.
+bool publish(const std::vector<long double>& scaled, int shift,
+             const std::vector<double*>& out, int32_t& exponent) {
+    bool normal = true;
+    for (long double v : scaled) {
+        const long double value = std::scalbn(v, shift);
+        if (v > 0.0L && !(value >= static_cast<long double>(std::numeric_limits<double>::min()) &&
+                          value <= static_cast<long double>(std::numeric_limits<double>::max())))
+            normal = false;
+    }
+    exponent = normal ? 0 : shift;
+    for (size_t i = 0; i < scaled.size(); ++i) {
+        *out[i] = static_cast<double>(normal ? std::scalbn(scaled[i], shift) : scaled[i]);
+        if (scaled[i] > 0.0L && !(*out[i] > 0.0)) return false;
+    }
+    return true;
+}
+
+// Term sum of squares and EXPLICIT residual sum of squares of the additive
+// model strata + term, for rows of within-strata centred data xw. With D the
+// term indicators and S the strata indicators, the reduced normal equations
+// M = D'(I - P_S)D have M_ab = delta_ab n_a - sum_s n_as n_bs / n_s;
+// dropping one reference level per connected component of the level-stratum
+// graph leaves M_r positive definite. t_j = per-level sums of column j of xw
+// (= D'(I - P_S) xw), beta_j = M_r^-1 t_j, SS_term = t' M_r^-1 t, and the
+// residual of row i is xw_i - (beta_{a(i)} - sum_a n_{a s(i)} beta_a / n_s(i)),
+// so the residual SS is a sum of squares, never a difference.
+struct PermanovaKernel {
+    const std::vector<int64_t>& level;
+    const std::vector<int64_t>& stratum;
+    const std::vector<double>& xw;
+    size_t k;
+    std::vector<int64_t> reduced;   // level -> row of M_r, -1 for references
+    std::vector<double> chol;       // lower Cholesky factor of M_r, r x r
+    size_t r = 0;
+    // Per stratum: (level, count) of its occupied cells.
+    std::vector<std::vector<std::pair<int64_t, int64_t>>> stratum_cells;
+    std::vector<int64_t> stratum_n;
+    std::vector<double> sums, rhs, effect, stratum_effect;
+
+    // Returns {SS_term, SS_residual}; perm == nullptr is the observation.
+    std::pair<long double, long double> operator()(const int64_t* perm) {
+        const size_t n = level.size(), a = reduced.size(), s = stratum_n.size();
+        std::fill(sums.begin(), sums.end(), 0.0);
+        for (size_t i = 0; i < n; ++i) {
+            const size_t src = static_cast<size_t>(perm ? perm[i] : static_cast<int64_t>(i));
+            double* row = &sums[static_cast<size_t>(level[i]) * k];
+            for (size_t j = 0; j < k; ++j) row[j] += xw[src * k + j];
+        }
+        long double ss_term = 0.0L;
+        std::fill(effect.begin(), effect.end(), 0.0);
+        for (size_t j = 0; j < k; ++j) {
+            for (size_t l = 0; l < a; ++l)
+                if (reduced[l] >= 0) rhs[static_cast<size_t>(reduced[l])] = sums[l * k + j];
+            for (size_t u = 0; u < r; ++u) {  // L y = t
+                long double v = ld(rhs[u]);
+                for (size_t w = 0; w < u; ++w)
+                    v -= ld(chol[u * r + w]) * ld(rhs[w]);
+                rhs[u] = static_cast<double>(v / ld(chol[u * r + u]));
+                ss_term += ld(rhs[u]) * ld(rhs[u]);
+            }
+            for (size_t u = r; u-- > 0;) {  // L' beta = y
+                long double v = ld(rhs[u]);
+                for (size_t w = u + 1; w < r; ++w)
+                    v -= ld(chol[w * r + u]) * ld(rhs[w]);
+                rhs[u] = static_cast<double>(v / ld(chol[u * r + u]));
+            }
+            for (size_t l = 0; l < a; ++l)
+                if (reduced[l] >= 0) effect[l * k + j] = rhs[static_cast<size_t>(reduced[l])];
+        }
+        for (size_t g = 0; g < s; ++g)
+            for (size_t j = 0; j < k; ++j) {
+                long double m = 0.0L;
+                for (const auto& [l, count] : stratum_cells[g])
+                    m += static_cast<long double>(count) * ld(effect[static_cast<size_t>(l) * k + j]);
+                stratum_effect[g * k + j] =
+                    static_cast<double>(m / static_cast<long double>(stratum_n[g]));
+            }
+        long double ss_res = 0.0L;
+        for (size_t i = 0; i < n; ++i) {
+            const size_t src = static_cast<size_t>(perm ? perm[i] : static_cast<int64_t>(i));
+            const size_t l = static_cast<size_t>(level[i]), g = static_cast<size_t>(stratum[i]);
+            for (size_t j = 0; j < k; ++j) {
+                const long double e = static_cast<long double>(xw[src * k + j]) -
+                                      ld(effect[l * k + j]) + ld(stratum_effect[g * k + j]);
+                ss_res += e * e;
+            }
+        }
+        return {ss_term, ss_res};
+    }
+};
+
+// Appends to `basis` (orthonormal n-vectors) the direction of `candidate`
+// if it is not already spanned (modified Gram-Schmidt with one
+// reorthogonalization; dependent when the residual norm is <= 1e-9 of the
+// candidate norm). Returns 1 when appended, 0 otherwise.
+size_t extend_basis(std::vector<std::vector<double>>& basis, std::vector<double> v) {
+    long double norm0 = 0.0L;
+    for (double x : v) norm0 += ld(x) * ld(x);
+    if (!(norm0 > 0.0L)) return 0;
+    for (int pass = 0; pass < 2; ++pass)
+        for (const auto& q : basis) {
+            long double dot = 0.0L;
+            for (size_t i = 0; i < v.size(); ++i) dot += ld(q[i]) * ld(v[i]);
+            for (size_t i = 0; i < v.size(); ++i) v[i] = static_cast<double>(ld(v[i]) - dot * ld(q[i]));
+        }
+    long double norm = 0.0L;
+    for (double x : v) norm += ld(x) * ld(x);
+    if (!(norm > 1e-18L * norm0)) return 0;
+    const long double scale = 1.0L / std::sqrt(norm);
+    for (double& x : v) x = static_cast<double>(ld(x) * scale);
+    basis.push_back(std::move(v));
+    return 1;
+}
+
+// Appends the indicator columns of dense codes (levels 0..count-1) one at a
+// time; returns the rank increment.
+size_t extend_with_indicators(std::vector<std::vector<double>>& basis,
+                              const std::vector<int64_t>& dense, size_t levels) {
+    size_t added = 0;
+    for (size_t l = 0; l < levels; ++l) {
+        std::vector<double> col(dense.size(), 0.0);
+        for (size_t i = 0; i < dense.size(); ++i)
+            if (static_cast<size_t>(dense[i]) == l) col[i] = 1.0;
+        added += extend_basis(basis, std::move(col));
+    }
+    return added;
+}
+
+// Projects the columns of y (n x k) off the orthonormal basis (modified
+// Gram-Schmidt order). Returns {squared norm of the coefficients of
+// basis[first..), EXPLICIT residual sum of squares |y - sum_b q_b q_b' y|^2};
+// work receives the residual.
+std::pair<long double, long double> project(const std::vector<std::vector<double>>& basis,
+                                            size_t first, const std::vector<double>& y,
+                                            size_t k, std::vector<double>& work) {
+    const size_t n = y.size() / k;
+    work = y;
+    long double tail = 0.0L;
+    for (size_t b = 0; b < basis.size(); ++b)
+        for (size_t j = 0; j < k; ++j) {
+            long double dot = 0.0L;
+            for (size_t i = 0; i < n; ++i)
+                dot += ld(basis[b][i]) * ld(work[i * k + j]);
+            if (b >= first) tail += dot * dot;
+            for (size_t i = 0; i < n; ++i)
+                work[i * k + j] = static_cast<double>(ld(work[i * k + j]) - dot * ld(basis[b][i]));
+        }
+    long double residual = 0.0L;
+    for (double v : work) residual += ld(v) * ld(v);
+    return {tail, residual};
 }
 }  // namespace
 
@@ -1362,5 +1641,480 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "Benjamini-Hochberg allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "Benjamini-Hochberg internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_permanova(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* strata_codes, int32_t n_permutations, uint64_t seed,
+    double* out_fifteen, int64_t* out_two, int32_t* ss_exponent) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!term_codes || !out_fifteen || !out_two || !ss_exponent)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null PERMANOVA buffer");
+    const int64_t n = X->rows, k = X->cols;
+    if (n < 2 || k < 1 || n_permutations < 0 || n_permutations > 1000000)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PERMANOVA dimensions");
+    if (!in_numerical_domain(*X)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+    try {
+        const auto nn = static_cast<size_t>(n), kk = static_cast<size_t>(k);
+        std::vector<int64_t> level_n, stratum_n;
+        const auto level = dense_codes(std::vector<int64_t>(term_codes, term_codes + n), level_n);
+        const auto stratum = dense_codes(
+            strata_codes ? std::vector<int64_t>(strata_codes, strata_codes + n)
+                         : std::vector<int64_t>(nn, 0),
+            stratum_n);
+        const size_t a = level_n.size(), s = stratum_n.size();
+        // Sizes and budgets before any allocation proportional to them.
+        if (a > 2048)
+            return fail(ctx, N4M_ERR_UNSUPPORTED, "PERMANOVA term exceeds 2048 levels");
+        const long double work =
+            (2.0L * static_cast<long double>(n) * static_cast<long double>(k + 1) +
+             2.0L * static_cast<long double>(a) * static_cast<long double>(a) *
+                 static_cast<long double>(k)) *
+                (static_cast<long double>(n_permutations) + 1.0L) +
+            static_cast<long double>(a) * static_cast<long double>(n);
+        if (work > max_moment_products)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "PERMANOVA permutations exceed 250 million operation budget");
+        std::vector<double> y;
+        int exponent = 0;
+        long double range_ss = 0.0L;
+        if (!centred_rows(*X, y, exponent, range_ss))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMANOVA input");
+        // Stratum means, total and between-strata SS, within-strata centred
+        // rows; every sum of squares is a sum of squared terms.
+        std::vector<long double> smean(s * kk, 0.0L);
+        for (size_t i = 0; i < nn; ++i)
+            for (size_t j = 0; j < kk; ++j)
+                smean[static_cast<size_t>(stratum[i]) * kk + j] += ld(y[i * kk + j]);
+        for (size_t g = 0; g < s; ++g)
+            for (size_t j = 0; j < kk; ++j)
+                smean[g * kk + j] /= static_cast<long double>(stratum_n[g]);
+        long double ss_total = 0.0L, ss_strata = 0.0L, within = 0.0L;
+        std::vector<double> xw(nn * kk);
+        for (size_t i = 0; i < nn; ++i)
+            for (size_t j = 0; j < kk; ++j) {
+                const long double w = ld(y[i * kk + j]) - smean[static_cast<size_t>(stratum[i]) * kk + j];
+                ss_total += ld(y[i * kk + j]) * ld(y[i * kk + j]);
+                within += w * w;
+                xw[i * kk + j] = static_cast<double>(w);
+            }
+        for (size_t g = 0; g < s; ++g)
+            for (size_t j = 0; j < kk; ++j)
+                ss_strata += static_cast<long double>(stratum_n[g]) * smean[g * kk + j] *
+                             smean[g * kk + j];
+        // Occupied (stratum, level) cells and their counts.
+        std::vector<std::pair<int64_t, int64_t>> cell(nn);
+        for (size_t i = 0; i < nn; ++i) cell[i] = {stratum[i], level[i]};
+        std::sort(cell.begin(), cell.end());
+        std::vector<std::pair<std::pair<int64_t, int64_t>, int64_t>> cells;
+        for (const auto& c : cell) {
+            if (cells.empty() || cells.back().first != c) cells.push_back({c, 0});
+            ++cells.back().second;
+        }
+        // Connected components of the bipartite level-stratum graph; the
+        // identifiable term df is levels - components.
+        std::vector<size_t> parent(a + s);
+        std::iota(parent.begin(), parent.end(), size_t{0});
+        const std::function<size_t(size_t)> root = [&](size_t u) {
+            while (parent[u] != u) u = parent[u] = parent[parent[u]];
+            return u;
+        };
+        for (const auto& c : cells) {
+            const size_t u = root(static_cast<size_t>(c.first.second));
+            const size_t v = root(a + static_cast<size_t>(c.first.first));
+            if (u != v) parent[std::max(u, v)] = std::min(u, v);
+        }
+        PermanovaKernel kernel{level, stratum, xw, kk, std::vector<int64_t>(a, -1), {}, 0,
+                               std::vector<std::vector<std::pair<int64_t, int64_t>>>(s),
+                               stratum_n, {}, {}, {}, {}};
+        for (const auto& c : cells)
+            kernel.stratum_cells[static_cast<size_t>(c.first.first)].push_back(
+                {c.first.second, c.second});
+        std::vector<bool> component_seen(a + s, false);
+        for (size_t l = 0; l < a; ++l) {
+            const size_t c = root(l);
+            if (!component_seen[c]) {
+                component_seen[c] = true;  // the lowest level is the reference
+                continue;
+            }
+            kernel.reduced[l] = static_cast<int64_t>(kernel.r++);
+        }
+        const size_t r = kernel.r;
+        const int64_t df_term = static_cast<int64_t>(r);
+        const int64_t df_res = n - static_cast<int64_t>(s) - df_term;
+        double log10_distinct = 0.0;
+        {
+            std::vector<long double> m(r * r, 0.0L);
+            for (size_t g = 0; g < s; ++g) {
+                const auto ns = static_cast<long double>(stratum_n[g]);
+                log10_distinct += std::lgamma(static_cast<double>(stratum_n[g]) + 1.0);
+                for (const auto& [lu, cu] : kernel.stratum_cells[g]) {
+                    log10_distinct -= std::lgamma(static_cast<double>(cu) + 1.0);
+                    const int64_t ru = kernel.reduced[static_cast<size_t>(lu)];
+                    if (ru < 0) continue;
+                    for (const auto& [lv, cv] : kernel.stratum_cells[g]) {
+                        const int64_t rv = kernel.reduced[static_cast<size_t>(lv)];
+                        if (rv < 0) continue;
+                        m[static_cast<size_t>(ru) * r + static_cast<size_t>(rv)] -=
+                            static_cast<long double>(cu) * static_cast<long double>(cv) / ns;
+                    }
+                }
+            }
+            log10_distinct /= std::log(10.0);
+            for (size_t l = 0; l < a; ++l)
+                if (kernel.reduced[l] >= 0) {
+                    const auto u = static_cast<size_t>(kernel.reduced[l]);
+                    m[u * r + u] += static_cast<long double>(level_n[l]);
+                }
+            kernel.chol.assign(r * r, 0.0);
+            for (size_t j = 0; j < r; ++j) {
+                long double d = m[j * r + j];
+                for (size_t l = 0; l < j; ++l)
+                    d -= ld(kernel.chol[j * r + l]) * ld(kernel.chol[j * r + l]);
+                if (!(d > 1e-12L * m[j * r + j]))
+                    return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                                "PERMANOVA design is numerically singular");
+                const long double pivot = std::sqrt(d);
+                kernel.chol[j * r + j] = static_cast<double>(pivot);
+                for (size_t i = j + 1; i < r; ++i) {
+                    long double v = m[i * r + j];
+                    for (size_t l = 0; l < j; ++l)
+                        v -= ld(kernel.chol[i * r + l]) * ld(kernel.chol[j * r + l]);
+                    kernel.chol[i * r + j] = static_cast<double>(v / pivot);
+                }
+            }
+        }
+        kernel.sums.assign(a * kk, 0.0);
+        kernel.rhs.assign(r, 0.0);
+        kernel.effect.assign(a * kk, 0.0);
+        kernel.stratum_effect.assign(s * kk, 0.0);
+        const auto [ss_term, ss_res] =
+            r > 0 ? kernel(nullptr) : std::pair<long double, long double>{0.0L, within};
+        for (int i = 0; i < 15; ++i) out_fifteen[i] = nan_value;
+        if (!publish({ss_total, ss_strata, ss_term, ss_res}, 2 * exponent,
+                     {&out_fifteen[0], &out_fifteen[1], &out_fifteen[2], &out_fifteen[3]},
+                     *ss_exponent))
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                        "PERMANOVA sum of squares below 2^-1074 of the total");
+        // Ratios and the test statistic stay in the scaled unit. The partial
+        // R^2 denominator is the term + residual SS of the same projection.
+        if (df_term > 0 && ss_total > 0.0L)
+            out_fifteen[4] = static_cast<double>(std::min(1.0L, ss_term / ss_total));
+        if (df_term > 0 && ss_term + ss_res > 0.0L)
+            out_fifteen[5] = static_cast<double>(ss_term / (ss_term + ss_res));
+        const long double f_scale =
+            df_term > 0 ? static_cast<long double>(df_res) / static_cast<long double>(df_term) : 0.0L;
+        // F is undefined only for an exactly zero residual SS; below the
+        // error estimate it is published and flagged numerically unresolved.
+        if (df_term > 0 && df_res > 0) {
+            if (ss_res > 0.0L) out_fifteen[6] = static_cast<double>(ss_term / ss_res * f_scale);
+            write_resolution(residual_error_estimate(range_ss, s + r, nn, kk), ss_res,
+                             &out_fifteen[13], &out_fifteen[14]);
+        }
+        out_fifteen[7] = static_cast<double>(df_term);
+        out_fifteen[8] = static_cast<double>(df_res);
+        out_fifteen[9] = static_cast<double>(a);
+        out_fifteen[10] = static_cast<double>(s);
+        out_fifteen[11] = log10_distinct;
+        out_two[0] = 0;
+        out_two[1] = 0;
+        // As vegan anova.cca: count pseudo-F_perm >= F_obs - sqrt(eps); a
+        // permuted residual SS that is exactly zero is an infinite F.
+        const double f_observed = out_fifteen[6];
+        if (n_permutations == 0 || !std::isfinite(f_observed)) return N4M_OK;
+        // Strata in ascending code order, members in ascending row order.
+        std::vector<std::vector<int64_t>> members(s);
+        for (size_t i = 0; i < nn; ++i)
+            members[static_cast<size_t>(stratum[i])].push_back(static_cast<int64_t>(i));
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        std::vector<int64_t> perm(nn), q(nn);
+        const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
+        int64_t at_least = 0;
+        for (int32_t b = 0; b < n_permutations; ++b) {
+            for (const auto& idx : members) {
+                const auto ns = static_cast<int64_t>(idx.size());
+                n4m_pcg64_engine_permutation(&rng, q.data(), ns);
+                for (size_t j = 0; j < idx.size(); ++j)
+                    perm[static_cast<size_t>(idx[j])] = idx[static_cast<size_t>(q[j])];
+            }
+            const auto [term, rest] = kernel(perm.data());
+            const double f = rest > 0.0L ? static_cast<double>(term / rest * f_scale)
+                                         : std::numeric_limits<double>::infinity();
+            if (f >= f_observed - tolerance) ++at_least;
+        }
+        out_two[0] = at_least;
+        out_two[1] = n_permutations;
+        out_fifteen[12] = static_cast<double>(1 + at_least) /
+                           static_cast<double>(1 + n_permutations);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PERMANOVA allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PERMANOVA internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations,
+    uint64_t seed, double* out_fourteen, int64_t* out_two, int32_t* ss_exponent) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!term_codes || !out_fourteen || !out_two || !ss_exponent ||
+        (n_conditions > 0 && !condition_codes))
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null Freedman-Lane PERMANOVA buffer");
+    const int64_t n = X->rows, k = X->cols;
+    if (n < 2 || k < 1 || n_conditions < 0 || n_conditions > 64 || n_permutations < 0 ||
+        n_permutations > 1000000)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid Freedman-Lane PERMANOVA dimensions");
+    if (!in_numerical_domain(*X)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+    try {
+        const auto nn = static_cast<size_t>(n), kk = static_cast<size_t>(k);
+        const auto nc = static_cast<size_t>(n_conditions);
+        // Level counts first: the design is generated column by column only
+        // after its size, memory and work are checked.
+        std::vector<std::vector<int64_t>> condition_dense(nc);
+        std::vector<size_t> condition_levels(nc);
+        long double columns = 1.0L;
+        for (size_t c = 0; c < nc; ++c) {
+            std::vector<int64_t> codes(nn), counts;
+            for (size_t i = 0; i < nn; ++i) codes[i] = condition_codes[i * nc + c];
+            condition_dense[c] = dense_codes(codes, counts);
+            condition_levels[c] = counts.size();
+            columns += static_cast<long double>(counts.size());
+        }
+        std::vector<int64_t> term_counts;
+        const auto term_dense =
+            dense_codes(std::vector<int64_t>(term_codes, term_codes + n), term_counts);
+        columns += static_cast<long double>(term_counts.size());
+        const long double rows = static_cast<long double>(n);
+        if (columns > 4096.0L)
+            return fail(ctx, N4M_ERR_UNSUPPORTED, "Freedman-Lane design exceeds 4096 columns");
+        if (rows * columns > 32.0L * 1024.0L * 1024.0L)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "Freedman-Lane design basis exceeds 32 Mi values (256 MiB)");
+        const long double work =
+            2.0L * rows * columns * columns +
+            (4.0L * rows * static_cast<long double>(k) * (columns + 1.0L)) *
+                (static_cast<long double>(n_permutations) + 1.0L);
+        if (work > max_moment_products)
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "Freedman-Lane permutations exceed 250 million operation budget");
+        std::vector<double> y;
+        int exponent = 0;
+        long double range_ss = 0.0L;
+        if (!centred_rows(*X, y, exponent, range_ss))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMANOVA input");
+        // Reduced design: intercept and the indicators of every condition
+        // factor (additive main effects, no interaction); full design adds the
+        // term indicators. Numerical ranks (Gram-Schmidt, 1e-9 relative).
+        std::vector<std::vector<double>> basis;
+        size_t rank_reduced = extend_basis(basis, std::vector<double>(nn, 1.0));
+        for (size_t c = 0; c < nc; ++c)
+            rank_reduced += extend_with_indicators(basis, condition_dense[c], condition_levels[c]);
+        const size_t df_term = extend_with_indicators(basis, term_dense, term_counts.size());
+        const size_t rank_full = rank_reduced + df_term;
+        const int64_t df_res = n - static_cast<int64_t>(rank_full);
+        // Reduced-model residuals e, projected off the reduced design twice
+        // (the second pass removes what rounding left of large fitted columns,
+        // "twice is enough"); y is centred, so the intercept projection is
+        // zero. The term and residual SS then come from one projection of e
+        // on the full basis, and the partial R^2 denominator is their sum.
+        const std::vector<std::vector<double>> reduced_basis(
+            basis.begin(), basis.begin() + static_cast<std::ptrdiff_t>(rank_reduced));
+        std::vector<double> e, scratch;
+        const long double ss_reduced = project(reduced_basis, 0, y, kk, scratch).first;
+        project(reduced_basis, 0, scratch, kk, e);
+        long double ss_total = 0.0L;
+        for (double v : y) ss_total += ld(v) * ld(v);
+        const auto [ss_term, ss_res] = project(basis, rank_reduced, e, kk, scratch);
+        for (int i = 0; i < 14; ++i) out_fourteen[i] = nan_value;
+        if (!publish({ss_total, ss_reduced, df_term > 0 ? ss_term : 0.0L, ss_res}, 2 * exponent,
+                     {&out_fourteen[0], &out_fourteen[1], &out_fourteen[2], &out_fourteen[3]},
+                     *ss_exponent))
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                        "PERMANOVA sum of squares below 2^-1074 of the total");
+        if (df_term > 0 && ss_total > 0.0L)
+            out_fourteen[4] = static_cast<double>(std::min(1.0L, ss_term / ss_total));
+        if (df_term > 0 && ss_term + ss_res > 0.0L)
+            out_fourteen[5] = static_cast<double>(ss_term / (ss_term + ss_res));
+        const long double f_scale = df_term > 0 ? static_cast<long double>(df_res) /
+                                                      static_cast<long double>(df_term)
+                                                : 0.0L;
+        if (df_term > 0 && df_res > 0) {
+            if (ss_res > 0.0L) out_fourteen[6] = static_cast<double>(ss_term / ss_res * f_scale);
+            write_resolution(residual_error_estimate(range_ss, rank_full, nn, kk), ss_res,
+                             &out_fourteen[12], &out_fourteen[13]);
+        }
+        out_fourteen[7] = static_cast<double>(df_term);
+        out_fourteen[8] = static_cast<double>(df_res);
+        out_fourteen[9] = static_cast<double>(rank_reduced);
+        out_fourteen[10] = std::lgamma(static_cast<double>(n) + 1.0) / std::log(10.0);
+        out_two[0] = 0;
+        out_two[1] = 0;
+        const double f_observed = out_fourteen[6];
+        if (n_permutations == 0 || !std::isfinite(f_observed)) return N4M_OK;
+        // Freedman-Lane: the permuted data fitted + e[perm] has, given the
+        // reduced design, the same term SS and residual SS as e[perm]
+        // projected on the full basis; both come from explicit projections.
+        const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        std::vector<int64_t> perm(nn);
+        std::vector<double> ep(nn * kk);
+        int64_t at_least = 0;
+        for (int32_t b = 0; b < n_permutations; ++b) {
+            n4m_pcg64_engine_permutation(&rng, perm.data(), n);
+            for (size_t i = 0; i < nn; ++i)
+                for (size_t j = 0; j < kk; ++j)
+                    ep[i * kk + j] = e[static_cast<size_t>(perm[i]) * kk + j];
+            const auto [term, rest] = project(basis, rank_reduced, ep, kk, scratch);
+            const double f = rest > 0.0L ? static_cast<double>(term / rest * f_scale)
+                                         : std::numeric_limits<double>::infinity();
+            if (f >= f_observed - tolerance) ++at_least;
+        }
+        out_two[0] = at_least;
+        out_two[1] = n_permutations;
+        out_fourteen[11] = static_cast<double>(1 + at_least) / static_cast<double>(1 + n_permutations);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "Freedman-Lane PERMANOVA allocation failed");
+    } catch (...) {
+        return fail(ctx, N4M_ERR_INTERNAL, "Freedman-Lane PERMANOVA internal error");
+    }
+}
+
+N4M_API n4m_status_t n4m_stats_permdisp(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int32_t n_permutations, uint64_t seed, double* distances,
+    double* group_mean_distances, double* out_eight, int64_t* out_two,
+    int32_t* distance_exponent) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!group_codes || !distances || !group_mean_distances || !out_eight || !out_two ||
+        !distance_exponent)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null PERMDISP buffer");
+    const int64_t n = X->rows, k = X->cols;
+    if (n < 2 || k < 1 || n_permutations < 0 || n_permutations > 1000000)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PERMDISP dimensions");
+    if (!in_numerical_domain(*X)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+    const long double work =
+        static_cast<long double>(n) * (2.0L * static_cast<long double>(k) +
+                                       3.0L * (static_cast<long double>(n_permutations) + 1.0L));
+    if (work > max_moment_products)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "PERMDISP permutations exceed 250 million operation budget");
+    try {
+        const auto nn = static_cast<size_t>(n), kk = static_cast<size_t>(k);
+        std::vector<int64_t> group_n;
+        const auto group = dense_codes(std::vector<int64_t>(group_codes, group_codes + n), group_n);
+        const size_t g = group_n.size();
+        std::vector<double> y;
+        int exponent = 0;
+        long double range_ss = 0.0L;
+        if (!centred_rows(*X, y, exponent, range_ss))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMDISP input");
+        std::vector<long double> centroid(g * kk, 0.0L);
+        for (size_t i = 0; i < nn; ++i)
+            for (size_t j = 0; j < kk; ++j)
+                centroid[static_cast<size_t>(group[i]) * kk + j] += ld(y[i * kk + j]);
+        for (size_t c = 0; c < g; ++c)
+            for (size_t j = 0; j < kk; ++j)
+                centroid[c * kk + j] /= static_cast<long double>(group_n[c]);
+        std::vector<long double> z(nn);
+        std::vector<long double> zmean(g, 0.0L);
+        for (size_t i = 0; i < nn; ++i) {
+            long double d2 = 0.0L;
+            for (size_t j = 0; j < kk; ++j) {
+                const long double d = ld(y[i * kk + j]) - centroid[static_cast<size_t>(group[i]) * kk + j];
+                d2 += d * d;
+            }
+            z[i] = std::sqrt(d2);
+            zmean[static_cast<size_t>(group[i])] += z[i];
+        }
+        for (size_t c = 0; c < g; ++c) zmean[c] /= static_cast<long double>(group_n[c]);
+        long double grand = 0.0L;
+        for (size_t c = 0; c < g; ++c) grand += static_cast<long double>(group_n[c]) * zmean[c];
+        grand /= static_cast<long double>(n);
+        // Between and within SS of the distances, each a sum of squares.
+        long double between = 0.0L, residual = 0.0L;
+        std::vector<long double> resid(nn);
+        for (size_t c = 0; c < g; ++c)
+            between += static_cast<long double>(group_n[c]) * (zmean[c] - grand) * (zmean[c] - grand);
+        for (size_t i = 0; i < nn; ++i) {
+            resid[i] = z[i] - zmean[static_cast<size_t>(group[i])];
+            residual += resid[i] * resid[i];
+        }
+        std::vector<long double> published(z);
+        std::vector<double*> targets;
+        for (size_t i = 0; i < nn; ++i) targets.push_back(&distances[i]);
+        for (size_t c = 0; c < g; ++c) {
+            published.push_back(zmean[c]);
+            targets.push_back(&group_mean_distances[c]);
+        }
+        if (!publish(published, exponent, targets, *distance_exponent))
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                        "PERMDISP distance below 2^-1074 of the largest");
+        for (int i = 0; i < 8; ++i) out_eight[i] = nan_value;
+        out_eight[1] = static_cast<double>(g) - 1.0;
+        out_eight[2] = static_cast<double>(n) - static_cast<double>(g);
+        out_eight[3] = static_cast<double>(g);
+        out_eight[4] = log10_factorial_ratio(n, group_n);
+        out_two[0] = 0;
+        out_two[1] = 0;
+        // F is undefined with one group, n == groups or an exactly zero
+        // within SS; below the error estimate it is published and flagged.
+        if (g < 2 || nn <= g) return N4M_OK;
+        write_resolution(residual_error_estimate(range_ss, g, nn, kk), residual, &out_eight[6],
+                         &out_eight[7]);
+        if (!(residual > 0.0L)) return N4M_OK;
+        const long double f_scale =
+            static_cast<long double>(nn - g) / static_cast<long double>(g - 1);
+        out_eight[0] = static_cast<double>(between / residual * f_scale);
+        if (n_permutations == 0) return N4M_OK;
+        // vegan permutest.betadisper: permute the ANOVA residuals of the
+        // distances, refit the one-way model and count F_perm >= F_obs -
+        // sqrt(eps). Between and within SS of each draw are explicit sums of
+        // squares around its own group means, never a total minus a part.
+        const double f_observed = out_eight[0];
+        const double tolerance = std::sqrt(std::numeric_limits<double>::epsilon());
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        std::vector<int64_t> perm(nn);
+        std::vector<long double> means(g);
+        int64_t at_least = 0;
+        for (int32_t b = 0; b < n_permutations; ++b) {
+            n4m_pcg64_engine_permutation(&rng, perm.data(), n);
+            std::fill(means.begin(), means.end(), 0.0L);
+            long double mean_all = 0.0L;
+            for (size_t i = 0; i < nn; ++i) {
+                const long double v = resid[static_cast<size_t>(perm[i])];
+                means[static_cast<size_t>(group[i])] += v;
+                mean_all += v;
+            }
+            mean_all /= static_cast<long double>(n);
+            for (size_t c = 0; c < g; ++c) means[c] /= static_cast<long double>(group_n[c]);
+            long double bp = 0.0L, wp = 0.0L;
+            for (size_t c = 0; c < g; ++c)
+                bp += static_cast<long double>(group_n[c]) * (means[c] - mean_all) * (means[c] - mean_all);
+            for (size_t i = 0; i < nn; ++i) {
+                const long double d =
+                    resid[static_cast<size_t>(perm[i])] - means[static_cast<size_t>(group[i])];
+                wp += d * d;
+            }
+            const double f = wp > 0.0L ? static_cast<double>(bp / wp * f_scale)
+                                       : std::numeric_limits<double>::infinity();
+            if (f >= f_observed - tolerance) ++at_least;
+        }
+        out_two[0] = at_least;
+        out_two[1] = n_permutations;
+        out_eight[5] = static_cast<double>(1 + at_least) / static_cast<double>(1 + n_permutations);
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PERMDISP allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PERMDISP internal error"); }
 }
 }  // extern "C"
