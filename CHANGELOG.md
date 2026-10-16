@@ -14,12 +14,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   `n4m_preflight_pca_compute`), PCR, Ridge, MB-PLS, Hotelling T2 / Q
   residuals, FlexiblePCA/SVD and wavelet PCA/SVD.
   - One-sided Jacobi runs on the input scaled exactly into [0.5, 1) and
-    sweeps to convergence, with no early stop on norm reduction, so weak but
-    genuine directions are resolved. A column cancelled below the documented
-    resolution floor (2^-500 of the scaled input) is an exact zero singular
-    value. Inputs whose dynamic range exceeds 2^480 are refused, so the floor
-    is reachable only through cancellation (e.g. +-1 spectra where one row is
-    the opposite of another).
+    sweeps to convergence, with no early stop on norm reduction. Singular
+    values are accurate to an absolute O(max(m,n) eps s_max) bound; smaller
+    ones are unresolved (weak directions of graded or decoupled inputs are
+    usually also resolved relatively, as a bonus). A column cancelled below
+    2^-500 of the scaled input stops rotating and is published as 0, inside
+    the unresolved range: this makes exactly rank-deficient inputs terminate
+    (e.g. +-1 spectra where one row is the opposite of another). Inputs whose
+    dynamic range exceeds 2^480 are refused.
   - Tridiagonal QL follows the LAPACK dsteqr organisation: unreduced blocks
     split by the local test, exact per-block scaling of extreme blocks
     (subnormal spectra are resolved) and a 30n total iteration budget.
@@ -37,8 +39,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - `n4m_preflight_pca_compute` declares the supported numerical domain D
   (nonzero |x| in [2^-128, 2^128], spread <= 2^64) and refuses inputs outside
   it with `N4M_ERR_UNSUPPORTED`. Inside D it centres with compensated sums,
-  ignores constant columns, and is exact under power-of-two scaling. ABI
-  unchanged (see `docs/abi/changes_log.md`).
+  ignores constant columns, and is exact under power-of-two scaling.
+  Variances are accurate to the absolute bound
+  `16 * max(n,p) * eps * lambda_max`; smaller ones are unresolved and are
+  published as 0.
+- The Jacobi convergence threshold no longer underflows for weak column pairs
+  (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
+  `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
+  inside D.
+
+### Added
+
+- ABI 2.20.0: `n4m_preflight_pca_compute_resolved` publishes the PCA
+  resolution bound and a per-component `unresolved` flag (rule-14 accuracy
+  contract). The JS `preflightPca` wrapper returns `resolution` and
+  `unresolved`. Tested against mpmath references (`B_n(t)` cancellation
+  families, a Kronecker product, permutations) on CPU and WASM.
 
 ## [1.3.6] - 2026-10-13
 

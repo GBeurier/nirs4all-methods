@@ -13,6 +13,7 @@ abi_symbols:
   - "n4m_preflight_noise_proxy_compute"
   - "n4m_preflight_pairs_within_tolerance"
   - "n4m_preflight_pca_compute"
+  - "n4m_preflight_pca_compute_resolved"
   - "n4m_preflight_repeatability_compute"
   - "n4m_preflight_summary_compute"
 tu:
@@ -40,7 +41,7 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts."
+notes: "Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test; ABI 2.20: PCA with its absolute resolution bound and per-component unresolved flags). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts."
 c_surface:
   - "n4m_preflight_factor_association"
   - "n4m_preflight_local_contrast"
@@ -48,6 +49,7 @@ c_surface:
   - "n4m_preflight_noise_proxy_compute"
   - "n4m_preflight_pairs_within_tolerance"
   - "n4m_preflight_pca_compute"
+  - "n4m_preflight_pca_compute_resolved"
   - "n4m_preflight_repeatability_compute"
   - "n4m_preflight_summary_compute"
 fq_name: "n4m.metrics.preflight.qualification"

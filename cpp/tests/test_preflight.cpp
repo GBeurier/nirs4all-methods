@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "svd_degenerate_goldens.inc"
+
 #define REQUIRE(x) do { if (!(x)) throw std::runtime_error(#x); } while (false)
 static bool near(double x, double y) { return std::abs(x-y) < 1e-9; }
 static bool relative_near(double x, double y) {
@@ -70,7 +72,8 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         const std::vector<double> hi={two(128),two(64),-two(128),two(65),two(127),-two(64),
                                       0,3*two(64),two(126),two(66),-two(127),0};
         PcaRun r=run_pca(ctx,hi,6,2,2);
-        REQUIRE(r.status==N4M_OK && std::isfinite(r.moments[1]) && r.eigen[1]>0.0);
+        // lambda_2 / lambda_1 ~ 2^-128: below the resolution, published as 0.
+        REQUIRE(r.status==N4M_OK && std::isfinite(r.moments[1]) && r.eigen[0]>0.0 && r.eigen[1]==0.0);
         std::vector<double> lo(hi);
         for (double& v : lo) v=std::ldexp(v,-192);           // [2^-128, 2^-64]
         const PcaRun rl=run_pca(ctx,lo,6,2,2);
@@ -139,9 +142,9 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         REQUIRE(with_constants(wide).status==N4M_ERR_UNSUPPORTED);
     }
     // Review cases. [A; -A] with A = [[-1,1,-1],[-1,-1,-1],[1,-1,1],[-t,t,t]]:
-    // analytic variances 2 sigma^2 / 7 with sigma = (sqrt17 +- 1)/2 and
-    // sqrt(2) t (relative correction O(t^2)). t = 2^-60 is inside D (and
-    // needs compensated centring); t = 1e-40 is outside (spread 1e40).
+    // analytic variances 2 sigma^2 / 7 with sigma = (sqrt17 +- 1)/2 (the
+    // third, 4t^2/7, is unresolved). t = 2^-60 is inside D (and needs
+    // compensated centring); t = 1e-40 is outside (spread 1e40).
     for (double t : {std::ldexp(1.0,-40), std::ldexp(1.0,-60), 1e-40}) {
         const double a4[12]={-1,1,-1, -1,-1,-1, 1,-1,1, -t,t,t};
         std::vector<double> x(24);
@@ -152,13 +155,67 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         const double s17=std::sqrt(17.0);
         REQUIRE(rel_close(r.eigen[0],2*(s17+1)*(s17+1)/28,1e-12));
         REQUIRE(rel_close(r.eigen[1],2*(s17-1)*(s17-1)/28,1e-12));
-        REQUIRE(rel_close(r.eigen[2],4*t*t/7,1e-12));
+        // 4t^2/7 ~ 2^-81 lambda_1 is below the resolution (rule 14): the
+        // 2.19 entry point publishes it as 0 (the 2.20 one also flags it).
+        REQUIRE(r.eigen[2]==0.0);
     }
     {
         // diag-like 2^200 / 2^-450 rows: outside D.
         const std::vector<double> x={std::ldexp(1.0,200),0,-std::ldexp(1.0,200),0,
                                      0,std::ldexp(1.0,-450),0,-std::ldexp(1.0,-450)};
         REQUIRE(run_pca(ctx,x,4,2,2).status==N4M_ERR_UNSUPPORTED);
+    }
+}
+
+// Rule 14 accuracy contract through the ABI 2.20 entry point, against the
+// mpmath variances of svd_degenerate_goldens.inc (B_8 plateau, B_8 below the
+// double range, B_6 (x) 2x2 that used to exhaust the Jacobi sweeps), under
+// row and column reversal. Every resolved variance lies within the published
+// resolution and is a normal double; every unresolved one is flagged with a
+// zero variance and zero scores. Variances clearly above / below the bound
+// must be classified accordingly.
+static void pca_resolution_tests(n4m_context_t* ctx) {
+    int unresolved_seen=0;
+    for (const MpGolden& g : kMpGoldens) {
+        const int64_t n=g.m, p=g.n; const auto k=static_cast<int32_t>(std::min(n,p));
+        for (int perm=0; perm<4; ++perm) {
+            std::vector<double> x(static_cast<size_t>(n*p)), sc(static_cast<size_t>(n*k)),
+                ld(static_cast<size_t>(k*p)), ev(static_cast<size_t>(k)), mom(2);
+            for (int64_t i=0;i<n;++i) for (int64_t j=0;j<p;++j)
+                x[static_cast<size_t>(((perm&1)?n-1-i:i)*p+((perm&2)?p-1-j:j))]=
+                    g.A[static_cast<size_t>(i*p+j)];
+            std::vector<uint8_t> flag(static_cast<size_t>(k),9);
+            double res=-1.0;
+            auto X=view(x.data(),n,p), S=view(sc.data(),n,k), L=view(ld.data(),k,p);
+            REQUIRE(n4m_preflight_pca_compute_resolved(ctx,&X,k,&S,&L,ev.data(),mom.data(),
+                                                       &res,flag.data())==N4M_OK);
+            REQUIRE(res==16.0*static_cast<double>(std::max(n,p))*
+                         std::numeric_limits<double>::epsilon()*ev[0]);
+            REQUIRE(res>=std::numeric_limits<double>::min());
+            for (int32_t a=0;a<k;++a) {
+                const auto ua=static_cast<size_t>(a);
+                const double ref=g.variances[a];
+                REQUIRE(flag[ua]<=1);
+                if (ref>2.0*res) REQUIRE(flag[ua]==0);
+                if (ref<0.5*res) REQUIRE(flag[ua]==1);
+                if (flag[ua]==0) {
+                    REQUIRE(std::abs(ev[ua]-ref)<=res && ev[ua]>=std::numeric_limits<double>::min());
+                } else {
+                    ++unresolved_seen;
+                    REQUIRE(ev[ua]==0.0);
+                    for (int64_t i=0;i<n;++i) REQUIRE(sc[static_cast<size_t>(i*k+a)]==0.0);
+                }
+            }
+        }
+    }
+    // Per family and permutation: one, one and two unresolved components.
+    REQUIRE(unresolved_seen==4*(1+1+2));
+    // B_8 below the double range scaled by 2^-30 leaves D (|x| = 2^-157).
+    {
+        const MpGolden& g=kMpGoldens[1];
+        std::vector<double> x(g.A,g.A+g.m*g.n);
+        for (double& v : x) v=std::ldexp(v,-30);
+        REQUIRE(run_pca(ctx,x,g.m,g.n,static_cast<int32_t>(g.n)).status==N4M_ERR_UNSUPPORTED);
     }
 }
 
@@ -204,9 +261,11 @@ int main() {
         REQUIRE(near(eigen3[0]+eigen3[1]+eigen3[2],moments[0]) && near(moments[0],23.0/3.0));
         REQUIRE(near(moments[1],257.0/9.0));
         pca_invariance_tests(ctx);
+        pca_resolution_tests(ctx);
         // Weak decoupled variance: [A; -A; 26 zero rows], A = [[1,0,0],
-        // [0,1e-9,0],[0,1e-9,1e-9]]. NumPy 2.2.6 SVD golden for the second
-        // variance; it must keep full relative accuracy.
+        // [0,1e-9,0],[0,1e-9,1e-9]]. The second variance (NumPy 2.2.6:
+        // 1.689e-19, i.e. 2.6e-18 lambda_1) is below the resolution (rule 14):
+        // published as 0. The internal kernel test keeps its relative value.
         {
             std::vector<double> w(96, 0.0);
             const double a[9]={1,0,0, 0,1e-9,0, 0,1e-9,1e-9};
@@ -214,7 +273,7 @@ int main() {
             const PcaRun r=run_pca(ctx,w,32,3,2);
             REQUIRE(r.status==N4M_OK);
             REQUIRE(rel_close(r.eigen[0],0.06451612903225808,1e-12));
-            REQUIRE(rel_close(r.eigen[1],1.6890541862902547e-19,1e-12));
+            REQUIRE(r.eigen[1]==0.0);
         }
         // Two balanced groups: within SS=4, MSW=2; between SS=16,
         // MSB=16 => ICC=(16-2)/(16+2)=7/9, pooled SD=sqrt(2).
