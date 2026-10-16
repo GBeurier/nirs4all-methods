@@ -84,23 +84,25 @@ ABI 2.20.0. No model-state serialization format changes.
 
 - Public ABI 2.20.0 one-way random-effects variance components:
   `n4m_stats_variance_components_reml` (REML for balanced and unbalanced
-  groups; every local maximum of the restricted likelihood is refined and
-  compared with the boundary s2b = 0; boundary, convergence and
-  representability status per feature; exact power-of-two scaling from the
-  centred variation, so outputs are translation and scale invariant) and
+  groups; every local maximum of the restricted likelihood the grid resolves
+  is refined and compared with the boundary s2b = 0; boundary and
+  convergence status per feature; the grid limitation is documented with a
+  degree bound, 4K-3 stationary points for K distinct group sizes) and
   `n4m_stats_variance_components_intervals` (exact chi-square interval of the
   within-group SD, exact F interval of the balanced ICC(1,1), seeded
   cluster-bootstrap percentile intervals of the pooled SD and REML ICC with
-  NumPy-parity PCG64 draws, and a per-feature interval status). The
-  percentile intervals are not coverage-calibrated: 0.86-0.94 measured at
-  95 % nominal (`parity/generators/variance_components_coverage.py`); BCa
-  was rejected (0.74 at ICC 0.1 with 20 groups). Chi-square and F quantiles
-  (`cpp/src/core/common/distributions.cpp`) use cancellation-free prefactors
-  and direct upper tails. Native tests compare with dense REML score
+  NumPy-parity PCG64 draws). Supported numerical domain (rule 13): nonzero
+  |x| in [2^-256, 2^256], spread <= 2^64 over values and differences;
+  outside it both calls refuse with `N4M_ERR_UNSUPPORTED`. The percentile
+  intervals are not coverage-calibrated: 0.86-0.94 measured at 95 % nominal
+  (`parity/generators/variance_components_coverage.py`); BCa was rejected
+  (0.74 at ICC 0.1 with 20 groups). Chi-square and F quantiles
+  (`cpp/src/core/common/distributions.cpp`) take tail probabilities and use
+  cancellation-free prefactors. Native tests compare with dense REML score
   equations (NumPy 2.5.4 / SciPy 1.18.1), statsmodels 0.15.0 MixedLM,
-  balanced closed forms, exact Fraction ANOVA, SciPy and mpmath 1.4.1
-  quantiles, a multimodal witness and 2^k / offset sweeps. The centring
-  helpers `bounding_exponent` and `center_in_place` move to
+  balanced closed forms, SciPy and mpmath 1.4.1 quantiles, a multimodal
+  witness, 2^k / offset sweeps and both sides of every domain boundary. The
+  centring helpers `bounding_exponent` and `center_in_place` move to
   `cpp/src/core/common/centring.hpp`, shared with the Preflight kernels.
   JS/WASM wrappers `statsVarianceComponentsReml` and
   `statsVarianceComponentsIntervals`.
