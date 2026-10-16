@@ -29,10 +29,12 @@ ABI 2.20.0. No model-state serialization format changes.
 
 ### Changed
 
-- Rule-13 numerical domain for the clustering kernels with real inputs
+- Rules 13/15 numerical domain for the clustering kernels with real inputs
   (`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment`,
   `n4m_random_multivariate_normal`): finite values, every nonzero `|x|` in
-  `[2^-256, 2^256]` and max/min nonzero `|x|` `<= 2^64` per input array.
+  `[2^-256, 2^256]` and max/min nonzero `|x|` `<= 2^32` per input array,
+  through the public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` (256) and
+  `N4M_DOMAIN_MAX_SPREAD_LOG2` (32) in `n4m/metrics.h`.
   Outside it the call returns `N4M_ERR_UNSUPPORTED` ("input outside the
   supported numerical domain ...") before computing; inside it results are
   correct (exact optimum for the assignment, reference operation order for

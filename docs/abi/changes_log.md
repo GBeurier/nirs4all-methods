@@ -16,10 +16,11 @@ factor of the lower triangle of `cov`; a covariance that is not numerically
 positive definite returns `N4M_ERR_NUMERICAL_FAILURE`. `n4m_random_permutations`
 writes successive `default_rng(seed).permutation(n)` draws of one PCG64 stream.
 
-Behaviour changes (signatures unchanged). Rule-13 numerical domain for
+Behaviour changes (signatures unchanged). Rules 13/15 numerical domain for
 `n4m_cluster_hdbscan`, `n4m_linear_sum_assignment` and `n4m_random_multivariate_normal`:
-finite values, every nonzero `|x|` in `[2^-256, 2^256]`, max/min nonzero `|x|` `<= 2^64`
-per input array; outside it `N4M_ERR_UNSUPPORTED` with the message "input outside the
+finite values, every nonzero `|x|` in `[2^-256, 2^256]`, max/min nonzero `|x|` `<= 2^32`
+per input array (new public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` = 256 and
+`N4M_DOMAIN_MAX_SPREAD_LOG2` = 32 in `n4m/metrics.h`); outside it `N4M_ERR_UNSUPPORTED` with the message "input outside the
 supported numerical domain ..." before computing. Each call checks a 256 MiB working-memory
 budget before allocating (the WASM32 build aborts on a failed allocation).
 `n4m_cluster_hdbscan` no longer writes past caller buffers for overflowing inputs (now

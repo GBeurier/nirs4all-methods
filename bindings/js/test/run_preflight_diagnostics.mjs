@@ -191,8 +191,8 @@ for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
         m._free(mean); backing.free(); ctx.destroy();
     }
 }
-// Rule-13 domain (same rules as n4m_cluster_robustness_tests): finite,
-// nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^64. Inside it the
+// Rules 13/15 domain (same rules as n4m_cluster_robustness_tests): finite,
+// nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^32. Inside it the
 // results are exact power-of-two rescalings or exact optima; outside it every
 // kernel refuses with N4M_ERR_UNSUPPORTED (10) and no trap.
 {
@@ -212,6 +212,11 @@ for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
             {minClusterSize: 2, minSamples: 2}));
         assert.equal(code, 10, `hdbscan x ${factor}`);
     }
+    // Spread edge: max/min nonzero |x| = 2^32 accepted, one ulp more refused.
+    const hdbscanStatus = (values) => status(() => clusterHdbscan({data: new Float64Array(values), rows: values.length, cols: 1},
+        {minClusterSize: 2, minSamples: 2}));
+    assert.equal(hdbscanStatus([1, 2, 2 ** 32]), 0);
+    assert.equal(hdbscanStatus([1, 2, 2 ** 32 * (1 + 2 ** -52)]), 10);
     const base = Array.from({length: 35}, (_, i) => 1 + ((i * 7.31) % 9));
     const want = linearSumAssignment({data: new Float64Array(base), rows: 5, cols: 7});
     for (const k of [-256, -100, 100, 252]) {
@@ -221,8 +226,8 @@ for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
     for (const k of [-257, 253]) {
         assert.equal(status(() => linearSumAssignment({data: new Float64Array(base.map((v) => v * 2 ** k)), rows: 5, cols: 7})), 10);
     }
-    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 64, 2, 3]), rows: 2, cols: 2})), 0);
-    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 64 * (1 + 2 ** -52), 2, 3]), rows: 2, cols: 2})), 10);
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 32, 2, 3]), rows: 2, cols: 2})), 0);
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 32 * (1 + 2 ** -52), 2, 3]), rows: 2, cols: 2})), 10);
     // Exact oracle: a double is an integer multiple of 2^-1074 (BigInt sums).
     const exactBig = (x) => {
         if (x === 0) return 0n;
@@ -253,20 +258,22 @@ for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
     };
     // Review 2026-10-13 P0: global centring returned [0, 1, 2] for the 1e20
     // matrix and declared the +-1e308 matrix infeasible. Both are outside the
-    // domain now; their in-domain analogues need exact sums.
+    // domain now; their analogues at the domain edges keep the exact optimum.
     assert.equal(status(() => linearSumAssignment({data: new Float64Array([-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1]), rows: 3, cols: 3})), 10);
     assert.equal(status(() => linearSumAssignment({data: new Float64Array([-1e308, 1e308, -1e308, 1e308]), rows: 2, cols: 2})), 10);
-    assert.deepEqual(optimal([-(2 ** 60), 2 ** 60, 2 ** 60, 2 ** 60, 1, 0, 2 ** 60, 0, 1], 3, 3), [0, 2, 1]);
+    assert.deepEqual(optimal([-(2 ** 32), 2 ** 32, 2 ** 32, 2 ** 32, 1, 0, 2 ** 32, 0, 1], 3, 3), [0, 2, 1]);
     optimal([-(2 ** 256), 2 ** 256, -(2 ** 256), 2 ** 256], 2, 2);
     let state = 12345;
     const random = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648; };
     for (let trial = 0; trial < 150; ++trial) {
         const rows = 2 + Math.floor(random() * 3), cols = rows + Math.floor(random() * 3);
-        const low = Math.floor(random() * 450) - 256;
+        // Full 52-bit mantissas, exponents in [low, low + 31]: spread below 2^32.
+        const low = Math.floor(random() * 481) - 256;
         const cost = Array.from({length: rows * cols}, () => {
             if (random() < 0.1) return 0;
-            const exponent = low + Math.floor(random() * 63);
-            return (random() < 0.5 ? -1 : 1) * (1 + Math.floor(random() * 4096) / 4096) * 2 ** exponent;
+            const exponent = low + Math.floor(random() * 32);
+            const fraction = (Math.floor(random() * 2 ** 26) * 2 ** 26 + Math.floor(random() * 2 ** 26)) / 2 ** 52;
+            return (random() < 0.5 ? -1 : 1) * (1 + fraction) * 2 ** exponent;
         });
         optimal(cost, rows, cols, trial % 2 === 1);
     }
@@ -304,6 +311,9 @@ for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
         assert.equal(status(() => randomMultivariateNormal(new Float64Array(3),
             {data: new Float64Array(cov.map((v) => v * 4 ** k)), rows: 3, cols: 3}, 6, 42n)), 10);
     }
+    const identity = {data: new Float64Array([1, 0, 0, 0, 1, 0, 0, 0, 1]), rows: 3, cols: 3};
+    assert.equal(status(() => randomMultivariateNormal(new Float64Array([1, 2 ** 32, 0]), identity, 3, 1n)), 0);
+    assert.equal(status(() => randomMultivariateNormal(new Float64Array([1, 2 ** 32 * (1 + 2 ** -52), 0]), identity, 3, 1n)), 10);
 }
 // Same assignment, Jaccard, normal-draw and Gaussian HDBSCAN gate as the
 // native n4m_cluster_matching_null_tests (NumPy 2.4.6, SciPy 1.18.1).

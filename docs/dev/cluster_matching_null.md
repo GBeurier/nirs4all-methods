@@ -29,16 +29,16 @@ covariance regularization and the null protocol belong to the caller.
   elements they share before the call.
 - `n4m_linear_sum_assignment`: the algorithm and tie rules of
   `scipy.optimize.linear_sum_assignment`, evaluated in exact arithmetic. Inside the
-  rule-13 domain (nonzero `|cost|` in `[2^-256, 2^256]`, max/min nonzero `|cost|` `≤
-  2^64`, `+inf` forbidden pairs excluded) every cost is an integer multiple of `2^E`, `E`
-  the last mantissa bit of the smallest nonzero `|cost|`, below `2^119` units; duals,
+  rules 13/15 domain (nonzero `|cost|` in `[2^-256, 2^256]`, max/min nonzero `|cost|` `≤
+  2^32`, `+inf` forbidden pairs excluded) every cost is an integer multiple of `2^E`, `E`
+  the last mantissa bit of the smallest nonzero `|cost|`, below `2^87` units; duals,
   reduced and path costs are kept as signed 192-bit integers in those units, with a
   guard far above any reachable value. The result is an exact optimum. On random 2–4 ×
   2–6 matrices with signed costs whose exponents span ±60 to ±600, SciPy's double
   version is suboptimal in 2–9 % of cases; `n4m_cluster_robustness_tests` and the
   JS/WASM test check the exact optimum by enumeration with independent exact sums
-  (2240-bit integers, BigInt) on in-domain matrices with exponents mixed over 63
-  binades, for minimisation, maximisation and transposed shapes. Costs are never
+  (2240-bit integers, BigInt) on in-domain matrices with full 53-bit mantissas and
+  exponents mixed over 32 binades, for minimisation, maximisation and transposed shapes. Costs are never
   centred; inputs outside the domain are refused before computing. Work is bounded by
   `rows·cols·min(rows, cols) ≤ 1e8` fixed-size operations and memory by
   `16·rows·cols + 128·(rows + cols)` bytes `≤ 256 MiB`, both checked before any
@@ -66,7 +66,7 @@ covariance regularization and the null protocol belong to the caller.
 `parity/generators/cluster_matching_null_v1.py` (test-only; pins NumPy 2.4.6, SciPy
 1.18.1, scikit-learn 1.9.1 and hdbscan 0.8.44) writes
 `parity/fixtures/cluster_matching_null_v1.json`. Its SHA-256 at generation is
-`69b1a94bd53ce5e79ec62fe601381703ea79118a116dfbd5aa57c8b572b57e70`. The cases are:
+`ff70ef7e34cdb15d1d018e1adf88cee4a04941e032d7123fd8a1d7d018de32a1`. The cases are:
 
 - twelve assignment matrices: square, wide, tall (transposed path), small-integer ties,
   constant (identity), tall constant maximized, forbidden `+inf` pairs, a maximized

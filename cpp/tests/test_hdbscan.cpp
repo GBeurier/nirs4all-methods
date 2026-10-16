@@ -195,7 +195,7 @@ int main() {
         // 2e155, 3e155] overflowed to inf, Prim emitted self-edges and the
         // condensed tree had 7 nodes for 4 rows, written past the caller's
         // 4-element buffers. The rule-13 domain (nonzero |x| in
-        // [2^-256, 2^256], max/min nonzero |x| <= 2^64) now refuses such
+        // [2^-256, 2^256], max/min nonzero |x| <= 2^32, rule 15) refuses such
         // inputs before computing; sentinels check that nothing is written.
         {
             const double sentinel = -12345.0;
@@ -243,8 +243,10 @@ int main() {
             // Just outside the domain on each side, and the review input.
             guarded({0, 4 * up, 5 * up, 6 * up}, N4M_ERR_UNSUPPORTED, ignored);    // above 2^256
             guarded({0, down / 2, down, 2 * down}, N4M_ERR_UNSUPPORTED, ignored);  // below 2^-256
-            guarded({1, 2, std::ldexp(1.0, 64)}, N4M_OK, ignored);                // spread 2^64
-            guarded({1, 2, std::ldexp(1.0, 64) * (1 + 0x1p-52)}, N4M_ERR_UNSUPPORTED, ignored);
+            guarded({1, 2, std::ldexp(1.0, N4M_DOMAIN_MAX_SPREAD_LOG2)}, N4M_OK, ignored);  // spread 2^32
+            guarded({1, 2, std::ldexp(1.0, N4M_DOMAIN_MAX_SPREAD_LOG2) * (1 + 0x1p-52)},
+                    N4M_ERR_UNSUPPORTED, ignored);
+            guarded({0, 1, 2, std::ldexp(1.0, 40)}, N4M_ERR_UNSUPPORTED, ignored);  // spread 2^40
             guarded({0, 1e155, 2e155, 3e155}, N4M_ERR_UNSUPPORTED, ignored);
             guarded({-1e308, 1e308}, N4M_ERR_UNSUPPORTED, ignored);
         }

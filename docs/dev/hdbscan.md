@@ -58,10 +58,11 @@ distances overflowing to infinity made Prim emit self-edges and a condensed tree
 seven nodes for four rows, written past the caller's buffers (`[0, 1e155, 2e155,
 3e155]`); densities `1/d` and their excess-of-mass sums overflowed near the subnormal
 range (`1e-308 × [0, 1, 3, 10, 11, 14]` gave NaN persistence). Point fixes moved the
-defects to ever more extreme inputs, so the kernel now follows the rule-13 domain:
+defects to ever more extreme inputs, so the kernel now follows the rules 13/15 domain
+(macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2`, `N4M_DOMAIN_MAX_SPREAD_LOG2` in `n4m/metrics.h`):
 
 - finite X with every nonzero `|x|` in `[2^-256, 2^256]` and max/min nonzero `|x|`
-  `≤ 2^64`; anything else returns `N4M_ERR_UNSUPPORTED` ("input outside the supported
+  `≤ 2^32`; anything else returns `N4M_ERR_UNSUPPORTED` ("input outside the supported
   numerical domain ...") after one O(n·p) scan, before any computation;
 - inside the domain every nonzero coordinate difference lies in `[2^-308, 2^257]`, so
   squared distances are normal doubles (sums over at most 5e7 columns stay below
@@ -77,15 +78,16 @@ defects to ever more extreme inputs, so the kernel now follows the rule-13 domai
   contains that case.
 
 `n4m_hdbscan_tests` checks sentinel-guarded buffers at both domain edges (`2^-256`,
-`3 · 2^254`, spread exactly `2^64`) and just outside them, and the review inputs.
+`3 · 2^254`, spread exactly `2^32`) and just outside them (one ulp beyond, and spread
+`2^40`), and the review inputs.
 `n4m_cluster_robustness_tests` scales an irregular blob set by `2^k`, `k ∈ {−1014, −257,
 −256, −200, −100, 100, 200, 252, 253, 1000}`: inside the domain all outputs are exact
 power-of-two rescalings, outside it the call is refused without writing. Exact
-translations by `2^54` and `2^200` and a constant `2^60` column leave every output
+translations by `2^54` and `2^200` and a constant `2^30` column leave every output
 bit-identical; a constant `1e300` column is refused. `parity/fixtures/
 cluster_matching_null_v1.json` adds five in-domain multi-magnitude cases (`[0, 1, 3, 10,
-11, 14, 2^60]`, blobs at `2^-200` and `2^180`, an outlier at `2^40`, columns at `2^-200`
-and `2^-250`) checked against scikit-learn `HDBSCAN(metric="precomputed")` on exact
+11, 14, 2^30]`, blobs at `2^-200` and `2^180`, an outlier at `2^28`, columns at `2^-200`
+and `2^-225`) checked against scikit-learn `HDBSCAN(metric="precomputed")` on exact
 `math.dist` distances. The JS/WASM test checks the same boundaries and status codes.
 
 ## Tie order matters, including in the reference
