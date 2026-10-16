@@ -50,14 +50,20 @@ relatively accurate when SSB is not small and absolutely accurate near 0
 (see metrics.h). Categorical targets are limited to n <= 3e9.
 
 Supported numerical domain (preflight rule 13): continuous targets of the
-factor-association kernels (Monte Carlo and exact), both correlation vectors
-and Holm/BH p-values must be finite with every nonzero |x| in
-[2^-256, 2^256] and max/min nonzero |x| <= 2^64 per input array (exact zeros
+factor-association kernels (Monte Carlo and exact) and both correlation
+vectors must be finite with every nonzero |x| in
+[2^-256, 2^256] and max/min nonzero |x| <= 2^32 per input array (rule 15,
+public macro `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32` in `n4m/metrics.h`; exact zeros
 allowed; categorical codes are labels and are not checked). A cheap O(n)
 pre-pass refuses other inputs with `N4M_ERR_UNSUPPORTED` and the message
 "input outside the supported numerical domain (nonzero |x| in [2^-256,
-2^256], max/min nonzero |x| <= 2^64)" before any computation. Inside D an F
-cannot overflow; the overflow refusal remains as a guard.
+2^256], max/min nonzero |x| <= 2^32)" before any computation. Inside D an F
+cannot overflow (F <= n 2^168); the overflow refusal remains as a guard.
+Precision is documented conservatively in metrics.h (errors of about
+c * n * DBL_EPSILON, absolute for eta^2, V and r).
+Holm and BH are exempt from the spread rule (they perform no subtraction):
+p-values must be finite, in [0, 1], and nonzero p >= 2^-1022; subnormal
+p-values are refused with `N4M_ERR_UNSUPPORTED`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
