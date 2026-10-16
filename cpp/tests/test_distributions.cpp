@@ -8,6 +8,8 @@
 
 #include <cmath>
 #include <cstdio>
+#include <initializer_list>
+#include <vector>
 
 namespace dist = n4m::core::distributions;
 
@@ -161,6 +163,29 @@ int main() {
     for (const auto& r : f_bound) {
         check(dist::f_quantile(t, r[0], r[1], false), r[2], "F lower 2^-64", t, r[0], r[1]);
         check(dist::f_quantile(t, r[0], r[1], true), r[3], "F upper 2^-64", t, r[0], r[1]);
+    }
+    // Closed form of F(2, nu) (review b9fix): P(F <= q) = 1 - (1 + 2q/nu)^(-nu/2),
+    // so the lower quantile of p is (nu/2) expm1(-2 log1p(-p)/nu) and the upper
+    // quantile of the tail p is (nu/2) expm1(-2 log(p)/nu); F(nu, 2) follows
+    // by reciprocity, its lower quantile being 1 / the upper one of F(2, nu).
+    // Covers nu up to 2^31 and both tails down to 2^-64.
+    std::vector<double> nus{0.5, 1.0, 3.0, 10.0, 1e3, 1e6};
+    for (int k = 0; k <= 31; ++k) nus.push_back(std::ldexp(1.0, k));
+    for (double nu : nus) {
+        for (double p : {0x1p-64, 1e-12, 1e-6, 0.025, 0.25, 0.5}) {
+            const double lower = 0.5 * nu * std::expm1(-2.0 * std::log1p(-p) / nu);
+            const double upper = 0.5 * nu * std::expm1(-2.0 * std::log(p) / nu);
+            check(dist::f_quantile(p, 2, nu, false), lower, "F(2,nu) lower", p, 2, nu);
+            check(dist::f_quantile(p, 2, nu, true), upper, "F(2,nu) upper", p, 2, nu);
+            check(dist::f_quantile(p, nu, 2, false), 1.0 / upper, "F(nu,2) lower", p, nu, 2);
+            check(dist::f_quantile(p, nu, 2, true), 1.0 / lower, "F(nu,2) upper", p, nu, 2);
+        }
+    }
+    // Closed form of chi-square(2): P = 1 - e^{-x/2}; lower quantile
+    // -2 log1p(-p), upper quantile -2 log(p).
+    for (double p : {0x1p-64, 1e-12, 1e-6, 0.025, 0.25, 0.5}) {
+        check(dist::chi2_quantile(p, 2, false), -2.0 * std::log1p(-p), "chi2(2) lower", p, 2, 0);
+        check(dist::chi2_quantile(p, 2, true), -2.0 * std::log(p), "chi2(2) upper", p, 2, 0);
     }
     // Outside the domain (tail below 2^-64 or above 1/2, df outside
     // [1/2, 2^31]): NaN, never a silent value.
