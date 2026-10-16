@@ -8,7 +8,7 @@ import {
     statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex,
+    clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, N4mError,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -280,4 +280,217 @@ relNear(statsCorrelationTest(new Float64Array([1, 2, 2 ** 20]), new Float64Array
     "pearson", 0, 1).coefficient, 0.8660258167378265);
 assert.equal(statsCorrelationTest(new Float64Array([1, 2, 3, 4]), new Float64Array([1, -1, -1, 1]),
     "pearson", 0, 1).coefficient, 0);
+// PERMANOVA / PERMDISP: hand values of test_permanova.cpp, then the
+// permanova_v1 reference gate (NumPy lstsq, SciPy, scikit-bio, NumPy draws).
+const oneWay = statsPermanova({data: new Float64Array([1, 2, 3, 7, 8, 9]), rows: 6, cols: 1},
+    [4, 4, 4, -9, -9, -9], undefined, 999, 17);
+near(oneWay.ssTerm, 54);
+near(oneWay.pseudoF, 54);
+assert.equal(oneWay.nAtLeastObserved, 93);
+const crossed = statsPermanova({data: new Float64Array([1, 3, 5, 7, 2, 4, 6, 8]), rows: 8, cols: 1},
+    [0, 0, 1, 1, 0, 0, 1, 1], [0, 0, 0, 0, 1, 1, 1, 1], 0, 1);
+near(crossed.pseudoF, 20);
+near(crossed.ssStrata, 2);
+const aliased = statsPermanova({data: new Float64Array([1, 3, 5, 7, 2, 4, 6, 8]), rows: 8, cols: 1},
+    [0, 0, 1, 1, 0, 0, 1, 1], [0, 0, 1, 1, 0, 0, 1, 1], 999, 1);
+assert.equal(aliased.dfTerm, 0);
+assert.ok(Number.isNaN(aliased.pValue));
+const disp = statsPermdisp({data: new Float64Array([0, 2, 10, 14, 18]), rows: 5, cols: 1},
+    [7, 7, 3, 3, 3], 0, 1);
+near(disp.f, 15 / 16);
+[8 / 3, 1].forEach((v, i) => near(disp.groupMeanDistances[i], v));
+// Robustness rules 13 and 15 (same cases as test_permanova.cpp): inside the
+// supported domain D (nonzero |x| in [2^-256, 2^256], max/min nonzero
+// |x| <= 2^32) results are exact up to the published exponent; outside D
+// every kernel refuses with status 10 and the domain message.
+const outsideDomain = (error) => error?.name === "N4mError" && error.status === 10 &&
+    error.message.includes("input outside the supported numerical domain");
+const kTerm = [0, 0, 1, 1, 2, 2, 0, 1, 1, 2, 2, 2];
+const kStrata = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1];
+const kBase = [3, 1, 5, 2, 9, 4, 11, 7, 13, 12, 15, 9, 4, 6, 10, 3, 12, 8, 16, 14, 17, 10, 21, 11];
+const contract = (values, e) => values.every((v) => v >= 0 && Number.isFinite(v) &&
+    !(e === 0 && v > 0 && v < 2.2250738585072014e-308));
+const kernels = {
+    permanova: (x, cols) => { const r = statsPermanova({data: Float64Array.from(x), rows: 12, cols}, kTerm, kStrata, 199, 7); return {ss: [r.ssTotal, r.ssTerm, r.ssResidual], e: r.ssExponent, ratio: [r.pseudoF, r.partialR2, Number(r.fNumericallyUnresolved)], b: r.nAtLeastObserved}; },
+    freedmanLane: (x, cols) => { const r = statsPermanovaFreedmanLane({data: Float64Array.from(x), rows: 12, cols}, kTerm, [kStrata], 199, 7); return {ss: [r.ssTotal, r.ssTerm, r.ssResidual], e: r.ssExponent, ratio: [r.pseudoF, r.partialR2, Number(r.fNumericallyUnresolved)], b: r.nAtLeastObserved}; },
+    permdisp: (x, cols) => { const r = statsPermdisp({data: Float64Array.from(x), rows: 12, cols}, kTerm, 199, 7); return {ss: Array.from(r.distances), e: r.distanceExponent, ratio: [r.f, Number(r.fNumericallyUnresolved)], b: r.nAtLeastObserved}; },
+};
+const ldexp = (v, k) => { let out = v; for (let i = 0; i < Math.abs(k); i++) out = k > 0 ? out * 2 : out / 2; return out; };
+const sameScaled = (got, base, shift, tag) => {
+    assert.ok(contract(got.ss, got.e), tag);
+    // Tolerance relative to each value and to the largest one (a zero
+    // distance may become a tiny positive one next to a 2^-56 column).
+    const want = base.ss.map((v) => ldexp(ldexp(v, base.e), shift));
+    const largest = Math.max(...want);
+    got.ss.forEach((v, i) => {
+        const have = ldexp(v, got.e);
+        assert.ok(Math.abs(have - want[i]) <= 1e-9 * Math.max(want[i], 1e-6 * largest), tag);
+        assert.ok(!(want[i] > 0) || have > 0, tag);
+    });
+    got.ratio.forEach((v, i) => assert.ok(Math.abs(v - base.ratio[i]) <= 1e-9 * Math.max(1, Math.abs(base.ratio[i])), tag));
+    assert.equal(got.b, base.b, tag);
+};
+for (const [name, run] of Object.entries(kernels)) {
+    const power = name === "permdisp" ? 1 : 2;
+    const base = run(kBase, 2);
+    // Magnitude sweep inside D (data 1..21: k in [-256, 251]) and outside.
+    for (const k of [-256, -200, -100, 0, 100, 200, 251]) {
+        sameScaled(run(kBase.map((v) => ldexp(v, k)), 2), base, power * k, `${name} k=${k}`);
+    }
+    for (const k of [-1069, -257, 252, 1000]) {
+        assert.throws(() => run(kBase.map((v) => ldexp(v, k)), 2), outsideDomain, `${name} k=${k}`);
+    }
+    // Translation: offsets 1e16 (even data) and 2^200 (data * 2^148) inside
+    // D; 2^300 and 1e300 outside.
+    for (const [offset, k] of [[1e16, 1], [2 ** 200, 148]]) {
+        sameScaled(run(kBase.map((v) => offset + ldexp(v, k)), 2), base, power * k, `${name} offset ${offset}`);
+    }
+    for (const [offset, k] of [[2 ** 300, 248], [1e300, 944]]) {
+        assert.throws(() => run(kBase.map((v) => offset + ldexp(v, k)), 2), outsideDomain, `${name} offset ${offset}`);
+    }
+    // Constant columns inside D (spread 2^31) change nothing; 2^30 (spread
+    // 2^33) and 1e308 constant columns are refused.
+    for (const huge of [2 ** 28, 2 ** 30, 1e308]) {
+        const wide = [];
+        for (let i = 0; i < 12; i++) wide.push(huge, kBase[2 * i], -(2 ** 27), kBase[2 * i + 1], 0.125);
+        if (huge < 2 ** 29) sameScaled(run(wide, 5), base, 0, `${name} constant columns`);
+        else assert.throws(() => run(wide, 5), outsideDomain, `${name} constant ${huge}`);
+    }
+    // Mixed signed exponents: a 2^13 column next to a -2^-13 (term + 1)
+    // column (constant within term levels); 2^28 / -2^-28 is refused.
+    const one = run(kBase.filter((_, i) => i % 2 === 0), 1);
+    const mixed = kBase.map((v, i) => i % 2 === 0 ? ldexp(v, 13) : -ldexp(kTerm[(i - 1) / 2] + 1, -13));
+    sameScaled(run(mixed, 2), one, power * 13, `${name} mixed`);
+    assert.throws(() => run(kBase.map((v, i) => i % 2 === 0 ? ldexp(v, 28) : -ldexp(v, -28)), 2),
+        outsideDomain, `${name} wide mixed`);
+}
+// Value-range boundaries: 2^+-256 inside D (SS_total = 6 (a/2)^2), 2^+-257 refused.
+for (const e of [256, -256, 257, -257]) {
+    const a = ldexp(1, e);
+    const call = () => statsPermanova({data: new Float64Array([0, 0, 0, a, a, a]), rows: 6, cols: 1},
+        [4, 4, 4, -9, -9, -9], undefined, 0, 1);
+    if (Math.abs(e) === 256) {
+        const r = call();
+        assert.equal(r.ssExponent, 0);
+        assert.equal(r.ssTotal, 6 * ldexp(1, 2 * (e - 1)));
+        assert.equal(r.r2, 1);
+    } else {
+        assert.throws(call, outsideDomain, `value range ${e}`);
+    }
+}
+{
+    const dev = [-3e-8, -1e-8, 1e-8, 3e-8];
+    const a = [], b = [], y = [];
+    for (let i = 0; i < 16; i++) { a.push(Math.floor(i / 4) % 2); b.push(Math.floor(i / 8)); y.push(10 * b[i] + 3 * a[i] + dev[i % 4]); }
+    const fl = statsPermanovaFreedmanLane({data: Float64Array.from(y), rows: 16, cols: 1}, a, [b], 99, 3);
+    assert.ok(fl.ssExponent === 0 && fl.ssResidual > 7e-15 && fl.ssResidual < 9e-15);
+    assert.ok(Number.isFinite(fl.pseudoF) && Math.abs(fl.pseudoF / 5.85e16 - 1) < 1e-2);
+    assert.equal(fl.fNumericallyUnresolved, false);
+}
+{
+    // Dyadic fixture (same as test_permanova.cpp) at the spread boundary
+    // (p = 16, q = -17, max/min nonzero |x| = 2^16 / 2^-16 = 2^32), 4, 6 and
+    // 8 rows per cell: SS_A = SS_res = n 2^-34, F = n - 3, partial R^2 1/2;
+    // PERMDISP by B gives distances 2^-17 |A + r|. (17, -17), (33, -32) and
+    // (600, -500) are outside D.
+    const fixture = (p, q, perCell) => {
+        const x = [], a = [], b = [];
+        for (let i = 0; i < 4 * perCell; i++) {
+            const cell = Math.floor(i / perCell);
+            a.push(cell < 2 ? -1 : 1); b.push(cell % 2 === 0 ? -1 : 1);
+            x.push(ldexp(b[i], p), ldexp(a[i] + (i % 2 === 0 ? 1 : -1), q));
+        }
+        return {X: {data: Float64Array.from(x), rows: 4 * perCell, cols: 2}, a, b};
+    };
+    for (const perCell of [4, 6, 8]) {
+        const {X, a, b} = fixture(16, -17, perCell), n = 4 * perCell;
+        for (const r of [statsPermanovaFreedmanLane(X, a, [b], 99, 5), statsPermanova(X, a, b, 99, 5)]) {
+            assert.equal(r.ssExponent, 0);
+            relNear(r.ssTerm, n * 2 ** -34);
+            relNear(r.ssResidual, n * 2 ** -34);
+            relNear(r.pseudoF, n - 3);
+            relNear(r.partialR2, 0.5);
+            assert.equal(r.fNumericallyUnresolved, false);
+        }
+        const d = statsPermdisp(X, b, 0, 1);
+        assert.equal(d.distanceExponent, 0);
+        d.distances.forEach((v, i) => assert.equal(v, Math.abs(a[i] + (i % 2 === 0 ? 1 : -1)) * 2 ** -17));
+        assert.equal(d.f, 0);
+    }
+    for (const [p, q] of [[17, -17], [33, -32], [600, -500]]) {
+        const out = fixture(p, q, 4);
+        assert.throws(() => statsPermanovaFreedmanLane(out.X, out.a, [out.b], 0, 1), outsideDomain);
+        assert.throws(() => statsPermanova(out.X, out.a, out.b, 0, 1), outsideDomain);
+        assert.throws(() => statsPermdisp(out.X, out.b, 0, 1), outsideDomain);
+    }
+}
+{
+    // Offset stratum next to a varying one (rational oracle): SS_A = 2,
+    // SS_res = 3, F = 10/3, partial R^2 0.4, PERMDISP distances by stratum
+    // [0 0 0 0 1.5 0.5 0.5 1.5] with c = 2^31; c = 2^60 is refused.
+    const term = [0, 0, 1, 1, 0, 0, 1, 1], strata = [0, 0, 0, 0, 1, 1, 1, 1];
+    const X = (c) => ({data: new Float64Array([c, c, c, c, 1, 2, 3, 4]), rows: 8, cols: 1});
+    for (const r of [statsPermanova(X(2 ** 31), term, strata, 0, 1),
+        statsPermanovaFreedmanLane(X(2 ** 31), term, [strata], 0, 1)]) {
+        relNear(r.ssTerm, 2);
+        relNear(r.ssResidual, 3);
+        relNear(r.pseudoF, 10 / 3);
+        relNear(r.partialR2, 0.4);
+    }
+    assert.deepEqual(Array.from(statsPermdisp(X(2 ** 31), strata, 0, 1).distances),
+        [0, 0, 0, 0, 1.5, 0.5, 0.5, 1.5]);
+    assert.throws(() => statsPermanova(X(2 ** 60), term, strata, 0, 1), outsideDomain);
+    assert.throws(() => statsPermdisp(X(2 ** 60), strata, 0, 1), outsideDomain);
+}
+{
+    // F is published whenever the residual SS is positive: resolved for
+    // A next to 2^-31 r (F = 14 2^62), flagged for one-ulp residuals, NaN
+    // only for an exactly zero residual SS.
+    const term = Array.from({length: 16}, (_, i) => i < 8 ? -1 : 1);
+    const x = [];
+    term.forEach((t, i) => x.push(t, (i % 2 === 0 ? 1 : -1) * 2 ** -31));
+    const fine = statsPermanova({data: Float64Array.from(x), rows: 16, cols: 2}, term, undefined, 0, 1);
+    relNear(fine.pseudoF, 14 * 2 ** 62);
+    assert.ok(fine.residualResolution < 1e-3 && !fine.fNumericallyUnresolved);
+    const ulp = statsPermanova({data: new Float64Array([1, 1 + 2 ** -52, 1, 1, 3, 3, 3, 3]), rows: 8, cols: 1},
+        [0, 0, 0, 0, 1, 1, 1, 1], undefined, 99, 1);
+    assert.ok(ulp.ssResidual > 0 && Number.isFinite(ulp.pseudoF) && ulp.fNumericallyUnresolved);
+    assert.ok(ulp.residualResolution >= 1 && ulp.nPermutationsExecuted === 99);
+    const exact = statsPermanova({data: new Float64Array([1, 1, 3, 3]), rows: 4, cols: 1}, [0, 0, 1, 1],
+        undefined, 99, 1);
+    assert.ok(Number.isNaN(exact.pseudoF) && exact.residualResolution === Infinity && exact.fNumericallyUnresolved);
+}
+const permanovaFixture = JSON.parse(readFileSync(
+    new URL("../../../parity/fixtures/permanova_v1.json", import.meta.url), "utf8"));
+for (const c of permanovaFixture.cases) {
+    const X = {data: new Float64Array(c.X.map(hex)), rows: c.rows, cols: c.cols};
+    const got = statsPermanova(X, c.term, c.strata ?? undefined, c.n_permutations, c.seed);
+    const want = c.permanova, total = hex(want.ss_total);
+    const close = (a, b, scale = 1) => Number.isNaN(b) ? Number.isNaN(a)
+        : Math.abs(a - b) <= 1e-10 * Math.max(scale, Math.abs(b));
+    [["ssTotal", "ss_total"], ["ssStrata", "ss_strata"], ["ssTerm", "ss_term"],
+        ["ssResidual", "ss_residual"]].forEach(([k, w]) => assert.ok(close(got[k], hex(want[w]), total), c.name));
+    [["r2", "r2"], ["partialR2", "partial_r2"], ["pseudoF", "pseudo_f"]]
+        .forEach(([k, w]) => assert.ok(close(got[k], hex(want[w])), c.name));
+    assert.equal(got.dfTerm, want.df_term, c.name);
+    assert.equal(got.dfResidual, want.df_residual, c.name);
+    assert.equal(got.nAtLeastObserved, want.b, c.name);
+    assert.equal(got.nPermutationsExecuted, want.executed, c.name);
+    if (c.freedman_lane) {
+        const fl = c.freedman_lane;
+        const r = statsPermanovaFreedmanLane(X, c.term, fl.conditions, c.n_permutations, fl.seed);
+        assert.ok(close(r.ssTerm, hex(fl.ss_term), hex(fl.ss_total)), c.name);
+        assert.ok(close(r.pseudoF, hex(fl.pseudo_f)), c.name);
+        assert.equal(r.dfTerm, fl.df_term, c.name);
+        assert.equal(r.rankReduced, fl.rank_reduced, c.name);
+        assert.equal(r.nAtLeastObserved, fl.b, c.name);
+        assert.equal(r.nPermutationsExecuted, fl.executed, c.name);
+    }
+    if (c.permdisp) {
+        const d = statsPermdisp(X, c.term, c.n_permutations, c.permdisp.seed);
+        assert.ok(close(d.f, hex(c.permdisp.f)), c.name);
+        c.permdisp.distances.map(hex).forEach((v, i) => assert.ok(close(d.distances[i], v), c.name));
+        assert.equal(d.nAtLeastObserved, c.permdisp.b, c.name);
+    }
+}
 console.log("JS/WASM Preflight diagnostics passed");

@@ -288,9 +288,9 @@ int main() {
             REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),3000,1,999,1,
                         assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
         }
-        // Supported numerical domain D (rule 13): finite, nonzero |x| in
-        // [2^-256, 2^256], max/min nonzero |x| <= 2^64 per input array, exact
-        // zeros allowed. Inside D results are checked against exact
+        // Supported numerical domain D (rules 13 and 15): finite, nonzero |x|
+        // in [2^-256, 2^256], max/min nonzero |x| <= 2^32 per input array,
+        // exact zeros allowed; p-values only need the magnitude bounds. Inside D results are checked against exact
         // references; outside D every kernel returns N4M_ERR_UNSUPPORTED.
         {
             const auto rel = [](double a, double b) {
@@ -402,7 +402,9 @@ int main() {
             REQUIRE(rel(assoc[1],std::ldexp(2.0/3.0,59)) && rel(assoc[0],1.0));
             // The review's extreme mixtures lie outside D: explicit refusal.
             double huge[3]={0.0,1e-100,1e300}, denorm[3]={0.0,std::ldexp(1.0,-1074),1.0};
-            double wide[3]={0.0,std::ldexp(1.0,-520),1.0};
+            double wide[3]={0.0,std::ldexp(1.0,-60),1.0};
+            double wide_mixed[3]={-std::ldexp(1.0,-30),std::ldexp(1.0,-30),std::ldexp(1.0,30)};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,wide_mixed,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             REQUIRE(n4m_preflight_factor_association(ctx,f3,huge,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             REQUIRE(n4m_preflight_factor_association(ctx,f3,denorm,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             REQUIRE(n4m_preflight_factor_association(ctx,f3,wide,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
