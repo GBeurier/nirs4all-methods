@@ -134,38 +134,47 @@ cannot overflow; the overflow refusal remains as a guard.
 Add two caller-buffer operations in `n4m/metrics.h`. Earlier symbols are
 unchanged and no serialized format changes.
 
+Supported numerical domain (lead rule 13), checked over every feature before
+any computation: each nonzero |x| in [2^-256, 2^256], and max/min nonzero |x|
+<= 2^64 over the raw values and over the differences the statistic uses
+(column-centred values with the per-group residuals). Outside it both calls
+return `N4M_ERR_UNSUPPORTED` with "input outside the supported numerical
+domain (...)". Inside it, results are translation and scale invariant: each
+feature is rescaled by exact powers of two chosen from its centred variation,
+and within-group residuals are centred per group from the original values and
+keep their own exponent.
+
 `n4m_stats_variance_components_reml` fits `x_ij = mu + u_i + e_ij` per feature
 by REML for balanced or unbalanced groups, singletons included, with an
-optional validity mask. Each feature is rescaled by exact powers of two chosen
-from its centred variation, and within-group residuals keep their own
-exponent, so results are translation and scale invariant and representable
-variances never overflow in intermediates. s2w is profiled out; the profiled
-criterion and its derivative are evaluated on gamma = s2b/s2w = 0 and on a
-log10 grid with step 1/8; every cell where the derivative changes sign from -
-to + is bisected, gamma = 0 is a candidate when the derivative there is >= 0,
-and the candidate with the largest restricted likelihood wins (unbalanced
-designs can have several local maxima). Above F = 2^64 the REML limit is
-used. Per feature it writes s2b, s2w, ICC(1), the restricted log-likelihood
-(statsmodels convention), counts, the number of candidates compared and the
-bisection iterations, plus a status: interior, insufficient, boundary
-s2b = 0, zero total variance, boundary s2w = 0, not converged, or not
-representable as a double (6, values NaN).
+optional validity mask. s2w is profiled out; the profiled criterion and its
+derivative are evaluated on gamma = s2b/s2w = 0 and on a log10 grid with step
+1/8; every cell where the derivative changes sign from - to + is bisected,
+gamma = 0 is a candidate when the derivative there is >= 0, and the candidate
+with the largest restricted likelihood wins. With K distinct group sizes the
+derivative has the sign of a polynomial of degree <= 4K-3, so balanced
+designs (K = 1) are unimodal; for K >= 2 a whole local maximum lying inside
+one grid cell (a factor 1.334 in gamma) is not seen, which is documented,
+not bounded. Above F = 2^64 the REML limit is used. Per feature it writes
+s2b, s2w, ICC(1), the restricted log-likelihood (statsmodels convention),
+counts, the number of candidates compared and the bisection iterations, plus
+a status: interior, insufficient, boundary s2b = 0, zero total variance,
+boundary s2w = 0, or not converged.
 
-`n4m_stats_variance_components_intervals` returns, at a given confidence, the
-exact chi-square interval of the within-group SD (pooled SS, N-g df), the exact
-F interval of the balanced ANOVA ICC(1,1) (Searle; it assumes independent
-groups), and percentile intervals of the pooled SD and the REML ICC from a
-cluster bootstrap. Optional cluster IDs define the resampling unit (groups
-must nest in clusters). Replicate b uses
+`n4m_stats_variance_components_intervals` returns, at a confidence 0 < c < 1,
+the exact chi-square interval of the within-group SD (pooled SS, N-g df), the
+exact F interval of the balanced ANOVA ICC(1,1) (Searle; it assumes
+independent groups), and percentile intervals of the pooled SD and the REML
+ICC from a cluster bootstrap. Optional cluster IDs define the resampling unit
+(groups must nest in clusters). Replicate b uses
 `numpy.random.default_rng(seed).integers(0, U, size=(B, U))[b]`; the same draws
-serve every feature; the count of valid replicates and a per-feature interval
-status (0, or 6 when a bound is not representable) are returned. The
+serve every feature; the count of valid replicates is returned. The
 percentile intervals are not coverage-calibrated (measured 0.86-0.94 at 95 %
-nominal; `parity/generators/variance_components_coverage.py`,
-recorded in `parity/fixtures/variance_components_coverage_v1.json`). Chi-square and
-F quantiles (`core/common/distributions.cpp`) evaluate both tails directly with
-cancellation-free prefactors and hold 1e-10 relative accuracy for df in
-[1/2, 2^31] and tails down to 1e-12. Bootstrap work above 2.5e9 operations,
+nominal; `parity/generators/variance_components_coverage.py`, recorded in
+`parity/fixtures/variance_components_coverage_v1.json`). Chi-square and F
+quantiles (`core/common/distributions.cpp`) take the probability of the
+requested tail, so an upper quantile never forms 1 - a/2, use
+cancellation-free prefactors and hold 1e-10 relative accuracy for tails in
+[2^-64, 1/2] and df in [1/2, 2^31]. Bootstrap work above 2.5e9 operations,
 `B x features x (groups + 1024)`, returns `N4M_ERR_UNSUPPORTED`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
