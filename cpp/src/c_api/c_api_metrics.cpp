@@ -113,12 +113,10 @@ N4M_API n4m_status_t n4m_metrics_regression_metrics_nrmse(const double* y_true,
 // Hotelling T²
 // ---------------------------------------------------------------------------
 
-N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
-                                            int32_t n_components,
-                                            double alpha,
-                                            double* t2_per_sample,
-                                            int64_t n_samples,
-                                            double* ucl_out) {
+namespace {
+n4m_status_t hotelling_t2(n4m_matrix_view_t X, int32_t n_components, double alpha,
+                          double* t2_per_sample, int64_t n_samples, double* ucl_out,
+                          int32_t* rank_used) {
     if (t2_per_sample == nullptr || ucl_out == nullptr) {
         return N4M_ERR_NULL_POINTER;
     }
@@ -131,10 +129,27 @@ N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
             return N4M_ERR_SHAPE_MISMATCH;
         }
         return n4m_util_hotelling_t2_impl(xp, xr, xc, n_components, alpha,
-                                           t2_per_sample, ucl_out);
+                                           t2_per_sample, ucl_out, rank_used);
     } catch (...) {
         return N4M_ERR_INTERNAL;
     }
+}
+}  // namespace
+
+N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
+                                            int32_t n_components,
+                                            double alpha,
+                                            double* t2_per_sample,
+                                            int64_t n_samples,
+                                            double* ucl_out) {
+    return hotelling_t2(X, n_components, alpha, t2_per_sample, n_samples, ucl_out, nullptr);
+}
+
+N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2_resolved(
+    n4m_matrix_view_t X, int32_t n_components, double alpha, double* t2_per_sample,
+    int64_t n_samples, double* ucl_out, int32_t* rank_used) {
+    if (rank_used == nullptr) return N4M_ERR_NULL_POINTER;
+    return hotelling_t2(X, n_components, alpha, t2_per_sample, n_samples, ucl_out, rank_used);
 }
 
 // ---------------------------------------------------------------------------

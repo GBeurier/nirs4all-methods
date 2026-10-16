@@ -122,6 +122,39 @@ void test_hotelling_t2_smoke() {
                      == N4M_ERR_SHAPE_MISMATCH);
 }
 
+// Review b8fix3 P0-3: column 3 = column 1 + column 2, so the centred rank is
+// 2 and the SVD's third singular value is rounding noise (~3e-17). Only the
+// two resolved directions enter T²; references are exact rationals from the
+// inverse covariance of the two independent columns, and the UCL uses r = 2:
+// 2 * 3 * 5 / (4 * 2) * F^{-1}(0.95; 2, 2) = 3.75 * 19.
+void test_hotelling_t2_rank_deficient() {
+    double X[4 * 3] = {1, 2, 3, 4, 5, 9, 6, 3, 9, 2, 8, 10};
+    const n4m_matrix_view_t Xv = make_rowmajor_view(X, 4, 3);
+    const double ref[4] = {5439.0 / 2428.0, 417.0 / 2428.0, 4113.0 / 2428.0, 4599.0 / 2428.0};
+    double t2[4] = {0}, ucl = -1.0;
+    int32_t rank = -1;
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(Xv, 3, 0.05, t2, 4, &ucl,
+                                                                  &rank) == N4M_OK);
+    N4M_TEST_REQUIRE(rank == 2);
+    for (int i = 0; i < 4; ++i) N4M_TEST_REQUIRE(std::abs(t2[i] - ref[i]) <= 1e-12);
+    N4M_TEST_REQUIRE(std::abs(ucl - 71.25) <= 1e-9);
+    double t2_old[4] = {0}, ucl_old = -1.0;
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(Xv, 3, 0.05, t2_old, 4, &ucl_old) ==
+                     N4M_OK);
+    for (int i = 0; i < 4; ++i) N4M_TEST_REQUIRE(t2_old[i] == t2[i]);
+    N4M_TEST_REQUIRE(ucl_old == ucl);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(Xv, 3, 0.05, t2, 4, &ucl,
+                                                                  nullptr) ==
+                     N4M_ERR_NULL_POINTER);
+    // Constant X: no resolved direction.
+    double C[4 * 2] = {5, -1, 5, -1, 5, -1, 5, -1};
+    const n4m_matrix_view_t Cv = make_rowmajor_view(C, 4, 2);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(Cv, 2, 0.05, t2, 4, &ucl,
+                                                                  &rank) == N4M_OK);
+    N4M_TEST_REQUIRE(rank == 0 && ucl == 0.0);
+    for (int i = 0; i < 4; ++i) N4M_TEST_REQUIRE(t2[i] == 0.0);
+}
+
 void test_q_residuals_smoke() {
     // Same 6x3 inputs as the T² smoke.
     double X[6 * 3] = {
@@ -368,6 +401,7 @@ void register_metrics_tests(n4m_testing::Runner& r) {
     r.run("metric_smoke_constant_bias",    test_metric_smoke_constant_bias);
     r.run("metric_smoke_invalid_n",        test_metric_smoke_invalid_n);
     r.run("hotelling_t2_smoke",            test_hotelling_t2_smoke);
+    r.run("hotelling_t2_rank_deficient",   test_hotelling_t2_rank_deficient);
     r.run("q_residuals_smoke",             test_q_residuals_smoke);
     r.run("metrics_parity",                verify_metrics_parity);
     r.run("hotelling_t2_parity",           verify_hotelling_t2_parity);

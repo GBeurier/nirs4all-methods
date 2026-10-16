@@ -116,12 +116,25 @@ N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
     uint8_t* mask_out, n4m_filter_stats_t* stats_out);
 
 /* ---------- 20.3 Multivariate outlier statistics ---------------------- */
+/* Hotelling T² on the leading PCA directions of the column-centred X.
+ * Only resolved directions are used: sigma_j > 16 * max(n,p) * DBL_EPSILON
+ * * sigma_1 (the SVD's absolute accuracy). With r <= n_components such
+ * directions, T² sums over the leading r and the UCL uses r degrees of
+ * freedom: r (n-1)(n+1) / (n (n-r)) * F^{-1}(1 - alpha; r, n - r). A
+ * rank-deficient X (e.g. a column that is an exact combination of others)
+ * therefore gets r < n_components; r = 0 (constant X) gives T² = 0 and
+ * UCL = 0. */
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
                                             int32_t n_components,
                                             double alpha,
                                             double* t2_per_sample,
                                             int64_t n_samples,
                                             double* ucl_out);
+/* ABI 2.20. n4m_outlier_detection_hotelling_t2 that also publishes the rank
+ * actually used (rank_used, one element, must not be NULL). */
+N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2_resolved(
+    n4m_matrix_view_t X, int32_t n_components, double alpha, double* t2_per_sample,
+    int64_t n_samples, double* ucl_out, int32_t* rank_used);
 N4M_API n4m_status_t n4m_outlier_detection_q_residuals(n4m_matrix_view_t X,
                                            int32_t n_components,
                                            double alpha,

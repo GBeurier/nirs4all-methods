@@ -4,7 +4,7 @@ _Namespace_: **`n4m.outlier_detection`** · _Fully-qualified_: `n4m.outlier_dete
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_outlier_detection_q_residuals`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L125). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_outlier_detection_q_residuals`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L138). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.outlier_detection import q_residuals`
 

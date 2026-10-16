@@ -24,6 +24,7 @@
 #include "core/optimization/_vendored/rectangular_lsap.hpp"
 #include "core/common/pca_helper.h"
 #include "core/common/rng_pcg64.h"
+#include "core/common/svd.h"
 #include "core/preprocessing/derivatives/savitzky_golay.h"
 #include "core/preprocessing/scatter/snv.h"
 
@@ -1006,55 +1007,131 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
             for (size_t i = 0; i < un; ++i)
                 data[i * up + j] = std::ldexp(data[i * up + j], col_exp[j] - g);
 
-        // Exact full-spectrum moments of the rescaled covariance:
-        // trace(C) = ||Xc||_F^2 / (n-1), trace(C^2) = ||Gram||_F^2 / (n-1)^2,
-        // the Gram taken on the smaller side.
+        // One Gram matrix on the smaller side, accumulated in long double,
+        // gives both the exact full-spectrum moments of the rescaled
+        // covariance (trace(C) = ||Xc||_F^2 / (n-1), trace(C^2) =
+        // ||Gram||_F^2 / (n-1)^2) and the decomposition. A converged
+        // symmetric QL eigensolver (n4m_symmetric_eigh, backward stable) on
+        // that Gram is exact for every n, p and k: no randomized projection,
+        // so every component meets the accuracy contract below.
+        const bool wide = n <= p;  // Gram = Xc Xc^T (n x n), else Xc^T Xc (p x p)
+        const size_t m = wide ? un : up;
+        std::vector<double> gram(m * m);
         long double sum1 = 0.0L, sum2 = 0.0L;
         for (double x : data) sum1 += static_cast<long double>(x) * static_cast<long double>(x);
-        if (n <= p) {
-            for (size_t i = 0; i < un; ++i) for (size_t h = 0; h <= i; ++h) {
-                long double dot = 0.0L;
+        for (size_t a = 0; a < m; ++a) for (size_t b = 0; b <= a; ++b) {
+            long double dot = 0.0L;
+            if (wide) {
                 for (size_t j = 0; j < up; ++j)
-                    dot += static_cast<long double>(data[i * up + j]) *
-                           static_cast<long double>(data[h * up + j]);
-                sum2 += (i == h ? 1.0L : 2.0L) * dot * dot;
-            }
-        } else {
-            for (size_t j = 0; j < up; ++j) for (size_t h = 0; h <= j; ++h) {
-                long double dot = 0.0L;
+                    dot += static_cast<long double>(data[a * up + j]) *
+                           static_cast<long double>(data[b * up + j]);
+            } else {
                 for (size_t i = 0; i < un; ++i)
-                    dot += static_cast<long double>(data[i * up + j]) *
-                           static_cast<long double>(data[i * up + h]);
-                sum2 += (j == h ? 1.0L : 2.0L) * dot * dot;
+                    dot += static_cast<long double>(data[i * up + a]) *
+                           static_cast<long double>(data[i * up + b]);
             }
+            sum2 += (a == b ? 1.0L : 2.0L) * dot * dot;
+            gram[a * m + b] = gram[b * m + a] = static_cast<double>(dot);
         }
         const long double d = static_cast<long double>(n - 1);
         // Inside the domain every rescaled output below is a normal double.
         const double m1 = std::ldexp(static_cast<double>(sum1 / d), 2 * g);
         const double m2 = std::ldexp(static_cast<double>(sum2 / (d * d)), 4 * g);
 
-        n4m_pca_fit_t fit{};
-        const auto st = n4m_pca_fit(data.data(), n, p, k, 0, &fit);
-        if (st != N4M_OK) return fail(ctx, st, "PCA fit failed");
+        std::vector<double> lam(m), vec(m * m);  // eigenvectors are the columns of vec
+        const auto st = n4m_symmetric_eigh(gram.data(), static_cast<int64_t>(m), lam.data(),
+                                           vec.data());
+        if (st != N4M_OK) return fail(ctx, st, "PCA eigendecomposition failed");
+        std::vector<size_t> order(m);
+        std::iota(order.begin(), order.end(), size_t{0});
+        std::stable_sort(order.begin(), order.end(),
+                         [&](size_t x, size_t y) { return lam[x] > lam[y]; });
+        const double nm1 = static_cast<double>(n - 1);
+        const auto variance = [&](int64_t a) {
+            return std::max(lam[order[static_cast<size_t>(a)]], 0.0) / nm1;
+        };
         // Accuracy contract (rule 14): variances carry an absolute error of
-        // order max(n,p) * eps * lambda_max (backward-stable SVD). The
-        // conservative threshold pca_resolution_factor * max(n,p) * eps *
-        // lambda_max separates resolved components; a component not above it
-        // is unresolved: flagged, and published
-        // with a zero variance and zero scores (its loading row stays a unit
-        // vector of the orthonormal basis). Decided in the rescaled space,
-        // where every resolved value maps to a normal double.
+        // order max(n,p) * eps * lambda_max. The conservative threshold
+        // pca_resolution_factor * max(n,p) * eps * lambda_max separates
+        // resolved components; a component not above it is unresolved:
+        // flagged, and published with a zero variance and zero scores (its
+        // loading row stays a unit vector of the orthonormal basis). Decided
+        // in the rescaled space, where every resolved value maps to a normal
+        // double.
         const double res_scaled = pca_resolution_factor * static_cast<double>(std::max(n, p)) *
-                                  std::numeric_limits<double>::epsilon() * fit.explained_var[0];
-        for (int64_t a = 0; a < k; ++a) {
-            const bool lost = !(fit.explained_var[a] > res_scaled);
+                                  std::numeric_limits<double>::epsilon() * variance(0);
+        const auto uk = static_cast<size_t>(k);
+        std::vector<double> load(uk * up, 0.0), sc(un * uk, 0.0);
+        for (size_t a = 0; a < uk; ++a) {
+            const auto ia = static_cast<int64_t>(a);
+            const bool lost = !(variance(ia) > res_scaled);
             unresolved[a] = lost ? 1 : 0;
-            eigenvalues[a] = lost ? 0.0 : std::ldexp(fit.explained_var[a], 2 * g);
-            for (int64_t j = 0; j < p; ++j) put(*loadings, a, j, fit.components[a * p + j]);
-            for (int64_t i = 0; i < n; ++i)
-                put(*scores, i, a, lost ? 0.0 : std::ldexp(fit.scores[i * k + a], g));
+            eigenvalues[a] = lost ? 0.0 : std::ldexp(variance(ia), 2 * g);
+            const size_t c = order[a];
+            double* row = load.data() + a * up;
+            if (!wide) {
+                // Loadings are Gram eigenvectors; scores = Xc v.
+                for (size_t j = 0; j < up; ++j) row[j] = vec[j * m + c];
+                if (!lost)
+                    for (size_t i = 0; i < un; ++i) {
+                        long double s = 0.0L;
+                        for (size_t j = 0; j < up; ++j)
+                            s += static_cast<long double>(data[i * up + j]) *
+                                 static_cast<long double>(row[j]);
+                        sc[i * uk + a] = static_cast<double>(s);
+                    }
+                continue;
+            }
+            // Wide: scores = u sigma, loadings = Xc^T u / sigma.
+            if (!lost) {
+                const double sigma = std::sqrt(lam[c]);
+                for (size_t i = 0; i < un; ++i) sc[i * uk + a] = vec[i * m + c] * sigma;
+                for (size_t j = 0; j < up; ++j) {
+                    long double s = 0.0L;
+                    for (size_t i = 0; i < un; ++i)
+                        s += static_cast<long double>(data[i * up + j]) *
+                             static_cast<long double>(vec[i * m + c]);
+                    row[j] = static_cast<double>(s / sigma);
+                }
+                continue;
+            }
+            // Unresolved wide component: Xc^T u / sigma is rounding noise, so
+            // complete the orthonormal basis deterministically with the first
+            // canonical vector that stays independent of the previous rows
+            // (modified Gram-Schmidt, applied twice).
+            for (size_t e = 0; e < up; ++e) {
+                std::fill(row, row + up, 0.0);
+                row[e] = 1.0;
+                for (int pass = 0; pass < 2; ++pass)
+                    for (size_t b = 0; b < a; ++b) {
+                        const double* prev = load.data() + b * up;
+                        double dot = 0.0;
+                        for (size_t j = 0; j < up; ++j) dot += prev[j] * row[j];
+                        for (size_t j = 0; j < up; ++j) row[j] -= dot * prev[j];
+                    }
+                double norm = 0.0;
+                for (size_t j = 0; j < up; ++j) norm += row[j] * row[j];
+                norm = std::sqrt(norm);
+                if (norm > 0.5) {
+                    for (size_t j = 0; j < up; ++j) row[j] /= norm;
+                    break;
+                }
+            }
         }
-        n4m_pca_fit_free(&fit);
+        // Sign convention (as n4m_pca_fit / sklearn): the largest-magnitude
+        // loading of each component is non-negative; scores follow.
+        for (size_t a = 0; a < uk; ++a) {
+            double* row = load.data() + a * up;
+            size_t arg = 0;
+            for (size_t j = 1; j < up; ++j)
+                if (std::fabs(row[j]) > std::fabs(row[arg])) arg = j;
+            const double sign = row[arg] < 0.0 ? -1.0 : 1.0;
+            for (size_t j = 0; j < up; ++j)
+                put(*loadings, static_cast<int64_t>(a), static_cast<int64_t>(j), sign * row[j]);
+            for (size_t i = 0; i < un; ++i)
+                put(*scores, static_cast<int64_t>(i), static_cast<int64_t>(a),
+                    std::ldexp(sign * sc[i * uk + a], g) + 0.0);  // no -0
+        }
         resolution[0] = std::ldexp(res_scaled, 2 * g);
         full_moments[0] = varying ? m1 : 0.0;
         full_moments[1] = varying ? m2 : 0.0;
@@ -1070,10 +1147,20 @@ N4M_API n4m_status_t n4m_preflight_pca_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
     const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
     double* eigenvalues, double* full_moments) {
-    double resolution = 0.0;
-    std::vector<uint8_t> unresolved(k > 0 ? static_cast<size_t>(k) : 0);
-    return pca_compute(ctx, X, k, scores, loadings, eigenvalues, full_moments, &resolution,
-                       unresolved.data());
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    // Validate k before sizing the flag buffer (pca_compute repeats it).
+    if (k < 1 || k > std::min(X->rows, X->cols))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PCA dimensions or component count");
+    try {
+        double resolution = 0.0;
+        std::vector<uint8_t> unresolved(static_cast<size_t>(k));
+        return pca_compute(ctx, X, k, scores, loadings, eigenvalues, full_moments, &resolution,
+                           unresolved.data());
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PCA allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PCA internal error"); }
 }
 
 N4M_API n4m_status_t n4m_preflight_pca_compute_resolved(

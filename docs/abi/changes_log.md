@@ -2,7 +2,7 @@
 
 ## 2026-10-16 — ABI 2.20.0: Preflight statistics, domain shift, variance components, cluster matching (released in 1.3.7)
 
-Nineteen new caller-buffer operations; the 2.19 signatures are unchanged and
+Twenty new caller-buffer operations; the 2.19 signatures are unchanged and
 no serialized format changes. Behaviour changes of 2.19 symbols are listed
 in the subsections (factor-association centring, HDBSCAN domain and buffer
 validation, SNV constant rows, PCA resolution) and in CHANGELOG 1.3.7.
@@ -19,10 +19,12 @@ neighbours, group means), "input outside the supported numerical domain
 (nonzero |x| in [2^-256, 2^256])". Holm/BH accept nonzero p >= 2^-1022;
 labels and codes are not checked; the PCA kernels use [2^-128, 2^128].
 
-Final signatures (all declared in `n4m/metrics.h`):
+Final signatures (declared in `n4m/metrics.h`, except
+`n4m_outlier_detection_hotelling_t2_resolved` in `n4m/outlier_detection.h`):
 
 ```c
 n4m_status_t n4m_cluster_jaccard_matrix(n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n, int64_t n_clusters_a, int64_t n_clusters_b, double* jaccard, int64_t* intersections, int64_t* sizes_a, int64_t* sizes_b);
+n4m_status_t n4m_outlier_detection_hotelling_t2_resolved(n4m_matrix_view_t X, int32_t n_components, double alpha, double* t2_per_sample, int64_t n_samples, double* ucl_out, int32_t* rank_used);
 n4m_status_t n4m_linear_sum_assignment(n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind, int64_t* col_ind, int64_t* n_assigned);
 n4m_status_t n4m_preflight_pca_compute_resolved(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k, const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings, double* eigenvalues, double* full_moments, double* resolution, uint8_t* unresolved);
 n4m_status_t n4m_preflight_snv_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids, int64_t n_groups, const n4m_matrix_view_t* out, double* error_bounds);
@@ -398,10 +400,11 @@ numerators and denominators (n ≤ 2^23 by memory). `n4m_linear_sum_assignment` 
 exact optimum (192-bit fixed-point duals, SciPy tie order on exact values, no centring,
 `rows*cols*min <= 1e8`). `n4m_cluster_jaccard_matrix` refuses n > 2^53. Each header states
 its domain of validity.
-### PCA resolution: `n4m_preflight_pca_compute_resolved`
+### PCA resolution: `n4m_preflight_pca_compute_resolved`, `n4m_outlier_detection_hotelling_t2_resolved`
 
-Add one caller-buffer operation in `n4m/metrics.h`. 2.19 symbols keep their
-signatures, and no serialized format changes.
+Add two caller-buffer operations, in `n4m/metrics.h` and
+`n4m/outlier_detection.h`. 2.19 symbols keep their signatures, and no
+serialized format changes.
 
 `n4m_preflight_pca_compute_resolved` is `n4m_preflight_pca_compute` with its
 accuracy contract made explicit. Two outputs are added:
@@ -434,6 +437,26 @@ therefore have no influence, and translations change nothing beyond the
 input's rounding. Scaling X by 2^s scales the eigenvalues, `full_moments[0]`
 and the resolution by 4^s, `full_moments[1]` by 16^s and the scores by 2^s;
 the loadings are invariant.
+
+The decomposition is the eigendecomposition of the Gram matrix on the
+smaller side (the one already accumulated in long double for
+`full_moments[1]`) by the converged symmetric QL solver, for every n, p and
+k. Before, truncated requests on large inputs went through a randomized
+sketch with two power iterations whose error was not covered by the
+published resolution (`[diag(d); -diag(d)]`, d_i = 1 + i/128, 256 x 128,
+k = 10: first variance 7 % low with `N4M_OK`). The 2.19 entry point now
+validates `k` before any allocation and keeps every allocation inside its
+exception barrier (`k = INT_MAX` used to abort with `std::bad_alloc`).
+
+`n4m_outlier_detection_hotelling_t2_resolved` is
+`n4m_outlier_detection_hotelling_t2` plus `rank_used` (one `int32_t`). Both
+use only resolved directions (`sigma_j > 16 * max(n,p) * DBL_EPSILON *
+sigma_1`) and compute the UCL with r = `rank_used` degrees of freedom. A
+rank-deficient X therefore no longer amplifies a rounding-level direction:
+for `[[1,2,3],[4,5,9],[6,3,9],[2,8,10]]` with k = 3, r = 2 and T² equals
+the exact 2-column values (e.g. 4113/2428 instead of 2.998). With r = 0
+(constant X), T² = 0 and UCL = 0. Full-rank inputs are bit-identical. The
+registry procedure `utilities.hotelling_t2` publishes `n_components_used`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

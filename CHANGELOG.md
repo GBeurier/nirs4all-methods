@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [1.3.7] - 2026-10-16
 
-ABI 2.20.0 (minor: 19 new symbols, no signature change of the 2.19
+ABI 2.20.0 (minor: 20 new symbols, no signature change of the 2.19
 surface). No model-state serialization format changes.
 
 ### Behaviour changes of symbols published in 1.3.6
@@ -37,6 +37,12 @@ surface). No model-state serialization format changes.
 - Internal SVD / symmetric-eigen helpers no longer fail or return wrong
   factors on degenerate inputs (see Fixed); on non-degenerate inputs the
   results are bit-identical to 1.3.6.
+- `n4m_preflight_pca_compute` no longer uses a randomized sketch on large
+  truncated requests (a first variance 7 % low with `N4M_OK`): it
+  eigendecomposes the smaller-side Gram matrix for every n, p and k.
+  `n4m_outlier_detection_hotelling_t2` (and the `utilities.hotelling_t2`
+  procedure) uses only resolved directions and the UCL of the rank actually
+  used, so collinear columns no longer inflate T².
 - PLS regression (all eight solvers) and PCR without autoscaling are
   scale-equivariant: data at 2^-30 that returned `N4M_ERR_NUMERICAL_FAILURE`
   now fit. Previously successful fits are bit-identical except NIPALS
@@ -183,6 +189,9 @@ surface). No model-state serialization format changes.
   spread limit, mixed exponents within a row, exact rational and 400-digit
   references. Each result is correct within its stated error, or the input is
   refused with `N4M_ERR_UNSUPPORTED` outside the domain.
+- ABI 2.20.0: `n4m_outlier_detection_hotelling_t2_resolved` publishes the
+  rank used by Hotelling T²; the `utilities.hotelling_t2` procedure reports
+  it as `n_components_used`.
 - ABI 2.20.0: `n4m_preflight_pca_compute_resolved` publishes the PCA
   resolution bound and a per-component `unresolved` flag (rule-14 accuracy
   contract). The JS `preflightPca` wrapper returns `resolution` and
@@ -452,6 +461,15 @@ surface). No model-state serialization format changes.
   `PLSRegression(scale=False)` / PCA + linear regression and NumPy analytic
   references (exact-singular-vector deflation, de Jong SIMPLS); a JS/WASM
   sweep checks the same on predictions.
+- The preflight PCA no longer uses the randomized sketch on large truncated
+  requests, whose error the published resolution did not cover (a first
+  variance 7 % low with `N4M_OK`). It now eigendecomposes the smaller-side
+  Gram matrix with the converged QL solver for every n, p and k. The 2.19
+  entry point validates `k` before allocating and keeps allocations inside
+  its exception barrier.
+- Hotelling T² uses only resolved directions and computes its UCL with the
+  rank actually used. Before, an exactly collinear column gave a
+  rounding-level direction that T² amplified (2.998 instead of 4113/2428).
 
 ## [1.3.6] - 2026-10-13
 
