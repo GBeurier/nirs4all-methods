@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **220**
-- Curated scientific records: **227**
-- Resolved documentation pages: **220**
+- Catalog entries: **223**
+- Curated scientific records: **230**
+- Resolved documentation pages: **223**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -70,6 +70,9 @@ This generated report records the documentation source used for each catalog ent
 | `augmentation.wavelength.wavelength_stretch` | [aug_wavelength_stretch](aug_wavelength_stretch.md) | curated |
 | `diagnostics.adjusted_rand_index` | [diagnostics_adjusted_rand_index](diagnostics_adjusted_rand_index.md) | curated |
 | `diagnostics.approximate_press` | [approximate_press](approximate_press.md) | curated |
+| `diagnostics.bh_adjust` | [diagnostics_bh_adjust](diagnostics_bh_adjust.md) | curated |
+| `diagnostics.correlation_test` | [diagnostics_correlation_test](diagnostics_correlation_test.md) | curated |
+| `diagnostics.factor_association_exact` | [diagnostics_factor_association_exact](diagnostics_factor_association_exact.md) | curated |
 | `diagnostics.hdbscan` | [diagnostics_hdbscan](diagnostics_hdbscan.md) | curated |
 | `diagnostics.holm_adjust` | [diagnostics_holm_adjust](diagnostics_holm_adjust.md) | curated |
 | `diagnostics.model_selection` | [one_se_rule](one_se_rule.md) | curated |

@@ -1,0 +1,43 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.correlation_test"
+family: "diagnostics.statistics"
+category: "diagnostics"
+subcategory: "statistics"
+since_abi: "2.20.0"
+abi_symbols:
+  - "n4m_stats_correlation_exact"
+  - "n4m_stats_correlation_test"
+tu:
+  - "cpp/src/c_api/c_api_preflight.cpp"
+headers:
+  - "cpp/include/n4m/metrics.h"
+carry_along_tu:
+  - "cpp/src/core/common/rng_pcg64.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.correlation_test"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Pearson or Spearman (average-rank) correlation of paired vectors with a seeded two-sided Monte Carlo permutation p-value (1+b)/(1+B), PCG64 draws equal to numpy.random.default_rng(seed).permutation(n); SciPy pearsonr/spearmanr parity; n4m_stats_correlation_exact enumerates the distinct arrangements for the exact p-value and the minimal attainable p-value."
+c_surface:
+  - "n4m_stats_correlation_exact"
+  - "n4m_stats_correlation_test"
+fq_name: "n4m.metrics.statistics.correlation_test"
+leaf: "correlation_test"
+legacy_ids:
+  - "diagnostics.correlation_test"
+namespace: "metrics.statistics"

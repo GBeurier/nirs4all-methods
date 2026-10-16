@@ -6,6 +6,62 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI 2.20.0. No model-state serialization format changes.
+
+### Added
+
+- Public ABI 2.20.0 generic statistics: `n4m_stats_correlation_test`
+  (Pearson or Spearman correlation with a seeded two-sided permutation
+  p-value, NumPy `default_rng` permutation parity) and `n4m_stats_bh_adjust`
+  (Benjamini-Hochberg adjusted p-values). JS/WASM wrappers
+  `statsCorrelationTest` and `statsBhAdjust`. SciPy 1.15.3 `pearsonr` /
+  `spearmanr`, statsmodels 0.15.0 `multipletests(method="fdr_bh")` and NumPy
+  2.2.6 permutation counts are pinned in `cpp/tests/test_preflight.cpp`.
+- `n4m_stats_factor_association_exact` and `n4m_stats_correlation_exact`:
+  exhaustive enumeration of distinct arrangements, returning the exact
+  p-value and the minimal attainable exact p-value (JS
+  `statsFactorAssociationExact`, `statsCorrelationExact`). Brute-force SciPy
+  references are pinned in the native and JS tests.
+
+### Fixed
+
+- `n4m_preflight_factor_association` centered targets on a naive mean after
+  dividing by max|y|, so a large common offset produced a spurious
+  between-group effect (two identical groups at `1e16` gave eta^2 = 0.27).
+  Centering is now translation stable (power-of-two scaling, shifted origin,
+  residual-mean correction), with translation-invariance tests.
+- The categorical association kernels computed `levels x classes` in
+  `size_t` without overflow check and allocated the table before the budget
+  check; 65536 x 65536 wrapped to 0 in WASM32 and the exact API then wrote
+  out of bounds. The product is now checked and capped at 10 million cells
+  before any allocation, and both the Monte Carlo and exact APIs refuse
+  oversized work before evaluating any statistic.
+- Magnitude robustness of the association kernels: the centered copy is
+  also rescaled from the centered variation, SSW is computed from per-level
+  residuals at their own power-of-two scale (a 2^-510 within-level spread
+  next to a unit gap gives F = (2/3) 2^1021 instead of NaN), and an
+  unrepresentable F returns `N4M_ERR_NUMERICAL_FAILURE`. Native and WASM
+  sweeps over 2^k (k from -1060 to 1000) and translations by 1e16 and 1e300
+  check invariance of eta^2, F, r, rho, counts, exact distributions, Holm
+  and BH.
+- Within-level sums of squares are computed from the original targets with a
+  per-level scale (no global scale or centre erases them); a lost or
+  unrepresentable F is an explicit `N4M_ERR_NUMERICAL_FAILURE`. Cramer's V
+  is computed from exact integer chi-square residuals (exactly 0 at
+  independence). Mixed-exponent and near-zero-effect tests use exact dyadic
+  and rational references; the precision contract in `metrics.h` is revised
+  to what these computations guarantee.
+- Supported numerical domain D for the association, correlation and exact
+  kernels: nonzero |x| in [2^-256, 2^256], max/min nonzero
+  |x| <= 2^32 per input array (public macro `N4M_DOMAIN_MAX_SPREAD_LOG2`),
+  zeros allowed. Inputs outside D are refused
+  with `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain
+  (...)") by a pre-pass; native and JS/WASM tests cover both sides of every
+  boundary, and the magnitude sweeps run inside D.
+- Holm and BH are exempt from the spread limit: they accept any
+  p-values in [0, 1] whose nonzero values are normal (>= 2^-1022), e.g.
+  p = 1 next to 1e-25; only subnormal p-values are refused.
+
 ## [1.3.6] - 2026-10-13
 
 ABI 2.19.0. No model-state serialization format changes.

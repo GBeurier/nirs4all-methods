@@ -1495,6 +1495,101 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "cpp/tests/test_preflight.cpp",
     ),
+    "diagnostics_correlation_test": _entry(
+        "Pearson and Spearman correlation with a permutation test",
+        "Pearson (1895), *Note on regression and inheritance in the case of two parents*, "
+        "Proceedings of the Royal Society of London 58, 240–242, "
+        "https://doi.org/10.1098/rspl.1895.0041; Spearman (1904), *The proof and measurement of "
+        "association between two things*, American Journal of Psychology 15(1), 72–101, "
+        "https://doi.org/10.2307/1412159; Phipson & Smyth (2010), *Permutation P-values Should "
+        "Never Be Zero*, Statistical Applications in Genetics and Molecular Biology 9(1), "
+        "https://doi.org/10.2202/1544-6115.1585.",
+        "Pearson $r=\\sum_i(x_i-\\bar x)(y_i-\\bar y)/\\sqrt{\\sum_i(x_i-\\bar x)^2"
+        "\\sum_i(y_i-\\bar y)^2}$. Spearman $\\rho$ is Pearson's $r$ on average ranks (tied "
+        "values share the mean of their ranks). The two-sided Monte Carlo test permutes $y$ "
+        "over all units with $B$ seeded draws and reports $(1+b)/(1+B)$, where $b$ counts "
+        "permuted $|r|\\ge|r_{obs}|-\\sqrt{\\epsilon}$. The log10 bound "
+        "$\\min(n!/\\prod m_x!,\\,n!/\\prod m_y!)$ limits the distinct outcomes.",
+        "Testing a monotone or linear association between a continuous covariate (for example "
+        "a measurement temperature) and a continuous target over exchangeable units, as in the "
+        "Preflight metadata-target association protocol.",
+        "The test assumes exchangeable units and permutes $y$ as one unrestricted block; "
+        "restricted or residual permutations need another protocol. The p-value resolution is "
+        "bounded by $1/(B+1)$ and by the number of distinct outcomes. A constant vector gives "
+        "NaN and runs no permutation. Work above 250 million operations returns "
+        "`N4M_ERR_UNSUPPORTED`. Correlation is not causation.",
+        "The ABI-2 symbols `n4m_stats_correlation_test` and `n4m_stats_correlation_exact` "
+        "(exhaustive enumeration of distinct arrangements: exact p-value and minimal attainable "
+        "p-value) in `n4m/metrics.h` are implemented in `cpp/src/c_api/c_api_preflight.cpp` and "
+        "wrapped in JS/WASM by `statsCorrelationTest` and `statsCorrelationExact`. Centering "
+        "uses an exact power-of-two scaling and a shifted origin, so $r$ is translation "
+        "invariant. "
+        "Draws reuse the PCG64 engine seeded like `numpy.random.default_rng`. SciPy "
+        "`pearsonr`/`spearmanr` coefficients and NumPy permutation counts are pinned in "
+        "`cpp/tests/test_preflight.cpp`.",
+        "https://doi.org/10.1098/rspl.1895.0041; "
+        "https://doi.org/10.2307/1412159; "
+        "https://doi.org/10.2202/1544-6115.1585; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_preflight.cpp",
+    ),
+    "diagnostics_factor_association_exact": _entry(
+        "Exact permutation distribution of a factor-target association",
+        "No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The "
+        "Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and "
+        "Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.",
+        "Under uniform permutation of the target over $n$ exchangeable units, each distinct "
+        "arrangement of a multiset with multiplicities $m_k$ has probability $1/N$, "
+        "$N=n!/\\prod_k m_k!$. The kernel enumerates the side (factor levels or target values) "
+        "with the smaller $N$ and evaluates eta² or Cramér's V² on each arrangement. It returns "
+        "$N$, the exact p-value $\\#\\{T\\ge T_{obs}-\\sqrt{\\epsilon}\\}/N$, the minimal "
+        "attainable exact p-value $\\#\\{T\\ge T_{max}-\\sqrt{\\epsilon}\\}/N$ and $T_{max}$.",
+        "Deciding whether a small permutation space can support a significance threshold after "
+        "multiplicity correction: the minimal attainable p-value, not $1/N$, is the resolution "
+        "of the test.",
+        "Exhaustive enumeration is limited to $N\\le 10^7$ and to 250 million operations; larger "
+        "spaces return `N4M_ERR_UNSUPPORTED`. Exchangeability of the units is assumed, as one "
+        "unrestricted block.",
+        "The ABI-2 symbol `n4m_stats_factor_association_exact` in `n4m/metrics.h` is "
+        "implemented in `cpp/src/c_api/c_api_preflight.cpp` with the same input contract as "
+        "`n4m_preflight_factor_association`, and wrapped in JS/WASM by "
+        "`statsFactorAssociationExact`. Brute-force SciPy/NumPy reference fractions are pinned in "
+        "`cpp/tests/test_preflight.cpp`.",
+        "https://doi.org/10.1007/b138696; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_preflight.cpp",
+    ),
+    "diagnostics_bh_adjust": _entry(
+        "Benjamini–Hochberg adjusted p-values",
+        "Benjamini & Hochberg (1995), *Controlling the False Discovery Rate: A Practical and "
+        "Powerful Approach to Multiple Testing*, Journal of the Royal Statistical Society B "
+        "57(1), 289–300, https://doi.org/10.1111/j.2517-6161.1995.tb02031.x; Benjamini & "
+        "Yekutieli (2001), *The control of the false discovery rate in multiple testing under "
+        "dependency*, Annals of Statistics 29(4), 1165–1188, "
+        "https://doi.org/10.1214/aos/1013699998.",
+        "For one family of $m$ p-values sorted ascending as $p_{(1)}\\le\\dots\\le p_{(m)}$, "
+        "the adjusted value of rank $i$ is $\\min(1,\\min_{j\\ge i} m\\,p_{(j)}/j)$, as R "
+        "`p.adjust(method = \"BH\")` and statsmodels `multipletests(method=\"fdr_bh\")`.",
+        "Publishing an exploratory false-discovery-rate view of a hypothesis family next to a "
+        "family-wise (Holm) decision rule.",
+        "BH controls the false discovery rate under independence or positive regression "
+        "dependence (PRDS) of the test statistics, not the family-wise error rate. The caller "
+        "defines the family. Inputs must lie in $[0,1]$ and $m\\ge 1$.",
+        "The ABI-2 symbol `n4m_stats_bh_adjust` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsBhAdjust`. "
+        "statsmodels and SciPy `false_discovery_control` reference values are pinned in "
+        "`cpp/tests/test_preflight.cpp`.",
+        "https://doi.org/10.1111/j.2517-6161.1995.tb02031.x; "
+        "https://doi.org/10.1214/aos/1013699998; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_preflight.cpp",
+    ),
     "diagnostics_adjusted_rand_index": _entry(
         "Adjusted Rand index between two partitions",
         "Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193–218, "

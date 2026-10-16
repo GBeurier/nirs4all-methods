@@ -4,7 +4,7 @@ _Namespace_: **`n4m.cluster`** · _Fully-qualified_: `n4m.cluster.hdbscan` · _C
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_cluster_hdbscan`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L106). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_cluster_hdbscan`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L116). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 

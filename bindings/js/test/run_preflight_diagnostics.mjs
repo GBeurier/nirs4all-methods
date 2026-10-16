@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
     loadModule, abiVersion, preflightPca, preflightRepeatability,
-    preflightFactorAssociation, preflightHolmAdjust,
+    preflightFactorAssociation, preflightHolmAdjust, statsCorrelationTest, statsBhAdjust,
+    statsFactorAssociationExact, statsCorrelationExact,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex,
@@ -16,7 +17,7 @@ const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 19, 0]);
+assert.deepEqual(abiVersion(), [2, 20, 0]);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);
@@ -158,4 +159,125 @@ for (const c of fixture.cases) {
     c.outlier_scores_hex.map(hex).forEach((v, i) => assert.ok(same(got.outlierScores[i], v), c.name));
     assert.deepEqual(got.tree.map((node) => node.parent), c.tree_parent, c.name);
 }
+// Same hand values and SciPy/NumPy/statsmodels goldens as test_preflight.cpp.
+const pearson = statsCorrelationTest(new Float64Array([1, 2, 3, 4, 5]),
+    new Float64Array([2, 4, 5, 4, 5]), "pearson", 999, 17);
+near(pearson.coefficient, 6 / Math.sqrt(60));
+near(pearson.log10DistinctPermutations, Math.log10(30));
+assert.equal(pearson.nAtLeastObserved, 133);
+assert.equal(pearson.nPermutationsExecuted, 999);
+near(pearson.pValue, 134 / 1000);
+const spearman = statsCorrelationTest(new Float64Array([1, 2, 3, 4, 5]),
+    new Float64Array([2, 4, 5, 4, 5]), "spearman", 999, 18446744073709551557n);
+near(spearman.coefficient, 7 / Math.sqrt(90));
+assert.equal(spearman.nAtLeastObserved, 190);
+const tiedRho = statsCorrelationTest(new Float64Array([1, 1, 2, 2, 3, 3, 4, 4, 5, 5]),
+    new Float64Array([3, 1, 4, 1, 5, 9, 2, 6, 5, 3]), "spearman", 999, 17);
+near(tiedRho.coefficient, 0.4099457958749614);
+assert.equal(tiedRho.nAtLeastObserved, 241);
+assert.ok(Number.isNaN(statsCorrelationTest(new Float64Array([1, 1, 1]),
+    new Float64Array([1, 2, 3]), "pearson", 99, 1).coefficient));
+const bh = statsBhAdjust(new Float64Array([0.001, 0.2, 0.5, 0.03, 0.04, 0.049]));
+[0.006, 0.24, 0.5, 0.0735, 0.0735, 0.0735].forEach((value, i) => near(bh[i], value));
+// Translation invariance and exact enumeration (brute-force SciPy goldens).
+const same16 = preflightFactorAssociation([0, 0, 0, 1, 1, 1],
+    new Float64Array([1e16, 1e16 + 2, 1e16 + 4, 1e16, 1e16 + 2, 1e16 + 4]), false, 0, 1);
+assert.ok(Math.abs(same16.effectSize) < 1e-15 && Math.abs(same16.statistic) < 1e-15);
+const perfect = statsFactorAssociationExact([0, 0, 0, 0, 1, 1, 1, 1],
+    new Float64Array([0, 0, 0, 0, 1, 1, 1, 1]), true, 1000);
+assert.equal(perfect.nArrangements, 70);
+near(perfect.minimumPValue, 1 / 35);
+const exactRho = statsCorrelationExact(new Float64Array([1, 2, 3, 4, 5]),
+    new Float64Array([2, 4, 5, 4, 5]), "spearman", 1000);
+assert.equal(exactRho.nArrangements, 30);
+near(exactRho.pValue, 0.2);
+near(exactRho.minimumPValue, 1 / 15);
+// Oversized categorical space (review P0): 65536 levels x 65536 classes
+// overflow 32-bit sizes; both APIs refuse before allocating.
+const bigCodes = Array.from({length: 65536}, (_, i) => i);
+const bigClasses = Float64Array.from(bigCodes);
+// Only the explicit status is accepted: a WASM trap (RuntimeError) fails.
+const status = (code) => (error) => error?.name === "N4mError" && error.status === code;
+assert.throws(() => statsFactorAssociationExact(bigCodes, bigClasses, true, 100000), status(10));
+assert.throws(() => preflightFactorAssociation(bigCodes, bigClasses, true, 0, 1), status(10));
+assert.ok(statsFactorAssociationExact([0, 0, 1, 1], new Float64Array([0, 0, 1, 1]), true, 10)
+    .nArrangements === 6);
+// Supported numerical domain D (rule 13; same cases as test_preflight.cpp):
+// nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^32 per array (rule 15).
+// Inside D results match exact references; outside D only N4M_ERR_UNSUPPORTED
+// (status 10) is accepted, never a trap or a silent value.
+const relNear = (a, b) => assert.ok(Math.abs(a - b) <= 1e-12 * Math.abs(b), `${a} vs ${b}`);
+const lo = 2 ** -256, hi = 2 ** 256, sp = 2 ** 32;
+const xz4 = new Float64Array([1, 2, 3, 4]);
+const insideD = [[lo, 2 * lo, 3 * lo, 0], [hi / 4, hi / 2, hi, 0], [1, 2, sp, 0], [-lo, 0, lo * sp, -lo]];
+const outsideD = [[lo * (1 - 2 ** -53), 2 * lo, 3 * lo, 0], [hi / 4, hi / 2, hi * (1 + 2 ** -52), 0],
+    [1, 2, sp * (1 + 2 ** -52), 0], [-lo, 0, 2 * lo * sp, -lo], [1, 0, 2 ** 33, 0]];
+for (const v of insideD) {
+    const y = new Float64Array(v);
+    preflightFactorAssociation([0, 0, 1, 1], y, false, 0, 1);
+    statsFactorAssociationExact([0, 0, 1, 1], y, false, 100);
+    statsCorrelationTest(y, xz4, "pearson", 0, 1);
+    statsCorrelationExact(xz4, y, "spearman", 100);
+}
+for (const v of outsideD) {
+    const y = new Float64Array(v);
+    assert.throws(() => preflightFactorAssociation([0, 0, 1, 1], y, false, 0, 1), status(10));
+    assert.throws(() => statsFactorAssociationExact([0, 0, 1, 1], y, false, 100), status(10));
+    assert.throws(() => statsCorrelationTest(y, xz4, "pearson", 0, 1), status(10));
+    assert.throws(() => statsCorrelationExact(xz4, y, "spearman", 100), status(10));
+}
+// Holm/BH: no spread limit (p = 1 next to 1e-25 or 2^-1022); subnormal p refused.
+assert.deepEqual(Array.from(preflightHolmAdjust(new Float64Array([1e-25, 1]))), [2e-25, 1]);
+assert.deepEqual(Array.from(statsBhAdjust(new Float64Array([1e-25, 1]))), [2e-25, 1]);
+assert.equal(preflightHolmAdjust(new Float64Array([2 ** -1022, 1]))[0], 2 ** -1021);
+assert.throws(() => preflightHolmAdjust(new Float64Array([2 ** -1022 * (1 - 2 ** -52), 1])), status(10));
+assert.throws(() => statsBhAdjust(new Float64Array([2 ** -1074, 1])), status(10));
+for (const k of [-240, -100, 0, 100, 240]) {
+    const ys = Float64Array.from([1, 2, 3, 7, 8, 9], (v) => v * 2 ** k);
+    const sweep = preflightFactorAssociation([4, 4, 4, -9, -9, -9], ys, false, 999, 17);
+    relNear(sweep.effectSize, 27 / 29);
+    relNear(sweep.statistic, 54);
+    assert.equal(sweep.nAtLeastObserved, 93);
+    const rho = statsCorrelationTest(Float64Array.from([1, 2, 3, 4, 5], (v) => v * 2 ** k),
+        new Float64Array([2, 4, 5, 4, 5]), "spearman", 999, 17);
+    relNear(rho.coefficient, 7 / Math.sqrt(90));
+    assert.equal(rho.nAtLeastObserved, 201);
+}
+for (const k of [-1060, -300, 300, 1000]) {
+    const ys = Float64Array.from([1, 2, 3, 7, 8, 9], (v) => v * 2 ** k);
+    assert.throws(() => preflightFactorAssociation([4, 4, 4, -9, -9, -9], ys, false, 999, 17), status(10));
+}
+const shifted = preflightFactorAssociation([4, 4, 4, -9, -9, -9],
+    Float64Array.from([1, 2, 3, 7, 8, 9], (v) => 2 ** 200 + v * 2 ** 150), false, 999, 17);
+relNear(shifted.effectSize, 27 / 29);
+assert.equal(shifted.nAtLeastObserved, 93);
+// Mixed exponents inside D (exact references) and the review's extreme
+// mixtures, now outside D.
+relNear(preflightFactorAssociation([0, 0, 1], new Float64Array([0, 2 ** -30, 1]), false, 0, 1)
+    .statistic, 1.5372286713774735e18);
+relNear(preflightFactorAssociation([0, 0, 1], new Float64Array([-(2 ** -15), 2 ** -15, 2 ** 15]),
+    false, 0, 1).statistic, (2 / 3) * 2 ** 59);
+for (const y of [[0, 1e-100, 1e300], [0, 2 ** -1074, 1], [0, 2 ** -520, 1], [0, 2 ** -60, 1]]) {
+    assert.throws(() => preflightFactorAssociation([0, 0, 1], new Float64Array(y), false, 0, 1), status(10));
+}
+const tinyHolm = preflightHolmAdjust(Float64Array.from([0.01, 0.04, 0.03, 0.005], (p) => p * 2 ** -200));
+[0.03, 0.06, 0.06, 0.02].forEach((v, i) => relNear(tinyHolm[i] * 2 ** 200, v));
+const d20 = 2 ** -20;
+const nearZero = preflightFactorAssociation([0, 0, 1, 1], new Float64Array([0, 2, d20, 2 + d20]), false, 0, 1);
+relNear(nearZero.effectSize, d20 * d20 / (4 + d20 * d20));
+relNear(nearZero.statistic, d20 * d20 / 2);
+const independent = preflightFactorAssociation(Array.from({length: 18}, (_, i) => Math.floor(i / 9)),
+    Float64Array.from({length: 18}, (_, i) => i % 9), true, 0, 1);
+assert.equal(independent.effectSize, 0);
+assert.equal(independent.statistic, 0);
+const nearIndependent = [];
+[[0, 0, 50], [0, 1, 51], [1, 0, 51], [1, 1, 50]].forEach(([r, c, k]) => {
+    for (let j = 0; j < k; ++j) nearIndependent.push([r, c]);
+});
+relNear(preflightFactorAssociation(nearIndependent.map(([r]) => r),
+    Float64Array.from(nearIndependent, ([, c]) => c), true, 0, 1).effectSize, 1 / 101);
+relNear(statsCorrelationTest(new Float64Array([1, 2, 2 ** 20]), new Float64Array([1, 2, 3]),
+    "pearson", 0, 1).coefficient, 0.8660258167378265);
+assert.equal(statsCorrelationTest(new Float64Array([1, 2, 3, 4]), new Float64Array([1, -1, -1, 1]),
+    "pearson", 0, 1).coefficient, 0);
 console.log("JS/WASM Preflight diagnostics passed");

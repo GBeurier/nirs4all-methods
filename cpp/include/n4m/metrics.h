@@ -8,6 +8,16 @@
 extern "C" {
 #endif
 
+/* Supported numerical domain D of the Preflight statistics kernels: finite
+ * values, every nonzero |x| in [2^-256, 2^256], and inside one input array
+ * max nonzero |x| / min nonzero |x| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2. With a
+ * spread below 2^53, subtracting two values of one input never erases their
+ * difference. Kernels that use it refuse other inputs with
+ * N4M_ERR_UNSUPPORTED and the message "input outside the supported numerical
+ * domain (...)". Labels/codes, summaries and Holm/BH p-values are exempt
+ * from the spread limit. */
+#define N4M_DOMAIN_MAX_SPREAD_LOG2 32
+
 /* Preflight diagnostics. All outputs are caller-owned. X and matrix outputs
  * accept positive element strides and F64 only. PCA requires n>=2, p>=1,
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
@@ -181,7 +191,31 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  *   [7] Monte Carlo p-value (1+b)/(1+B); NaN when B == 0 or [0] is NaN.
  * The permutation statistic is eta^2 or Cramer's V^2; b counts permuted
  * values >= observed - sqrt(DBL_EPSILON). out_two = {b, executed B}; no
- * permutation runs when the effect size is undefined. */
+ * permutation runs when the effect size is undefined. Targets are centered
+ * after an exact power-of-two scaling and a shift to the first target, with
+ * a residual-mean correction, so eta^2 and F are translation invariant.
+ * categorical=1 with levels * classes > 10 million cells returns
+ * N4M_ERR_UNSUPPORTED before any table allocation or statistic.
+ * Supported numerical domain D: continuous targets in D (nonzero |y| in
+ * [2^-256, 2^256], max/min nonzero |y| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2,
+ * exact zeros allowed; categorical class codes are labels and are not
+ * checked). Inputs outside D return N4M_ERR_UNSUPPORTED before any
+ * computation. Inside D the results are scale invariant (exact power-of-two
+ * rescaling) and translation invariant up to the rounding of the shifted
+ * inputs, and F cannot overflow (F <= n * 2^168).
+ * Accuracy, stated conservatively: eta^2 and V have an absolute error of at
+ * most about c * n * DBL_EPSILON (c a small constant); eta^2 = 0 and V = 0
+ * are returned exactly for equal level means on dyadic data and at exact
+ * independence. V^2 = chi^2 / (n (min(levels, classes) - 1)), with chi^2
+ * summed from exact integer residuals O*n - r*c (nonnegative terms;
+ * n <= 3e9 for categorical targets). SSW is summed from per-level residuals
+ * of the original targets (each level scaled and centered on its own), so it
+ * has a relative error of about c * n * DBL_EPSILON. F = eta^2 SST/(levels-1)
+ * / (SSW/(n-levels)) therefore has a relative error of about c * n *
+ * DBL_EPSILON when eta^2 is not small, and otherwise an absolute error of
+ * about c * n * DBL_EPSILON * (SST/SSW) * (n-levels)/(levels-1). F is NaN
+ * only when every level is constant or n == levels; an F that is not a
+ * normal double while eta^2 > 0 returns N4M_ERR_NUMERICAL_FAILURE. */
 N4M_API n4m_status_t n4m_preflight_factor_association(
     n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
@@ -189,8 +223,75 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
 
 /* Holm step-down adjusted p-values for one family of m >= 1 hypotheses.
  * Inputs must lie in [0, 1]; adjusted[i] = min(1, max_{j<=rank(i)}
- * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm"). */
+ * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm").
+ * No spread limit (no subtraction is performed): nonzero p-values must be
+ * normal, p >= 2^-1022 (DBL_MIN); subnormal p-values return
+ * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain
+ * (nonzero p-values >= 2^-1022)"). */
 N4M_API n4m_status_t n4m_preflight_holm_adjust(
+    n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
+
+/* Pearson (method 0) or Spearman (method 1) correlation between paired
+ * finite vectors x and y over n exchangeable analysis units, with an
+ * optional seeded two-sided Monte Carlo permutation test of y over all
+ * units (a single unrestricted block). Spearman correlates average ranks
+ * (ties share the mean of their ranks, as scipy.stats.rankdata "average"),
+ * so it equals scipy.stats.spearmanr; Pearson equals scipy.stats.pearsonr.
+ * n >= 2, 0 <= n_permutations <= 1000000 and n * (n_permutations + 1) <=
+ * 250 million operations. Permutation draws use PCG64 seeded like
+ * numpy.random.default_rng(seed); the b-th draw equals the b-th
+ * rng.permutation(n), y_i -> y[perm[i]]. -0.0 and +0.0 are one value.
+ * out_five (caller-owned, NaN when undefined):
+ *   [0] correlation coefficient in [-1, 1]; NaN when x or y is constant.
+ *   [1] number of distinct x values; [2] number of distinct y values.
+ *   [3] log10 of min(n!/prod(x_multiplicity!), n!/prod(y_multiplicity!)),
+ *       an upper bound on distinct permutation outcomes of the statistic.
+ *   [4] two-sided Monte Carlo p-value (1+b)/(1+B); NaN when B == 0 or [0]
+ *       is NaN.
+ * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
+ * {b, executed B}; no permutation runs when the coefficient is undefined.
+ * Both vectors must lie in the supported domain D (each checked
+ * separately; outside D: N4M_ERR_UNSUPPORTED) and use the same scale- and
+ * translation-stable centering as n4m_preflight_factor_association. The
+ * absolute error of r is at most about c * n * DBL_EPSILON; exactly
+ * uncorrelated dyadic data give r = 0. */
+N4M_API n4m_status_t n4m_stats_correlation_test(
+    n4m_context_t* ctx, const double* x, const double* y, int64_t n,
+    int32_t method, int32_t n_permutations, uint64_t seed,
+    double* out_five, int64_t* out_two);
+
+/* Exact permutation distributions of the statistics above over n
+ * exchangeable units. The side with fewer distinct arrangements
+ * (n!/prod(multiplicity!)) is enumerated (std::next_permutation over its
+ * multiset of codes) with the other side fixed; every distinct arrangement
+ * has equal probability under uniform permutation. The statistic is eta^2 or
+ * Cramer's V^2 (factor association, same input contract as
+ * n4m_preflight_factor_association) or |r| (correlation, method 0 Pearson,
+ * 1 Spearman). 1 <= max_arrangements <= 10000000.
+ * Inputs follow the domain D of the Monte Carlo kernels (outside D:
+ * N4M_ERR_UNSUPPORTED before any computation). A larger arrangement count,
+ * or 2 * count * (n + levels * classes) > 250 million operations, returns
+ * N4M_ERR_UNSUPPORTED before any statistic is evaluated (and, as above, a
+ * categorical table above 10 million cells is refused before allocation).
+ * out_four (caller-owned): [0] number N of distinct arrangements;
+ * [1] exact p-value #{T >= T_obs - sqrt(DBL_EPSILON)}/N; [2] minimal
+ * attainable exact p-value #{T >= T_max - sqrt(DBL_EPSILON)}/N; [3] T_max.
+ * [1]-[3] are NaN when the statistic is undefined. */
+N4M_API n4m_status_t n4m_stats_factor_association_exact(
+    n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
+    int64_t n, int32_t categorical, int64_t max_arrangements, double* out_four);
+N4M_API n4m_status_t n4m_stats_correlation_exact(
+    n4m_context_t* ctx, const double* x, const double* y, int64_t n,
+    int32_t method, int64_t max_arrangements, double* out_four);
+
+/* Benjamini-Hochberg step-up adjusted p-values for one family of m >= 1
+ * hypotheses. Inputs must lie in [0, 1]; with p_(1) <= ... <= p_(m),
+ * adjusted p_(i) = min(1, min_{j>=i} m p_(j) / j), as R p.adjust("BH")
+ * (same domain as Holm: no spread limit, subnormal p-values refused;
+ * positive p-values stay positive)
+ * and statsmodels multipletests(method="fdr_bh"). Controls the false
+ * discovery rate under independence or positive regression dependence. */
+N4M_API n4m_status_t n4m_stats_bh_adjust(
     n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
