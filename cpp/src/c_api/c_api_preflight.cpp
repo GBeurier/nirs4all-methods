@@ -2057,9 +2057,9 @@ N4M_API n4m_status_t n4m_stats_group_means(
 
 N4M_API n4m_status_t n4m_stats_regression_scores(
     n4m_context_t* ctx, const double* y_true, const double* y_pred, int64_t n,
-    double* out_three) {
+    double* out_four) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
-    if (!y_true || !y_pred || !out_three)
+    if (!y_true || !y_pred || !out_four)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null regression-scores buffer");
     if (n < 1) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "regression scores need n >= 1");
     try {
@@ -2095,11 +2095,26 @@ N4M_API n4m_status_t n4m_stats_regression_scores(
             sst.add(d * d);
         }
         const double sse_v = sse.hi + sse.lo, sst_v = sst.hi + sst.lo;
-        out_three[0] = std::sqrt(sse.divided(nd));
-        out_three[1] = sae.divided(nd);
-        // R^2 = 1 - SSE/SST; NaN (documented "undefined") when y is constant.
-        out_three[2] = sst_v > 0.0 ? 1.0 - sse_v / sst_v
-                                   : std::numeric_limits<double>::quiet_NaN();
+        out_four[0] = std::sqrt(sse.divided(nd));
+        out_four[1] = sae.divided(nd);
+        // R^2 = 1 - SSE/SST as significand * 2^exponent. The ratio of two
+        // finite sums can exceed the double range inside D (SSE ~ 2^514,
+        // SST ~ 2^-511); it is then published scaled, never as -Inf.
+        out_four[2] = std::numeric_limits<double>::quiet_NaN();
+        out_four[3] = 0.0;
+        if (sst_v > 0.0) {
+            int es = 0, et = 0;
+            const double ms = std::frexp(sse_v, &es), mt = std::frexp(sst_v, &et);
+            const int exponent = es - et;
+            if (sse_v == 0.0 || exponent < 1000) {
+                out_four[2] = 1.0 - sse_v / sst_v;
+            } else {
+                // 1 is below the resolution of SSE/SST >= 2^998: R^2 = -SSE/SST.
+                int e = 0;
+                out_four[2] = -std::frexp(ms / mt, &e);
+                out_four[3] = static_cast<double>(exponent + e);
+            }
+        }
         return N4M_OK;
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "regression-scores internal error"); }
 }
