@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- NIPALS PLS regression (`models.pls.pls_regression`, solver `nipals`) and
+  PCR (`models.pls.pcr`) without autoscaling are now scale-equivariant.
+  Their scikit-learn-compatible absolute `DBL_EPSILON` thresholds refused
+  finite data with `N4M_ERR_NUMERICAL_FAILURE` from X 2^-30 or Y 2^-60
+  onwards (and NIPALS lost equivariance at Y 2^30). Both fits now work on the
+  centred matrices rescaled by an exact power of two to a largest magnitude in
+  [1, 2) and restore the scale afterwards, so fitting X 2^k, Y 2^m gives
+  exactly 2^(m-k) times the coefficients. Results are bit-identical when the
+  centred data already lie at that scale; otherwise NIPALS moves by at most a
+  few 1e-12 relative (the solver's absolute `+eps` terms now act at unit
+  scale) and PCR is bit-identical. New C++ and JS/WASM sweeps over
+  k, m in {0, +-30, +-60, +-200} check exact equivariance and agreement with a
+  scikit-learn 1.7.2 `PLSRegression(scale=False)` / PCA + linear regression
+  reference. The other PLS regression solvers (SIMPLS, kernel, wide kernel,
+  orthogonal scores, SVD, power, randomized SVD) keep absolute thresholds
+  without autoscaling.
+
 ## [1.3.6] - 2026-10-13
 
 ABI 2.19.0. No model-state serialization format changes.
