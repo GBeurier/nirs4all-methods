@@ -325,6 +325,36 @@ The magnitude-sweep tests (`cpp/tests/test_preflight_robustness.cpp`, JS
 - independent oracles: exact rational pair decisions and 400-digit SNV
   references.
 Existing symbol signatures are unchanged, and no serialized format changes.
+## 2026-10-13 — ABI 2.20.0: cluster matching and Gaussian null kernels (unreleased)
+
+Add three caller-buffer operations in `n4m/metrics.h`. 2.19 symbols are unchanged
+and no serialized format changes. `n4m_cluster_jaccard_matrix` writes the
+row-major intersection counts and Jaccard indices of every cluster pair of two
+labelings (negative labels unassigned; NaN when both clusters are empty) and the
+cluster sizes; it refuses more than 100 million cells. `n4m_linear_sum_assignment`
+is a port of SciPy 1.18.1 `linear_sum_assignment` (minimize or maximize, +inf
+forbids a pair, NaN/-inf invalid, infeasible -> `N4M_ERR_NUMERICAL_FAILURE`,
+SciPy tie order, pairs in increasing row order). `n4m_random_multivariate_normal`
+equals NumPy `default_rng(seed).multivariate_normal(mean, cov, size=n,
+method="cholesky")`: PCG64 Ziggurat normals row by row times the lower Cholesky
+factor of the lower triangle of `cov`; a covariance that is not numerically
+positive definite returns `N4M_ERR_NUMERICAL_FAILURE`. `n4m_random_permutations`
+writes successive `default_rng(seed).permutation(n)` draws of one PCG64 stream.
+
+Behaviour changes (signatures unchanged). Rules 13/15 numerical domain for
+`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment` and `n4m_random_multivariate_normal`:
+finite values, every nonzero `|x|` in `[2^-256, 2^256]`, max/min nonzero `|x|` `<= 2^32`
+per input array (new public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` = 256 and
+`N4M_DOMAIN_MAX_SPREAD_LOG2` = 32 in `n4m/metrics.h`); outside it `N4M_ERR_UNSUPPORTED` with the message "input outside the
+supported numerical domain ..." before computing. Each call checks a 256 MiB working-memory
+budget before allocating (the WASM32 build aborts on a failed allocation).
+`n4m_cluster_hdbscan` no longer writes past caller buffers for overflowing inputs (now
+refused) and validates MST edges and tree sizes before writing; `inf - inf` excess at
+zero distance counts as 0. `n4m_preflight_adjusted_rand_index` computes exact integer
+numerators and denominators (n ≤ 2^23 by memory). `n4m_linear_sum_assignment` returns an
+exact optimum (192-bit fixed-point duals, SciPy tie order on exact values, no centring,
+`rows*cols*min <= 1e8`). `n4m_cluster_jaccard_matrix` refuses n > 2^53. Each header states
+its domain of validity.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

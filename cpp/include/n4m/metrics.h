@@ -117,6 +117,19 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
  * values, min_cluster_size>=2, 1<=min_samples<=X.rows, selection_method
  * 0=EOM or 1=leaf, allow_single_cluster 0 or 1. Workloads with
  * rows*rows*cols above 2.5e9 return N4M_ERR_UNSUPPORTED.
+ * Numerical domain (rules 13/15, N4M_DOMAIN_* above): finite X with every
+ * nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^32; outside
+ * it the call returns N4M_ERR_UNSUPPORTED ("input outside the supported numerical
+ * domain ...") before computing (non-finite X stays N4M_ERR_INVALID_ARGUMENT).
+ * Inside it every nonzero coordinate difference lies in [2^-308, 2^257], so
+ * squared distances, densities (lambda = 1/distance <= 2^308) and stability
+ * sums are normal doubles and the scikit-learn operation order is kept:
+ * results equal the reference, and scaling X by 2^k scales lambdas and
+ * stabilities by exactly 2^-k. Memory: 8*rows*cols + 512*rows bytes at most
+ * 256 MiB. Documented non-finite values: lambda +inf at distance 0,
+ * stability +inf for a node reaching distance 0 (inf - inf counts as 0
+ * excess, where scikit-learn would give NaN), GLOSH NaN where an infinite-
+ * density subtree makes it undefined.
  * Tie rule: MST edges of equal mutual-reachability weight are processed in
  * Prim insertion order (stable sort); Prim keeps the lowest row index on
  * equal weights. EOM replaces a node by its children only when their summed
@@ -148,10 +161,87 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
  * confusion counts. Every label value, including -1, is an ordinary class:
  * callers filter noise first. *ari is NaN when n<2 or when both partitions
  * are the same trivial partition (one class or all singletons), where
- * scikit-learn returns 1.0 by convention. */
+ * scikit-learn returns 1.0 by convention. Pair counts and the numerator and
+ * denominator are exact integers (128-bit products, ABI 2.20), so values near
+ * 0 do not come from cancelled rounded products; only the final division
+ * rounds. Invariant to the label values. Integer inputs: the rule-13
+ * numerical domain does not apply; memory 32*n bytes at most 256 MiB
+ * (n <= 2^23), else N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
     double* ari);
+
+/* Cluster overlap between two partitions of the same n elements (ABI 2.20).
+ * labels_a[i] in [0, n_clusters_a) or negative (unassigned, e.g. HDBSCAN
+ * noise), likewise labels_b with n_clusters_b; unassigned elements belong to
+ * no cluster. Caller-owned row-major outputs: intersections[i*n_clusters_b+j]
+ * = |A_i ∩ B_j| and jaccard[i*n_clusters_b+j] = |A_i ∩ B_j| / |A_i ∪ B_j|
+ * (NaN when both clusters are empty); sizes_a[i] = |A_i|, sizes_b[j] = |B_j|.
+ * n >= 0, n_clusters_a and n_clusters_b >= 0, and
+ * n_clusters_a * n_clusters_b <= 100 million cells. Counts are exact integers
+ * and each Jaccard value is one correctly rounded division; n > 2^53 returns
+ * N4M_ERR_UNSUPPORTED. Integer inputs: the rule-13 numerical domain does not
+ * apply, and no working memory is allocated. */
+N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
+    n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n,
+    int64_t n_clusters_a, int64_t n_clusters_b, double* jaccard, int64_t* intersections,
+    int64_t* sizes_a, int64_t* sizes_b);
+
+/* Rectangular linear sum assignment (ABI 2.20), a port of SciPy 1.18.1
+ * scipy.optimize.linear_sum_assignment (Crouse's shortest augmenting path,
+ * BSD-3-Clause). Minimizes (maximize=0) or maximizes (maximize=1) the summed
+ * cost of a one-to-one assignment of min(rows, cols) row/column pairs. The
+ * cost view is any strided f64 matrix; +inf forbids a pair, NaN and -inf
+ * (after negation when maximizing) return N4M_ERR_INVALID_ARGUMENT, and an
+ * assignment without forbidden pairs that does not exist returns
+ * N4M_ERR_NUMERICAL_FAILURE. Ties follow SciPy exactly (columns scanned from
+ * last to first, an unassigned column wins equal reduced costs; a constant
+ * matrix gives the identity). Caller-owned row_ind/col_ind receive
+ * min(rows, cols) pairs in increasing row order; *n_assigned their count.
+ * Numerical domain (rules 13/15, N4M_DOMAIN_* above): finite costs with every nonzero |cost| in
+ * [2^-256, 2^256] and max/min nonzero |cost| <= 2^32 (+inf forbidden pairs
+ * excluded); outside it N4M_ERR_UNSUPPORTED is returned before computing.
+ * Inside it every cost is an integer multiple of 2^E (E = last mantissa bit
+ * of the smallest nonzero |cost|) below 2^87 units, and duals, reduced and
+ * path costs are kept as exact signed 192-bit integers in those units: the
+ * result is an exact optimum of the given costs, including where SciPy's
+ * double arithmetic is suboptimal; ties follow SciPy's order on exact values.
+ * Work: rows*cols*min(rows, cols) <= 1e8 exact operations; memory:
+ * 16*rows*cols + 128*(rows+cols) bytes at most 256 MiB, checked before any
+ * allocation. */
+N4M_API n4m_status_t n4m_linear_sum_assignment(
+    n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind,
+    int64_t* col_ind, int64_t* n_assigned);
+
+/* n_permutations successive uniform permutations of [0, n) (ABI 2.20), equal
+ * to rng = numpy.random.default_rng(seed); [rng.permutation(n) for _ in
+ * range(n_permutations)]: one Methods PCG64 stream (NumPy SeedSequence
+ * expansion) and NumPy's Fisher-Yates over random_interval. out is caller-owned
+ * row-major n_permutations x n. n >= 0, n_permutations >= 0 and
+ * n * n_permutations <= 250 million. */
+N4M_API n4m_status_t n4m_random_permutations(
+    n4m_context_t* ctx, uint64_t seed, int64_t n, int64_t n_permutations, int64_t* out);
+
+/* n draws of a d-variate normal distribution (ABI 2.20), equal to
+ * numpy.random.default_rng(seed).multivariate_normal(mean, cov, size=n,
+ * method="cholesky"): standard normals from the Methods PCG64 Ziggurat stream
+ * (NumPy-identical) fill z row by row, L is the lower Cholesky factor of cov
+ * (only the lower triangle of cov is read, as LAPACK potrf "L"), and
+ * out[i*d+j] = sum_k z[i*d+k] L[j][k] + mean[j]. cov is a d x d strided f64
+ * view (d >= 1), mean has d finite values, out is caller-owned row-major
+ * n x d (n >= 0). A covariance that is not numerically positive definite
+ * returns N4M_ERR_NUMERICAL_FAILURE; regularization is the caller's choice.
+ * Limits (N4M_ERR_UNSUPPORTED, checked before any allocation, also for n = 0):
+ * 8*(d*d + n*d) bytes at most 256 MiB, d^3/6 and n*d*d at most 2.5e9.
+ * Numerical domain (rules 13/15, N4M_DOMAIN_* above): mean and the lower
+ * triangle of cov each finite with every nonzero |value| in [2^-256, 2^256]
+ * and max/min nonzero |value| <= 2^32; outside it N4M_ERR_UNSUPPORTED before computing. Inside it the
+ * factor (computed on cov / 4^m with 2^m near the largest standard deviation,
+ * an exact rescaling) and the draws stay normal, so scaling cov by 4^k scales
+ * the draws by exactly 2^k. */
+N4M_API n4m_status_t n4m_random_multivariate_normal(
+    n4m_context_t* ctx, uint64_t seed, const double* mean, const n4m_matrix_view_t* cov,
+    int64_t n, double* out);
 
 /* Smoothing-residual noise proxy along the feature axis. Features are assumed
  * equally spaced. Each row is smoothed by the Methods Savitzky-Golay filter

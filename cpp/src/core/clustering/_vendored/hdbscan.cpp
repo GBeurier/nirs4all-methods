@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <limits>
 #include <numeric>
+#include <utility>
 
 namespace n4m::core::hdbscan {
 namespace {
@@ -42,6 +43,10 @@ struct Row {
     std::size_t size;
 };
 
+// The C API admits only the numerical domain of rules 13/15 (finite values,
+// nonzero |x| in [2^-256, 2^256], spread <= 2^32). There every nonzero
+// coordinate difference lies in [2^-308, 2^257], so every squared distance is
+// a normal double and the scikit-learn sum of squares is kept unchanged.
 double euclidean(const double* x, const double* y, std::size_t p) noexcept {
     double d = 0.0;
     for (std::size_t k = 0; k < p; ++k) {
@@ -125,6 +130,7 @@ std::vector<Merge> single_linkage(std::vector<Edge> mst, std::size_t n) {
     std::size_t next_label = n;
     for (std::size_t i = 0; i + 1 < n; ++i) {
         const std::size_t a = find(mst[i].current), b = find(mst[i].next);
+        if (a == b) return {};  // a cycle: the caller rejects the empty linkage
         merges[i] = {a, b, mst[i].distance, size[a] + size[b]};
         parent[a] = parent[b] = next_label;
         size[next_label] = size[a] + size[b];
@@ -199,7 +205,18 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
     const auto min_size = static_cast<std::size_t>(params.min_cluster_size);
     const std::vector<double> core =
         core_distances(data, n, p, static_cast<std::size_t>(params.min_samples));
-    const std::vector<Merge> merges = single_linkage(prim_mst(data, n, p, core), n);
+    std::vector<Edge> mst = prim_mst(data, n, p, core);
+    const auto failure = [](Error error) {
+        Result failed;
+        failed.error = error;
+        return failed;
+    };
+    for (const Edge& e : mst) {
+        if (e.current >= n || e.next >= n || e.current == e.next)
+            return failure(Error::invalid_tree);
+    }
+    const std::vector<Merge> merges = single_linkage(std::move(mst), n);
+    if (merges.size() != n - 1) return failure(Error::invalid_tree);
     std::size_t k = 0;
     const std::vector<Row> rows = condense(merges, n, min_size, k);
 
@@ -227,7 +244,11 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
     }
     for (const Row& r : rows) {
         const std::size_t parent = r.parent - n;
-        stability[parent] += (r.lambda - birth[parent]) * static_cast<double>(r.size);
+        // A node born at zero distance whose points leave at zero distance
+        // carries no excess of mass (scikit-learn would form inf - inf = NaN).
+        const double excess =
+            std::isinf(r.lambda) && std::isinf(birth[parent]) ? 0.0 : r.lambda - birth[parent];
+        stability[parent] += excess * static_cast<double>(r.size);
     }
 
     // Cluster selection (`_get_clusters`). Children have larger node indices
@@ -316,10 +337,11 @@ Result fit(const double* data, std::int64_t n_rows, std::int64_t n_cols, const P
         if (label >= 0) ++members[static_cast<std::size_t>(label)];
     out.persistence.resize(label_node.size());
     for (std::size_t c = 0; c < label_node.size(); ++c) {
+        const double denominator = static_cast<double>(members[c]) * max_lambda;
         out.persistence[c] =
             (std::isinf(max_lambda) || max_lambda == 0.0 || members[c] == 0)
                 ? 1.0
-                : stability[label_node[c]] / (static_cast<double>(members[c]) * max_lambda);
+                : stability[label_node[c]] / denominator;
     }
     return out;
 }

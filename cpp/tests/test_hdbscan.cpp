@@ -191,6 +191,66 @@ int main() {
                                       nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
                                       nullptr, nullptr) == N4M_ERR_NULL_POINTER);
 
+        // Regression (review 2026-10-13): squared distances of [0, 1e155,
+        // 2e155, 3e155] overflowed to inf, Prim emitted self-edges and the
+        // condensed tree had 7 nodes for 4 rows, written past the caller's
+        // 4-element buffers. The rule-13 domain (nonzero |x| in
+        // [2^-256, 2^256], max/min nonzero |x| <= 2^32, rule 15) refuses such
+        // inputs before computing; sentinels check that nothing is written.
+        {
+            const double sentinel = -12345.0;
+            auto guarded = [&](std::vector<double> data, n4m_status_t expect, Output& out) {
+                const auto rows = static_cast<int64_t>(data.size());
+                n4m_matrix_view_t V{};
+                REQUIRE(n4m_matrix_view_init_rowmajor(&V, data.data(), rows, 1, N4M_DTYPE_F64) == N4M_OK);
+                const auto cap = static_cast<size_t>(rows), pad = size_t{8};
+                std::vector<int64_t> lab(cap + pad, -777), par(cap + pad, -777), siz(cap + pad, -777),
+                    tl(cap + pad, -777);
+                std::vector<double> mem(cap + pad, sentinel), out_s(cap + pad, sentinel),
+                    pers(cap + pad, sentinel), bir(cap + pad, sentinel), dea(cap + pad, sentinel),
+                    sta(cap + pad, sentinel);
+                int64_t nc = -1, nn = -1;
+                REQUIRE(n4m_cluster_hdbscan(ctx, &V, 2, 2, 0, 0, lab.data(), mem.data(), out_s.data(),
+                                            &nc, pers.data(), &nn, par.data(), siz.data(), tl.data(),
+                                            bir.data(), dea.data(), sta.data()) == expect);
+                const size_t first_guard = expect == N4M_OK ? cap : 0;
+                for (size_t i = first_guard; i < cap + pad; ++i)
+                    REQUIRE(lab[i] == -777 && par[i] == -777 && siz[i] == -777 && tl[i] == -777 &&
+                            mem[i] == sentinel && out_s[i] == sentinel && pers[i] == sentinel &&
+                            bir[i] == sentinel && dea[i] == sentinel && sta[i] == sentinel);
+                if (expect != N4M_OK) return;
+                REQUIRE(nn >= 1 && nn <= rows && nc >= 0 && nc <= rows);
+                out.labels.assign(lab.begin(), lab.begin() + rows);
+                out.membership.assign(mem.begin(), mem.begin() + rows);
+                out.tree_parent.assign(par.begin(), par.begin() + nn);
+                out.birth.assign(bir.begin(), bir.begin() + nn);
+                out.n_clusters = nc;
+            };
+            const double up = std::ldexp(1.0, 254), down = std::ldexp(1.0, -256);
+            Output u, h, t, ignored;
+            guarded({0, 1, 2, 3}, N4M_OK, u);
+            guarded({0, up, 2 * up, 3 * up}, N4M_OK, h);       // largest 3 * 2^254 <= 2^256
+            guarded({0, down, 2 * down, 3 * down}, N4M_OK, t);  // smallest exactly 2^-256
+            // Power-of-two rescaling keeps partition and memberships exactly.
+            for (const Output* rescaled : {&h, &t}) {
+                REQUIRE(rescaled->labels == u.labels && rescaled->tree_parent == u.tree_parent &&
+                        rescaled->n_clusters == u.n_clusters && rescaled->membership == u.membership);
+            }
+            for (size_t k = 0; k < u.birth.size(); ++k) {
+                REQUIRE(h.birth[k] == std::ldexp(u.birth[k], -254));
+                REQUIRE(t.birth[k] == std::ldexp(u.birth[k], 256));
+            }
+            // Just outside the domain on each side, and the review input.
+            guarded({0, 4 * up, 5 * up, 6 * up}, N4M_ERR_UNSUPPORTED, ignored);    // above 2^256
+            guarded({0, down / 2, down, 2 * down}, N4M_ERR_UNSUPPORTED, ignored);  // below 2^-256
+            guarded({1, 2, std::ldexp(1.0, N4M_DOMAIN_MAX_SPREAD_LOG2)}, N4M_OK, ignored);  // spread 2^32
+            guarded({1, 2, std::ldexp(1.0, N4M_DOMAIN_MAX_SPREAD_LOG2) * (1 + 0x1p-52)},
+                    N4M_ERR_UNSUPPORTED, ignored);
+            guarded({0, 1, 2, std::ldexp(1.0, 40)}, N4M_ERR_UNSUPPORTED, ignored);  // spread 2^40
+            guarded({0, 1e155, 2e155, 3e155}, N4M_ERR_UNSUPPORTED, ignored);
+            guarded({-1e308, 1e308}, N4M_ERR_UNSUPPORTED, ignored);
+        }
+
         // ARI reference values from scikit-learn 1.9.1 adjusted_rand_score.
         REQUIRE(close(ari(ctx, {0, 0, 1, 2}, {0, 0, 1, 1}), 0.5714285714285714));
         REQUIRE(close(ari(ctx, {0, 0, 1, 1}, {0, 1, 0, 1}), -0.5));

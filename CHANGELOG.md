@@ -291,6 +291,67 @@ ABI 2.20.0 (project version unchanged until release).
   `int32_t` argument before the Emscripten call (4294967301 was wrapped to a
   window of 5); the noise proxy also checks the Savitzky-Golay domain and
   `windowLength <= cols`.
+- Public ABI 2.20.0 cluster matching and null-model kernels in
+  `n4m/metrics.h`: `n4m_cluster_jaccard_matrix` (intersection counts, cluster
+  sizes and Jaccard indices between two partitions, negative labels
+  unassigned), `n4m_linear_sum_assignment` (a BSD-3 port of SciPy 1.18.1
+  `scipy.optimize.linear_sum_assignment` with SciPy's tie order, vendored in
+  `cpp/src/core/optimization/_vendored`) and `n4m_random_multivariate_normal`
+  (NumPy `default_rng(seed).multivariate_normal(..., method="cholesky")` on
+  the existing PCG64 Ziggurat stream). A reference gate
+  (`parity/fixtures/cluster_matching_null_v1.json`,
+  `n4m_cluster_matching_null_tests`) pins SciPy assignments, scikit-learn
+  contingency tables, NumPy draws and stable-tie scikit-learn HDBSCAN
+  partitions of simulated Gaussian data. JS/WASM wrappers:
+  `clusterJaccardMatrix`, `linearSumAssignment`, `randomMultivariateNormal`.
+- `n4m_random_permutations` (ABI 2.20.0): successive
+  `default_rng(seed).permutation(n)` draws from one Methods PCG64 stream, for
+  seeded subsampling plans; JS/WASM `randomPermutations`.
+
+### Changed
+
+- Rules 13/15 numerical domain for the clustering kernels with real inputs
+  (`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment`,
+  `n4m_random_multivariate_normal`): finite values, every nonzero `|x|` in
+  `[2^-256, 2^256]` and max/min nonzero `|x|` `<= 2^32` per input array,
+  through the public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` (256) and
+  `N4M_DOMAIN_MAX_SPREAD_LOG2` (32) in `n4m/metrics.h`.
+  Outside it the call returns `N4M_ERR_UNSUPPORTED` ("input outside the
+  supported numerical domain ...") before computing; inside it results are
+  correct (exact optimum for the assignment, reference operation order for
+  HDBSCAN, exact `2^k` scaling). Each kernel also checks a cumulative
+  working-memory budget of 256 MiB before allocating, because the WASM32
+  build (2 GiB maximum, C++ exceptions not caught) aborts on a failed
+  allocation. ARI and Jaccard take integer labels: no numerical domain, but
+  memory and size limits (`n <= 2^23` for ARI, `n <= 2^53` for Jaccard).
+
+### Fixed
+
+- `n4m_cluster_hdbscan` (since ABI 2.19.0, Methods 1.3.6) could write past
+  the caller's buffers: with finite inputs whose squared distances overflow
+  (for example `[0, 1e155, 2e155, 3e155]`), Prim produced self-edges and the
+  condensed tree had more nodes than rows. Such inputs are now outside the
+  numerical domain and refused; inside it squared distances, densities and
+  stability sums stay normal doubles. MST edges and tree sizes are validated
+  and nothing is written when an invariant fails. `inf - inf` excess at zero
+  distance counts as 0 instead of NaN. Sentinel, domain-boundary and
+  multi-magnitude regression tests (scikit-learn on exact distances) run
+  natively and in WASM.
+- `n4m_preflight_adjusted_rand_index` uses exact integer pair counts and
+  128-bit numerator and denominator (no cancellation near 0).
+- `n4m_linear_sum_assignment` keeps duals, reduced and path costs as exact
+  signed 192-bit integers in units of the last mantissa bit of the smallest
+  nonzero cost: the result is an exact optimum, also where SciPy's double
+  arithmetic is suboptimal (signed costs with spread exponents). Costs are
+  never centred. Work limit `rows*cols*min(rows,cols) <= 1e8` exact
+  operations; memory `16*rows*cols + 128*(rows+cols)` bytes at most 256 MiB
+  (a `1 x 32,000,000` matrix is refused).
+- `n4m_random_multivariate_normal` checks storage, Cholesky cost and draws
+  before any allocation, including `n = 0`.
+- Property tests (`n4m_cluster_robustness_tests`, JS/WASM): domain
+  boundaries on both sides, `2^k` sweeps, exact translations, constant
+  columns, mixed-exponent assignments against an exact enumeration with an
+  independent oracle, memory refusals.
 
 ## [1.3.6] - 2026-10-13
 

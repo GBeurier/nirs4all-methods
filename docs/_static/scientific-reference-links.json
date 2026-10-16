@@ -910,19 +910,19 @@
       "links": [
         {
           "kind": "doi",
-          "value": "10.1111/j.2517-6161.1995.tb02031.x"
+          "value": "10.1016/j.csda.2006.11.025"
         },
         {
           "kind": "doi",
-          "value": "10.1214/aos/1013699998"
+          "value": "10.1111/j.1469-8137.1912.tb05611.x"
         },
         {
           "kind": "url",
-          "value": "https://doi.org/10.1111/j.2517-6161.1995.tb02031.x"
+          "value": "https://doi.org/10.1016/j.csda.2006.11.025"
         },
         {
           "kind": "url",
-          "value": "https://doi.org/10.1214/aos/1013699998"
+          "value": "https://doi.org/10.1111/j.1469-8137.1912.tb05611.x"
         },
         {
           "kind": "url",
@@ -930,68 +930,10 @@
         },
         {
           "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp"
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json"
         }
       ],
-      "page": "diagnostics_bh_adjust"
-    },
-    {
-      "links": [
-        {
-          "kind": "doi",
-          "value": "10.1098/rspl.1895.0041"
-        },
-        {
-          "kind": "doi",
-          "value": "10.2202/1544-6115.1585"
-        },
-        {
-          "kind": "doi",
-          "value": "10.2307/1412159"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1098/rspl.1895.0041"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.2202/1544-6115.1585"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.2307/1412159"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp"
-        }
-      ],
-      "page": "diagnostics_correlation_test"
-    },
-    {
-      "links": [
-        {
-          "kind": "doi",
-          "value": "10.1007/b138696"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1007/b138696"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp"
-        }
-      ],
-      "page": "diagnostics_factor_association_exact"
+      "page": "diagnostics_cluster_jaccard_matrix"
     },
     {
       "links": [
@@ -1047,67 +989,30 @@
       "links": [
         {
           "kind": "doi",
-          "value": "10.1080/00949650215733"
+          "value": "10.1002/nav.3800020109"
         },
         {
           "kind": "doi",
-          "value": "10.1111/j.1442-9993.2001.01070.pp.x"
-        },
-        {
-          "kind": "doi",
-          "value": "10.1139/f00-178"
-        },
-        {
-          "kind": "doi",
-          "value": "10.1890/0012-9658(2001)082"
+          "value": "10.1109/TAES.2016.140952"
         },
         {
           "kind": "url",
-          "value": "https://doi.org/10.1080/00949650215733"
+          "value": "https://doi.org/10.1002/nav.3800020109"
         },
         {
           "kind": "url",
-          "value": "https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x"
+          "value": "https://doi.org/10.1109/TAES.2016.140952"
         },
         {
           "kind": "url",
-          "value": "https://doi.org/10.1139/f00-178"
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/optimization/_vendored/rectangular_lsap.cpp"
         },
         {
           "kind": "url",
-          "value": "https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json"
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json"
         }
       ],
-      "page": "diagnostics_permanova"
-    },
-    {
-      "links": [
-        {
-          "kind": "doi",
-          "value": "10.1111/j.1541-0420.2005.00440.x"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1111/j.1541-0420.2005.00440.x"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json"
-        }
-      ],
-      "page": "diagnostics_permdisp"
+      "page": "diagnostics_linear_sum_assignment"
     },
     {
       "links": [
@@ -1187,35 +1092,6 @@
         }
       ],
       "page": "diagnostics_regression_metrics"
-    },
-    {
-      "links": [
-        {
-          "kind": "doi",
-          "value": "10.1080/01621459.1977.10480998"
-        },
-        {
-          "kind": "doi",
-          "value": "10.1093/biomet/58.3.545"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1080/01621459.1977.10480998"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1093/biomet/58.3.545"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variance_components.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_variance_components.cpp"
-        }
-      ],
-      "page": "diagnostics_variance_components"
     },
     {
       "links": [
@@ -3633,6 +3509,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "e00e2a6ab607ea70a5024af6e0990e5dbaac6840bd83019e9c5df9355c808b32"
+    "docs/_extras/scientific_remaining.py": "fe60f5540846fc3a6229c5bedb3ecaf62812175126120f5799b12b4c3792c74f"
   }
 }

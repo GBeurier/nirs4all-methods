@@ -1903,6 +1903,67 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "cpp/tests/test_variance_components.cpp",
     ),
+    "diagnostics_cluster_jaccard_matrix": _entry(
+        "Jaccard overlap between the clusters of two partitions",
+        "Jaccard (1912), *The distribution of the flora in the alpine zone*, New Phytologist "
+        "11(2), 37–50, https://doi.org/10.1111/j.1469-8137.1912.tb05611.x; Hennig (2007), "
+        "*Cluster-wise assessment of cluster stability*, Computational Statistics & Data "
+        "Analysis 52(1), 258–271, https://doi.org/10.1016/j.csda.2006.11.025.",
+        "For two labelings of the same $n$ elements, unassigned (negative) labels belong to no "
+        "cluster. The kernel counts $|A_i|$, $|B_j|$ and $|A_i\\cap B_j|$ and returns "
+        "$J_{ij}=|A_i\\cap B_j|/(|A_i|+|B_j|-|A_i\\cap B_j|)$ for every cluster pair, NaN when "
+        "both clusters are empty.",
+        "Matching the clusters of a resampled or perturbed partition to a reference partition, "
+        "for example to count how often each reference cluster reappears under subsampling.",
+        "The Jaccard index ignores unassigned elements and cluster shape; the caller restricts "
+        "both labelings to the elements they share. Matching and thresholds are the caller's "
+        "protocol (see `n4m_linear_sum_assignment`). The matrix is limited to 100 million cells.",
+        "The ABI-2 symbol `n4m_cluster_jaccard_matrix` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `clusterJaccardMatrix`. "
+        "`parity/generators/cluster_matching_null_v1.py` writes scikit-learn 1.9.1 "
+        "`contingency_matrix` references to `parity/fixtures/cluster_matching_null_v1.json`, "
+        "which `cpp/tests/test_cluster_matching_null.cpp` checks exactly.",
+        "https://doi.org/10.1111/j.1469-8137.1912.tb05611.x; "
+        "https://doi.org/10.1016/j.csda.2006.11.025; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "parity/fixtures/cluster_matching_null_v1.json",
+    ),
+    "diagnostics_linear_sum_assignment": _entry(
+        "Rectangular linear sum assignment",
+        "Crouse (2016), *On implementing 2D rectangular assignment algorithms*, IEEE "
+        "Transactions on Aerospace and Electronic Systems 52(4), 1679–1696, "
+        "https://doi.org/10.1109/TAES.2016.140952; Kuhn (1955), *The Hungarian method for the "
+        "assignment problem*, Naval Research Logistics Quarterly 2, 83–97, "
+        "https://doi.org/10.1002/nav.3800020109.",
+        "For a cost matrix $C$ with $r$ rows and $c$ columns, the kernel finds a one-to-one "
+        "assignment of $\\min(r,c)$ row/column pairs that minimizes (or maximizes) "
+        "$\\sum C_{i,\\sigma(i)}$, by successive shortest augmenting paths with dual "
+        "variables. A $+\\infty$ cost forbids a pair.",
+        "Matching clusters across partitions by maximum total Jaccard overlap, and other "
+        "one-to-one assignment problems.",
+        "Inside the declared numerical domain (nonzero |cost| in [2^-256, 2^256], spread at most "
+        "2^32; other inputs are refused) duals and path costs are exact 192-bit fixed-point "
+        "integers, so the result is an exact optimum even where SciPy's double arithmetic loses "
+        "small differences next to large costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned "
+        "from last to first, unassigned columns first on equal reduced cost), so equal-cost "
+        "solutions are reproducible but arbitrary. NaN and $-\\infty$ costs are invalid; a "
+        "matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is "
+        "$O(rc\\min(r,c))$ exact-arithmetic operations and is limited to 1e8.",
+        "The ABI-2 symbol `n4m_linear_sum_assignment` in `n4m/metrics.h` is a port of SciPy "
+        "1.18.1 `scipy.optimize.linear_sum_assignment` (BSD-3-Clause) in "
+        "`cpp/src/core/optimization/_vendored/rectangular_lsap.cpp`, wrapped in JS/WASM by "
+        "`linearSumAssignment`. `parity/fixtures/cluster_matching_null_v1.json` pins SciPy "
+        "assignments on square, wide, tall, tied, forbidden and maximized matrices, checked "
+        "exactly by `cpp/tests/test_cluster_matching_null.cpp`.",
+        "https://doi.org/10.1109/TAES.2016.140952; "
+        "https://doi.org/10.1002/nav.3800020109; "
+        + _REPO
+        + "cpp/src/core/optimization/_vendored/rectangular_lsap.cpp; "
+        + _REPO
+        + "parity/fixtures/cluster_matching_null_v1.json",
+    ),
     "utilities_hotelling_t2": _entry(
         "Standalone PCA Hotelling T² statistic",
         "Hotelling (1931), *The Generalization of Student's Ratio*, Annals of Mathematical "

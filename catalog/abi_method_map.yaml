@@ -93,6 +93,8 @@ method_prefix:
   diagnostics.regression_scores: n4m_stats_regression_scores
   diagnostics.permdisp: n4m_stats_permdisp
   diagnostics.variance_components: n4m_stats_variance_components
+  diagnostics.cluster_jaccard_matrix: n4m_cluster_jaccard_matrix
+  diagnostics.linear_sum_assignment: n4m_linear_sum_assignment
 
   # ---- filters ----
   filters.composite: n4m_outlier_detection_composite

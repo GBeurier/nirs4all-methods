@@ -95,6 +95,23 @@ attributed to both projects. The n4m source files are CECILL-2.1 (see the
 repository LICENSE); BSD-3 is permissive and compatible.
 ```
 
+## SciPy rectangular linear sum assignment  (SPDX: BSD-3-Clause)
+
+**Upstream**: https://github.com/scipy/scipy (1.18.1, `scipy/optimize/rectangular_lsap/rectangular_lsap.cpp`, author PM Larsen)
+**Vendored at**: `cpp/src/core/optimization/_vendored` (full notice in `LICENSE.scipy.txt` there)
+**Notes**: C++17 port keeping the upstream control flow and tie rules; index types, the -1 sentinels
+and casts were adapted, and duals and path costs are exact 192-bit fixed-point integers, so the
+result is an exact optimum. The two vendored files keep the BSD-3-Clause
+SPDX identifier. Algorithm: D. F. Crouse (2016), doi:10.1109/TAES.2016.140952.
+
+```
+Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.
+All rights reserved.
+Licensed under the BSD-3-Clause license (full text in
+cpp/src/core/optimization/_vendored/LICENSE.scipy.txt). BSD-3 is permissive
+and compatible with the CECILL-2.1 licence of the rest of n4m.
+```
+
 ## NumPy random (PCG64 / SeedSequence / Ziggurat / bounded + choice samplers)  (SPDX: BSD-3-Clause)
 
 **Upstream**: https://github.com/numpy/numpy (numpy/random)
