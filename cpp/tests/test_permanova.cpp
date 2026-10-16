@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -268,10 +269,17 @@ void check_scaled(const Outputs& base, const Outputs& got, int power, int k, con
     if (got.status != N4M_OK)
         throw std::runtime_error(std::string(tag) + " unexpected status at k=" + std::to_string(k));
     check_contract(got, tag);
+    // Tolerance relative to each value and to the largest of the vector (a
+    // zero distance may become a tiny positive one when a 2^-56 column is
+    // added next to it).
+    long double largest = 0.0L;
+    for (double v : base.ss) largest = std::max(largest, true_value(v, base.exponent));
+    largest = std::ldexp(largest, power * k);
     for (size_t i = 0; i < base.ss.size(); ++i) {
         const long double want = std::ldexp(true_value(base.ss[i], base.exponent), power * k);
         const long double have = true_value(got.ss[i], got.exponent);
-        if (std::abs(have - want) > 1e-9L * want || (want > 0.0L && !(have > 0.0L)))
+        if (std::abs(have - want) > 1e-9L * std::max(want, 1e-6L * largest) ||
+            (want > 0.0L && !(have > 0.0L)))
             throw std::runtime_error(std::string(tag) + " SS mismatch at k=" + std::to_string(k));
     }
     for (size_t i = 0; i < base.ratios.size(); ++i)
@@ -281,6 +289,20 @@ void check_scaled(const Outputs& base, const Outputs& got, int power, int k, con
         throw std::runtime_error(std::string(tag) + " count mismatch at k=" + std::to_string(k));
 }
 
+// Outside the supported domain D the kernels refuse before computing.
+void check_refused(n4m_context_t* ctx, const Outputs& got, const char* tag) {
+    const char* message = n4m_context_last_error(ctx);
+    if (got.status != N4M_ERR_UNSUPPORTED || !message ||
+        !std::strstr(message, "outside the supported numerical domain"))
+        throw std::runtime_error(std::string(tag) + " expected a domain refusal");
+}
+
+std::vector<double> scaled(const double* data, size_t count, int k) {
+    std::vector<double> x(data, data + count);
+    for (double& v : x) v = std::ldexp(v, k);
+    return x;
+}
+
 void robustness_sweep(n4m_context_t* ctx) {
     static const char* names[3] = {"permanova", "freedman_lane", "permdisp"};
     for (int which = 0; which < 3; ++which) {
@@ -288,61 +310,74 @@ void robustness_sweep(n4m_context_t* ctx) {
         const std::vector<double> base_x(kBase, kBase + 24);
         const Outputs base = run_kernel(ctx, which, base_x, 2);
         REQUIRE(base.status == N4M_OK && base.counts[1] == 199);
-        // Magnitude sweep 2^k (integer data < 2^5: exact down to 2^-1069).
-        for (int k : {-1069, -1022, -500, -100, 0, 100, 500, 1000}) {
-            std::vector<double> x(base_x);
-            for (double& v : x) v = std::ldexp(v, k);
-            check_scaled(base, run_kernel(ctx, which, x, 2), power, k, names[which]);
-        }
-        // Translation: offsets exactly representable with the data spacing.
-        // 1e16 with even data (spacing 2 = ulp); 2^300 with data * 2^248.
+        // Magnitude sweep inside D (data 1..21: k in [-256, 251]) and just
+        // outside it on both sides.
+        for (int k : {-256, -200, -100, 0, 100, 200, 251})
+            check_scaled(base, run_kernel(ctx, which, scaled(kBase, 24, k), 2), power, k,
+                         names[which]);
+        for (int k : {-1069, -257, 252, 1000})
+            check_refused(ctx, run_kernel(ctx, which, scaled(kBase, 24, k), 2), names[which]);
+        // Translation inside D, offsets exact with the data spacing: 1e16
+        // with even data (ulp 2), 2^200 with data * 2^148 (ulp of 2^200).
         for (const auto& [offset, k] : {std::pair<double, int>{1e16, 1},
-                                        std::pair<double, int>{std::ldexp(1.0, 300), 248}}) {
+                                        std::pair<double, int>{std::ldexp(1.0, 200), 148}}) {
             std::vector<double> x(base_x);
             for (double& v : x) v = offset + std::ldexp(v, k);
             check_scaled(base, run_kernel(ctx, which, x, 2), power, k, names[which]);
         }
-        // 1e300 + data spaced by its ulp (2^944): the sums of squares exceed
-        // DBL_MAX and are published in the scaled unit with their exponent.
-        {
+        // Offsets beyond 2^256 are refused.
+        for (const auto& [offset, k] : {std::pair<double, int>{std::ldexp(1.0, 300), 248},
+                                        std::pair<double, int>{1e300, 944}}) {
             std::vector<double> x(base_x);
-            for (double& v : x) v = 1e300 + std::ldexp(v, 944);
-            check_scaled(base, run_kernel(ctx, which, x, 2), power, 944, names[which]);
+            for (double& v : x) v = offset + std::ldexp(v, k);
+            check_refused(ctx, run_kernel(ctx, which, x, 2), names[which]);
         }
-        // Constant columns of huge, tiny and opposite amplitude change nothing.
-        {
+        // Constant columns inside D (spread 2^60 / 2^-3 = 2^63) change nothing;
+        // a 1e308 constant column is outside D and refused.
+        for (const double huge : {std::ldexp(1.0, 60), 1e308}) {
             std::vector<double> x;
             for (int i = 0; i < 12; ++i) {
-                x.push_back(1e308);
+                x.push_back(huge);
                 x.push_back(kBase[2 * i]);
-                x.push_back(-1.7e308);
+                x.push_back(-std::ldexp(1.0, 59));
                 x.push_back(kBase[2 * i + 1]);
-                x.push_back(4.9e-324);
+                x.push_back(0.125);
             }
-            check_scaled(base, run_kernel(ctx, which, x, 5), power, 0, names[which]);
+            const Outputs got = run_kernel(ctx, which, x, 5);
+            if (huge < 1e300)
+                check_scaled(base, got, power, 0, names[which]);
+            else
+                check_refused(ctx, got, names[which]);
         }
-    }
-    // Mixed exponents in one matrix: column 1 * 2^300 next to column 2 *
-    // -2^-700 (signed). Column 2 is 2^-2000 of column 1 in every sum, so the
-    // results equal the column-1-only results scaled by 2^600.
-    for (int which = 0; which < 3; ++which) {
+        // Mixed signed exponents in one matrix inside D: column 2^28 next to
+        // column -2^-28 (value spread 2^60). Column 2 weighs 2^-112 in every
+        // sum: the results equal the column-1-only results scaled by 2^56.
         std::vector<double> one(12), mixed(24);
         for (int i = 0; i < 12; ++i) {
             one[static_cast<size_t>(i)] = kBase[2 * i];
-            mixed[static_cast<size_t>(2 * i)] = std::ldexp(kBase[2 * i], 300);
-            mixed[static_cast<size_t>(2 * i + 1)] = -std::ldexp(kBase[2 * i + 1], -700);
+            mixed[static_cast<size_t>(2 * i)] = std::ldexp(kBase[2 * i], 28);
+            mixed[static_cast<size_t>(2 * i + 1)] = -std::ldexp(kBase[2 * i + 1], -28);
         }
-        const Outputs base1 = run_kernel(ctx, which, one, 1);
-        check_scaled(base1, run_kernel(ctx, which, mixed, 2), which == 2 ? 1 : 2, 300, names[which]);
+        check_scaled(run_kernel(ctx, which, one, 1), run_kernel(ctx, which, mixed, 2), power, 28,
+                     names[which]);
     }
-    // Astra P0 constant column: SS 58 next to a constant 1e308 column.
-    double c2[12] = {1e308, 1, 1e308, 2, 1e308, 3, 1e308, 7, 1e308, 8, 1e308, 9};
+    // Value-range boundaries: 2^256 and 2^-256 are inside D, the next binade
+    // outside. Six values {0, 0, 0, a, a, a}: SS_total = 6 (a/2)^2.
     int64_t g[6] = {4, 4, 4, -9, -9, -9};
-    n4m_matrix_view_t C{};
-    REQUIRE(n4m_matrix_view_init_rowmajor(&C, c2, 6, 2, N4M_DTYPE_F64) == N4M_OK);
-    Permanova r{};
-    REQUIRE(permanova(ctx, C, g, nullptr, 0, 1, r) == N4M_OK);
-    REQUIRE(near(r.v[0], 58) && near(r.v[2], 54) && near(r.v[6], 54));
+    for (int e : {256, -256, 257, -257}) {
+        const double a = std::ldexp(1.0, e);
+        double edge[6] = {0, 0, 0, a, a, a};
+        Outputs o;
+        Permanova r{};
+        o.status = permanova(ctx, view(edge, 6, 1), g, nullptr, 0, 1, r);
+        if (e == 256 || e == -256) {
+            REQUIRE(o.status == N4M_OK && g_exp == 0);
+            REQUIRE(true_value(r.v[0], g_exp) == 6.0L * std::ldexp(1.0L, 2 * (e - 1)));
+            REQUIRE(r.v[4] == 1.0);
+        } else {
+            check_refused(ctx, o, "value range");
+        }
+    }
 }
 
 // Astra P0 cancellation: balanced 2x2, 4 rows per cell, y = 10B + 3A +
@@ -362,9 +397,9 @@ void cancellation_case(n4m_context_t* ctx) {
     long double rss = 0.0L;
     for (int c = 0; c < 4; ++c) {
         long double m = 0.0L;
-        for (int i = 0; i < 4; ++i) m += y[4 * c + i];
+        for (int i = 0; i < 4; ++i) m += static_cast<long double>(y[4 * c + i]);
         m /= 4.0L;
-        for (int i = 0; i < 4; ++i) rss += (y[4 * c + i] - m) * (y[4 * c + i] - m);
+        for (int i = 0; i < 4; ++i) rss += (static_cast<long double>(y[4 * c + i]) - m) * (static_cast<long double>(y[4 * c + i]) - m);
     }
     REQUIRE(rss > 7e-19L && rss < 9e-19L);
     const long double f = 36.0L * 13.0L / rss;  // SS_A = 16 * 1.5^2 = 36 on 1 df
@@ -381,46 +416,56 @@ void cancellation_case(n4m_context_t* ctx) {
     REQUIRE(std::isfinite(r.v[6]) && std::abs(r.v[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
 }
 
-// Astra round 3 dyadic fixture: 16 balanced rows, A, B in {-1, +1}, residual
-// r alternating +-1 in each cell; columns 2^-500 B and 2^-560 (A + r). Exact
-// analytic outputs for A given B: SS_A = SS_res = 2^-1116 (below the double
-// range), F = 13, partial R^2 = 1/2, SS_total = 2^-996 + 2^-1115.
+// Dyadic fixture (Astra rounds 3 and 4): 16 balanced rows, A, B in {-1, +1},
+// residual r alternating +-1 in each cell; columns 2^p B and 2^q (A + r).
+// Nonzero |x| are 2^p and 2^(q+1). Inside D at the spread boundary
+// (p = 33, q = -32: max/min exactly 2^64), A given B is exact: SS_A = SS_res = 2^(2q+4), F = 13,
+// partial R^2 = 1/2; PERMDISP by B gives distances 2^q |A + r| in
+// {0, 2^(q+1)} with group means 2^q and F = 0. With p = 34 (spread 2^65) or
+// the round-4 columns 2^600 / 2^-500 the input is outside D and refused:
+// the small column is never silently erased.
 void dyadic_case(n4m_context_t* ctx) {
+    const auto fixture = [](int p, int q, double* x, int64_t* a, int64_t* b) {
+        for (int i = 0; i < 16; ++i) {
+            const int cell = i / 4;
+            a[i] = cell < 2 ? -1 : 1;
+            b[i] = cell % 2 == 0 ? -1 : 1;
+            const double r = i % 2 == 0 ? 1.0 : -1.0;
+            x[2 * i] = std::ldexp(static_cast<double>(b[i]), p);
+            x[2 * i + 1] = std::ldexp(static_cast<double>(a[i]) + r, q);
+        }
+    };
     double x[32];
     int64_t a[16], b[16];
-    for (int i = 0; i < 16; ++i) {
-        const int cell = i / 4;
-        a[i] = cell < 2 ? -1 : 1;
-        b[i] = cell % 2 == 0 ? -1 : 1;
-        const double r = i % 2 == 0 ? 1.0 : -1.0;
-        x[2 * i] = std::ldexp(static_cast<double>(b[i]), -500);
-        x[2 * i + 1] = std::ldexp(static_cast<double>(a[i]) + r, -560);
-    }
+    fixture(33, -32, x, a, b);
     auto X = view(x, 16, 2);
-    const long double ss_a = std::ldexp(1.0L, -1116);
-    const long double total = std::ldexp(1.0L, -996) + std::ldexp(1.0L, -1115);
-    const auto exact = [](long double got, long double want) {
-        return std::abs(got - want) <= 1e-12L * want;
-    };
+    const long double ss_a = std::ldexp(1.0L, -60);
     double fl[12];
     int64_t counts[2];
     REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, a, b, 1, 99, 5, fl, counts, &g_exp) == N4M_OK);
-    REQUIRE(g_exp != 0);  // 2^-1116 is not a normal double: scaled publication
-    REQUIRE(exact(true_value(fl[2], g_exp), ss_a) && exact(true_value(fl[3], g_exp), ss_a));
-    REQUIRE(exact(true_value(fl[0], g_exp), total));
+    REQUIRE(g_exp == 0 && true_value(fl[2], 0) == ss_a && true_value(fl[3], 0) == ss_a);
     REQUIRE(std::abs(fl[6] - 13.0) <= 1e-12 * 13.0 && std::abs(fl[5] - 0.5) <= 1e-12);
     REQUIRE(fl[7] == 1 && fl[8] == 13 && counts[1] == 99);
     Permanova r{};
     REQUIRE(permanova(ctx, X, a, b, 99, 5, r) == N4M_OK);
-    REQUIRE(g_exp != 0);
-    REQUIRE(exact(true_value(r.v[2], g_exp), ss_a) && exact(true_value(r.v[3], g_exp), ss_a));
+    REQUIRE(g_exp == 0 && true_value(r.v[2], 0) == ss_a && true_value(r.v[3], 0) == ss_a);
     REQUIRE(std::abs(r.v[6] - 13.0) <= 1e-12 * 13.0 && std::abs(r.v[5] - 0.5) <= 1e-12);
-    // PERMDISP by A: every row lies sqrt(2^-1000 + 2^-1120) from its centroid.
     double dist[16], means[16], out6[6];
-    REQUIRE(n4m_stats_permdisp(ctx, &X, a, 0, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
-    const long double d = std::sqrt(std::ldexp(1.0L, -1000) + std::ldexp(1.0L, -1120));
-    for (double v : dist) REQUIRE(exact(true_value(v, g_exp), d));
-    REQUIRE(std::isnan(out6[0]));  // equal distances: zero within SS, F undefined
+    REQUIRE(n4m_stats_permdisp(ctx, &X, b, 0, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
+    for (int i = 0; i < 16; ++i) {
+        const double want = std::abs(static_cast<double>(a[i]) + (i % 2 == 0 ? 1.0 : -1.0));
+        REQUIRE(g_exp == 0 && dist[i] == std::ldexp(want, -32));
+    }
+    REQUIRE(means[0] == std::ldexp(1.0, -32) && means[1] == std::ldexp(1.0, -32));
+    REQUIRE(out6[0] == 0.0);
+    for (const auto& [p, q] : {std::pair<int, int>{34, -32}, std::pair<int, int>{600, -500}}) {
+        fixture(p, q, x, a, b);
+        Outputs o;
+        o.status = n4m_stats_permanova_freedman_lane(ctx, &X, a, b, 1, 0, 1, fl, counts, &g_exp);
+        check_refused(ctx, o, "dyadic outside D");
+        o.status = n4m_stats_permdisp(ctx, &X, b, 0, 1, dist, means, out6, counts, &g_exp);
+        check_refused(ctx, o, "dyadic outside D");
+    }
 }
 
 // Size checks precede dense allocation: 20000 levels are refused at once.
@@ -460,59 +505,19 @@ int main() {
         REQUIRE(r.counts[0] == 93 && r.counts[1] == 999 && near(r.v[12], 94.0 / 1000.0));
         REQUIRE(permanova(ctx, Y, fa, nullptr, 0, 17, r) == N4M_OK);
         REQUIRE(std::isnan(r.v[12]) && r.counts[1] == 0);
-        // Extreme magnitudes are scaled before sums: R^2 stays 27/29.
+        // Values beyond the supported domain are refused before computing
+        // (1e150, 1e-162 and 1e155 + 1e140 k were scale tests of the earlier
+        // unrestricted kernels).
         double yh[6] = {1e150, 2e150, 3e150, 7e150, 8e150, 9e150};
-        auto YH = view(yh, 6, 1);
-        REQUIRE(permanova(ctx, YH, fa, nullptr, 0, 1, r) == N4M_OK);
-        REQUIRE(near(r.v[4], 27.0 / 29.0) && near(r.v[0], 58e300, 58e300));
-
-        // Scale reconstruction never forms scale^2 (Astra review). Six values
-        // of magnitude 1e-162: SS = 6 x^2 ~ 6e-324 is not a normal double, so
-        // it is published in the scaled unit with its exponent, not rounded.
+        REQUIRE(permanova(ctx, view(yh, 6, 1), fa, nullptr, 0, 1, r) == N4M_ERR_UNSUPPORTED);
         double tiny[6] = {-1e-162, -1e-162, -1e-162, 1e-162, 1e-162, 1e-162};
         int64_t halves6[6] = {0, 0, 0, 1, 1, 1};
+        REQUIRE(permanova(ctx, view(tiny, 6, 1), halves6, nullptr, 0, 1, r) == N4M_ERR_UNSUPPORTED);
+        double tdist[6], tmeans[6], tout[6];
+        int64_t tcounts[2];
         auto T = view(tiny, 6, 1);
-        REQUIRE(permanova(ctx, T, halves6, nullptr, 0, 1, r) == N4M_OK);
-        const long double six_x2 = 6.0L * static_cast<long double>(tiny[3]) * tiny[3];
-        REQUIRE(g_exp != 0);
-        REQUIRE(std::abs(true_value(r.v[0], g_exp) - six_x2) <= 1e-12L * six_x2);
-        REQUIRE(std::abs(true_value(r.v[2], g_exp) - six_x2) <= 1e-12L * six_x2);
-        REQUIRE(true_value(r.v[3], g_exp) <= 1e-15L * six_x2);
-        REQUIRE(near(r.v[4], 1.0) && near(r.v[5], 1.0));
-        // 1e155 + 1e140 * {0,2,4,12,14,16}: finite SS near 2.3e282, while
-        // scale^2 would overflow. Reference: exact double differences to the
-        // first value (Sterbenz), summed in long double here.
-        double big[6];
-        const double steps[6] = {0, 2, 4, 12, 14, 16};
-        for (int i = 0; i < 6; ++i) big[i] = 1e155 + 1e140 * steps[i];
-        long double mean = 0.0L, m0 = 0.0L, m1 = 0.0L;
-        for (int i = 0; i < 6; ++i) mean += static_cast<long double>(big[i] - big[0]) / 6.0L;
-        for (int i = 0; i < 3; ++i) m0 += static_cast<long double>(big[i] - big[0]) / 3.0L;
-        for (int i = 3; i < 6; ++i) m1 += static_cast<long double>(big[i] - big[0]) / 3.0L;
-        long double sst = 0.0L, ssw = 0.0L;
-        for (int i = 0; i < 6; ++i) {
-            const long double d = static_cast<long double>(big[i] - big[0]);
-            sst += (d - mean) * (d - mean);
-            ssw += (d - (i < 3 ? m0 : m1)) * (d - (i < 3 ? m0 : m1));
-        }
-        auto B6 = view(big, 6, 1);
-        REQUIRE(permanova(ctx, B6, halves6, nullptr, 0, 1, r) == N4M_OK);
-        REQUIRE(g_exp == 0);
-        REQUIRE(std::isfinite(r.v[0]) && r.v[0] > 2e282 && r.v[0] < 2.5e282);
-        REQUIRE(near(r.v[0], static_cast<double>(sst), 0.0));
-        REQUIRE(near(r.v[3], static_cast<double>(ssw), 0.0));
-        REQUIRE(near(r.v[2], static_cast<double>(sst - ssw), 0.0));
-        double bdist[6], bmeans[6], bout[6];
-        int64_t bcounts[2];
-        REQUIRE(n4m_stats_permdisp(ctx, &B6, halves6, 0, 1, bdist, bmeans, bout, bcounts, &g_exp) == N4M_OK);
-        REQUIRE(near(bdist[0], static_cast<double>(m0 - static_cast<long double>(big[0] - big[0])), 0.0));
-        REQUIRE(near(bmeans[0], static_cast<double>(
-            (std::abs(static_cast<long double>(big[0] - big[0]) - m0) +
-             std::abs(static_cast<long double>(big[1] - big[0]) - m0) +
-             std::abs(static_cast<long double>(big[2] - big[0]) - m0)) / 3.0L), 0.0));
-        double tdist[6], tmeans[6];
-        REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, bout, bcounts, &g_exp) == N4M_OK);
-        REQUIRE(tdist[0] == 0.0 && tmeans[1] == 0.0);
+        REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, tout, tcounts, &g_exp)
+                == N4M_ERR_UNSUPPORTED);
 
         // Freedman-Lane with no condition: fitted = mean, so each draw is the
         // free permutation of the data and b equals the one-way golden (93).

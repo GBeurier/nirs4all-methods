@@ -305,24 +305,29 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * (rows move only inside their stratum). As vegan anova.cca, b counts
  * pseudo-F_perm >= F_obs - sqrt(DBL_EPSILON) (+inf when the permuted residual
  * SS is zero); p = (1+b)/(1+B).
- * Numerical domain (shared by n4m_stats_permanova_freedman_lane and
- * n4m_stats_permdisp): each column is centred (exact power-of-two prescale,
- * shift to its first row, compensated mean) and all columns are expressed in
- * one power-of-two unit chosen from the CENTRED variation, so constant
- * columns of any amplitude and common offsets do not change any output.
- * Every sum of squares is a sum of
- * squared terms (residuals are projected explicitly, never obtained as a
- * difference of totals) accumulated in long double, and F and all ratios are
- * formed in the scaled unit, so they never depend on the representability
- * of the published sums of squares. Published sums of squares (and PERMDISP
- * distances) carry an exponent: the true value is out * 2^(*ss_exponent).
- * The exponent is 0, with true values written, when every positive value is
- * a normal double; otherwise the values are written in the scaled unit and
- * the exponent is the unit's (so a positive quantity is never published as
- * 0 or inf). N4M_ERR_NUMERICAL_FAILURE is returned only when a positive
- * value lies below 2^-1074 of the largest one even in the scaled unit.
- * A column varying less than 2^-1074 of the most varying one is dropped: its
- * contribution is below the long double resolution of every sum.
+ * Numerical domain D (shared by n4m_stats_permanova_freedman_lane and
+ * n4m_stats_permdisp): X finite, every nonzero |x| in [2^-256, 2^256] and
+ * max/min nonzero |x| <= 2^64 over the whole matrix (exact zeros allowed),
+ * the same D as the association kernels. Outside D the call returns N4M_ERR_UNSUPPORTED, before any
+ * computation, with the context message "input outside the supported
+ * numerical domain (...)". Inside D each column is centred (exact
+ * power-of-two prescale, shift to its first row, compensated mean) and all
+ * columns are expressed in one power-of-two unit chosen from the CENTRED
+ * variation, so constant columns and common offsets do not change any output,
+ * and the rescaling is exact: no varying column is erased and no squared term
+ * underflows. Every sum of squares is a sum of squared terms (residuals are
+ * projected explicitly, never obtained as a difference of totals)
+ * accumulated in long double, and F and all ratios are formed in the scaled
+ * unit. A pseudo-F (and its test) is NaN when the residual SS is at or below
+ * its rounding resolution gamma^2 times the projected SS, gamma = 16
+ * (rank + 2) sqrt(n k) DBL_EPSILON (a backward-error estimate). Published sums
+ * of squares (and PERMDISP distances) carry an exponent: the true value is
+ * out * 2^(*ss_exponent); it is 0, with true values written, when every
+ * positive value is a normal double (always the case for ss_total inside
+ * D), otherwise the values are written in the scaled unit so that a positive
+ * quantity is never published as 0.
+ * N4M_ERR_NUMERICAL_FAILURE is returned if a positive value is not
+ * representable even in the scaled unit.
  * Sizes, products and work budgets are checked before any allocation that
  * depends on the number of levels.
  * Requires n >= 2, k >= 1, finite X, at most 2048 term levels, 0 <=
@@ -390,7 +395,7 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
  * operations.
  * distances has n elements; group_mean_distances has capacity n and
  * receives one mean per group in ascending code order.
- * out_six: [0] F (NaN with one group, n == groups or zero within SS)
+ * out_six: [0] F (NaN with one group, n == groups or an unresolved within SS)
  * [1] df1 = groups-1 [2] df2 = n-groups [3] groups
  * [4] log10(n!/prod n_g!) [5] Monte Carlo p-value; out_two = {b, executed B};
  * *distance_exponent: true distance = out * 2^exponent (both arrays). */

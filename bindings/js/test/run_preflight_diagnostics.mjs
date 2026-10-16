@@ -297,31 +297,15 @@ const disp = statsPermdisp({data: new Float64Array([0, 2, 10, 14, 18]), rows: 5,
     [7, 7, 3, 3, 3], 0, 1);
 near(disp.f, 15 / 16);
 [8 / 3, 1].forEach((v, i) => near(disp.groupMeanDistances[i], v));
-// Scale reconstruction without scale^2 (same cases as test_permanova.cpp).
-const tiny = statsPermanova({data: new Float64Array([-1e-162, -1e-162, -1e-162, 1e-162, 1e-162, 1e-162]),
-    rows: 6, cols: 1}, [0, 0, 0, 1, 1, 1], undefined, 0, 1);
-// 6 x^2 ~ 6e-324 is not a normal double: scaled value with its exponent.
-assert.notEqual(tiny.ssExponent, 0);
-assert.ok(Math.abs(Math.log2(tiny.ssTotal) + tiny.ssExponent - Math.log2(6 * (1e-162 / 2 ** -540) ** 2) + 1080) < 1e-9);
-assert.ok(tiny.ssResidual <= 1e-15 * tiny.ssTotal);
-const bigX = [0, 2, 4, 12, 14, 16].map((k) => 1e155 + 1e140 * k);
-const big = statsPermanova({data: new Float64Array(bigX), rows: 6, cols: 1},
-    [0, 0, 0, 1, 1, 1], undefined, 0, 1);
-const bigD = bigX.map((v) => v - bigX[0]);
-const dm = bigD.reduce((a, b) => a + b, 0) / 6;
-const sst = bigD.reduce((a, v) => a + (v - dm) ** 2, 0);
-assert.ok(big.ssExponent === 0 && Math.abs(big.ssTotal - sst) <= 1e-10 * sst);
-const bigDisp = statsPermdisp({data: new Float64Array(bigX), rows: 6, cols: 1}, [0, 0, 0, 1, 1, 1], 0, 1);
-assert.ok(bigDisp.distances.every(Number.isFinite));
-// Robustness rule (same properties as test_permanova.cpp): magnitude sweep,
-// mixed exponents, constant columns, cancellation and dyadic cases. Sums of
-// squares and distances are published as value x 2^exponent; exponent 0 only
-// when every positive value is a normal double.
+// Robustness rule 13 (same cases as test_permanova.cpp): inside the
+// supported domain D (nonzero |x| in [2^-256, 2^256], max/min nonzero
+// |x| <= 2^64) results are exact up to the published exponent; outside D
+// every kernel refuses with status 10 and the domain message.
+const outsideDomain = (error) => error?.name === "N4mError" && error.status === 10 &&
+    error.message.includes("input outside the supported numerical domain");
 const kTerm = [0, 0, 1, 1, 2, 2, 0, 1, 1, 2, 2, 2];
 const kStrata = [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1];
 const kBase = [3, 1, 5, 2, 9, 4, 11, 7, 13, 12, 15, 9, 4, 6, 10, 3, 12, 8, 16, 14, 17, 10, 21, 11];
-// log2 of a published value: exact exponent arithmetic, no overflow.
-const log2Of = (v, e) => Math.log2(v) + e;
 const contract = (values, e) => values.every((v) => v >= 0 && Number.isFinite(v) &&
     !(e === 0 && v > 0 && v < 2.2250738585072014e-308));
 const kernels = {
@@ -332,9 +316,14 @@ const kernels = {
 const ldexp = (v, k) => { let out = v; for (let i = 0; i < Math.abs(k); i++) out = k > 0 ? out * 2 : out / 2; return out; };
 const sameScaled = (got, base, shift, tag) => {
     assert.ok(contract(got.ss, got.e), tag);
+    // Tolerance relative to each value and to the largest one (a zero
+    // distance may become a tiny positive one next to a 2^-56 column).
+    const want = base.ss.map((v) => ldexp(ldexp(v, base.e), shift));
+    const largest = Math.max(...want);
     got.ss.forEach((v, i) => {
-        if (base.ss[i] === 0) { assert.ok(v === 0 || log2Of(v, got.e) < -1000, tag); return; }
-        assert.ok(Math.abs(log2Of(v, got.e) - (log2Of(base.ss[i], base.e) + shift)) < 1e-9, tag);
+        const have = ldexp(v, got.e);
+        assert.ok(Math.abs(have - want[i]) <= 1e-9 * Math.max(want[i], 1e-6 * largest), tag);
+        assert.ok(!(want[i] > 0) || have > 0, tag);
     });
     got.ratio.forEach((v, i) => assert.ok(Math.abs(v - base.ratio[i]) <= 1e-9 * Math.max(1, Math.abs(base.ratio[i])), tag));
     assert.equal(got.b, base.b, tag);
@@ -342,20 +331,47 @@ const sameScaled = (got, base, shift, tag) => {
 for (const [name, run] of Object.entries(kernels)) {
     const power = name === "permdisp" ? 1 : 2;
     const base = run(kBase, 2);
-    for (const k of [-1069, -500, 0, 500, 1000]) {
+    // Magnitude sweep inside D (data 1..21: k in [-256, 251]) and outside.
+    for (const k of [-256, -200, -100, 0, 100, 200, 251]) {
         sameScaled(run(kBase.map((v) => ldexp(v, k)), 2), base, power * k, `${name} k=${k}`);
     }
+    for (const k of [-1069, -257, 252, 1000]) {
+        assert.throws(() => run(kBase.map((v) => ldexp(v, k)), 2), outsideDomain, `${name} k=${k}`);
+    }
+    // Translation: offsets 1e16 (even data) and 2^200 (data * 2^148) inside
+    // D; 2^300 and 1e300 outside.
+    for (const [offset, k] of [[1e16, 1], [2 ** 200, 148]]) {
+        sameScaled(run(kBase.map((v) => offset + ldexp(v, k)), 2), base, power * k, `${name} offset ${offset}`);
+    }
+    for (const [offset, k] of [[2 ** 300, 248], [1e300, 944]]) {
+        assert.throws(() => run(kBase.map((v) => offset + ldexp(v, k)), 2), outsideDomain, `${name} offset ${offset}`);
+    }
+    // Constant columns inside D change nothing; a 1e308 one is refused.
+    for (const huge of [2 ** 60, 1e308]) {
+        const wide = [];
+        for (let i = 0; i < 12; i++) wide.push(huge, kBase[2 * i], -(2 ** 59), kBase[2 * i + 1], 0.125);
+        if (huge < 1e300) sameScaled(run(wide, 5), base, 0, `${name} constant columns`);
+        else assert.throws(() => run(wide, 5), outsideDomain, `${name} constant 1e308`);
+    }
+    // Mixed signed exponents: 2^28 column next to a -2^-28 column.
     const one = run(kBase.filter((_, i) => i % 2 === 0), 1);
-    const mixed = kBase.map((v, i) => i % 2 === 0 ? ldexp(v, 300) : -ldexp(v, -700));
-    sameScaled(run(mixed, 2), one, power * 300, `${name} mixed`);
-    const wide = [];
-    for (let i = 0; i < 12; i++) wide.push(1e308, kBase[2 * i], -1.7e308, kBase[2 * i + 1], 5e-324);
-    sameScaled(run(wide, 5), base, 0, `${name} constant columns`);
+    const mixed = kBase.map((v, i) => i % 2 === 0 ? ldexp(v, 28) : -ldexp(v, -28));
+    sameScaled(run(mixed, 2), one, power * 28, `${name} mixed`);
 }
-const astraConstant = statsPermanova({data: new Float64Array([1e308, 1, 1e308, 2, 1e308, 3, 1e308, 7, 1e308, 8, 1e308, 9]), rows: 6, cols: 2},
-    [4, 4, 4, -9, -9, -9], undefined, 0, 1);
-near(astraConstant.ssTotal, 58);
-assert.equal(astraConstant.ssExponent, 0);
+// Value-range boundaries: 2^+-256 inside D (SS_total = 6 (a/2)^2), 2^+-257 refused.
+for (const e of [256, -256, 257, -257]) {
+    const a = ldexp(1, e);
+    const call = () => statsPermanova({data: new Float64Array([0, 0, 0, a, a, a]), rows: 6, cols: 1},
+        [4, 4, 4, -9, -9, -9], undefined, 0, 1);
+    if (Math.abs(e) === 256) {
+        const r = call();
+        assert.equal(r.ssExponent, 0);
+        assert.equal(r.ssTotal, 6 * ldexp(1, 2 * (e - 1)));
+        assert.equal(r.r2, 1);
+    } else {
+        assert.throws(call, outsideDomain, `value range ${e}`);
+    }
+}
 {
     const dev = [-3e-10, -1e-10, 1e-10, 3e-10];
     const a = [], b = [], y = [];
@@ -365,19 +381,35 @@ assert.equal(astraConstant.ssExponent, 0);
     assert.ok(Number.isFinite(fl.pseudoF) && Math.abs(fl.pseudoF / 5.85e20 - 1) < 1e-2);
 }
 {
-    // Dyadic fixture (exact): SS_A = SS_res = 2^-1116, F = 13, partial R^2 1/2.
-    const x = [], a = [], b = [];
-    for (let i = 0; i < 16; i++) {
-        const cell = Math.floor(i / 4);
-        a.push(cell < 2 ? -1 : 1); b.push(cell % 2 === 0 ? -1 : 1);
-        x.push(b[i] * 2 ** -500, (a[i] + (i % 2 === 0 ? 1 : -1)) * 2 ** -560);
-    }
-    const X = {data: Float64Array.from(x), rows: 16, cols: 2};
+    // Dyadic fixture at the spread boundary (p = 33, q = -32, max/min nonzero
+    // |x| = 2^33 / 2^-31 = 2^64): SS_A = SS_res
+    // = 2^-60 exactly, F = 13, partial R^2 1/2; PERMDISP by B gives
+    // distances 2^-32 |A + r|. (34, -32) and (600, -500) are outside D.
+    const fixture = (p, q) => {
+        const x = [], a = [], b = [];
+        for (let i = 0; i < 16; i++) {
+            const cell = Math.floor(i / 4);
+            a.push(cell < 2 ? -1 : 1); b.push(cell % 2 === 0 ? -1 : 1);
+            x.push(ldexp(b[i], p), ldexp(a[i] + (i % 2 === 0 ? 1 : -1), q));
+        }
+        return {X: {data: Float64Array.from(x), rows: 16, cols: 2}, a, b};
+    };
+    const {X, a, b} = fixture(33, -32);
     for (const r of [statsPermanovaFreedmanLane(X, a, [b], 99, 5), statsPermanova(X, a, b, 99, 5)]) {
-        assert.notEqual(r.ssExponent, 0);
-        assert.ok(Math.abs(log2Of(r.ssTerm, r.ssExponent) + 1116) < 1e-12);
-        assert.ok(Math.abs(log2Of(r.ssResidual, r.ssExponent) + 1116) < 1e-12);
+        assert.equal(r.ssExponent, 0);
+        assert.equal(r.ssTerm, 2 ** -60);
+        assert.equal(r.ssResidual, 2 ** -60);
         assert.ok(Math.abs(r.pseudoF - 13) < 1e-11 && Math.abs(r.partialR2 - 0.5) < 1e-12);
+    }
+    const d = statsPermdisp(X, b, 0, 1);
+    assert.equal(d.distanceExponent, 0);
+    d.distances.forEach((v, i) => assert.equal(v, Math.abs(a[i] + (i % 2 === 0 ? 1 : -1)) * 2 ** -32));
+    assert.equal(d.f, 0);
+    for (const [p, q] of [[34, -32], [600, -500]]) {
+        const out = fixture(p, q);
+        assert.throws(() => statsPermanovaFreedmanLane(out.X, out.a, [out.b], 0, 1), outsideDomain);
+        assert.throws(() => statsPermanova(out.X, out.a, out.b, 0, 1), outsideDomain);
+        assert.throws(() => statsPermdisp(out.X, out.b, 0, 1), outsideDomain);
     }
 }
 const permanovaFixture = JSON.parse(readFileSync(

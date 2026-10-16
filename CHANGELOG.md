@@ -44,28 +44,39 @@ ABI 2.20.0. No model-state serialization format changes.
   `statsPermanovaFreedmanLane`. It complements the within-strata test, whose
   null also excludes interactions with the conditions.
 - Numerical domain of `n4m_stats_permanova`, `n4m_stats_permanova_freedman_lane`
-  and `n4m_stats_permdisp`: columns are centred before scaling and the common
-  power-of-two unit comes from the centred variation, so constant columns of
-  any amplitude and large offsets change nothing; every sum of squares
-  (including each permutation's residual SS) is a sum of squared terms of
-  explicit residuals, never a difference of totals; sums of squares and
+  and `n4m_stats_permdisp`: the shared supported domain D (finite X, every
+  nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^64 over the whole
+  matrix, zeros allowed) is checked in one O(n k) pre-pass; outside D the kernels return `N4M_ERR_UNSUPPORTED` before any
+  computation with the message "input outside the supported numerical domain
+  (...)". Inside D columns are centred before scaling and the common
+  power-of-two unit comes from the centred variation, so constant columns and
+  offsets change nothing, and the rescaling is exact (no varying column is
+  erased, no squared term underflows); every sum of squares (including each
+  permutation's residual SS) is a sum of squared terms of explicit residuals,
+  never a difference of totals; a pseudo-F whose residual SS is at or below
+  its rounding resolution (gamma^2 times the projected SS, a backward-error
+  estimate) is reported undefined with no test; sums of squares and
   distances carry a binary exponent output (`ss_exponent`,
-  `distance_exponent`): 0 with true values when all positive values are normal
-  doubles, otherwise scaled values with the unit's exponent, so a positive
-  quantity is never published as 0 or infinity and F and ratios never depend
-  on that representation; design sizes and budgets are checked before any
-  level-dependent allocation. Property tests sweep magnitudes 2^k (k from -1069 to 1000),
-  offsets (1e16, 2^300, 1e300), mixed exponents in one matrix (2^300 next to
-  -2^-700), huge constant columns and an exact dyadic case (SS = 2^-1116,
-  F = 13) in native and WASM.
+  `distance_exponent`): 0 with true values when all positive values are
+  normal doubles, otherwise scaled values with the unit's exponent, so a
+  positive quantity is never published as 0; design sizes and budgets are
+  checked before any level-dependent allocation. Native and WASM property
+  tests cover both sides of D: magnitudes 2^k (k in [-256, 251] inside;
+  -1069, -257, 252, 1000 refused), offsets (1e16 and 2^200 inside; 2^300 and
+  1e300 refused), constant columns (2^60 inside, 1e308 refused), mixed
+  exponents (2^28 next to -2^-28), the value-range edges 2^+-256 (inside) and
+  2^+-257 (refused), and an exact dyadic case at the spread boundary
+  (columns 2^33 B and 2^-32 (A + r): SS = 2^-60, F = 13) whose 2^65-spread
+  and 2^600 / 2^-500 variants are refused instead of erasing the small
+  column.
 - Reference gate `parity/fixtures/permanova_v1.json`
   (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
   least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
   scikit-bio 0.7.4 `permanova`/`permdisp` and NumPy permutation counts, on
   free, conditional, partially aliased, fully aliased, singleton-stratum,
   dispersion-only and PERMDISP F-boundary cases (vegan `permutest.betadisper`
-  transcribed as the counting oracle), plus hand-derived closed forms and
-  1e-162 / 1e155-offset scale cases. Freedman-Lane goldens come from an
+  transcribed as the counting oracle), plus hand-derived closed forms; the
+  former 1e-162 / 1e150 / 1e155-offset scale cases are now refused. Freedman-Lane goldens come from an
   independent lstsq refit oracle (one, two and zero condition factors,
   aliased and saturated designs); vegan's own margin and partial-permutest
   schemes, which are not Freedman-Lane, are transcribed for information only.
