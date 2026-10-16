@@ -936,8 +936,8 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PCA dimensions or component count");
     if (scores->rows != n || scores->cols != k || loadings->rows != k || loadings->cols != p)
         return fail(ctx, N4M_ERR_SHAPE_MISMATCH, "PCA output shape mismatch");
-    const long double m = static_cast<long double>(std::min(n, p));
-    const long double products = m * m * static_cast<long double>(std::max(n, p));
+    const long double small_side = static_cast<long double>(std::min(n, p));
+    const long double products = small_side * small_side * static_cast<long double>(std::max(n, p));
     if (products > max_moment_products)
         return fail(ctx, N4M_ERR_UNSUPPORTED, "full PCA moments exceed 250 million product budget");
     try {
