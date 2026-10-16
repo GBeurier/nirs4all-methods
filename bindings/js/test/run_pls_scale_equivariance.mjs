@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: CECILL-2.1
-// Scale equivariance of the NIPALS PLSRegression and PCR estimator roles
+// Scale equivariance of every PLSRegression solver and the PCR estimator role
 // without autoscaling (center on, scale off, the preflight probe settings).
 // Fitting X 2^k, Y 2^m must predict exactly 2^m times the base predictions,
-// which match an independent scikit-learn 1.7.2 reference: PLSRegression(
-// n_components=3, scale=False) and PCA(n_components=3, svd_solver="full") +
-// LinearRegression (PCR), fitted on the base data and rescaled analytically
-// (scikit-learn's own absolute epsilons collapse its fit at Y 2^-60, so only
-// its base-scale fit is a valid oracle). Mirrors cpp/tests/test_models_pls.cpp.
+// which match independent references fitted on the base data and rescaled
+// analytically: scikit-learn 1.7.2 PLSRegression(n_components=3, scale=False)
+// (one target: every solver; two targets: NIPALS), PCA(n_components=3,
+// svd_solver="full") + LinearRegression (PCR), and NumPy 2.2.6 analytic
+// two-target references (exact-singular-vector regression deflation, de Jong
+// SIMPLS). scikit-learn's own absolute epsilons collapse its fit at Y 2^-60,
+// so only its base-scale fit is a valid oracle. The roles expose no solver
+// tolerance, so the iterative two-target solvers stop at their default
+// convergence tolerance short of the analytic limit (the C++ sweep in
+// cpp/tests/test_models_pls.cpp checks that limit at tight tolerance).
 
 import assert from "node:assert/strict";
 import * as n4m from "../dist/index.js";
@@ -40,6 +45,16 @@ const PCR_Y2 = [
     -1.2920592892405538, 1.4281767180739962, -0.8219629954140476, 0.7033326466062279,
     1.0849870020018442, -0.28684733153814906, 1.2297408628741704, -1.2781534393212208,
     -1.3908828952499093, -0.10487458205601959, 1.3752137732947596, -0.5728917833534646];
+
+// Analytic two-target references (p x q row-major).
+const EXACT_Y2 = [
+    0.4973933947810975, 2.5052955832490746, -1.2807422950667673, 0.38070661558248864,
+    0.3885082082101655, -0.6375563871303572, 2.6515308894065996, -0.59236011867862,
+    -1.274772713729894, -0.1300636165886849, 2.4360764274911926, 0.3755312787663398];
+const SIMPLS_Y2 = [
+    0.5207946575018618, 2.5313352885842972, -1.279134232007274, 0.37839292312303313,
+    0.35816837979798144, -0.66155341696253, 2.687190982374273, -0.5623000956881986,
+    -1.2706326836444113, -0.1267563242881262, 2.4304343674427282, 0.3806905005590011];
 
 const scaled = (values, rows, cols, e) => ({
     data: Float64Array.from(values, (v) => v * 2 ** e), rows, cols,
@@ -76,12 +91,24 @@ function fitPredict(Cls, params, y, q, k, m) {
 
 const exponents = [0, 30, -30, 60, -60, 200, -200];
 const cases = [
-    ["nipals y1", n4m.PLSRegression, { solver: "nipals" }, Y1, 1, PLS_Y1],
-    ["nipals y2", n4m.PLSRegression, { solver: "nipals" }, Y2, 2, PLS_Y2],
-    ["pcr y1", n4m.PCR, {}, Y1, 1, PCR_Y1],
-    ["pcr y2", n4m.PCR, {}, Y2, 2, PCR_Y2],
+    ["pcr y1", n4m.PCR, {}, Y1, 1, PCR_Y1, 1e-10],
+    ["pcr y2", n4m.PCR, {}, Y2, 2, PCR_Y2, 1e-10],
+    ["nipals y2", n4m.PLSRegression, { solver: "nipals" }, Y2, 2, PLS_Y2, 1e-10],
+    ["simpls y2", n4m.PLSRegression, { solver: "simpls" }, Y2, 2, SIMPLS_Y2, 1e-10],
+    ["svd y2", n4m.PLSRegression, { solver: "svd" }, Y2, 2, EXACT_Y2, 1e-10],
+    // Default convergence tolerance (see header): observed 1.2e-10, 5.1e-6,
+    // 5.1e-6, 4.6e-7 and 4.7e-6 from the analytic limit.
+    ["orthogonal_scores y2", n4m.PLSRegression, { solver: "orthogonal_scores" }, Y2, 2, EXACT_Y2, 1e-9],
+    ["kernel_algorithm y2", n4m.PLSRegression, { solver: "kernel_algorithm" }, Y2, 2, EXACT_Y2, 1e-5],
+    ["wide_kernel y2", n4m.PLSRegression, { solver: "wide_kernel" }, Y2, 2, EXACT_Y2, 1e-5],
+    ["power y2", n4m.PLSRegression, { solver: "power" }, Y2, 2, EXACT_Y2, 1e-6],
+    ["randomized_svd y2", n4m.PLSRegression, { solver: "randomized_svd" }, Y2, 2, EXACT_Y2, 1e-5],
 ];
-for (const [label, Cls, params, y, q, coef] of cases) {
+for (const solver of ["nipals", "simpls", "orthogonal_scores", "kernel_algorithm", "wide_kernel",
+                      "svd", "power", "randomized_svd"]) {
+    cases.push([`${solver} y1`, n4m.PLSRegression, { solver }, Y1, 1, PLS_Y1, 1e-10]);
+}
+for (const [label, Cls, params, y, q, coef, tol] of cases) {
     const ref = referencePredictions(y, q, coef);
     const norm = Math.max(...ref.map(Math.abs));
     const base = fitPredict(Cls, params, y, q, 0, 0);
@@ -90,9 +117,9 @@ for (const [label, Cls, params, y, q, coef] of cases) {
             const got = fitPredict(Cls, params, y, q, k, m);
             const where = `${label} X 2^${k}, Y 2^${m}`;
             assert.deepEqual(got, base, `${where}: predictions not exactly equivariant`);
-            got.forEach((v, i) => assert.ok(Math.abs(v - ref[i]) <= 1e-9 * norm,
-                `${where}[${i}]: ${v} vs scikit-learn ${ref[i]}`));
+            got.forEach((v, i) => assert.ok(Math.abs(v - ref[i]) <= tol * norm,
+                `${where}[${i}]: ${v} vs reference ${ref[i]}`));
         }
     }
 }
-console.log("PLS/PCR scale equivariance OK");
+console.log(`PLS/PCR scale equivariance OK (${cases.length} cases)`);
