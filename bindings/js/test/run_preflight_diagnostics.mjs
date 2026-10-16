@@ -75,8 +75,8 @@ assert.equal(statusOf(loD, 6, 2, 2), 0);
 assert.equal(statusOf([2 ** 128 * (1 + 2 ** -52), ...hiD.slice(1)], 6, 2, 2), UNSUPPORTED);
 assert.equal(statusOf(loD.map((v) => v / 2), 6, 2, 2), UNSUPPORTED);
 assert.equal(statusOf([hiD[0], 2 ** 95, ...hiD.slice(2)], 6, 2, 2), UNSUPPORTED);
-const shifted = pcaOf(pcaBase.map((v) => 16 * v + 1e16));
-for (let a = 0; a < 3; ++a) relativeNearTol(shifted.eigenvalues[a], 256 * base.eigenvalues[a]);
+const pcaShifted = pcaOf(pcaBase.map((v) => 16 * v + 1e16));
+for (let a = 0; a < 3; ++a) relativeNearTol(pcaShifted.eigenvalues[a], 256 * base.eigenvalues[a]);
 assert.equal(statusOf(pcaBase.map((v) => v * pow2(950) + 1e300)), UNSUPPORTED);
 const withConstants = (c0, c1) => {
     const out = [];
@@ -184,10 +184,10 @@ near(summary[5], 1.5);
 near(summary[6], 3);
 near(summary[7], 4.5);
 // Domain edge 2^256 (rule 13): [-a, 0, a] has SD a and quartiles -a/2, a/2.
-const edge = 2 ** 256;
-const extremeSummary = preflightSummary(new Float64Array([-edge, 0, edge]));
-assert.ok(extremeSummary[6] === 0 && extremeSummary[4] === edge);
-assert.ok(extremeSummary[5] === -edge / 2 && extremeSummary[7] === edge / 2);
+const summaryEdge = 2 ** 256;
+const extremeSummary = preflightSummary(new Float64Array([-summaryEdge, 0, summaryEdge]));
+assert.ok(extremeSummary[6] === 0 && extremeSummary[4] === summaryEdge);
+assert.ok(extremeSummary[5] === -summaryEdge / 2 && extremeSummary[7] === summaryEdge / 2);
 assert.throws(() => preflightSummary(new Float64Array([Number.MAX_VALUE, -Number.MAX_VALUE])),
     (error) => error.status === 10);
 const extremeRepeat = preflightRepeatability({
@@ -204,9 +204,9 @@ assert.deepEqual(neighbors.indices, [1, -1]);
 near(neighbors.distances[0], 1);
 assert.ok(Number.isNaN(neighbors.distances[1]));
 const extremeNeighbors = preflightNearestNeighbors(
-    {data: new Float64Array([edge, edge]), rows: 1, cols: 2},
+    {data: new Float64Array([summaryEdge, summaryEdge]), rows: 1, cols: 2},
     {data: new Float64Array([0, 0]), rows: 1, cols: 2}, 1);
-assert.ok(Math.abs(extremeNeighbors.distances[0] - Math.SQRT2 * edge) <= 4e-16 * Math.SQRT2 * edge);
+assert.ok(Math.abs(extremeNeighbors.distances[0] - Math.SQRT2 * summaryEdge) <= 4e-16 * Math.SQRT2 * summaryEdge);
 assert.throws(() => preflightNearestNeighbors(
     {data: new Float64Array([Number.MAX_VALUE]), rows: 1, cols: 1},
     {data: new Float64Array([-Number.MAX_VALUE]), rows: 1, cols: 1}, 1),
@@ -600,7 +600,7 @@ assert.ok(statsFactorAssociationExact([0, 0, 1, 1], new Float64Array([0, 0, 1, 1
 // Inside D results match exact references; outside D only N4M_ERR_UNSUPPORTED
 // (status 10) is accepted, never a trap or a silent value.
 const relNear = (a, b) => assert.ok(Math.abs(a - b) <= 1e-12 * Math.abs(b), `${a} vs ${b}`);
-const lo = 2 ** -256, hi = 2 ** 256, sp = 2 ** 32;
+const sp = 2 ** 32;  // lo = 2^-256 and hi = 2^256 are declared above
 const xz4 = new Float64Array([1, 2, 3, 4]);
 const insideD = [[lo, 2 * lo, 3 * lo, 0], [hi / 4, hi / 2, hi, 0], [1, 2, sp, 0], [-lo, 0, lo * sp, -lo]];
 const outsideD = [[lo * (1 - 2 ** -53), 2 * lo, 3 * lo, 0], [hi / 4, hi / 2, hi * (1 + 2 ** -52), 0],
@@ -1219,7 +1219,6 @@ for (const c of nullFixture.cases) {
         samePartition(got.labels, c.labels, c.name);
     }
 }
-console.log("JS/WASM Preflight diagnostics passed");
 
 // One-way REML and intervals: same independent references as
 // cpp/tests/test_variance_components.cpp (dense REML score equations with
@@ -1297,7 +1296,6 @@ refused([1, 2 ** 33, 2], g3);
 accepted([1, 1 + 2 ** -20, 2 ** 10], g001);
 refused([1, 1 + 2 ** -22, 2 ** 12], g001);
 refused([-1e300, -9e299, 9e299, 1e300], twoGroups);
-console.log("variance components: ok");
 // Group means: exact dyadic values (same case as test_group_means.cpp).
 const gm = statsGroupMeans({data: new Float64Array([1, 2, 3, 6, 10, -4, 0, 0, 1, 1, 2, 8]),
     rows: 6, cols: 2}, [1, 1, 0, 2, 2, 2], 3);
@@ -1331,3 +1329,4 @@ domainError(() => statsRegressionScores(new Float64Array([1, 2 ** 300]), new Flo
 // Spread limit 2^32 (rule 15), both sides.
 assert.equal(statsRegressionScores(new Float64Array([1, 2 ** 32]), new Float64Array([1, 1])).mae, (2 ** 32 - 1) / 2);
 domainError(() => statsRegressionScores(new Float64Array([1, 2 ** 33]), new Float64Array([1, 1])));
+console.log("JS/WASM Preflight diagnostics passed");
