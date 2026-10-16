@@ -49,17 +49,53 @@ power-of-two scaling and per-column centring. `n4m_stats_permanova_freedman_lane
 given the additive main effects of condition factors (row-major
 `n x n_conditions` codes), by Freedman-Lane permutation of the reduced-model
 residuals, with numerical design ranks, `df_term = 0` for an aliased term and
-no test when either design is saturated. Numerical domain of the three kernels: centring before
-scaling, a common power-of-two unit from the centred variation (constant
-columns and offsets are invisible), explicit residual sums of squares for the
-observation and every draw, an `int32_t*` exponent output on each function
-(true value = out x 2^exponent; 0 when every positive value is a normal
-double) instead of rounding a positive quantity to 0 or infinity
-(`N4M_ERR_NUMERICAL_FAILURE` only when a value is below 2^-1074 of the largest
-even in the scaled unit), and size/budget checks before
+no test when either design is saturated. Numerical domain of the three kernels: the shared supported domain D
+(finite X, nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^64 over
+the whole matrix, zeros allowed) is checked before computing; outside D they return `N4M_ERR_UNSUPPORTED` with
+"input outside the supported numerical domain (...)". Inside D: centring
+before scaling, a common power-of-two unit from the centred variation
+(constant columns and offsets are invisible; the rescaling is exact),
+explicit residual sums of squares for the observation and every draw, a
+pseudo-F reported undefined when its residual SS is at or below its rounding
+resolution, an `int32_t*` exponent output on each function (true value = out
+x 2^exponent; 0 when every positive value is a normal double) instead of
+rounding a positive quantity to 0, and size/budget checks before
 level-dependent allocations (the Freedman-Lane basis is limited to 32 Mi
-values). Terms above 2048 levels and workloads above 250 million
-operations return `N4M_ERR_UNSUPPORTED`.
+values). Terms above 2048 levels and workloads above 250 million operations
+return `N4M_ERR_UNSUPPORTED`.
+
+Final ABI 2.20.0 signatures of the operations added by this unreleased
+version (2.19 signatures unchanged):
+
+```c
+n4m_status_t n4m_stats_correlation_test(n4m_context_t* ctx, const double* x,
+    const double* y, int64_t n, int32_t method, int32_t n_permutations,
+    uint64_t seed, double* out_five, int64_t* out_two);
+n4m_status_t n4m_stats_bh_adjust(n4m_context_t* ctx, const double* p_values,
+    int64_t m, double* adjusted);
+n4m_status_t n4m_stats_factor_association_exact(n4m_context_t* ctx,
+    const int64_t* factor_codes, const double* targets, int64_t n,
+    int32_t categorical, int64_t max_arrangements, double* out_four);
+n4m_status_t n4m_stats_correlation_exact(n4m_context_t* ctx, const double* x,
+    const double* y, int64_t n, int32_t method, int64_t max_arrangements,
+    double* out_four);
+n4m_status_t n4m_stats_permanova(n4m_context_t* ctx, const n4m_matrix_view_t* X,
+    const int64_t* term_codes, const int64_t* strata_codes,
+    int32_t n_permutations, uint64_t seed, double* out_thirteen,
+    int64_t* out_two, int32_t* ss_exponent);
+n4m_status_t n4m_stats_permanova_freedman_lane(n4m_context_t* ctx,
+    const n4m_matrix_view_t* X, const int64_t* term_codes,
+    const int64_t* condition_codes, int32_t n_conditions,
+    int32_t n_permutations, uint64_t seed, double* out_twelve,
+    int64_t* out_two, int32_t* ss_exponent);
+n4m_status_t n4m_stats_permdisp(n4m_context_t* ctx, const n4m_matrix_view_t* X,
+    const int64_t* group_codes, int32_t n_permutations, uint64_t seed,
+    double* distances, double* group_mean_distances, double* out_six,
+    int64_t* out_two, int32_t* distance_exponent);
+```
+
+Earlier drafts of this unreleased version had no exponent outputs; they were
+never published, so only the signatures above exist.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The
 centered copy is rescaled by exact powers of two chosen from max|y| and then
