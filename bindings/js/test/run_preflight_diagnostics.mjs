@@ -40,13 +40,13 @@ const summary = preflightSummary(new Float64Array([0, 2, 4, 6]));
 near(summary[5], 1.5);
 near(summary[6], 3);
 near(summary[7], 4.5);
-const extremeSummary = preflightSummary(new Float64Array([-1e308, 0, 1e308]));
-near(extremeSummary[6], 0);
-relativeNear(extremeSummary[4], 1e308);
-relativeNear(extremeSummary[5], -5e307);
-relativeNear(extremeSummary[7], 5e307);
+// Domain edge 2^256 (rule 13): [-a, 0, a] has SD a and quartiles -a/2, a/2.
+const edge = 2 ** 256;
+const extremeSummary = preflightSummary(new Float64Array([-edge, 0, edge]));
+assert.ok(extremeSummary[6] === 0 && extremeSummary[4] === edge);
+assert.ok(extremeSummary[5] === -edge / 2 && extremeSummary[7] === edge / 2);
 assert.throws(() => preflightSummary(new Float64Array([Number.MAX_VALUE, -Number.MAX_VALUE])),
-    (error) => error.status === 7);
+    (error) => error.status === 10);
 const extremeRepeat = preflightRepeatability({
     data: new Float64Array([1e308, -1e308, 1e308, -1e308]), rows: 4, cols: 1,
 }, [10, 10, 20, 20]);
@@ -61,13 +61,13 @@ assert.deepEqual(neighbors.indices, [1, -1]);
 near(neighbors.distances[0], 1);
 assert.ok(Number.isNaN(neighbors.distances[1]));
 const extremeNeighbors = preflightNearestNeighbors(
-    {data: new Float64Array([1e308, 1e308]), rows: 1, cols: 2},
+    {data: new Float64Array([edge, edge]), rows: 1, cols: 2},
     {data: new Float64Array([0, 0]), rows: 1, cols: 2}, 1);
-relativeNear(extremeNeighbors.distances[0], Math.SQRT2 * 1e308);
+assert.ok(Math.abs(extremeNeighbors.distances[0] - Math.SQRT2 * edge) <= 4e-16 * Math.SQRT2 * edge);
 assert.throws(() => preflightNearestNeighbors(
     {data: new Float64Array([Number.MAX_VALUE]), rows: 1, cols: 1},
     {data: new Float64Array([-Number.MAX_VALUE]), rows: 1, cols: 1}, 1),
-    (error) => error.status === 7);
+    (error) => error.status === 10);
 const continuous = preflightLocalContrast(new Float64Array([0, 1, 2]),
     [1, 2, 1], 1, false);
 near(continuous.contrast, 0.5);
@@ -272,6 +272,56 @@ assert.ok(snvRows.errorBounds[0] > 0 && snvRows.errorBounds[0] < 1e-14);
     unsupported(() => preflightNoiseProxy(row([-(2 ** 100), 2 ** 100, 1, 0, 0]), 5, 1));
     unsupported(() => preflightNoiseProxy(row([-Number.MAX_VALUE, 2 ** -1074, Number.MAX_VALUE]), 3, 1));
 }
+// Test-only goldens inside the supported domain (Python 3.10 fractions,
+// 400-digit decimal square roots, rounded to binary64).
+const summaryGoldens = [
+    [[1e+16, 1.0000000000000002e+16, 1.0000000000000004e+16, 1.0000000000000008e+16, 9999999999999998.0], [1.0000000000000002e+16, 3.847076812334269, 1e+16, 1.0000000000000002e+16, 1.0000000000000004e+16]],
+    [[1.152921504606847e+18, 0.125, -0.0625, 0.0, 1.0], [2.305843009213694e+17, 5.1560217140444934e+17, 0.0, 0.125, 1.0]],
+    [[0.1, 0.2, 0.30000000000000004, 0.4, 0.5, 0.6], [0.35000000000000003, 0.18708286933869706, 0.22500000000000003, 0.35000000000000003, 0.475]],
+    [[8.636168555094445e-78, 2.5908505665283334e-77, 6.223015277861142e-61, 0.0], [1.5557538194652854e-61, 3.111507638930571e-61, 6.477126416320833e-78, 1.727233711018889e-77, 1.5557538194652858e-61]],
+    [[-1.6069380442589903e+60, 1.6069380442589903e+60, 1.42724769270596e+45, -1.393796574908164e+42, 1.0727468786061222e+55], [2.1454937574974152e+54, 1.1362767880523081e+60, -1.393796574908164e+42, 1.42724769270596e+45, 1.0727468786061222e+55]],
+    [[1.0000000000000002, 1.0, 0.9999999999999999, 1.0000000000000004], [1.0000000000000002, 2.461759443637518e-16, 1.0, 1.0, 1.0000000000000002]],
+];
+const knnGoldens = [
+    [[1.0000000000000024, 1.0000000000000089, 1.0000000000000029], [1.5000000000000062, 1.5000000000000135, 0.9999999999999969, 0.499999999999996, 0.5000000000000095, 1.500000000000002, 0.49999999999999756, 1.0000000000000004, 1.5000000000000095, 0.4999999999999971, 1.0000000000000153, 1.5000000000000095, 0.49999999999999556, 0.5000000000000073, 1.0000000000000049], [4, 0, 2, 3, 1], [0.7071067811865535, 0.8660254037844415, 0.7071067811865557, 0.707106781186556, 0.7071067811865535]],
+    [[1.000000000000007, 1.0000000000000042, 1.000000000000007], [1.0000000000000064, 0.49999999999999667, 1.4999999999999984, 1.0000000000000158, 0.5000000000000075, 1.5000000000000093, 1.5000000000000098, 1.0000000000000095, 1.000000000000002, 1.5000000000000013, 1.5000000000000062, 1.50000000000001, 0.5000000000000098, 1.0000000000000022, 1.5], [2, 4, 1, 0, 3], [0.7071067811865467, 0.7071067811865467, 0.5000000000000027, 0.8660254037844382, 0.7071067811865406]],
+    [[1.000000000000008, 1.000000000000008, 1.0000000000000042], [1.000000000000004, 0.5000000000000091, 0.9999999999999998, 1.0000000000000027, 0.5000000000000084, 1.5000000000000118, 1.0000000000000129, 1.5000000000000098, 0.500000000000004, 0.5000000000000111, 0.5000000000000093, 1.500000000000002, 0.5000000000000064, 1.0000000000000118, 0.5000000000000038], [0, 4, 2, 1, 3], [0.4999999999999989, 0.7071067811865526, 0.7071067811865489, 0.8660254037844348, 0.7071067811865489]],
+    [[1.0000000000000113, 1.0000000000000069, 1.0000000000000022], [0.5000000000000107, 0.5000000000000004, 0.5000000000000044, 1.5000000000000135, 0.9999999999999976, 1.5000000000000095, 1.5000000000000193, 1.000000000000002, 0.9999999999999971, 1.0000000000000173, 1.4999999999999982, 0.9999999999999991, 1.500000000000016, 0.500000000000002, 1.0000000000000089], [3, 2, 4, 1, 0], [0.8660254037844415, 0.7071067811865542, 0.500000000000008, 0.49999999999999134, 0.7071067811865542]],
+    [[1.0000000000000016, 1.000000000000005, 1.0000000000000033], [0.4999999999999971, 1.4999999999999976, 1.5000000000000075, 1.5000000000000018, 1.5000000000000007, 1.5000000000000087, 1.0000000000000093, 1.500000000000012, 1.000000000000006, 1.5000000000000029, 1.0000000000000007, 1.0000000000000127, 0.5000000000000093, 0.9999999999999969, 1.4999999999999964], [3, 2, 4, 1, 0], [0.8660254037844393, 0.8660254037844393, 0.5000000000000069, 0.5000000000000013, 0.7071067811865371]],
+    [[1.0000000000000107, 1.000000000000009, 1.0000000000000056], [1.0000000000000024, 0.5000000000000049, 1.0000000000000133, 1.0000000000000044, 1.5000000000000133, 1.0000000000000082, 0.5000000000000107, 1.0000000000000155, 0.5000000000000051, 0.5000000000000109, 1.0000000000000115, 1.500000000000011, 1.5000000000000142, 0.5000000000000031, 1.5000000000000064], [1, 0, 2, 3, 4], [0.5000000000000042, 0.5000000000000042, 0.7071067811865478, 0.7071067811865513, 0.8660254037844447]],
+    [[0.1, 0.7], [0.4, 1.1, -0.30000000000000004, 1.0, 0.1, 0.19999999999999996], [2, 1, 0], [0.5000000000000001, 0.5000000000000001, 0.5]],
+];
+const contrastGoldens = [
+    [[1e+16, 1.0000000000000002e+16, 1.0000000000000004e+16, 1.0000000000000006e+16, 1.0000000000000008e+16], [1, 0, 3, 2, 3], 0.8],
+    [[0.1, 0.2, 0.30000000000000004, 0.7, 0.9], [1, 2, 1, 4, 3], 0.9067796610169491],
+    [[1.152921504606847e+18, 0.125, -0.0625, 1.0], [2, 3, 1, 0], 1.9877039828900914e-19],
+];
+// Summary, nearest neighbours and local contrast (ABI 2.18) inside D against
+// exact rational / 400-digit references, and refusal just outside D.
+const ulpClose = (x, y, ulps) => Number.isFinite(x) && Math.abs(x - y) <= ulps * 2 ** -52 * Math.max(Math.abs(y), 2 ** -1022);
+for (const [x, [mean, sd, q1, med, q3]] of summaryGoldens) {
+    const out = preflightSummary(new Float64Array(x));
+    assert.ok(ulpClose(out[3], mean, 1), `mean ${x}`);
+    rel(out[4], sd, 1e-15, `sd ${x}`);
+    [q1, med, q3].forEach((q, c) => assert.ok(ulpClose(out[5 + c], q, 2), `q ${x}`));
+}
+unsupported(() => preflightSummary(new Float64Array([1, 0, 2 ** 64 + 2 ** 12])));
+unsupported(() => preflightSummary(new Float64Array([2 ** -257, 0])));
+assert.equal(preflightSummary(new Float64Array([1, 0, 2 ** 64]))[0], 3);
+for (const [q, refs, order, dist] of knnGoldens) {
+    const p = q.length, m = refs.length / p;
+    const out = preflightNearestNeighbors(row(q), {data: new Float64Array(refs), rows: m, cols: p}, m);
+    assert.deepEqual(out.indices, order);
+    out.indices.forEach((idx, a) => rel(out.distances[a], dist[idx], 1e-15));
+}
+unsupported(() => preflightNearestNeighbors(row([2 ** -257, 0]), row([0, 0]), 1));
+unsupported(() => preflightNearestNeighbors(row([1, 0]), row([2 ** 257, 0]), 1));
+for (const [y, nb, contrast] of contrastGoldens) {
+    const out = preflightLocalContrast(new Float64Array(y), nb, 1, false);
+    assert.ok(Math.abs(out.contrast - contrast) <= 1e-15 * Math.max(1, Math.abs(contrast)), `${y}`);
+}
+unsupported(() => preflightLocalContrast(new Float64Array([1, 0, 2 ** -257, 1, 2]), [1, 0, 3, 2, 2], 1, false));
+assert.ok(Number.isFinite(preflightLocalContrast(new Float64Array([1, 0, 2 ** 64, 1, 2]), [1, 0, 3, 2, 2], 1, false).contrast));
 // Review b1 #1: the registry SNV keeps a constant row flat and resists overflow.
 const snvOp = ppCreate("StandardNormalVariate");
 try {

@@ -30,7 +30,25 @@ ABI 2.20.0 (project version unchanged until release).
   `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain").
   Inside, results are correct to the documented precision. The machinery that
   only served out-of-domain inputs (halved differences, 1/8 prescaling,
-  subnormal clamps) is removed.
+  subnormal clamps) is removed. The same domain now applies to
+  `n4m_preflight_summary_compute`, `n4m_preflight_nearest_neighbors` and
+  `n4m_preflight_local_contrast` (continuous targets).
+
+### Fixed (ABI 2.18 Preflight kernels)
+
+- Summary: the `long double` running mean, whose precision differed between
+  x86 (64-bit significand) and WASM (113-bit), is replaced by a double-double
+  mean from an unevaluated Neumaier pair. It has no refinement pass, which
+  would add `u mean|x - m|` on cancelling values such as
+  `[-2^200, 2^200, 2^150, -2^140, 7·2^180]`. The SD is a compensated sum of
+  squared deviations, and the quartiles keep `b - a` exactly.
+- Nearest neighbours: compensated distances. Candidates within 2^-45 of each
+  other are ordered exactly (exact accumulator), so rounding can no longer
+  swap distinct distances or break equal ones out of index order.
+- Local contrast: double-double variance and compensated sums, no
+  `long double`.
+- SNV: the same mean (no refinement pass); bound
+  `(3uA + n^2 u^2 mean|y| + 2u^2|m|)/sd_y + 8u max|z|`.
 
 ### Fixed
 
