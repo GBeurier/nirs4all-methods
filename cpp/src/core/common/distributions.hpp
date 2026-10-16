@@ -15,8 +15,14 @@
 //
 // Quantiles take the probability of the requested tail (lower or upper), so
 // an upper quantile such as chi2_{1-a/2} never forms 1 - a/2 in double; they
-// bisect that tail on log x (chi-square) or on the logit of the beta
-// variable (F = (d2/d1) e^t) to a relative resolution of a few ulps.
+// bisect that tail on log x (chi-square) or on the logit t of the beta
+// variable (F = (d2/d1) e^t, with log Y = -log1p(e^-t) and
+// log(1 - Y) = -log1p(e^t) formed directly from t).
+//
+// Accuracy (measured, not proven): on the test grids (SciPy 1.18.1, mpmath
+// 1.4.1, and the closed forms of chi-square(2) and F(2, nu), F(nu, 2) for nu
+// up to 2^31 and tails down to 2^-64) the relative error stays below 1e-10
+// (worst observed 5e-12). Away from those grids no bound is proven.
 //
 // Domain: tail probability in [2^-64, 1/2]; degrees of freedom in
 // [1/2, 2^31]; a chi-square quantile in [1e-300, 1e300] and an F quantile in
@@ -29,9 +35,6 @@ namespace n4m::core::distributions {
 // Lower and upper regularized incomplete gamma P(a, x), Q(a, x).
 double regularized_gamma_p(double a, double x) noexcept;
 double regularized_gamma_q(double a, double x) noexcept;
-// Regularized incomplete beta I_x(a, b), given x and y = 1 - x computed
-// independently by the caller (so either may be tiny).
-double regularized_beta(double a, double b, double x, double y) noexcept;
 
 // Chi-square and F quantiles of a lower (upper = false) or upper tail
 // probability (NaN outside the domain above).

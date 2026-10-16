@@ -53,13 +53,15 @@ double log_gamma_ratio(double b, double a) noexcept {
            stirling_delta(b);
 }
 
-// log of x^a y^b / B(a, b), y = 1 - x.
-double log_beta_prefactor(double a, double b, double x, double y) noexcept {
+// log of x^a y^b / B(a, b), y = 1 - x, given lx = log x and ly = log y
+// computed by the caller without forming log of a value close to 1.
+double log_beta_prefactor(double a, double b, double x, double y, double lx,
+                          double ly) noexcept {
     const double s = a + b;
     if (std::min(a, b) >= stirling_threshold)
         return -a * phi(x * s / a) - b * phi(y * s / b) + 0.5 * std::log(a / s * b) -
                half_log_two_pi - stirling_delta(a) - stirling_delta(b) + stirling_delta(s);
-    const double head = a * std::log(x) + b * std::log(y);
+    const double head = a * lx + b * ly;
     if (b >= stirling_threshold) return head + log_gamma_ratio(b, a) - std::lgamma(a);
     if (a >= stirling_threshold) return head + log_gamma_ratio(a, b) - std::lgamma(b);
     return head + std::lgamma(s) - std::lgamma(a) - std::lgamma(b);
@@ -95,9 +97,14 @@ double gamma_fraction(double a, double x) noexcept {
 }
 
 // Continued fraction of I_x(a, b) without its prefactor, x < (a+1)/(a+b+2).
-double beta_fraction(double a, double b, double x) noexcept {
+// Its first denominator 1 - (a+b) x/(a+1) equals (1 - b + (a+b) y)/(a+1)
+// with y = 1 - x; the form with the smaller rounding bound is used, which
+// keeps x close to 1 (large a, small b) accurate.
+double beta_fraction(double a, double b, double x, double y) noexcept {
     const double qab = a + b, qap = a + 1.0, qam = a - 1.0;
-    double c = 1.0, d = 1.0 - qab * x / qap;
+    const double via_x = 1.0 - qab * x / qap;
+    const double via_y = (1.0 - b + qab * y) / qap;
+    double c = 1.0, d = qab * x <= std::abs(1.0 - b) + qab * y ? via_x : via_y;
     if (std::abs(d) < tiny) d = tiny;
     d = 1.0 / d;
     double h = d;
@@ -156,14 +163,15 @@ double bisect(Below below, double lo, double hi) noexcept {
 double regularized_gamma_p(double a, double x) noexcept { return gamma_tail(a, x, true); }
 double regularized_gamma_q(double a, double x) noexcept { return gamma_tail(a, x, false); }
 
-double regularized_beta(double a, double b, double x, double y) noexcept {
+// I_x(a, b) from x, y = 1 - x and their logarithms.
+static double beta_tail(double a, double b, double x, double y, double lx, double ly) noexcept {
     if (!(a > 0.0) || !(b > 0.0) || !(x >= 0.0) || !(y >= 0.0)) return nan_value;
     if (x == 0.0) return 0.0;
     if (y == 0.0) return 1.0;
     const double s = a + b;
     if (x < (a + 1.0) / (s + 2.0))
-        return std::exp(log_beta_prefactor(a, b, x, y)) * beta_fraction(a, b, x) / a;
-    return 1.0 - std::exp(log_beta_prefactor(b, a, y, x)) * beta_fraction(b, a, y) / b;
+        return std::exp(log_beta_prefactor(a, b, x, y, lx, ly)) * beta_fraction(a, b, x, y) / a;
+    return 1.0 - std::exp(log_beta_prefactor(b, a, y, x, ly, lx)) * beta_fraction(b, a, y, x) / b;
 }
 
 double chi2_quantile(double tail, double df, bool upper) noexcept {
@@ -183,10 +191,12 @@ double f_quantile(double tail, double d1, double d2, bool upper) noexcept {
     if (!valid_tail(tail) || !valid_df(d1) || !valid_df(d2)) return nan_value;
     const double a = 0.5 * d1, b = 0.5 * d2;
     // t = logit(Y) with Y ~ Beta(a, b) and F = (d2/d1) e^t: Y = 1/(1+e^-t),
-    // 1 - Y = 1/(1+e^t), both formed directly.
+    // 1 - Y = 1/(1+e^t), and their logarithms -log1p(e^-t), -log1p(e^t),
+    // all formed directly from t (b log(1 - Y) never amplifies a rounding).
     auto below = [&](double t) {
         const double y = 1.0 / (1.0 + std::exp(-t)), z = 1.0 / (1.0 + std::exp(t));
-        return upper ? regularized_beta(b, a, z, y) > tail : regularized_beta(a, b, y, z) < tail;
+        const double ly = -std::log1p(std::exp(-t)), lz = -std::log1p(std::exp(t));
+        return upper ? beta_tail(b, a, z, y, lz, ly) > tail : beta_tail(a, b, y, z, ly, lz) < tail;
     };
     const double lo = -700.0, hi = 700.0;
     if (!below(lo) || below(hi)) return nan_value;
