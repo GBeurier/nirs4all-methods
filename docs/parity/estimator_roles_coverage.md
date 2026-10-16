@@ -8,13 +8,13 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**210 of 226 catalog entries covered.**
+**210 of 232 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
 | aom_pop | 18 | 21 |
 | augmentation | 39 | 39 |
-| diagnostics | 5 | 15 |
+| diagnostics | 5 | 21 |
 | filters | 6 | 7 |
 | models | 37 | 38 |
 | preprocessing | 63 | 64 |
@@ -87,17 +87,23 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `diagnostics.adjusted_rand_index` | not yet | - | - |
 | `diagnostics.approximate_press` | procedure | generic | manifest only |
 | `diagnostics.bh_adjust` | not yet | - | - |
+| `diagnostics.cluster_jaccard_matrix` | not yet | - | - |
 | `diagnostics.correlation_test` | not yet | - | - |
+| `diagnostics.energy_distance` | not yet | - | - |
 | `diagnostics.factor_association_exact` | not yet | - | - |
+| `diagnostics.group_means` | not yet | - | - |
 | `diagnostics.hdbscan` | not yet | - | - |
 | `diagnostics.holm_adjust` | not yet | - | - |
+| `diagnostics.linear_sum_assignment` | not yet | - | - |
 | `diagnostics.model_selection` | procedure | generic | manifest only |
+| `diagnostics.pca_monitor` | not yet | - | - |
 | `diagnostics.permanova` | not yet | - | - |
 | `diagnostics.permdisp` | not yet | - | - |
 | `diagnostics.pls_diagnostics` | procedure | generic | manifest only |
 | `diagnostics.pls_monitoring` | procedure | generic | manifest only |
 | `diagnostics.preflight_qualification` | not yet | - | - |
 | `diagnostics.regression_metrics` | procedure | generic | manifest only |
+| `diagnostics.regression_scores` | not yet | - | - |
 | `diagnostics.variance_components` | not yet | - | - |
 | `filters.composite` | not yet | - | - |
 | `filters.correlation` | estimator | selector | Python, R, JS/WASM |

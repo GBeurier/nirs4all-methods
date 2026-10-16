@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats.variance_components`** · _Fully-qualified_: `n4m.stat
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_variance_components_intervals`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L490) · [`n4m_stats_variance_components_reml`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L461). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_variance_components_intervals`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L697) · [`n4m_stats_variance_components_reml`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L668). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 

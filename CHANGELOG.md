@@ -4,9 +4,39 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.7] - 2026-10-16
 
-ABI 2.20.0. No model-state serialization format changes.
+ABI 2.20.0 (minor: 19 new symbols, no signature change of the 2.19
+surface). No model-state serialization format changes.
+
+### Behaviour changes of symbols published in 1.3.6
+
+- `n4m_preflight_factor_association`: targets are centred translation
+  stably (exact power-of-two scaling, shifted origin, residual-mean
+  correction). Two identical groups at `1e16 + {0, 2, 4}` gave eta^2 = 0.27
+  and F = 1.5; they now give 0. Permutation draws and counts are unchanged.
+- `n4m_cluster_hdbscan`: inputs whose squared distances overflow (for
+  example `[0, 1e155, 2e155, 3e155]`) could write past the caller's buffers;
+  they are now outside the numerical domain and refused. A zero-distance
+  `inf - inf` excess counts as 0 instead of NaN, MST edges and tree sizes are
+  validated before anything is written, and each call checks a 256 MiB
+  working-memory budget before allocating.
+- SNV (`n4m_transform_snv_*`, the registry `StandardNormalVariate` and the
+  pipelines using it): a constant finite row now maps to exact zeros instead
+  of the standardized rounding residue of its mean (eleven `0.1` gave eleven
+  `1.0`); a non-finite result for a finite row returns
+  `N4M_ERR_NUMERICAL_FAILURE`. Agreement with NumPy stays within the 1e-12
+  parity tolerance but is no longer bit-for-bit.
+- The ABI 2.18/2.19 Preflight kernels (`n4m_preflight_*`) and
+  `n4m_cluster_hdbscan` refuse inputs outside their declared numerical
+  domain with `N4M_ERR_UNSUPPORTED` (see Changed). `n4m_preflight_pca_compute`
+  publishes components below its resolution bound as 0 (use
+  `n4m_preflight_pca_compute_resolved` for the bound and the flags), and
+  `n4m_preflight_noise_proxy_compute` accepts only the verified
+  Savitzky-Golay domain.
+- Internal SVD / symmetric-eigen helpers no longer fail or return wrong
+  factors on degenerate inputs (see Fixed); on non-degenerate inputs the
+  results are bit-identical to 1.3.6.
 
 ### Added
 
@@ -69,6 +99,106 @@ ABI 2.20.0. No model-state serialization format changes.
   residuals are projected off the reduced design twice, and the partial R^2
   is SS_term / (SS_term + SS_residual) of one projection (24- and 32-row
   dyadic references: R^2 = 0.5, F = 21 and 29).
+- Reference gate `parity/fixtures/permanova_v1.json`
+  (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
+  least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
+  scikit-bio 0.7.4 `permanova`/`permdisp` and NumPy permutation counts, on
+  free, conditional, partially aliased, fully aliased, singleton-stratum,
+  dispersion-only and PERMDISP F-boundary cases (vegan `permutest.betadisper`
+  transcribed as the counting oracle), plus hand-derived closed forms; the
+  former 1e-162 / 1e150 / 1e155-offset scale cases are now refused. Freedman-Lane goldens come from an
+  independent lstsq refit oracle (one, two and zero condition factors,
+  aliased and saturated designs); vegan's own margin and partial-permutest
+  schemes, which are not Freedman-Lane, are transcribed for information only.
+  The reference packages are test-only.
+- Public ABI 2.20.0 one-way random-effects variance components:
+  `n4m_stats_variance_components_reml` (REML for balanced and unbalanced
+  groups; every local maximum of the restricted likelihood the grid resolves
+  is refined and compared with the boundary s2b = 0; boundary and
+  convergence status per feature; the grid limitation is documented with a
+  degree bound, 4K-3 stationary points for K distinct group sizes) and
+  `n4m_stats_variance_components_intervals` (exact chi-square interval of the
+  within-group SD, exact F interval of the balanced ICC(1,1), seeded
+  cluster-bootstrap percentile intervals of the pooled SD and REML ICC with
+  NumPy-parity PCG64 draws). Supported numerical domain (rules 13/15):
+  nonzero |x| in [2^-256, 2^256], spread <= 2^32 over values and differences;
+  outside it both calls refuse with `N4M_ERR_UNSUPPORTED`. The percentile
+  intervals are not coverage-calibrated: 0.86-0.94 measured at 95 % nominal
+  (`parity/generators/variance_components_coverage.py`); BCa was rejected
+  (0.74 at ICC 0.1 with 20 groups). Chi-square and F quantiles
+  (`cpp/src/core/common/distributions.cpp`) take tail probabilities and use
+  cancellation-free prefactors. Native tests compare with dense REML score
+  equations (NumPy 2.5.4 / SciPy 1.18.1), statsmodels 0.15.0 MixedLM,
+  balanced closed forms, SciPy and mpmath 1.4.1 quantiles, a multimodal
+  witness, 2^k / offset sweeps and both sides of every domain boundary. The
+  centring helpers `bounding_exponent` and `center_in_place` move to
+  `cpp/src/core/common/centring.hpp`, shared with the Preflight kernels.
+  JS/WASM wrappers `statsVarianceComponentsReml` and
+  `statsVarianceComponentsIntervals`.
+- Public ABI 2.20.0 domain-shift statistics: `n4m_stats_energy_distance`
+  (energy distances between groups of rows, symmetric, with conservative
+  rounding estimates, the K-sample statistic of R `energy::eqdist.etest` and
+  a seeded Monte Carlo label permutation test with `numpy.random.default_rng`
+  parity; declared tie rule `T_perm >= T - sqrt(eps)|T|`, numerically
+  undecidable draws counted separately with a conservative p-value) and
+  `n4m_stats_pca_monitor` (reference PCA with an effective k of components
+  above the eigenvalue resolution, T² and Q of monitored rows, out-of-fold
+  empirical limits, counts beyond the limits by more than a conservative
+  tolerance and counts within it, centroid shift, variance traces). JS/WASM
+  `statsEnergyDistance` and `statsPcaMonitor` check the budgets before any
+  WASM allocation. Supported domain (lead rule 15, shared constant
+  `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`): finite values, nonzero |x| in
+  [2^-256, 2^256], spread <= 2^32; other inputs return `N4M_ERR_UNSUPPORTED`.
+  Reference gate `parity/fixtures/domain_shift_v1.json` (NumPy 2.2.6,
+  SciPy 1.15.3, exact rational oracles).
+- Public ABI 2.20.0 cluster matching and null-model kernels in
+  `n4m/metrics.h`: `n4m_cluster_jaccard_matrix` (intersection counts, cluster
+  sizes and Jaccard indices between two partitions, negative labels
+  unassigned), `n4m_linear_sum_assignment` (a BSD-3 port of SciPy 1.18.1
+  `scipy.optimize.linear_sum_assignment` with SciPy's tie order, vendored in
+  `cpp/src/core/optimization/_vendored`) and `n4m_random_multivariate_normal`
+  (NumPy `default_rng(seed).multivariate_normal(..., method="cholesky")` on
+  the existing PCG64 Ziggurat stream). A reference gate
+  (`parity/fixtures/cluster_matching_null_v1.json`,
+  `n4m_cluster_matching_null_tests`) pins SciPy assignments, scikit-learn
+  contingency tables, NumPy draws and stable-tie scikit-learn HDBSCAN
+  partitions of simulated Gaussian data. JS/WASM wrappers:
+  `clusterJaccardMatrix`, `linearSumAssignment`, `randomMultivariateNormal`.
+- `n4m_random_permutations` (ABI 2.20.0): successive
+  `default_rng(seed).permutation(n)` draws from one Methods PCG64 stream, for
+  seeded subsampling plans; JS/WASM `randomPermutations`.
+- `n4m_preflight_snv_compute` (ABI 2.20.0) and the JS wrapper
+  `preflightSnv`: SNV with an optional compensated equal-weight aggregation
+  by group. Each output row carries a first-order bound on the rounding error
+  of its entries, so callers can tell rounding residue from structure.
+- Property and oracle tests for SNV, the noise proxy and tolerance pairs on
+  the supported domain: scales 2^-256..2^248 and their out-of-domain
+  neighbours, exact offsets near 1e16 and 2^200, constant columns up to the
+  spread limit, mixed exponents within a row, exact rational and 400-digit
+  references. Each result is correct within its stated error, or the input is
+  refused with `N4M_ERR_UNSUPPORTED` outside the domain.
+- ABI 2.20.0: `n4m_preflight_pca_compute_resolved` publishes the PCA
+  resolution bound and a per-component `unresolved` flag (rule-14 accuracy
+  contract). The JS `preflightPca` wrapper returns `resolution` and
+  `unresolved`. Tested against mpmath references (`B_n(t)` cancellation
+  families, a Kronecker product, permutations) on CPU and WASM.
+
+### Changed
+
+- One supported numerical domain D for the Preflight and statistics kernels
+  (lead rules 13 and 15): finite values, every nonzero |x| in
+  [2^-256, 2^256] and, wherever a statistic depends on differences of input
+  values, max/min nonzero |x| <= 2^32 inside the array or slice that is
+  differenced. Public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` (256) and
+  `N4M_DOMAIN_MAX_SPREAD_LOG2` (32) in `n4m/metrics.h`; one internal helper
+  (`cpp/src/core/common/numerical_domain.hpp`) and one message, "input
+  outside the supported numerical domain (nonzero |x| in [2^-256, 2^256],
+  max/min nonzero |x| <= 2^32)", or its magnitude-only variant for the
+  exempt kernels. Exempt from the spread limit: summaries, nearest neighbours
+  and group means (magnitude bounds only), Holm/BH p-values (nonzero p >=
+  2^-1022) and integer labels/codes. The PCA declares a tighter magnitude
+  bound, [2^-128, 2^128]. Compensated sums of the kernels use one
+  double-double helper (`cpp/src/core/common/double_double.hpp`).
 - Numerical domain of `n4m_stats_permanova`, `n4m_stats_permanova_freedman_lane`
   and `n4m_stats_permdisp`: the shared supported domain D (finite X, every
   nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^32 over the whole
@@ -102,43 +232,52 @@ ABI 2.20.0. No model-state serialization format changes.
   SS_A = 2, SS_res = 3, F = 10/3; 2^60 refused), and resolution cases (F =
   14 2^62 resolved; one-ulp residuals flagged unresolved; a zero residual SS
   gives NaN).
-- Reference gate `parity/fixtures/permanova_v1.json`
-  (`parity/generators/permanova_v1.py`, `n4m_permanova_tests`): NumPy 2.2.6
-  least squares on full one-hot designs, SciPy 1.15.3 `f_oneway`,
-  scikit-bio 0.7.4 `permanova`/`permdisp` and NumPy permutation counts, on
-  free, conditional, partially aliased, fully aliased, singleton-stratum,
-  dispersion-only and PERMDISP F-boundary cases (vegan `permutest.betadisper`
-  transcribed as the counting oracle), plus hand-derived closed forms; the
-  former 1e-162 / 1e150 / 1e155-offset scale cases are now refused. Freedman-Lane goldens come from an
-  independent lstsq refit oracle (one, two and zero condition factors,
-  aliased and saturated designs); vegan's own margin and partial-permutest
-  schemes, which are not Freedman-Lane, are transcribed for information only.
-  The reference packages are test-only.
+- Supported numerical domain D for the association, correlation and exact
+  kernels: nonzero |x| in [2^-256, 2^256], max/min nonzero
+  |x| <= 2^32 per input array (public macro `N4M_DOMAIN_MAX_SPREAD_LOG2`),
+  zeros allowed. Inputs outside D are refused
+  with `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain
+  (...)") by a pre-pass; native and JS/WASM tests cover both sides of every
+  boundary, and the magnitude sweeps run inside D.
+- Holm and BH are exempt from the spread limit: they accept any
+  p-values in [0, 1] whose nonzero values are normal (>= 2^-1022), e.g.
+  p = 1 next to 1e-25; only subnormal p-values are refused.
+- Supported numerical domain of the Preflight kernels (`n4m_preflight_snv_compute`,
+  `n4m_preflight_noise_proxy_compute`, `n4m_preflight_pairs_within_tolerance`):
+  every nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero
+  |x| <= 2^32 (`N4M_DOMAIN_MAX_SPREAD_LOG2`, lead rule 15). Inputs outside are refused before computing with
+  `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain").
+  Inside, results are correct to the documented precision. The machinery that
+  only served out-of-domain inputs (halved differences, 1/8 prescaling,
+  subnormal clamps) is removed. The same domain now applies to
+  `n4m_preflight_local_contrast` (continuous targets).
+  `n4m_preflight_summary_compute` and `n4m_preflight_nearest_neighbors` keep
+  only the magnitude bound: compensated moments and quartiles, compensated
+  distances and exact ordering near ties need no spread bound, so
+  rounding-level PCA score components are accepted.
 
-- Public ABI 2.20.0 one-way random-effects variance components:
-  `n4m_stats_variance_components_reml` (REML for balanced and unbalanced
-  groups; every local maximum of the restricted likelihood the grid resolves
-  is refined and compared with the boundary s2b = 0; boundary and
-  convergence status per feature; the grid limitation is documented with a
-  degree bound, 4K-3 stationary points for K distinct group sizes) and
-  `n4m_stats_variance_components_intervals` (exact chi-square interval of the
-  within-group SD, exact F interval of the balanced ICC(1,1), seeded
-  cluster-bootstrap percentile intervals of the pooled SD and REML ICC with
-  NumPy-parity PCG64 draws). Supported numerical domain (rules 13/15):
-  nonzero |x| in [2^-256, 2^256], spread <= 2^32 over values and differences;
-  outside it both calls refuse with `N4M_ERR_UNSUPPORTED`. The percentile
-  intervals are not coverage-calibrated: 0.86-0.94 measured at 95 % nominal
-  (`parity/generators/variance_components_coverage.py`); BCa was rejected
-  (0.74 at ICC 0.1 with 20 groups). Chi-square and F quantiles
-  (`cpp/src/core/common/distributions.cpp`) take tail probabilities and use
-  cancellation-free prefactors. Native tests compare with dense REML score
-  equations (NumPy 2.5.4 / SciPy 1.18.1), statsmodels 0.15.0 MixedLM,
-  balanced closed forms, SciPy and mpmath 1.4.1 quantiles, a multimodal
-  witness, 2^k / offset sweeps and both sides of every domain boundary. The
-  centring helpers `bounding_exponent` and `center_in_place` move to
-  `cpp/src/core/common/centring.hpp`, shared with the Preflight kernels.
-  JS/WASM wrappers `statsVarianceComponentsReml` and
-  `statsVarianceComponentsIntervals`.
+- Noise proxy precision contract made honest. Each residual has an absolute
+  error of at most `2 W eps sum|c_k| max|w_k|` against the exact
+  Savitzky-Golay residual, which includes the coefficient errors and the
+  final binary64 rounding. The former `2^-95 sum|w_k||c_k|` claim did not
+  hold: a zero exact weight gave a 2e-33 proxy, and the residual is rounded
+  to binary64. Tests compare with exact rational SG residuals (windows 3,
+  13 and 31) and check that no window/order pair of the validated SG domain
+  is refused inside D.
+- Rules 13/15 numerical domain for the clustering kernels with real inputs
+  (`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment`,
+  `n4m_random_multivariate_normal`): finite values, every nonzero `|x|` in
+  `[2^-256, 2^256]` and max/min nonzero `|x|` `<= 2^32` per input array,
+  through the public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` (256) and
+  `N4M_DOMAIN_MAX_SPREAD_LOG2` (32) in `n4m/metrics.h`.
+  Outside it the call returns `N4M_ERR_UNSUPPORTED` ("input outside the
+  supported numerical domain ...") before computing; inside it results are
+  correct (exact optimum for the assignment, reference operation order for
+  HDBSCAN, exact `2^k` scaling). Each kernel also checks a cumulative
+  working-memory budget of 256 MiB before allocating, because the WASM32
+  build (2 GiB maximum, C++ exceptions not caught) aborts on a failed
+  allocation. ARI and Jaccard take integer labels: no numerical domain, but
+  memory and size limits (`n <= 2^23` for ARI, `n <= 2^53` for Jaccard).
 
 ### Fixed
 
@@ -168,77 +307,9 @@ ABI 2.20.0. No model-state serialization format changes.
   independence). Mixed-exponent and near-zero-effect tests use exact dyadic
   and rational references; the precision contract in `metrics.h` is revised
   to what these computations guarantee.
-- Supported numerical domain D for the association, correlation and exact
-  kernels: nonzero |x| in [2^-256, 2^256], max/min nonzero
-  |x| <= 2^32 per input array (public macro `N4M_DOMAIN_MAX_SPREAD_LOG2`),
-  zeros allowed. Inputs outside D are refused
-  with `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain
-  (...)") by a pre-pass; native and JS/WASM tests cover both sides of every
-  boundary, and the magnitude sweeps run inside D.
-- Holm and BH are exempt from the spread limit: they accept any
-  p-values in [0, 1] whose nonzero values are normal (>= 2^-1022), e.g.
-  p = 1 next to 1e-25; only subnormal p-values are refused.
-- Public ABI 2.20.0 domain-shift statistics: `n4m_stats_energy_distance`
-  (energy distances between groups of rows, symmetric, with conservative
-  rounding estimates, the K-sample statistic of R `energy::eqdist.etest` and
-  a seeded Monte Carlo label permutation test with `numpy.random.default_rng`
-  parity; declared tie rule `T_perm >= T - sqrt(eps)|T|`, numerically
-  undecidable draws counted separately with a conservative p-value) and
-  `n4m_stats_pca_monitor` (reference PCA with an effective k of components
-  above the eigenvalue resolution, T² and Q of monitored rows, out-of-fold
-  empirical limits, counts beyond the limits by more than a conservative
-  tolerance and counts within it, centroid shift, variance traces). JS/WASM
-  `statsEnergyDistance` and `statsPcaMonitor` check the budgets before any
-  WASM allocation. Supported domain (lead rule 15, shared constant
-  `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`): finite values, nonzero |x| in
-  [2^-256, 2^256], spread <= 2^32; other inputs return `N4M_ERR_UNSUPPORTED`.
-  Reference gate `parity/fixtures/domain_shift_v1.json` (NumPy 2.2.6,
-  SciPy 1.15.3, exact rational oracles).
-ABI 2.20.0 (project version unchanged until release).
-
-### Added
-
-- `n4m_preflight_snv_compute` (ABI 2.20.0) and the JS wrapper
-  `preflightSnv`: SNV with an optional compensated equal-weight aggregation
-  by group. Each output row carries a first-order bound on the rounding error
-  of its entries, so callers can tell rounding residue from structure.
-- Property and oracle tests for SNV, the noise proxy and tolerance pairs on
-  the supported domain: scales 2^-256..2^248 and their out-of-domain
-  neighbours, exact offsets near 1e16 and 2^200, constant columns up to the
-  spread limit, mixed exponents within a row, exact rational and 400-digit
-  references. Each result is correct within its stated error, or the input is
-  refused with `N4M_ERR_UNSUPPORTED` outside the domain.
-
-### Changed
-
-- Supported numerical domain of the Preflight kernels (`n4m_preflight_snv_compute`,
-  `n4m_preflight_noise_proxy_compute`, `n4m_preflight_pairs_within_tolerance`):
-  every nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero
-  |x| <= 2^32 (`N4M_DOMAIN_MAX_SPREAD_LOG2`, lead rule 15). Inputs outside are refused before computing with
-  `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain").
-  Inside, results are correct to the documented precision. The machinery that
-  only served out-of-domain inputs (halved differences, 1/8 prescaling,
-  subnormal clamps) is removed. The same domain now applies to
-  `n4m_preflight_local_contrast` (continuous targets).
-  `n4m_preflight_summary_compute` and `n4m_preflight_nearest_neighbors` keep
-  only the magnitude bound: compensated moments and quartiles, compensated
-  distances and exact ordering near ties need no spread bound, so
-  rounding-level PCA score components are accepted.
-
-- Noise proxy precision contract made honest. Each residual has an absolute
-  error of at most `2 W eps sum|c_k| max|w_k|` against the exact
-  Savitzky-Golay residual, which includes the coefficient errors and the
-  final binary64 rounding. The former `2^-95 sum|w_k||c_k|` claim did not
-  hold: a zero exact weight gave a 2e-33 proxy, and the residual is rounded
-  to binary64. Tests compare with exact rational SG residuals (windows 3,
-  13 and 31) and check that no window/order pair of the validated SG domain
-  is refused inside D.
-
-### Fixed (ABI 2.18 Preflight kernels)
-
 - Summary: the `long double` running mean, whose precision differed between
   x86 (64-bit significand) and WASM (113-bit), is replaced by a double-double
-  mean from an unevaluated Neumaier pair. It has no refinement pass, which
+  mean (double-double sum, one exact division remainder). It has no refinement pass, which
   would add `u mean|x - m|` on cancelling values such as
   `[-2^200, 2^200, 2^150, -2^140, 7·2^180]`. The SD is a compensated sum of
   squared deviations, and the quartiles keep `b - a` exactly.
@@ -249,9 +320,6 @@ ABI 2.20.0 (project version unchanged until release).
   `long double`.
 - SNV: the same mean (no refinement pass); bound
   `(3uA + n^2 u^2 mean|y| + 2u^2|m|)/sd_y + 8u max|z|`.
-
-### Fixed
-
 - SNV numerical scheme: each finite row is rescaled by a power of two. The
   mean is a compensated double-double, so offsets no longer leak into the
   deviations, and the deviations are rescaled again before squaring. `[a, 0, -a]` at the
@@ -291,42 +359,6 @@ ABI 2.20.0 (project version unchanged until release).
   `int32_t` argument before the Emscripten call (4294967301 was wrapped to a
   window of 5); the noise proxy also checks the Savitzky-Golay domain and
   `windowLength <= cols`.
-- Public ABI 2.20.0 cluster matching and null-model kernels in
-  `n4m/metrics.h`: `n4m_cluster_jaccard_matrix` (intersection counts, cluster
-  sizes and Jaccard indices between two partitions, negative labels
-  unassigned), `n4m_linear_sum_assignment` (a BSD-3 port of SciPy 1.18.1
-  `scipy.optimize.linear_sum_assignment` with SciPy's tie order, vendored in
-  `cpp/src/core/optimization/_vendored`) and `n4m_random_multivariate_normal`
-  (NumPy `default_rng(seed).multivariate_normal(..., method="cholesky")` on
-  the existing PCG64 Ziggurat stream). A reference gate
-  (`parity/fixtures/cluster_matching_null_v1.json`,
-  `n4m_cluster_matching_null_tests`) pins SciPy assignments, scikit-learn
-  contingency tables, NumPy draws and stable-tie scikit-learn HDBSCAN
-  partitions of simulated Gaussian data. JS/WASM wrappers:
-  `clusterJaccardMatrix`, `linearSumAssignment`, `randomMultivariateNormal`.
-- `n4m_random_permutations` (ABI 2.20.0): successive
-  `default_rng(seed).permutation(n)` draws from one Methods PCG64 stream, for
-  seeded subsampling plans; JS/WASM `randomPermutations`.
-
-### Changed
-
-- Rules 13/15 numerical domain for the clustering kernels with real inputs
-  (`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment`,
-  `n4m_random_multivariate_normal`): finite values, every nonzero `|x|` in
-  `[2^-256, 2^256]` and max/min nonzero `|x|` `<= 2^32` per input array,
-  through the public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` (256) and
-  `N4M_DOMAIN_MAX_SPREAD_LOG2` (32) in `n4m/metrics.h`.
-  Outside it the call returns `N4M_ERR_UNSUPPORTED` ("input outside the
-  supported numerical domain ...") before computing; inside it results are
-  correct (exact optimum for the assignment, reference operation order for
-  HDBSCAN, exact `2^k` scaling). Each kernel also checks a cumulative
-  working-memory budget of 256 MiB before allocating, because the WASM32
-  build (2 GiB maximum, C++ exceptions not caught) aborts on a failed
-  allocation. ARI and Jaccard take integer labels: no numerical domain, but
-  memory and size limits (`n <= 2^23` for ARI, `n <= 2^53` for Jaccard).
-
-### Fixed
-
 - `n4m_cluster_hdbscan` (since ABI 2.19.0, Methods 1.3.6) could write past
   the caller's buffers: with finite inputs whose squared distances overflow
   (for example `[0, 1e155, 2e155, 3e155]`), Prim produced self-edges and the
@@ -352,8 +384,6 @@ ABI 2.20.0 (project version unchanged until release).
   boundaries on both sides, `2^k` sweeps, exact translations, constant
   columns, mixed-exponent assignments against an exact enumeration with an
   independent oracle, memory refusals.
-### Fixed
-
 - Internal SVD / symmetric-eigen helpers (`cpp/src/core/common/svd.c`) no
   longer return `N4M_ERR_CONVERGENCE_FAILED`, or silently wrong factors, on
   degenerate or extreme inputs. This affects PCA (`n4m_pca_fit`,
@@ -394,14 +424,6 @@ ABI 2.20.0 (project version unchanged until release).
   (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
   `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
   inside D.
-
-### Added
-
-- ABI 2.20.0: `n4m_preflight_pca_compute_resolved` publishes the PCA
-  resolution bound and a per-component `unresolved` flag (rule-14 accuracy
-  contract). The JS `preflightPca` wrapper returns `resolution` and
-  `unresolved`. Tested against mpmath references (`B_n(t)` cancellation
-  families, a Kronecker product, permutations) on CPU and WASM.
 
 ## [1.3.6] - 2026-10-13
 
