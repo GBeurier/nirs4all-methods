@@ -44,7 +44,7 @@ Current implementation: [cpp/src/core/pls_monitoring.cpp](https://github.com/GBe
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_metrics_pls_monitoring_run`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L463). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_metrics_pls_monitoring_run`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L538). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 

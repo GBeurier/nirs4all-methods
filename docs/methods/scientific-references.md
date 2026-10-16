@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **232**
+- Curated records: **233**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `74bac3e69827acceb0ea8fd58d57fb80045a4f1db155f2fd7f9e57b4bb7ea703`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `0ea1aa66fe1f2fc8dd539b27c63cb5da0612296aba3df8008ab813f0a7959195`
 
 ## References by documentation page
 
@@ -489,6 +489,12 @@ This kernel bundle has no single canonical paper. The noise proxy smooths with t
 No single paper defines this API bundle. RPD usage in NIR calibration is reviewed by Williams & Sobering (1993); RPIQ by Bellon-Maurel et al. (2010), https://doi.org/10.1016/j.trac.2010.07.005. RMSE, MAE, bias, SEP, R², and NRMSE use the explicit formulas in the implementation.
 
 **Provenance:** https://doi.org/10.1016/j.trac.2010.07.005; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/nirs_metrics.c
+
+### [`diagnostics_variance_components`](diagnostics_variance_components.md) — One-way random-effects variance components (REML) and their intervals
+
+Patterson & Thompson (1971), *Recovery of inter-block information when block sizes are unequal*, Biometrika 58(3), 545–554, https://doi.org/10.1093/biomet/58.3.545; Harville (1977), *Maximum Likelihood Approaches to Variance Component Estimation and to Related Problems*, JASA 72(358), 320–338, https://doi.org/10.1080/01621459.1977.10480998; Searle (1971), *Linear Models*, Wiley, for the exact balanced ICC interval.
+
+**Provenance:** https://doi.org/10.1093/biomet/58.3.545; https://doi.org/10.1080/01621459.1977.10480998; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variance_components.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_variance_components.cpp
 
 ### [`ds`](ds.md) — Direct Standardisation
 
