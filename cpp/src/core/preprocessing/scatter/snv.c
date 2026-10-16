@@ -13,9 +13,9 @@
  *   - y = x * 2^-e with e = ilogb(max|x|), an exact power-of-two rescaling
  *     (|y| < 2), so no sum overflows and subnormal rows are not lost (values
  *     below 2^-1074 relative to max|x| are not representable after scaling);
- *   - the mean is a double-double m_hi + m_lo from a compensated (Neumaier)
- *     sum, the exact fma division remainder and one refinement pass, so a
- *     large offset (1e16, 1e300) does not leak into the deviations;
+ *   - the mean is a double-double m_hi + m_lo from the unevaluated
+ *     compensated (Neumaier) pair and the exact fma division remainder, so
+ *     neither a large offset nor cancelling values leak into the deviations;
  *   - deviations d = (y - m_hi) - m_lo are rescaled again by 2^-ilogb(max|d|)
  *     before squaring, so squares cannot underflow;
  *   - centred and scaled output is t / sd_t, never reconstructed at the
@@ -25,7 +25,7 @@
  *
  * First-order rounding bound (u = 2^-53) on every entry of a centred and
  * scaled row, reported by n4m_pp_snv_apply_bounded:
- *   B = (3 u A + n u^2 (A + |m|)) / sd_y + 8 u max|z|,
+ *   B = (3 u A + n^2 u^2 mean|y| + 2 u^2 |m|) / sd_y + 8 u max|z|,
  * with A = mean|y - m|, sd_y the SD in y units and z the output row.
  */
 
@@ -93,15 +93,18 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     double amax = 0.0;
     for (int64_t j = 0; j < cols; ++j) amax = fmax(amax, fabs(x[j]));
     const int e = ilogb(amax);
-    /* Mean as a double-double m_hi + m_lo: the remainder of a correctly
-     * rounded division is exact (fma), then one refinement pass. */
+    /* Mean as a double-double m_hi + m_lo from the unevaluated Neumaier pair
+     * (exact sum within (n u)^2 sum|y|) and the exact fma division remainder.
+     * No refinement pass: it would add u mean|y - m|, which dominates when
+     * the row's values cancel. */
     snv_acc_t s0 = {0.0, 0.0};
-    for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s0, ldexp(x[j], -e));
+    double abs_sum = 0.0;
+    for (int64_t j = 0; j < cols; ++j) {
+        snv_acc_add(&s0, ldexp(x[j], -e));
+        abs_sum += fabs(ldexp(x[j], -e));
+    }
     const double m_hi = s0.sum / n;
-    double m_lo = (fma(-m_hi, n, s0.sum) + s0.comp) / n;
-    snv_acc_t s1 = {0.0, 0.0};
-    for (int64_t j = 0; j < cols; ++j) snv_acc_add(&s1, (ldexp(x[j], -e) - m_hi) - m_lo);
-    m_lo += (s1.sum + s1.comp) / n;
+    const double m_lo = (fma(-m_hi, n, s0.sum) + s0.comp) / n;
     double abs_dev = 0.0, dmax = 0.0;
     for (int64_t j = 0; j < cols; ++j) {
         const double d = fabs((ldexp(x[j], -e) - m_hi) - m_lo);
@@ -144,10 +147,12 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
         out[j] = v;
     }
     if (bound && state->with_mean) {
-        /* Mean error <= 3u A + n u^2 (A + |m|); deviation and SD roundings
-         * add at most 8u |z|. A = mean|y - m|, sd_y = sd_t 2^k. */
+        /* Mean error <= (n u)^2 mean|y| + 2 u^2 |m| (plus 3u A kept as a
+         * margin for the deviations); deviation and SD roundings add at most
+         * 8u |z|. A = mean|y - m|, sd_y = sd_t 2^k. */
         const double a = abs_dev / n, sd_y = ldexp(sd_t, k);
-        *bound = (3.0 * u * a + n * u * u * (a + fabs(m_hi))) / sd_y + 8.0 * u * zmax;
+        *bound = (3.0 * u * a + n * n * u * u * (abs_sum / n) + 2.0 * u * u * fabs(m_hi)) / sd_y +
+                 8.0 * u * zmax;
     }
     return N4M_OK;
 }

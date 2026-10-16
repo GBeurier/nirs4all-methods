@@ -72,14 +72,15 @@ int main() {
         REQUIRE(n4m_preflight_summary_compute(ctx,repeats,nullptr,4,summary)==N4M_OK);
         REQUIRE(near(summary[0],4) && near(summary[3],3));
         REQUIRE(near(summary[5],1.5) && near(summary[6],3) && near(summary[7],4.5));
-        double extreme[3]={-1e308,0,1e308};
+        // Domain edge 2^256: SD of [-a, 0, a] is a, quartiles -a/2 and a/2.
+        const double edge=std::ldexp(1.0,256);
+        double extreme[3]={-edge,0,edge};
         REQUIRE(n4m_preflight_summary_compute(ctx,extreme,nullptr,3,summary)==N4M_OK);
-        REQUIRE(near(summary[3],0) && relative_near(summary[4],1e308));
-        REQUIRE(relative_near(summary[5],-5e307) && near(summary[6],0));
-        REQUIRE(relative_near(summary[7],5e307));
+        REQUIRE(summary[3]==0 && summary[4]==edge);
+        REQUIRE(summary[5]==-edge/2 && summary[6]==0 && summary[7]==edge/2);
         double unrepresentable[2]={1.7976931348623157e308,-1.7976931348623157e308};
         REQUIRE(n4m_preflight_summary_compute(ctx,unrepresentable,nullptr,2,summary)
-                ==N4M_ERR_NUMERICAL_FAILURE);
+                ==N4M_ERR_UNSUPPORTED);
         double extreme_repeat[4]={1e308,-1e308,1e308,-1e308};
         R=view(extreme_repeat,4,1);
         REQUIRE(n4m_preflight_repeatability_compute(ctx,&R,ids,nullptr,sd,icc,ng,state)==N4M_OK);
@@ -89,16 +90,16 @@ int main() {
         int64_t qi[1]={9}, ri[2]={9,10}, out_idx[2]; double out_dist[2];
         REQUIRE(n4m_preflight_nearest_neighbors(ctx,&Q,&F,qi,ri,2,out_idx,out_dist)==N4M_OK);
         REQUIRE(out_idx[0]==1 && near(out_dist[0],1) && out_idx[1]==-1 && std::isnan(out_dist[1]));
-        double extreme_query[2]={1e308,1e308}, origin[2]={0,0};
+        double extreme_query[2]={edge,edge}, origin[2]={0,0};
         Q=view(extreme_query,1,2); F=view(origin,1,2);
         REQUIRE(n4m_preflight_nearest_neighbors(ctx,&Q,&F,nullptr,nullptr,1,out_idx,out_dist)
                 ==N4M_OK);
-        REQUIRE(relative_near(out_dist[0],std::sqrt(2.0)*1e308));
+        REQUIRE(rel(out_dist[0],std::sqrt(2.0)*edge,4e-16));
         double max_query[1]={1.7976931348623157e308};
         double min_ref[1]={-1.7976931348623157e308};
         Q=view(max_query,1,1); F=view(min_ref,1,1);
         REQUIRE(n4m_preflight_nearest_neighbors(ctx,&Q,&F,nullptr,nullptr,1,out_idx,out_dist)
-                ==N4M_ERR_NUMERICAL_FAILURE);
+                ==N4M_ERR_UNSUPPORTED);
         double continuous[3]={0,1,2}; int64_t local_idx[3]={1,2,1};
         double contrast[4]={};
         REQUIRE(n4m_preflight_local_contrast(ctx,continuous,local_idx,nullptr,3,1,0,contrast)==N4M_OK);

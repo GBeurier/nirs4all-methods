@@ -299,6 +299,138 @@ void noise_mixed(n4m_context_t* ctx) {
     REQUIRE(noise(ctx, {-p2(100), p2(100), 1, 0, 0}, 1, 5, 5, 1).status == N4M_ERR_UNSUPPORTED);
     REQUIRE(noise(ctx, {-dmax, tiny, dmax}, 1, 3, 3, 1).status == N4M_ERR_UNSUPPORTED);
 }
+struct SummaryGolden { std::vector<double> x, want; };  // mean, sd, q1, median, q3
+struct KnnGolden { std::vector<double> q, refs; std::vector<int64_t> order; std::vector<double> dist; };
+struct ContrastGolden { std::vector<double> y; std::vector<int64_t> neighbor; double contrast; };
+// Test-only goldens inside the supported domain (Python 3.10 fractions,
+// 400-digit decimal square roots, rounded to binary64).
+const SummaryGolden summary_goldens[] = {
+    {{1e+16, 1.0000000000000002e+16, 1.0000000000000004e+16, 1.0000000000000008e+16, 9999999999999998.0}, {1.0000000000000002e+16, 3.847076812334269, 1e+16, 1.0000000000000002e+16, 1.0000000000000004e+16}},
+    {{1.152921504606847e+18, 0.125, -0.0625, 0.0, 1.0}, {2.305843009213694e+17, 5.1560217140444934e+17, 0.0, 0.125, 1.0}},
+    {{0.1, 0.2, 0.30000000000000004, 0.4, 0.5, 0.6}, {0.35000000000000003, 0.18708286933869706, 0.22500000000000003, 0.35000000000000003, 0.475}},
+    {{8.636168555094445e-78, 2.5908505665283334e-77, 6.223015277861142e-61, 0.0}, {1.5557538194652854e-61, 3.111507638930571e-61, 6.477126416320833e-78, 1.727233711018889e-77, 1.5557538194652858e-61}},
+    {{-1.6069380442589903e+60, 1.6069380442589903e+60, 1.42724769270596e+45, -1.393796574908164e+42, 1.0727468786061222e+55}, {2.1454937574974152e+54, 1.1362767880523081e+60, -1.393796574908164e+42, 1.42724769270596e+45, 1.0727468786061222e+55}},
+    {{1.0000000000000002, 1.0, 0.9999999999999999, 1.0000000000000004}, {1.0000000000000002, 2.461759443637518e-16, 1.0, 1.0, 1.0000000000000002}},
+};
+const KnnGolden knn_goldens[] = {
+    {{1.0000000000000024, 1.0000000000000089, 1.0000000000000029}, {1.5000000000000062, 1.5000000000000135, 0.9999999999999969, 0.499999999999996, 0.5000000000000095, 1.500000000000002, 0.49999999999999756, 1.0000000000000004, 1.5000000000000095, 0.4999999999999971, 1.0000000000000153, 1.5000000000000095, 0.49999999999999556, 0.5000000000000073, 1.0000000000000049}, {4, 0, 2, 3, 1}, {0.7071067811865535, 0.8660254037844415, 0.7071067811865557, 0.707106781186556, 0.7071067811865535}},
+    {{1.000000000000007, 1.0000000000000042, 1.000000000000007}, {1.0000000000000064, 0.49999999999999667, 1.4999999999999984, 1.0000000000000158, 0.5000000000000075, 1.5000000000000093, 1.5000000000000098, 1.0000000000000095, 1.000000000000002, 1.5000000000000013, 1.5000000000000062, 1.50000000000001, 0.5000000000000098, 1.0000000000000022, 1.5}, {2, 4, 1, 0, 3}, {0.7071067811865467, 0.7071067811865467, 0.5000000000000027, 0.8660254037844382, 0.7071067811865406}},
+    {{1.000000000000008, 1.000000000000008, 1.0000000000000042}, {1.000000000000004, 0.5000000000000091, 0.9999999999999998, 1.0000000000000027, 0.5000000000000084, 1.5000000000000118, 1.0000000000000129, 1.5000000000000098, 0.500000000000004, 0.5000000000000111, 0.5000000000000093, 1.500000000000002, 0.5000000000000064, 1.0000000000000118, 0.5000000000000038}, {0, 4, 2, 1, 3}, {0.4999999999999989, 0.7071067811865526, 0.7071067811865489, 0.8660254037844348, 0.7071067811865489}},
+    {{1.0000000000000113, 1.0000000000000069, 1.0000000000000022}, {0.5000000000000107, 0.5000000000000004, 0.5000000000000044, 1.5000000000000135, 0.9999999999999976, 1.5000000000000095, 1.5000000000000193, 1.000000000000002, 0.9999999999999971, 1.0000000000000173, 1.4999999999999982, 0.9999999999999991, 1.500000000000016, 0.500000000000002, 1.0000000000000089}, {3, 2, 4, 1, 0}, {0.8660254037844415, 0.7071067811865542, 0.500000000000008, 0.49999999999999134, 0.7071067811865542}},
+    {{1.0000000000000016, 1.000000000000005, 1.0000000000000033}, {0.4999999999999971, 1.4999999999999976, 1.5000000000000075, 1.5000000000000018, 1.5000000000000007, 1.5000000000000087, 1.0000000000000093, 1.500000000000012, 1.000000000000006, 1.5000000000000029, 1.0000000000000007, 1.0000000000000127, 0.5000000000000093, 0.9999999999999969, 1.4999999999999964}, {3, 2, 4, 1, 0}, {0.8660254037844393, 0.8660254037844393, 0.5000000000000069, 0.5000000000000013, 0.7071067811865371}},
+    {{1.0000000000000107, 1.000000000000009, 1.0000000000000056}, {1.0000000000000024, 0.5000000000000049, 1.0000000000000133, 1.0000000000000044, 1.5000000000000133, 1.0000000000000082, 0.5000000000000107, 1.0000000000000155, 0.5000000000000051, 0.5000000000000109, 1.0000000000000115, 1.500000000000011, 1.5000000000000142, 0.5000000000000031, 1.5000000000000064}, {1, 0, 2, 3, 4}, {0.5000000000000042, 0.5000000000000042, 0.7071067811865478, 0.7071067811865513, 0.8660254037844447}},
+    {{0.1, 0.7}, {0.4, 1.1, -0.30000000000000004, 1.0, 0.1, 0.19999999999999996}, {2, 1, 0}, {0.5000000000000001, 0.5000000000000001, 0.5}},
+};
+const ContrastGolden contrast_goldens[] = {
+    {{1e+16, 1.0000000000000002e+16, 1.0000000000000004e+16, 1.0000000000000006e+16, 1.0000000000000008e+16}, {1, 0, 3, 2, 3}, 0.8},
+    {{0.1, 0.2, 0.30000000000000004, 0.7, 0.9}, {1, 2, 1, 4, 3}, 0.9067796610169491},
+    {{1.152921504606847e+18, 0.125, -0.0625, 1.0}, {2, 3, 1, 0}, 1.9877039828900914e-19},
+};
+
+bool ulp_close(double x, double y, int ulps) {
+    return std::isfinite(x) && std::abs(x - y) <= ulps * 0x1p-52 * std::max(std::abs(y), 0x1p-1022);
+}
+
+// Summary (ABI 2.18) on the domain: exact rational oracle (mean, quartiles
+// within 1-2 ulp, SD within 1e-15), power-of-two equivariance, exact offsets
+// and both domain boundaries.
+void summary_checks(n4m_context_t* ctx) {
+    const auto run = [&](std::vector<double> v, double* out) {
+        return n4m_preflight_summary_compute(ctx, v.data(), nullptr,
+                                             static_cast<int64_t>(v.size()), out);
+    };
+    double out[8];
+    for (const auto& g : summary_goldens) {
+        REQUIRE(run(g.x, out) == N4M_OK);
+        REQUIRE(ulp_close(out[3], g.want[0], 1) && rel(out[4], g.want[1], 1e-15));
+        for (int c = 0; c < 3; ++c) REQUIRE(ulp_close(out[5 + c], g.want[static_cast<size_t>(2 + c)], 2));
+    }
+    const std::vector<double> base = {3, 1, 4, 1, 5, 9, 2, 6};
+    double ref[8];
+    REQUIRE(run(base, ref) == N4M_OK);
+    for (int k : sweep) {
+        std::vector<double> x(base);
+        for (double& v : x) v = std::ldexp(v, k);
+        REQUIRE(run(x, out) == N4M_OK);
+        for (int c = 1; c < 8; ++c) REQUIRE(out[c] == std::ldexp(ref[c], k));
+    }
+    for (int k : {-257, 250}) {  // 1 2^-257 and 9 2^250 > 2^253: 9 2^250 > 2^256? 9 2^250 = 1.125 2^253 inside
+        std::vector<double> x(base);
+        for (double& v : x) v = std::ldexp(v, k);
+        REQUIRE(run(x, out) == (k == -257 ? N4M_ERR_UNSUPPORTED : N4M_OK));
+    }
+    {
+        std::vector<double> x(base);
+        for (double& v : x) v = std::ldexp(v, 254);  // 9 2^254 > 2^256
+        REQUIRE(run(x, out) == N4M_ERR_UNSUPPORTED);
+    }
+    std::vector<double> shifted(base);
+    for (double& v : shifted) v = v * p2(148) + p2(200);
+    REQUIRE(run(shifted, out) == N4M_OK && rel(out[4], ref[4] * p2(148), 1e-15));
+    REQUIRE(run({1.0, p2(64)}, out) == N4M_OK);
+    REQUIRE(run({1.0, std::nextafter(p2(64), INFINITY)}, out) == N4M_ERR_UNSUPPORTED);
+}
+
+// Nearest neighbours (ABI 2.18): candidate orders where a naive double
+// distance disagrees with the exact one, and exact ties computed with
+// different roundings; distances within 1e-15 of the 400-digit references.
+void neighbor_checks(n4m_context_t* ctx) {
+    for (const auto& g : knn_goldens) {
+        std::vector<double> q(g.q), refs(g.refs);
+        const auto p = static_cast<int64_t>(q.size());
+        const auto m = static_cast<int64_t>(refs.size()) / p;
+        auto Q = view(q.data(), 1, p), R = view(refs.data(), m, p);
+        std::vector<int64_t> idx(static_cast<size_t>(m));
+        std::vector<double> dist(static_cast<size_t>(m));
+        REQUIRE(n4m_preflight_nearest_neighbors(ctx, &Q, &R, nullptr, nullptr,
+                                                static_cast<int32_t>(m), idx.data(), dist.data()) == N4M_OK);
+        REQUIRE(idx == g.order);
+        for (size_t a = 0; a < idx.size(); ++a)
+            REQUIRE(rel(dist[a], g.dist[static_cast<size_t>(idx[a])], 1e-15));
+    }
+    // Scale equivariance and domain boundaries.
+    for (int k : sweep) {
+        std::vector<double> q = {std::ldexp(1.0, k), 0}, refs = {0, 0, std::ldexp(4.0, k), std::ldexp(3.0, k)};
+        auto Q = view(q.data(), 1, 2), R = view(refs.data(), 2, 2);
+        int64_t idx[2]; double dist[2];
+        REQUIRE(n4m_preflight_nearest_neighbors(ctx, &Q, &R, nullptr, nullptr, 2, idx, dist) == N4M_OK);
+        REQUIRE(idx[0] == 0 && dist[0] == std::ldexp(1.0, k) && dist[1] == std::ldexp(std::sqrt(18.0), k));
+    }
+    for (double bad : {p2(-257), std::nextafter(p2(256), INFINITY)}) {
+        double q[2] = {bad, 0}, refs[2] = {0, 0};
+        auto Q = view(q, 1, 2), R = view(refs, 1, 2);
+        int64_t idx[1]; double dist[1];
+        REQUIRE(n4m_preflight_nearest_neighbors(ctx, &Q, &R, nullptr, nullptr, 1, idx, dist) ==
+                N4M_ERR_UNSUPPORTED);
+    }
+}
+
+// Local contrast (ABI 2.18), continuous targets: exact rational oracle,
+// power-of-two invariance (bitwise) and domain boundaries; category codes are
+// labels and are not bounded by the domain.
+void contrast_checks(n4m_context_t* ctx) {
+    const auto run = [&](std::vector<double> y, std::vector<int64_t> nb, int categorical, double* out) {
+        return n4m_preflight_local_contrast(ctx, y.data(), nb.data(), nullptr,
+                                            static_cast<int64_t>(y.size()), 1, categorical, out);
+    };
+    double out[4], ref[4];
+    for (const auto& g : contrast_goldens) {
+        REQUIRE(run(g.y, g.neighbor, 0, out) == N4M_OK);
+        REQUIRE(std::abs(out[0] - g.contrast) <= 1e-15 * std::max(1.0, std::abs(g.contrast)));
+    }
+    const std::vector<double> base = {3, 1, 4, 1, 5};
+    const std::vector<int64_t> nb = {1, 0, 3, 2, 2};
+    REQUIRE(run(base, nb, 0, ref) == N4M_OK);
+    for (int k : sweep) {
+        std::vector<double> y(base);
+        for (double& v : y) v = std::ldexp(v, k);
+        REQUIRE(run(y, nb, 0, out) == N4M_OK && out[0] == ref[0]);
+    }
+    REQUIRE(run({1, 0, p2(-257), 1, 2}, nb, 0, out) == N4M_ERR_UNSUPPORTED);
+    REQUIRE(run({1, 0, std::nextafter(p2(64), INFINITY), 1, 2}, nb, 0, out) == N4M_ERR_UNSUPPORTED);
+    REQUIRE(run({1, 0, p2(64), 1, 2}, nb, 0, out) == N4M_OK);
+    REQUIRE(run({1, 0, 9007199254740991.0, 1, 2}, nb, 1, out) == N4M_OK);
+}
 }  // namespace
 
 int main() {
@@ -311,6 +443,9 @@ int main() {
         oracle_pairs(ctx);
         oracle_snv(ctx);
         noise_mixed(ctx);
+        summary_checks(ctx);
+        neighbor_checks(ctx);
+        contrast_checks(ctx);
         n4m_context_destroy(ctx);
         std::puts("preflight robustness sweeps: ok");
         return 0;

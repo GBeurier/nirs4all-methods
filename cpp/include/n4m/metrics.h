@@ -38,7 +38,13 @@ N4M_API n4m_status_t n4m_preflight_repeatability_compute(
 /* Eight finite-value summary outputs: count, min, max, mean, sample SD,
  * q25, median, q75. Quantiles use linear type-7 interpolation. The optional
  * mask has n bytes; zero excludes a value. Unmasked nonfinite values fail.
- * For no values, all fields except count=0 are NaN; SD is NaN for n<2. */
+ * For no values, all fields except count=0 are NaN; SD is NaN for n<2.
+ * Supported domain D: every nonzero |x| in [2^-256, 2^256] and over the unmasked values,
+ * max/min nonzero |x| <= 2^64; otherwise N4M_ERR_UNSUPPORTED ("input outside
+ * the supported numerical domain") before computing. Inside D the mean
+ * is a double-double from an unevaluated Neumaier pair (error <= (n u)^2
+ * mean|x| + u |m|), the SD a compensated sum of squared deviations from it,
+ * and each quartile a + w (b - a) with b - a kept exactly (within 2 ulp). */
 N4M_API n4m_status_t n4m_preflight_summary_compute(
     n4m_context_t* ctx, const double* values, const uint8_t* valid_mask,
     int64_t n, double* out_eight);
@@ -47,7 +53,13 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
  * distance then reference index. When BOTH group arrays are non-NULL, rows
  * with the same group ID are excluded. Outputs are row-major n_query x k,
  * using index=-1 and distance=NaN when too few eligible neighbors remain.
- * All input values must be finite. k>0; callers own every buffer. */
+ * All input values must be finite. k>0; callers own every buffer.
+ * Supported domain D: every nonzero |x| in [2^-256, 2^256] and per row,
+ * max/min nonzero |x| <= 2^64; otherwise N4M_ERR_UNSUPPORTED ("input outside
+ * the supported numerical domain") before computing. Inside D
+ * distances use a compensated sum (relative error < 4u); two candidates
+ * within 2^-45 (relative) of each other are ordered exactly from
+ * ||q - a||^2 - ||q - b||^2 in an exact accumulator, ties by index. */
 N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,
@@ -70,7 +82,12 @@ N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
  * out_four[2:4] are the observed and expected SAME-class fractions, each
  * averaged equally over eligible focal rows. Continuous sets these to NaN.
  * A zero denominator or no eligible rows yields NaN contrast, with N4M_OK
- * and coverage still reported. */
+ * and coverage still reported. Continuous targets must lie in the supported
+ * domain D (every nonzero |y| in [2^-256, 2^256], max/min nonzero |y| <=
+ * 2^64), else N4M_ERR_UNSUPPORTED; category codes are labels and are not
+ * bounded by D. Inside D the variance uses a double-double mean and
+ * compensated sums; out_four[0] = 1 - ratio carries an absolute error of a
+ * few u times the ratio. */
 N4M_API n4m_status_t n4m_preflight_local_contrast(
     n4m_context_t* ctx, const double* targets, const int64_t* neighbor_indices,
     const int64_t* group_ids, int64_t n, int32_t k, int32_t categorical,
@@ -164,7 +181,7 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
  * group g (compensated per band). out is n_groups x cols, caller-owned.
  * error_bounds[g] (n_groups doubles) bounds the absolute rounding error of
  * every entry of out row g: for one SNV row,
- * B = (3uA + n u^2 (A + |m|)) / sd_y + 8 u max|z| with u = 2^-53, y the row
+ * B = (3uA + n^2 u^2 mean|y| + 2u^2 |m|) / sd_y + 8 u max|z| with u = 2^-53, y the row
  * rescaled by 2^-ilogb(max|x|), m, sd_y and A = mean|y - m| its mean, SD and
  * mean absolute deviation, n = cols, z the SNV row (0 for a constant row);
  * for a group of r > 1 rows, max member B + (4u + 2 r u^2) max member |z|.

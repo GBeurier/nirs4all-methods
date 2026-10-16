@@ -8,7 +8,7 @@ SD) to each row of a finite matrix. With `group_ids` it also returns the
 equal-weight mean of the SNV rows of each group (compensated per band). It
 writes one first-order rounding bound per output row:
 
-- for one row, `(3uA + n u^2 (A + |m|)) / sd_y + 8 u max|z|`;
+- for one row, `(3uA + n^2 u^2 mean|y| + 2u^2 |m|) / sd_y + 8 u max|z|`;
 - for a group of r rows, the largest member bound plus
   `(4u + 2 r u^2) max|z|`.
 
@@ -18,6 +18,19 @@ mean is a compensated double-double, and deviations are rescaled before
 squaring. Rows at the smallest subnormal, rows that overflow, rows offset by
 2^60 or 1e300 and rows with 100,000 offset bands are standardized within
 their bound.
+
+The ABI 2.18 kernels `n4m_preflight_summary_compute`,
+`n4m_preflight_nearest_neighbors` and `n4m_preflight_local_contrast` (for
+continuous targets) also follow D. Their computations change as follows:
+
+- summary: the mean is a double-double from an unevaluated Neumaier pair,
+  the SD a compensated sum of squared deviations, and the quartiles exact
+  differences (`long double` removed, so x86 and WASM agree);
+- nearest neighbours: compensated distances, and orders within 2^-45 decided
+  exactly from squared-distance differences in the exact accumulator;
+- local contrast: double-double variance and compensated sums.
+
+Tests use independent rational and 400-digit oracles for all three.
 
 The three Preflight kernels follow one supported numerical domain D: every
 nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64.
