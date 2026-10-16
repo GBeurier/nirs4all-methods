@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.energy_distance"
+family: "diagnostics.multivariate_tests"
+category: "diagnostics"
+subcategory: "multivariate_tests"
+since_abi: "2.20.0"
+abi_symbols:
+  - "n4m_stats_energy_distance"
+tu:
+  - "cpp/src/c_api/c_api_preflight.cpp"
+headers:
+  - "cpp/include/n4m/metrics.h"
+carry_along_tu:
+  - "cpp/src/core/common/rng_pcg64.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures:
+    - "parity/fixtures/domain_shift_v1.json"
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.energy_distance"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "Energy distance (Szekely-Rizzo) between groups of rows (Euclidean, V-statistic mean distances, symmetric, with conservative rounding estimates) and the K-sample energy statistic sum n_a n_b/(n_a+n_b) E_ab of R energy::eqdist.etest, with a seeded Monte Carlo label permutation test (PCG64, numpy.random.default_rng parity; declared tie rule T_perm >= T - sqrt(eps)|T|, numerically undecidable draws counted separately with a conservative p-value). Supported domain: finite values, nonzero |x| in [2^-256, 2^256], spread <= 2^32 (refused otherwise). Reference gate: parity/generators/domain_shift_v1.py -> parity/fixtures/domain_shift_v1.json (scipy cdist, exact rational energies and permutation statistics), cpp/tests/test_domain_shift.cpp."
+c_surface:
+  - "n4m_stats_energy_distance"
+fq_name: "n4m.stats.energy_distance"
+leaf: "energy_distance"
+legacy_ids:
+  - "diagnostics.energy_distance"
+namespace: "stats"

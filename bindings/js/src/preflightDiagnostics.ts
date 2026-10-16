@@ -880,3 +880,165 @@ export function statsPermanovaFreedmanLane(X: Matrix, termCodes: readonly (numbe
         scope.close();
     }
 }
+
+export interface StatsEnergyDistanceResult {
+    /** Row-major nGroups x nGroups energies E = 2M_ab - M_aa - M_bb (unit of X), symmetric, >= 0. */
+    energy: Float64Array;
+    /** Row-major absolute rounding bounds of the energies. */
+    energyBounds: Float64Array;
+    /** Row-major mean pairwise distances M (V-statistic, self-pairs included). */
+    meanDistances: Float64Array;
+    /** sum_{a<b} n_a n_b / (n_a + n_b) energy[a][b] and its rounding bound. */
+    statistic: number;
+    statisticBound: number;
+    /** log10(n! / prod n_a!), distinct label assignments. */
+    log10DistinctPermutations: number;
+    /** Monte Carlo (1+b)/(1+B) under T_perm >= T - sqrt(eps)|T|; NaN without permutations. */
+    pValue: number;
+    /** (1+b')/(1+B) counting every numerically undecidable draw as a tie. */
+    pValueConservative: number;
+    nAtLeastObserved: number;
+    nPermutationsExecuted: number;
+    /** Draws within 2 bound(T) of the tie threshold. */
+    nUndecidable: number;
+}
+
+/** Energy distance between groups of rows with a K-sample permutation test.
+ * groupCodes are integers in [0, nGroups); the seed is an unsigned 64-bit
+ * integer (pass a bigint above 2^53). The native size limits are checked
+ * before any WASM allocation and raise N4mError(ERR_UNSUPPORTED); inputs
+ * outside the supported numerical domain raise the same status. */
+export function statsEnergyDistance(X: Matrix, groupCodes: readonly number[], nGroups: number,
+    nPermutations: number, seed: number | bigint): StatsEnergyDistanceResult {
+    validateMatrix(X);
+    if (groupCodes.length !== X.rows || !Number.isSafeInteger(nGroups) || nGroups < 2 ||
+        nGroups > X.rows || groupCodes.some((c) => !Number.isInteger(c) || c < 0 || c >= nGroups)) {
+        throw new RangeError("invalid energy distance groups");
+    }
+    const seed64 = validatePermutation(nPermutations, seed);
+    const pairs = X.rows * (X.rows - 1) / 2;
+    if (pairs > 20_000_000 || X.rows * X.cols > 50_000_000 || nGroups * nGroups > 10_000_000 ||
+        pairs * (X.cols + nPermutations + 1) > 2.5e9) {
+        throw new N4mError(Status.ERR_UNSUPPORTED,
+            "energy distance exceeds its pair, cell, group or operation budget");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const codes = scope.i64(groupCodes);
+        const g2 = nGroups * nGroups;
+        const energy = scope.alloc(g2 * 8), bounds = scope.alloc(g2 * 8), mean = scope.alloc(g2 * 8);
+        const out = scope.alloc(40), counts = scope.alloc(24);
+        const st = m.ccall("n4m_stats_energy_distance", "number",
+            ["number", "number", "number", "number", "number", "i64", "number", "number", "number",
+                "number", "number"],
+            [ctx.handle, x.viewPtr, codes, nGroups, nPermutations, seed64, energy, bounds, mean, out,
+                counts]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, 5);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            energy: copyF64(energy, g2), energyBounds: copyF64(bounds, g2),
+            meanDistances: copyF64(mean, g2),
+            statistic: r[0]!, statisticBound: r[1]!, log10DistinctPermutations: r[2]!, pValue: r[3]!,
+            pValueConservative: r[4]!,
+            nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
+            nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
+            nUndecidable: Number(dv.getBigInt64(counts + 16, true)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+export interface StatsPcaMonitorResult {
+    /** First effectiveComponents eigenvalues (ddof 1), then NaN. */
+    eigenvalues: Float64Array;
+    /** Smallest numerical rank of the fold and full fits, capped at maxComponents. */
+    effectiveComponents: number;
+    /** Out-of-fold reference statistics (row i in fold i mod nFolds). */
+    referenceT2: Float64Array;
+    referenceQ: Float64Array;
+    /** Monitored rows in the fit on every reference row. */
+    monitoredT2: Float64Array;
+    monitoredQ: Float64Array;
+    /** Monitored rows above the T^2 limit, the Q limit, either, by more than the tolerance. */
+    nBeyondT2: number;
+    nBeyondQ: number;
+    nBeyondEither: number;
+    /** Rows within the tolerance of a limit (numerically undetermined). */
+    nNearT2: number;
+    nNearQ: number;
+    nNearEither: number;
+    /** Empirical (1 - alpha) type-7 quantiles of the out-of-fold values. */
+    t2Limit: number;
+    qLimit: number;
+    /** Conservative relative tolerance tau = 16 m eps cond (an estimate). */
+    tolerance: number;
+    condition: number;
+    /** Q tolerance scale S (Q tolerance = tau S). */
+    qToleranceScale: number;
+    /** Eigenvalue resolution 16 m eps lambda_1. */
+    eigenvalueResolution: number;
+    referenceTotalVariance: number;
+    monitoredTotalVariance: number;
+    centroidDistance: number;
+    centroidSubspaceDistance: number;
+    centroidResidualDistance: number;
+    centroidT2: number;
+    retainedFraction: number;
+}
+
+/** PCA monitoring of rows against a reference PCA with out-of-fold limits.
+ * The native size limits are checked before any WASM allocation. */
+export function statsPcaMonitor(reference: Matrix, monitored: Matrix, maxComponents: number,
+    nFolds: number, alpha: number): StatsPcaMonitorResult {
+    validateMatrix(reference);
+    validateMatrix(monitored);
+    if (monitored.cols !== reference.cols || !Number.isSafeInteger(maxComponents) ||
+        maxComponents < 1 || !Number.isSafeInteger(nFolds) || nFolds < 2 ||
+        nFolds > reference.rows || !(alpha > 0 && alpha < 1)) {
+        throw new RangeError("invalid PCA monitor dimensions");
+    }
+    const nr = reference.rows, nm = monitored.rows, p = reference.cols;
+    const small = Math.min(nr, p);
+    if ((nr + nm) * p > 50_000_000 ||
+        (nFolds + 1) * small * small * Math.max(nr, p) + 4 * (nr + nm) * maxComponents * p > 1e10) {
+        throw new N4mError(Status.ERR_UNSUPPORTED, "PCA monitor exceeds its cell or operation budget");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const r = scope.matrix(reference.data, nr, p);
+        const mo = scope.matrix(monitored.data, nm, p);
+        const eigen = scope.alloc(maxComponents * 8);
+        const rt = scope.alloc(nr * 8), rq = scope.alloc(nr * 8);
+        const mt = scope.alloc(nm * 8), mq = scope.alloc(nm * 8);
+        const k = scope.alloc(4), counts = scope.alloc(48), out = scope.alloc(13 * 8);
+        const st = m.ccall("n4m_stats_pca_monitor", "number",
+            ["number", "number", "number", "number", "number", "number", "number", "number",
+                "number", "number", "number", "number", "number", "number"],
+            [ctx.handle, r.viewPtr, mo.viewPtr, maxComponents, nFolds, alpha, eigen, rt, rq, mt,
+                mq, k, counts, out]) as number;
+        checkStatus(st, ctx.handle);
+        const o = copyF64(out, 13);
+        const dv = new DataView(m.HEAPU8.buffer);
+        const count = (i: number) => Number(dv.getBigInt64(counts + 8 * i, true));
+        return {
+            eigenvalues: copyF64(eigen, maxComponents),
+            effectiveComponents: dv.getInt32(k, true),
+            referenceT2: copyF64(rt, nr), referenceQ: copyF64(rq, nr),
+            monitoredT2: copyF64(mt, nm), monitoredQ: copyF64(mq, nm),
+            nBeyondT2: count(0), nBeyondQ: count(1), nBeyondEither: count(2),
+            nNearT2: count(3), nNearQ: count(4), nNearEither: count(5),
+            t2Limit: o[0]!, qLimit: o[1]!, tolerance: o[9]!, condition: o[10]!,
+            qToleranceScale: o[11]!, eigenvalueResolution: o[12]!, referenceTotalVariance: o[2]!,
+            monitoredTotalVariance: o[3]!, centroidDistance: o[4]!,
+            centroidSubspaceDistance: o[5]!, centroidResidualDistance: o[6]!, centroidT2: o[7]!,
+            retainedFraction: o[8]!,
+        };
+    } finally {
+        scope.close();
+    }
+}

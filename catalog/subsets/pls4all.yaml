@@ -61,6 +61,8 @@ excludes:
     # PLS-specific; they ship in the full nirs4all-methods package only.
     - "diagnostics.preflight_qualification"
     - "diagnostics.holm_adjust"
+    - "diagnostics.energy_distance"
+    - "diagnostics.pca_monitor"
     - "diagnostics.adjusted_rand_index"
     - "diagnostics.hdbscan"
     - "diagnostics.correlation_test"

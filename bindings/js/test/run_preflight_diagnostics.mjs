@@ -9,6 +9,7 @@ import {
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, N4mError,
+    statsEnergyDistance, statsPcaMonitor,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -491,6 +492,128 @@ for (const c of permanovaFixture.cases) {
         assert.ok(close(d.f, hex(c.permdisp.f)), c.name);
         c.permdisp.distances.map(hex).forEach((v, i) => assert.ok(close(d.distances[i], v), c.name));
         assert.equal(d.nAtLeastObserved, c.permdisp.b, c.name);
+    }
+}
+// Energy distance and PCA monitoring gate shared with n4m_domain_shift_tests.
+{
+    const hexd = (h) => Buffer.from(h, "hex").readDoubleBE(0);
+    const EPS = 2 ** -52;
+    const closeTo = (a, b, floor = 1) => Number.isNaN(b) ? Number.isNaN(a) :
+        Math.abs(a - b) <= 1e-12 * Math.max(floor, Math.abs(b));
+    const isStatus = (code) => (e) => e instanceof N4mError && e.status === code;
+    const shift = JSON.parse(readFileSync(
+        new URL("../../../parity/fixtures/domain_shift_v1.json", import.meta.url), "utf8"));
+    assert.equal(shift.cases.length, 20);
+    for (const c of shift.cases) {
+        const X = {data: new Float64Array(c.input_hex.map(hexd)), rows: c.rows, cols: c.cols};
+        if (c.kind === "energy") {
+            const got = statsEnergyDistance(X, c.codes, c.n_groups, c.n_permutations, BigInt(c.seed));
+            const g = c.n_groups, rational = c.oracle === "rational";
+            c.energy_hex.map(hexd).forEach((v, i) => {
+                if (rational) assert.ok(Math.abs(got.energy[i] - v) <= got.energyBounds[i] + EPS / 2 * Math.abs(v), c.name);
+                else assert.ok(closeTo(got.energy[i], v), c.name);
+                assert.ok(got.energy[i] >= 0 && got.energyBounds[i] >= 0, c.name);
+                assert.equal(got.energy[i], got.energy[(i % g) * g + Math.floor(i / g)], `${c.name} symmetry`);
+            });
+            c.mean_distances_hex.map(hexd).forEach((v, i) => assert.ok(closeTo(got.meanDistances[i], v), c.name));
+            assert.ok(closeTo(got.pValue, hexd(c.p_value_hex[0])), c.name);
+            assert.equal(got.nAtLeastObserved, c.n_at_least_observed, c.name);
+            assert.equal(got.nPermutationsExecuted, c.n_permutations, c.name);
+            if (c.n_permutations) assert.ok(got.pValueConservative >= got.pValue && got.nUndecidable >= 0);
+        } else {
+            const M = {data: new Float64Array(c.monitored_hex.map(hexd)), rows: c.monitored_rows,
+                cols: c.cols};
+            const got = statsPcaMonitor(X, M, c.k, c.n_folds, hexd(c.alpha_hex[0]));
+            const tau = got.tolerance, rel = Math.max(tau, 1e-12), qs = Math.max(got.qToleranceScale, 1);
+            assert.ok(Math.abs(tau - hexd(c.tau_hex[0])) <= (1e-6 + tau) * tau, c.name);
+            assert.equal(got.effectiveComponents, c.effective_k, c.name);
+            assert.deepEqual([got.nBeyondT2, got.nBeyondQ, got.nBeyondEither, got.nNearT2,
+                got.nNearQ, got.nNearEither], c.counts, c.name);
+            c.monitored_q_hex.map(hexd).forEach((v, i) => {
+                assert.ok(Math.abs(got.monitoredQ[i] - v) <= rel * qs, c.name);
+                assert.ok(got.monitoredQ[i] >= 0, c.name);
+            });
+            c.monitored_t2_hex.map(hexd).forEach((v, i) => assert.ok(Number.isNaN(v) ?
+                Number.isNaN(got.monitoredT2[i]) : Math.abs(got.monitoredT2[i] - v) <= rel * Math.max(Math.abs(v), 1), c.name));
+            const out = c.out_hex.map(hexd);
+            assert.ok(closeTo(got.referenceTotalVariance, out[2]) && closeTo(got.monitoredTotalVariance, out[3]), c.name);
+        }
+    }
+    // Analytic cases: local differences, exact cancellation, symmetry.
+    const col = (...v) => ({data: new Float64Array(v), rows: v.length, cols: 1});
+    let e = statsEnergyDistance(col(2 ** 31, 0, 1), [0, 1, 2], 3, 0, 0);
+    assert.equal(e.energy[1 * 3 + 2], 2);
+    e = statsEnergyDistance(col(0, -4, -7, 2, 2, 2 ** 31, 1, -4, -7, 2, 2, 2 ** 31),
+        [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1], 2, 0, 0);
+    assert.ok(Math.abs(e.energy[1] - 1 / 18) <= e.energyBounds[1] && e.energy[1] === e.energy[2]);
+    // Declared tie rule (rational oracle 476 / 999).
+    e = statsEnergyDistance(col(0, 1, 2, 2 ** 31, 100, 101, 102, 2 ** 31), [0, 0, 0, 0, 1, 1, 1, 1], 2, 999, 42n);
+    assert.equal(e.nAtLeastObserved, 476);
+    assert.ok(e.pValueConservative >= e.pValue);
+    const line = [];
+    for (let i = -5; i <= 5; i++) line.push(i, 0);
+    let mon = statsPcaMonitor({data: new Float64Array(line), rows: 11, cols: 2},
+        {data: new Float64Array([0, 100, 1, 2 ** -18, 2, 0]), rows: 3, cols: 2}, 1, 5, 0.05);
+    assert.equal(mon.monitoredQ[1], 2 ** -36);
+    assert.ok(mon.nBeyondQ === 2 && mon.nNearQ === 1);
+    mon = statsPcaMonitor(col(...[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5].map((i) => 2 ** 31 + 256 * i)),
+        col(2 ** 31 - 2 ** 20, 2 ** 31 - 2 ** 20 + 1), 1, 5, 0.05);
+    assert.equal(mon.monitoredTotalVariance, 0.5);
+    // Domain boundaries: inside accepted, outside refused with status 10.
+    const pair = (a, b) => statsEnergyDistance(col(a, b, a, b), [0, 1, 1, 0], 2, 0, 0);
+    const after = 1 + EPS;
+    pair(2 ** -256, 2 ** -250);
+    assert.throws(() => pair(2 ** -256 / after, 2 ** -250), isStatus(10));
+    pair(2 ** 256, 2 ** 250);
+    assert.throws(() => pair(2 ** 256 * after, 2 ** 250), isStatus(10));
+    pair(1, 2 ** 32);
+    assert.throws(() => pair(1, 2 ** 32 * after), isStatus(10));
+    assert.throws(() => pair(1, 2 ** 60), isStatus(10));
+    pair(0, 2 ** -256);
+    assert.throws(() => pair(0, 2 ** -1074), isStatus(10));
+    assert.throws(() => pair(-1e308, 1e308), isStatus(10));
+    // Budgets refuse before allocation (status 10), never a trap.
+    assert.throws(() => statsEnergyDistance({data: new Float64Array(100000), rows: 100000, cols: 1},
+        Array.from({length: 100000}, (_, i) => i), 100000, 0, 0), isStatus(10));
+    assert.throws(() => statsEnergyDistance(col(0, 1), [0, 2], 2, 0, 0), RangeError);
+    // Magnitude sweep on integer-grid data: exact power-of-two images inside
+    // the domain, explicit refusal (status 10) outside.
+    const n = 12, p = 3, base = new Float64Array(n * p);
+    for (let i = 0; i < n; i++) for (let j = 0; j < p; j++)
+        base[i * p + j] = ((i * 37 + j * 11) % 23) - 11 + (i >= 8 ? 9 * (j + 1) : 0);
+    const codes = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1];
+    const runBoth = (data, cols) => ({
+        e: statsEnergyDistance({data, rows: n, cols}, codes, 2, 99, 7n),
+        m: statsPcaMonitor({data: data.slice(0, 8 * cols), rows: 8, cols},
+            {data: data.slice(8 * cols), rows: 4, cols}, 2, 4, 0.1),
+    });
+    const unit = runBoth(base, p);
+    for (const s of [-1062, -300, -230, -100, 0, 100, 200, 300, 1000]) {
+        const x = base.map((v) => v * 2 ** s);
+        if (s < -256 || s + 6 > 256) {
+            assert.throws(() => runBoth(x, p), isStatus(10), `shift ${s}`);
+            continue;
+        }
+        const r = runBoth(x, p);
+        assert.equal(r.e.energy[1], unit.e.energy[1] * 2 ** s, `energy ${s}`);
+        assert.equal(r.e.nAtLeastObserved, unit.e.nAtLeastObserved);
+        assert.equal(r.m.effectiveComponents, unit.m.effectiveComponents);
+        assert.deepEqual([r.m.nBeyondT2, r.m.nBeyondQ, r.m.nNearT2, r.m.nNearQ],
+            [unit.m.nBeyondT2, unit.m.nBeyondQ, unit.m.nNearT2, unit.m.nNearQ]);
+    }
+    for (const level of [2 ** 31, 2 ** 33]) {
+        const wide = new Float64Array(n * (p + 1));
+        for (let i = 0; i < n; i++) {
+            for (let j = 0; j < p; j++) wide[i * (p + 1) + j] = base[i * p + j];
+            wide[i * (p + 1) + p] = level;
+        }
+        if (level > 2 ** 32) {
+            assert.throws(() => runBoth(wide, p + 1), isStatus(10));
+            continue;
+        }
+        const w = runBoth(wide, p + 1);
+        assert.deepEqual([...w.e.energy], [...unit.e.energy]);
+        assert.deepEqual([w.m.nBeyondQ, w.m.nBeyondT2], [unit.m.nBeyondQ, unit.m.nBeyondT2]);
     }
 }
 console.log("JS/WASM Preflight diagnostics passed");
