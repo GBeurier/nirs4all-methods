@@ -162,10 +162,10 @@ def permutation_cases() -> list[dict]:
 
 
 def multiscale_hdbscan_cases() -> list[dict]:
-    """HDBSCAN on data mixing magnitudes inside the rule-13 domain.
+    """HDBSCAN on data mixing magnitudes inside the rule-13/15 domain.
 
     The domain is: nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <=
-    2^64 within the matrix. The reference runs scikit-learn
+    2^32 within the matrix. The reference runs scikit-learn
     HDBSCAN(metric="precomputed") on exact math.dist distances. Every case
     has distinct pairwise distances (so the MST and partition do not depend on
     ties), except the review vector, whose expected partition does not depend
@@ -174,21 +174,21 @@ def multiscale_hdbscan_cases() -> list[dict]:
     rng = np.random.default_rng(20261015)
     blobs = np.vstack([rng.normal(0.0, 1.0, (8, 2)), rng.normal(30.0, 1.0, (8, 2))]) + 5.0
     specs = [
-        ("review_1d_with_2e60", np.array([[0.0], [1.0], [3.0], [10.0], [11.0], [14.0], [2.0**60]]), 2, 2),
+        ("review_1d_with_2e30", np.array([[0.0], [1.0], [3.0], [10.0], [11.0], [14.0], [2.0**30]]), 2, 2),
         ("blobs_at_2e-200", blobs * 2.0**-200, 4, 3),
         ("blobs_at_2e180", blobs * 2.0**180, 4, 3),
-        ("blobs_with_outlier_at_2e40", np.vstack([blobs, [[2.0**40, -(2.0**40)]]]), 4, 3),
-        ("columns_at_2e-200_and_2e-250", np.c_[blobs[:, :1] * 2.0**-200, blobs[:, 1:] * 2.0**-250], 4, 3),
+        ("blobs_with_outlier_at_2e28", np.vstack([blobs, [[2.0**28, -(2.0**28)]]]), 4, 3),
+        ("columns_at_2e-200_and_2e-225", np.c_[blobs[:, :1] * 2.0**-200, blobs[:, 1:] * 2.0**-225], 4, 3),
     ]
     cases = []
     for name, x, mcs, ms in specs:
         nonzero = np.abs(x[x != 0])
         assert nonzero.min() >= 2.0**-256 and nonzero.max() <= 2.0**256, name
-        assert nonzero.max() <= nonzero.min() * 2.0**64, name
+        assert nonzero.max() <= nonzero.min() * 2.0**32, name
         n = len(x)
         d = np.array([[math.dist(x[i], x[j]) for j in range(n)] for i in range(n)])
         off = d[np.triu_indices(n, 1)]
-        near = off[off < 2.0**39]
+        near = off[off < 2.0**27]
         assert name.startswith("review") or len(np.unique(near)) == len(near), name
         model = HDBSCAN(metric="precomputed", min_cluster_size=mcs, min_samples=ms, copy=True).fit(d)
         if name.startswith("review"):

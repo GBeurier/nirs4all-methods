@@ -23,8 +23,8 @@
 namespace {
 
 constexpr int64_t sentinel_label = -777;
-// Rule-13 domain predicate, written independently of the library: finite,
-// nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^64.
+// Domain predicate of rules 13/15, written independently of the library:
+// finite, nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^32.
 bool in_domain(const std::vector<double>& x) {
     double low = 0.0, high = 0.0;
     for (const double v : x) {
@@ -34,7 +34,7 @@ bool in_domain(const std::vector<double>& x) {
         if (low == 0.0 || a < low) low = a;
         if (a > high) high = a;
     }
-    return high == 0.0 || (low >= 0x1p-256 && high <= 0x1p256 && high / low <= 0x1p64);
+    return high == 0.0 || (low >= 0x1p-256 && high <= 0x1p256 && high / low <= 0x1p32);
 }
 
 struct Fit {
@@ -135,7 +135,7 @@ void hdbscan_sweep(n4m_context_t* ctx) {
     for (double& v : high_shift) v = std::ldexp(v, 150) + std::ldexp(1.0, 200);
     for (size_t i = 0; i < 21; ++i) {
         wide.push_back(grid[2 * i]);
-        wide.push_back(std::ldexp(1.0, 60));
+        wide.push_back(std::ldexp(1.0, 30));
         wide.push_back(grid[2 * i + 1]);
     }
     for (const auto* x : {&shifted, &wide, &high_grid, &high_shift}) REQUIRE(in_domain(*x));
@@ -262,12 +262,11 @@ void assignment_exactness(n4m_context_t* ctx) {
             compare_sums(two, two) == 0 && -1e20 + 1.0 + 1.0 == -1e20);
     // Review 2026-10-13 P0: global centring on the minimum turned the lower
     // block of [[-1e20,1e20,1e20],[1e20,1,0],[1e20,0,1]] into a constant and
-    // returned [0, 1, 2]. That matrix (spread 1e20 > 2^64) is now outside the
-    // domain; its in-domain analogue with 2^60 still needs exact sums, since
-    // -2^60 + 1 + 1 rounds to -2^60 in double precision.
+    // returned [0, 1, 2]. That matrix (spread 1e20 > 2^32) is now outside the
+    // domain; its analogue at the spread limit 2^32 keeps the optimum.
     const std::vector<double> review = {-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1};
     assign(ctx, review, 3, 3, 0, N4M_ERR_UNSUPPORTED);
-    const double big = 0x1p60;
+    const double big = std::ldexp(1.0, N4M_DOMAIN_MAX_SPREAD_LOG2);
     const std::vector<double> centring = {-big, big, big, big, 1, 0, big, 0, 1};
     REQUIRE((assign(ctx, centring, 3, 3, 0) == std::vector<int64_t>{0, 2, 1}));
     check_optimal(ctx, centring, 3, 3);
@@ -279,8 +278,9 @@ void assignment_exactness(n4m_context_t* ctx) {
     const auto columns = assign(ctx, edge, 2, 2, 0);
     REQUIRE((columns == std::vector<int64_t>{0, 1} || columns == std::vector<int64_t>{1, 0}));
     check_optimal(ctx, edge, 2, 2);
-    // Signed mixtures inside the domain: every matrix draws its exponents in a
-    // window [b, b + 62] with b in [-256, 193], plus exact zeros; checked
+    // Signed mixtures inside the domain: every matrix draws full 53-bit
+    // mantissas with exponents in a window [b, b + 31], b in [-256, 224] (spread
+    // below 2^32; sums of such costs are not exact in double), plus exact zeros; checked
     // against the exact enumeration, for minimisation, maximisation and tall
     // (transposed) shapes.
     uint64_t state = 0x9e3779b97f4a7c15u;
@@ -291,15 +291,16 @@ void assignment_exactness(n4m_context_t* ctx) {
     for (int trial = 0; trial < 600; ++trial) {
         const auto rows = static_cast<int64_t>(2 + next() % 3);
         const auto cols = rows + static_cast<int64_t>(next() % 3);
-        const int base = static_cast<int>(next() % 450) - 256;
+        const int base = static_cast<int>(next() % 481) - 256;
         std::vector<double> cost(static_cast<size_t>(rows * cols));
         for (double& v : cost) {
             if (next() % 10 == 0) {
                 v = 0.0;
                 continue;
             }
-            const double mantissa = 1.0 + static_cast<double>(next() % 4096) / 4096.0;
-            const int exponent = base + static_cast<int>(next() % 63);
+            const double mantissa =
+                1.0 + std::ldexp(static_cast<double>(next() & ((uint64_t{1} << 52) - 1)), -52);
+            const int exponent = base + static_cast<int>(next() % 32);
             v = (next() % 2 ? -1.0 : 1.0) * std::ldexp(mantissa, exponent);
         }
         REQUIRE(in_domain(cost));
@@ -323,13 +324,15 @@ void assignment_exactness(n4m_context_t* ctx) {
         }
         REQUIRE(compare_sums(tall_cost, wide_cost) == 0);
     }
-    // Domain boundaries: smallest and largest magnitudes, spread 2^64.
-    assign(ctx, {0x1p-256, 0x1p-193, 0x1p-200, 0x1p-210}, 2, 2, 0);
-    assign(ctx, {0x1p-257, 0x1p-194, 0x1p-200, 0x1p-210}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
-    assign(ctx, {0x1p256, 0x1p200, 0x1p255, 0x1p250}, 2, 2, 0);
-    assign(ctx, {0x1p256 * (1 + 0x1p-52), 0x1p200, 0x1p255, 0x1p250}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
-    assign(ctx, {1.0, 0x1p64, 2.0, 3.0}, 2, 2, 0);
-    assign(ctx, {1.0, 0x1p64 * (1 + 0x1p-52), 2.0, 3.0}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
+    // Domain boundaries: smallest and largest magnitudes, spread 2^32.
+    assign(ctx, {0x1p-256, 0x1p-225, 0x1p-230, 0x1p-240}, 2, 2, 0);
+    assign(ctx, {0x1p-257, 0x1p-226, 0x1p-230, 0x1p-240}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
+    assign(ctx, {0x1p256, 0x1p230, 0x1p255, 0x1p250}, 2, 2, 0);
+    assign(ctx, {0x1p256 * (1 + 0x1p-52), 0x1p230, 0x1p255, 0x1p250}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
+    const double spread = std::ldexp(1.0, N4M_DOMAIN_MAX_SPREAD_LOG2);
+    assign(ctx, {1.0, spread, 2.0, 3.0}, 2, 2, 0);
+    assign(ctx, {1.0, spread * (1 + 0x1p-52), 2.0, 3.0}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
+    assign(ctx, {1.0, 0x1p40, 2.0, 3.0}, 2, 2, 0, N4M_ERR_UNSUPPORTED);
     // A forbidden pair (+inf) is not a numerical value.
     assign(ctx, {std::numeric_limits<double>::infinity(), 1.0, 2.0, 3.0}, 2, 2, 0);
     std::puts("assignment: exact optimum inside the domain, refusals at its edges");
@@ -411,13 +414,13 @@ void normal_sweep(n4m_context_t* ctx) {
                 N4M_ERR_UNSUPPORTED);
         REQUIRE(out[0] == -1.0);
     }
-    // Spread: a mean with 1 and 2^65 is refused, 1 and 2^64 accepted.
+    // Spread: a mean with 1 and 2^32 is accepted, one ulp more is refused.
     {
         double identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
         n4m_matrix_view_t C{};
         REQUIRE(n4m_matrix_view_init_rowmajor(&C, identity, 3, 3, N4M_DTYPE_F64) == N4M_OK);
         std::vector<double> out(9);
-        const double ok_mean[3] = {1.0, 0x1p64, 0.0}, bad_mean[3] = {1.0, 0x1p65, 0.0};
+        const double ok_mean[3] = {1.0, 0x1p32, 0.0}, bad_mean[3] = {1.0, 0x1p32 * (1 + 0x1p-52), 0.0};
         REQUIRE(n4m_random_multivariate_normal(ctx, 1, ok_mean, &C, 3, out.data()) == N4M_OK);
         REQUIRE(n4m_random_multivariate_normal(ctx, 1, bad_mean, &C, 3, out.data()) ==
                 N4M_ERR_UNSUPPORTED);

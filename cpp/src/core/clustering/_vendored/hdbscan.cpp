@@ -43,8 +43,8 @@ struct Row {
     std::size_t size;
 };
 
-// The C API admits only the numerical domain of rule 13 (finite values,
-// nonzero |x| in [2^-256, 2^256], spread <= 2^64). There every nonzero
+// The C API admits only the numerical domain of rules 13/15 (finite values,
+// nonzero |x| in [2^-256, 2^256], spread <= 2^32). There every nonzero
 // coordinate difference lies in [2^-308, 2^257], so every squared distance is
 // a normal double and the scikit-learn sum of squares is kept unchanged.
 double euclidean(const double* x, const double* y, std::size_t p) noexcept {

@@ -8,6 +8,16 @@
 extern "C" {
 #endif
 
+/* Supported numerical domain of the Preflight kernels (lead rules 13/15):
+ * every nonzero |x| in [2^-N4M_DOMAIN_MAX_MAGNITUDE_LOG2,
+ * 2^N4M_DOMAIN_MAX_MAGNITUDE_LOG2] and, wherever a statistic depends on
+ * differences between input values, per row max/min nonzero |x| <=
+ * 2^N4M_DOMAIN_MAX_SPREAD_LOG2. Inputs outside are refused before computing
+ * with N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain").
+ * Exempt: summaries (magnitude bound only) and integer labels/codes. */
+#define N4M_DOMAIN_MAX_MAGNITUDE_LOG2 256
+#define N4M_DOMAIN_MAX_SPREAD_LOG2 32
+
 /* Preflight diagnostics. All outputs are caller-owned. X and matrix outputs
  * accept positive element strides and F64 only. PCA requires n>=2, p>=1,
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
@@ -85,9 +95,9 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
  * values, min_cluster_size>=2, 1<=min_samples<=X.rows, selection_method
  * 0=EOM or 1=leaf, allow_single_cluster 0 or 1. Workloads with
  * rows*rows*cols above 2.5e9 return N4M_ERR_UNSUPPORTED.
- * Numerical domain (rule 13, ABI 2.20): finite X with every nonzero |x| in
- * [2^-256, 2^256] and max/min nonzero |x| <= 2^64; outside it the call
- * returns N4M_ERR_UNSUPPORTED ("input outside the supported numerical
+ * Numerical domain (rules 13/15, N4M_DOMAIN_* above): finite X with every
+ * nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^32; outside
+ * it the call returns N4M_ERR_UNSUPPORTED ("input outside the supported numerical
  * domain ...") before computing (non-finite X stays N4M_ERR_INVALID_ARGUMENT).
  * Inside it every nonzero coordinate difference lies in [2^-308, 2^257], so
  * squared distances, densities (lambda = 1/distance <= 2^308) and stability
@@ -166,11 +176,11 @@ N4M_API n4m_status_t n4m_cluster_jaccard_matrix(
  * last to first, an unassigned column wins equal reduced costs; a constant
  * matrix gives the identity). Caller-owned row_ind/col_ind receive
  * min(rows, cols) pairs in increasing row order; *n_assigned their count.
- * Numerical domain (rule 13): finite costs with every nonzero |cost| in
- * [2^-256, 2^256] and max/min nonzero |cost| <= 2^64 (+inf forbidden pairs
+ * Numerical domain (rules 13/15, N4M_DOMAIN_* above): finite costs with every nonzero |cost| in
+ * [2^-256, 2^256] and max/min nonzero |cost| <= 2^32 (+inf forbidden pairs
  * excluded); outside it N4M_ERR_UNSUPPORTED is returned before computing.
  * Inside it every cost is an integer multiple of 2^E (E = last mantissa bit
- * of the smallest nonzero |cost|) below 2^119 units, and duals, reduced and
+ * of the smallest nonzero |cost|) below 2^87 units, and duals, reduced and
  * path costs are kept as exact signed 192-bit integers in those units: the
  * result is an exact optimum of the given costs, including where SciPy's
  * double arithmetic is suboptimal; ties follow SciPy's order on exact values.
@@ -201,9 +211,9 @@ N4M_API n4m_status_t n4m_random_permutations(
  * returns N4M_ERR_NUMERICAL_FAILURE; regularization is the caller's choice.
  * Limits (N4M_ERR_UNSUPPORTED, checked before any allocation, also for n = 0):
  * 8*(d*d + n*d) bytes at most 256 MiB, d^3/6 and n*d*d at most 2.5e9.
- * Numerical domain (rule 13): mean and the lower triangle of cov each finite
- * with every nonzero |value| in [2^-256, 2^256] and max/min nonzero |value|
- * <= 2^64; outside it N4M_ERR_UNSUPPORTED before computing. Inside it the
+ * Numerical domain (rules 13/15, N4M_DOMAIN_* above): mean and the lower
+ * triangle of cov each finite with every nonzero |value| in [2^-256, 2^256]
+ * and max/min nonzero |value| <= 2^32; outside it N4M_ERR_UNSUPPORTED before computing. Inside it the
  * factor (computed on cov / 4^m with 2^m near the largest standard deviation,
  * an exact rescaling) and the draws stay normal, so scaling cov by 4^k scales
  * the draws by exactly 2^k. */

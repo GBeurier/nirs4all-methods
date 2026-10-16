@@ -32,15 +32,16 @@ constexpr long double max_hdbscan_products = 2500000000.0L;
 // 256 MiB.
 constexpr long double max_working_bytes = 268435456.0L;
 
-// Rule-13 numerical domain shared by the clustering kernels: finite values,
-// every nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^64 within
-// one input array. Inside it the kernels are exact or within their documented
-// precision; outside it they refuse before computing.
-constexpr int domain_exponent = 256;
-constexpr int domain_spread_exponent = 64;
+// Numerical domain shared by the clustering kernels (lead rules 13/15,
+// constants in n4m/metrics.h): finite values, every nonzero |x| in
+// [2^-256, 2^256] and max/min nonzero |x| <= 2^32 within one input array.
+// Inside it the kernels are exact or within their documented precision;
+// outside it they refuse before computing.
+constexpr int domain_exponent = N4M_DOMAIN_MAX_MAGNITUDE_LOG2;
+constexpr int domain_spread_exponent = N4M_DOMAIN_MAX_SPREAD_LOG2;
 constexpr const char* domain_message =
-    "input outside the supported numerical domain (finite, nonzero |x| in "
-    "[2^-256, 2^256], max/min nonzero |x| <= 2^64)";
+    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
+    "max/min nonzero |x| <= 2^32 per input array)";
 
 struct DomainScan {
     double low = std::numeric_limits<double>::infinity();

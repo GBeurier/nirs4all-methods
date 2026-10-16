@@ -227,7 +227,7 @@ Status solve(std::size_t nr, std::size_t nc, const double* input_cost, bool maxi
 
     // Exact integer units: 2^E with E the exponent of the last mantissa bit
     // of the smallest nonzero |cost|. In the supported domain (nonzero |cost|
-    // in [2^-256, 2^256], spread <= 2^64) every cost is below 2^119 units.
+    // in [2^-256, 2^256], spread <= 2^32) every cost is below 2^87 units.
     // Duals and path costs are differences of sums of at most
     // 4 * (rows + 1) costs, far below the 2^189 overflow guard for every size
     // the C API admits; a guard breach is reported, never wrapped.

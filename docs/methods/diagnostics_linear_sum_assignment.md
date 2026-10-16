@@ -4,7 +4,7 @@ _Namespace_: **`n4m.optimize`** · _Fully-qualified_: `n4m.optimize.linear_sum_a
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_linear_sum_assignment`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L180). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_linear_sum_assignment`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L190). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -26,7 +26,7 @@ Matching clusters across partitions by maximum total Jaccard overlap, and other 
 
 ### Limits and validation
 
-Inside the declared numerical domain (nonzero |cost| in [2^-256, 2^256], spread at most 2^64; other inputs are refused) duals and path costs are exact 192-bit fixed-point integers, so the result is an exact optimum even where SciPy's double arithmetic loses small differences next to large costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned from last to first, unassigned columns first on equal reduced cost), so equal-cost solutions are reproducible but arbitrary. NaN and $-\infty$ costs are invalid; a matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is $O(rc\min(r,c))$ exact-arithmetic operations and is limited to 1e8.
+Inside the declared numerical domain (nonzero |cost| in [2^-256, 2^256], spread at most 2^32; other inputs are refused) duals and path costs are exact 192-bit fixed-point integers, so the result is an exact optimum even where SciPy's double arithmetic loses small differences next to large costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned from last to first, unassigned columns first on equal reduced cost), so equal-cost solutions are reproducible but arbitrary. NaN and $-\infty$ costs are invalid; a matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is $O(rc\min(r,c))$ exact-arithmetic operations and is limited to 1e8.
 
 ### Implementation
 
