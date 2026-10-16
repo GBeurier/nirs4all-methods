@@ -31,10 +31,11 @@ ABI 2.20.0 (project version unchanged until release).
   Inside, results are correct to the documented precision. The machinery that
   only served out-of-domain inputs (halved differences, 1/8 prescaling,
   subnormal clamps) is removed. The same domain now applies to
-  `n4m_preflight_nearest_neighbors` and `n4m_preflight_local_contrast`
-  (continuous targets). `n4m_preflight_summary_compute` keeps only the
-  magnitude bound, since its compensated moments and quartiles need no
-  spread bound.
+  `n4m_preflight_local_contrast` (continuous targets).
+  `n4m_preflight_summary_compute` and `n4m_preflight_nearest_neighbors` keep
+  only the magnitude bound: compensated moments and quartiles, compensated
+  distances and exact ordering near ties need no spread bound, so
+  rounding-level PCA score components are accepted.
 
 - Noise proxy precision contract made honest. Each residual has an absolute
   error of at most `2 W eps sum|c_k| max|w_k|` against the exact
