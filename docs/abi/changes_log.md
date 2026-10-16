@@ -1,6 +1,49 @@
 # ABI — Changes Log
 
-## 2026-10-16 — ABI 2.20.0 (continued): energy distance and PCA monitoring (unreleased)
+## 2026-10-16 — ABI 2.20.0: Preflight statistics, domain shift, variance components, cluster matching (released in 1.3.7)
+
+Nineteen new caller-buffer operations; the 2.19 signatures are unchanged and
+no serialized format changes. Behaviour changes of 2.19 symbols are listed
+in the subsections (factor-association centring, HDBSCAN domain and buffer
+validation, SNV constant rows, PCA resolution) and in CHANGELOG 1.3.7.
+
+Supported numerical domain D (lead rules 13 and 15, public macros
+`N4M_DOMAIN_MAX_MAGNITUDE_LOG2 = 256` and `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32` in
+`n4m/metrics.h`): finite values, every nonzero |x| in [2^-256, 2^256] and,
+where a statistic depends on differences, max/min nonzero |x| <= 2^32 in the
+array or slice that is differenced. Outside D a kernel returns
+`N4M_ERR_UNSUPPORTED` before computing, with the message "input outside the
+supported numerical domain (nonzero |x| in [2^-256, 2^256], max/min nonzero
+|x| <= 2^32)" or, for the magnitude-only kernels (summary, nearest
+neighbours, group means), "input outside the supported numerical domain
+(nonzero |x| in [2^-256, 2^256])". Holm/BH accept nonzero p >= 2^-1022;
+labels and codes are not checked; the PCA kernels use [2^-128, 2^128].
+
+Final signatures (all declared in `n4m/metrics.h`):
+
+```c
+n4m_status_t n4m_cluster_jaccard_matrix(n4m_context_t* ctx, const int64_t* labels_a, const int64_t* labels_b, int64_t n, int64_t n_clusters_a, int64_t n_clusters_b, double* jaccard, int64_t* intersections, int64_t* sizes_a, int64_t* sizes_b);
+n4m_status_t n4m_linear_sum_assignment(n4m_context_t* ctx, const n4m_matrix_view_t* cost, int32_t maximize, int64_t* row_ind, int64_t* col_ind, int64_t* n_assigned);
+n4m_status_t n4m_preflight_pca_compute_resolved(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k, const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings, double* eigenvalues, double* full_moments, double* resolution, uint8_t* unresolved);
+n4m_status_t n4m_preflight_snv_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids, int64_t n_groups, const n4m_matrix_view_t* out, double* error_bounds);
+n4m_status_t n4m_random_multivariate_normal(n4m_context_t* ctx, uint64_t seed, const double* mean, const n4m_matrix_view_t* cov, int64_t n, double* out);
+n4m_status_t n4m_random_permutations(n4m_context_t* ctx, uint64_t seed, int64_t n, int64_t n_permutations, int64_t* out);
+n4m_status_t n4m_stats_bh_adjust(n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
+n4m_status_t n4m_stats_correlation_exact(n4m_context_t* ctx, const double* x, const double* y, int64_t n, int32_t method, int64_t max_arrangements, double* out_four);
+n4m_status_t n4m_stats_correlation_test(n4m_context_t* ctx, const double* x, const double* y, int64_t n, int32_t method, int32_t n_permutations, uint64_t seed, double* out_five, int64_t* out_two);
+n4m_status_t n4m_stats_energy_distance(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes, int32_t n_groups, int32_t n_permutations, uint64_t seed, double* energy, double* energy_bounds, double* mean_distances, double* out_five, int64_t* out_three);
+n4m_status_t n4m_stats_factor_association_exact(n4m_context_t* ctx, const int64_t* factor_codes, const double* targets, int64_t n, int32_t categorical, int64_t max_arrangements, double* out_four);
+n4m_status_t n4m_stats_group_means(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes, int64_t n_groups, double* out_means, int64_t* out_counts);
+n4m_status_t n4m_stats_pca_monitor(n4m_context_t* ctx, const n4m_matrix_view_t* reference, const n4m_matrix_view_t* monitored, int32_t max_components, int32_t n_folds, double alpha, double* eigenvalues, double* reference_t2, double* reference_q, double* monitored_t2, double* monitored_q, int32_t* effective_components, int64_t* out_counts, double* out_thirteen);
+n4m_status_t n4m_stats_permanova(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes, const int64_t* strata_codes, int32_t n_permutations, uint64_t seed, double* out_fifteen, int64_t* out_two, int32_t* ss_exponent);
+n4m_status_t n4m_stats_permanova_freedman_lane(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes, const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations, uint64_t seed, double* out_fourteen, int64_t* out_two, int32_t* ss_exponent);
+n4m_status_t n4m_stats_permdisp(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes, int32_t n_permutations, uint64_t seed, double* distances, double* group_mean_distances, double* out_eight, int64_t* out_two, int32_t* distance_exponent);
+n4m_status_t n4m_stats_regression_scores(n4m_context_t* ctx, const double* y_true, const double* y_pred, int64_t n, double* out_three);
+n4m_status_t n4m_stats_variance_components_intervals(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids, const int64_t* cluster_ids, const uint8_t* valid_mask, double confidence, int32_t n_bootstrap, uint64_t seed, double* out, int64_t* n_valid_replicates);
+n4m_status_t n4m_stats_variance_components_reml(n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids, const uint8_t* valid_mask, double* out, int32_t* band_status);
+```
+
+### Energy distance and PCA monitoring
 
 Add two generic caller-buffer operations in `n4m/metrics.h` to the same
 unreleased 2.20.0 surface; no serialized format changes.
@@ -28,7 +71,7 @@ otherwise `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical
 domain") before any computation. Budgets are checked before allocation:
 energy 20 million pairs, 50 million cells, 10 million group pairs, 2.5 billion
 operations; monitor 50 million cells and 10 billion operations.
-## 2026-10-13 — ABI 2.20.0 (continued): group means and regression scores (unreleased)
+### Group means and regression scores
 
 These two kernels are added to the same unreleased 2.20.0 surface in
 `n4m/metrics.h`. No serialized format changes.
@@ -50,7 +93,7 @@ MAE; absolute, times 1 + SSE/SST, for R²). Outside this domain they return
 numerical domain (...)". Nonfinite values return `N4M_ERR_INVALID_ARGUMENT`,
 as do invalid group codes and empty groups.
 
-## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
+### Generic correlation test and Benjamini-Hochberg
 
 Add four generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19
 signatures are unchanged and no serialized format changes.
@@ -76,7 +119,7 @@ the between-group sum (two identical groups `1e16 + {0, 2, 4}` gave eta^2 =
 0.27, F = 1.5). Targets are now centered after an exact power-of-two scaling,
 a shift to the first target and a residual-mean correction; eta^2 and F are
 translation invariant. Permutation draws and counts are unchanged.
-## 2026-10-13 — ABI 2.20.0 (continued): PERMANOVA and PERMDISP (unreleased)
+### PERMANOVA and PERMDISP
 
 Add two more generic caller-buffer operations in `n4m/metrics.h` to the same
 unreleased 2.20.0 surface; no serialized format changes.
@@ -194,7 +237,7 @@ Holm and BH are exempt from the spread rule (they perform no subtraction):
 p-values must be finite, in [0, 1], and nonzero p >= 2^-1022; subnormal
 p-values are refused with `N4M_ERR_UNSUPPORTED`.
 
-## 2026-10-13 — ABI 2.20.0 (continued): one-way random-effects variance components (unreleased)
+### One-way random-effects variance components
 
 Add two caller-buffer operations in `n4m/metrics.h`. Earlier symbols are
 unchanged and no serialized format changes.
@@ -247,7 +290,7 @@ df in [1/2, 2^31]. Measured relative error on the test grids (SciPy, mpmath,
 closed forms of chi-square(2) and F(2, nu), F(nu, 2) up to nu = 2^31): worst
 5e-12, tests assert 1e-10; no bound is proven elsewhere. Bootstrap work above 2.5e9 operations,
 `B x features x (groups + 1024)`, returns `N4M_ERR_UNSUPPORTED`.
-## 2026-10-13 — ABI 2.20.0: SNV with rounding bounds (unreleased)
+### SNV with rounding bounds
 
 Add `n4m_preflight_snv_compute(ctx, X, group_ids, n_groups, out,
 error_bounds)` in `n4m/metrics.h`. It applies SNV (centring and population
@@ -325,7 +368,7 @@ The magnitude-sweep tests (`cpp/tests/test_preflight_robustness.cpp`, JS
 - independent oracles: exact rational pair decisions and 400-digit SNV
   references.
 Existing symbol signatures are unchanged, and no serialized format changes.
-## 2026-10-13 — ABI 2.20.0: cluster matching and Gaussian null kernels (unreleased)
+### Cluster matching and Gaussian null kernels
 
 Add three caller-buffer operations in `n4m/metrics.h`. 2.19 symbols are unchanged
 and no serialized format changes. `n4m_cluster_jaccard_matrix` writes the
@@ -355,7 +398,7 @@ numerators and denominators (n ≤ 2^23 by memory). `n4m_linear_sum_assignment` 
 exact optimum (192-bit fixed-point duals, SciPy tie order on exact values, no centring,
 `rows*cols*min <= 1e8`). `n4m_cluster_jaccard_matrix` refuses n > 2^53. Each header states
 its domain of validity.
-## Unreleased — ABI 2.20.0: `n4m_preflight_pca_compute_resolved`
+### PCA resolution: `n4m_preflight_pca_compute_resolved`
 
 Add one caller-buffer operation in `n4m/metrics.h`. 2.19 symbols keep their
 signatures, and no serialized format changes.
