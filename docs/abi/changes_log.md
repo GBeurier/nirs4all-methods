@@ -19,9 +19,10 @@ squaring. Rows at the smallest subnormal, rows that overflow, rows offset by
 2^60 or 1e300 and rows with 100,000 offset bands are standardized within
 their bound.
 
-The ABI 2.18 kernels `n4m_preflight_summary_compute`,
-`n4m_preflight_nearest_neighbors` and `n4m_preflight_local_contrast` (for
-continuous targets) also follow D. Their computations change as follows:
+The ABI 2.18 kernels `n4m_preflight_nearest_neighbors` and
+`n4m_preflight_local_contrast` (for continuous targets) also follow D.
+`n4m_preflight_summary_compute` applies only the magnitude bound: its mean,
+SD and quartiles are correct for any spread inside it. Their computations change as follows:
 
 - summary: the mean is a double-double from an unevaluated Neumaier pair,
   the SD a compensated sum of squared deviations, and the quartiles exact
