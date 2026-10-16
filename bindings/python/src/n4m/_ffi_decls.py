@@ -542,6 +542,7 @@ SYMBOLS = (
     ("n4m_outlier_detection_high_leverage_is_fitted", (c_void_p, POINTER(c_int)), c_int),
     ("n4m_outlier_detection_high_leverage_threshold", (c_void_p,), c_double),
     ("n4m_outlier_detection_hotelling_t2", (MatrixView, c_int32, c_double, POINTER(c_double), c_int64, POINTER(c_double)), c_int),
+    ("n4m_outlier_detection_hotelling_t2_resolved", (MatrixView, c_int32, c_double, POINTER(c_double), c_int64, POINTER(c_double), POINTER(c_int32)), c_int),
     ("n4m_outlier_detection_q_residuals", (MatrixView, c_int32, c_double, POINTER(c_double), c_int64, POINTER(c_double)), c_int),
     ("n4m_outlier_detection_spectral_quality_apply", (c_void_p, MatrixView, POINTER(c_uint8), POINTER(FilterStats)), c_int),
     ("n4m_outlier_detection_spectral_quality_create", (POINTER(c_void_p), c_double, c_double, c_double, c_int, c_double, c_int, c_double, c_int), c_int),

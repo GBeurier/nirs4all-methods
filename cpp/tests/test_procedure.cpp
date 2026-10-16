@@ -813,6 +813,13 @@ const std::map<std::string, Direct>& generic_checks() {
          [](n4m_context_t*, const n4m_params_t* p, const n4m_fit_inputs_v1_t& in,
             const n4m_method_result_t* r) {
              outlier_statistic(p, in, r, "t2", n4m_outlier_detection_hotelling_t2);
+             std::vector<double> values(kRows);
+             double ucl = 0.0;
+             int32_t rank = -1;
+             CHECK(n4m_outlier_detection_hotelling_t2_resolved(
+                       *in.X, pi32(p, "n_components"), pdbl(p, "alpha"), values.data(), kRows,
+                       &ucl, &rank) == N4M_OK);
+             CHECK(scalar_is(r, "n_components_used", static_cast<double>(rank)));
          }},
         {"utilities.q_residuals",
          [](n4m_context_t*, const n4m_params_t* p, const n4m_fit_inputs_v1_t& in,

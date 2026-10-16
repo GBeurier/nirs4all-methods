@@ -7,7 +7,7 @@ import {
     preflightFactorAssociation, preflightHolmAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex,
+    clusterHdbscan, preflightAdjustedRandIndex, HotellingT2,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -294,5 +294,50 @@ for (const c of fixture.cases) {
     c.membership_hex.map(hex).forEach((v, i) => assert.ok(same(got.membership[i], v), c.name));
     c.outlier_scores_hex.map(hex).forEach((v, i) => assert.ok(same(got.outlierScores[i], v), c.name));
     assert.deepEqual(got.tree.map((node) => node.parent), c.tree_parent, c.name);
+}
+// Every former automatic solver class of the PCA on analytic spectra:
+// X = [D 0; -D 0] (2q x p) has centred variances 2 d_i^2 / (2q - 1) and
+// zeros (mirrors pca_solver_class_tests in cpp/tests/test_preflight.cpp).
+// q = 128, d_i = 1 + i/128, k = 10 (review b8fix3) was 7 % low through the
+// randomized sketch.
+for (const [q, p, k, zeroTail] of [[128, 128, 10, 0], [32, 32, 10, 0], [100, 300, 10, 0],
+                                   [150, 400, 10, 0], [24, 24, 24, 4], [10, 40, 20, 0]]) {
+    const n = 2 * q;
+    const d = Array.from({length: q}, (_, i) => (i < q - zeroTail ? 1 + i / q : 0));
+    const x = new Float64Array(n * p);
+    d.forEach((v, i) => { x[i * p + i] = v; x[(q + i) * p + i] = -v; });
+    const ref = new Array(Math.min(n, p)).fill(0);
+    d.forEach((v, i) => { ref[i] = 2 * v * v / (n - 1); });
+    ref.sort((a, b) => b - a);
+    const r = preflightPca({data: x, rows: n, cols: p}, k);
+    assert.equal(r.resolution, 16 * Math.max(n, p) * Number.EPSILON * r.eigenvalues[0]);
+    for (let a = 0; a < k; ++a) {
+        if (ref[a] > 0) {
+            assert.equal(r.unresolved[a], 0, `${n}x${p} component ${a}`);
+            assert.ok(Math.abs(r.eigenvalues[a] - ref[a]) <= r.resolution, `${n}x${p} component ${a}`);
+        } else {
+            assert.equal(r.unresolved[a], 1);
+            assert.equal(r.eigenvalues[a], 0);
+            for (let i = 0; i < n; ++i) assert.equal(r.scores.data[i * k + a], 0);
+        }
+    }
+    for (let a = 0; a < k; ++a) for (let b = 0; b <= a; ++b) {
+        let dot = 0;
+        for (let j = 0; j < p; ++j) dot += r.loadings.data[a * p + j] * r.loadings.data[b * p + j];
+        assert.ok(Math.abs(dot - (a === b ? 1 : 0)) <= 1e-12);
+    }
+}
+// k is validated before any allocation (k = INT_MAX used to abort).
+assert.throws(() => preflightPca({data: new Float64Array([1, 2]), rows: 2, cols: 1}, 2147483647));
+
+// Hotelling T² keeps only resolved directions (review b8fix3): column 3 =
+// column 1 + column 2, rank 2; exact rational references, UCL with r = 2.
+{
+    const out = new HotellingT2({n_components: 3, alpha: 0.05})
+        .run({data: new Float64Array([1, 2, 3, 4, 5, 9, 6, 3, 9, 2, 8, 10]), rows: 4, cols: 3});
+    assert.equal(out.n_components_used, 2);
+    [5439, 417, 4113, 4599].forEach((num, i) =>
+        assert.ok(Math.abs(out.t2.data[i] - num / 2428) <= 1e-12));
+    assert.ok(Math.abs(out.ucl - 71.25) <= 1e-9);
 }
 console.log("JS/WASM Preflight diagnostics passed");

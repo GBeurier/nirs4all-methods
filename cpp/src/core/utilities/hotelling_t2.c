@@ -15,6 +15,7 @@
 
 #include "hotelling_t2.h"
 
+#include <float.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -130,7 +131,8 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
                                          int32_t n_components,
                                          double alpha,
                                          double* t2_per_sample,
-                                         double* ucl_out) {
+                                         double* ucl_out,
+                                         int32_t* rank_used) {
     if (X == NULL || t2_per_sample == NULL || ucl_out == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
@@ -187,27 +189,41 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
         return svd_st;
     }
 
+    /* Only resolved directions enter T²: singular values are accurate to
+     * the absolute bound O(max(n,p) eps s_max) (svd.h), so a direction with
+     * sigma_j <= 16 max(n,p) eps sigma_1 is rounding noise (e.g. an exactly
+     * collinear column) and dividing by its variance would amplify it.
+     * S is sorted, so the resolved directions are the leading r <= k. */
+    const double tol = 16.0 * (double)(n > p ? n : p) * DBL_EPSILON * S[0];
+    int32_t r = 0;
+    while (r < k && S[r] > tol) ++r;
+
     /* T = U * Σ; eigenvalues λ_j = σ_j² / (n - 1). */
     const double inv_nm1 = 1.0 / (double)(n - 1);
     for (int64_t i = 0; i < n; ++i) {
         double t2 = 0.0;
-        for (int32_t j = 0; j < k; ++j) {
+        for (int32_t j = 0; j < r; ++j) {
             const double sigma_j = S[j];
             const double lambda  = sigma_j * sigma_j * inv_nm1;
-            if (lambda > 0.0) {
-                const double t = U[(size_t)i * (size_t)p + (size_t)j] * sigma_j;
-                t2 += (t * t) / lambda;
-            }
+            const double t = U[(size_t)i * (size_t)p + (size_t)j] * sigma_j;
+            t2 += (t * t) / lambda;
         }
         t2_per_sample[i] = t2;
     }
 
-    /* UCL = k (n - 1)(n + 1) / (n (n - k)) * F^{-1}(1 - alpha; k, n - k). */
-    const double d1 = (double)k;
-    const double d2 = (double)(n - k);
-    const double Fq = f_quantile_ref(1.0 - alpha, d1, d2);
-    *ucl_out = (double)k * (double)(n - 1) * (double)(n + 1) /
-               ((double)n * (double)(n - k)) * Fq;
+    /* UCL = r (n - 1)(n + 1) / (n (n - r)) * F^{-1}(1 - alpha; r, n - r),
+     * with r the rank actually used (r = k for a full-rank request). No
+     * resolved direction (constant X): T² = 0 and UCL = 0. */
+    if (r > 0) {
+        const double d1 = (double)r;
+        const double d2 = (double)(n - r);
+        const double Fq = f_quantile_ref(1.0 - alpha, d1, d2);
+        *ucl_out = (double)r * (double)(n - 1) * (double)(n + 1) /
+                   ((double)n * (double)(n - r)) * Fq;
+    } else {
+        *ucl_out = 0.0;
+    }
+    if (rank_used != NULL) *rank_used = r;
 
     free(Xc);
     free(U);

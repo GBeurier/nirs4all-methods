@@ -13,7 +13,7 @@ extern "C" {
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
  * elements, and full_moments has two elements: sum(lambda) and
  * sum(lambda^2), over the FULL centered covariance spectrum (ddof=1).
- * The moments remain exact when PCA is truncated or approximated.
+ * The moments remain exact when PCA is truncated.
  * Supported numerical domain: every nonzero |x| in [2^-128, 2^128] and
  * max/min nonzero |x| <= 2^32 (exact zeros allowed); anything else returns
  * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain")
@@ -23,9 +23,15 @@ extern "C" {
  * have no influence, translations change nothing beyond the input's
  * rounding, and scaling X by 2^s scales eigenvalues and full_moments[0] by
  * 4^s, full_moments[1] by 16^s and scores by 2^s (loadings invariant).
+ * Decomposition: the Gram matrix on the smaller side (accumulated in long
+ * double) is eigendecomposed by a converged symmetric QL solver, for every
+ * n, p and k; there is no randomized or iteration-limited approximation,
+ * and truncation only selects the leading k components.
  * Accuracy (absolute only): eigenvalues carry an absolute error of order
- * max(n,p) * DBL_EPSILON * lambda_max, as for any backward-stable SVD; no
- * relative accuracy is claimed for smaller variances. The conservative
+ * max(n,p) * DBL_EPSILON * lambda_max, as for any backward-stable
+ * eigensolver; no relative accuracy is claimed for smaller variances. Where
+ * long double is double (MSVC, Apple arm64), the Gram accumulation can add
+ * up to n * DBL_EPSILON * trace(C) in the worst case. The conservative
  * threshold resolution = 16 * max(n,p) * DBL_EPSILON * lambda_max separates
  * resolved components from unresolved ones: a component whose variance is
  * not above it is published with eigenvalue and scores 0 (its loading row
