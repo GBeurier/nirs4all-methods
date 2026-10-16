@@ -159,15 +159,17 @@ for (const c of fixture.cases) {
     c.outlier_scores_hex.map(hex).forEach((v, i) => assert.ok(same(got.outlierScores[i], v), c.name));
     assert.deepEqual(got.tree.map((node) => node.parent), c.tree_parent, c.name);
 }
-// Overflowing squared distances once produced 7 tree nodes for 4 rows.
-const huge = clusterHdbscan({data: new Float64Array([0, 1e155, 2e155, 3e155]), rows: 4, cols: 1},
-    {minClusterSize: 2, minSamples: 2});
+// Overflowing squared distances once produced 7 tree nodes for 4 rows; such
+// inputs are now outside the rule-13 domain and refused with status 10.
 const unit = clusterHdbscan({data: new Float64Array([0, 1, 2, 3]), rows: 4, cols: 1},
     {minClusterSize: 2, minSamples: 2});
-assert.ok(huge.tree.length <= 4);
-assert.deepEqual(huge.labels, unit.labels);
-assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), rows: 2, cols: 1},
-    {minClusterSize: 2, minSamples: 2}));
+const edge = clusterHdbscan({data: new Float64Array([0, 2 ** 254, 2 ** 255, 3 * 2 ** 254]), rows: 4, cols: 1},
+    {minClusterSize: 2, minSamples: 2});
+assert.deepEqual(edge.labels, unit.labels);
+for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
+    assert.throws(() => clusterHdbscan({data: new Float64Array(data), rows: data.length, cols: 1},
+        {minClusterSize: 2, minSamples: 2}), (e) => e.status === 10);
+}
 // Review 2026-10-13 P0: a 65536 x 65536 overlapping covariance view with n = 0
 // made d*d wrap to 0 in WASM32 and the Cholesky factor be written into an empty
 // vector. The limits are now checked first and the call is refused.
@@ -189,38 +191,38 @@ assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), row
         m._free(mean); backing.free(); ctx.destroy();
     }
 }
-// Magnitude robustness (same rules as n4m_cluster_robustness_tests): every
-// result is either invariant or an explicit N4M_ERR_UNSUPPORTED (10).
+// Rule-13 domain (same rules as n4m_cluster_robustness_tests): finite,
+// nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^64. Inside it the
+// results are exact power-of-two rescalings or exact optima; outside it every
+// kernel refuses with N4M_ERR_UNSUPPORTED (10) and no trap.
 {
     const status = (fn) => { try { fn(); return 0; } catch (e) { return e.status ?? -1; } };
-    // Purely relative: the expected values span 2^-1000 to 2^1000.
-    const relEq = (a, e) => assert.ok(Math.abs(a - e) <= 1e-12 * Math.abs(e), `${a} != ${e}`);
     const line = [0, 1, 3, 10, 11, 14];
-    const unit = clusterHdbscan({data: new Float64Array(line), rows: 6, cols: 1}, {minClusterSize: 2, minSamples: 2});
-    for (const k of [-500, -100, 100, 500, 1000]) {
+    const unitLine = clusterHdbscan({data: new Float64Array(line), rows: 6, cols: 1}, {minClusterSize: 2, minSamples: 2});
+    for (const k of [-256, -100, 100, 252]) {
         const got = clusterHdbscan({data: new Float64Array(line.map((v) => v * 2 ** k)), rows: 6, cols: 1},
             {minClusterSize: 2, minSamples: 2});
-        assert.deepEqual(got.labels, unit.labels);
-        got.persistence.forEach((v, i) => relEq(v, unit.persistence[i]));
-        got.tree.forEach((node, i) => relEq(node.stability, unit.tree[i].stability * 2 ** -k));
+        assert.deepEqual(got.labels, unitLine.labels);
+        assert.deepEqual(Array.from(got.persistence), Array.from(unitLine.persistence));
+        got.tree.forEach((node, i) => assert.equal(node.stability, unitLine.tree[i].stability * 2 ** -k));
     }
-    // Review 2026-10-13: 1e-308 overflowed the stability sums (persistence NaN)
-    // and 1e-310 gave an infinite density for a positive distance, with OK.
-    for (const factor of [1e-308, 1e-310]) {
+    // Outside: below 2^-256, above 2^256, and the review's 1e-308 / 1e-310.
+    for (const factor of [2 ** -257, 2 ** 253, 1e-308, 1e-310]) {
         const code = status(() => clusterHdbscan({data: new Float64Array(line.map((v) => v * factor)), rows: 6, cols: 1},
             {minClusterSize: 2, minSamples: 2}));
         assert.equal(code, 10, `hdbscan x ${factor}`);
     }
     const base = Array.from({length: 35}, (_, i) => 1 + ((i * 7.31) % 9));
     const want = linearSumAssignment({data: new Float64Array(base), rows: 5, cols: 7});
-    for (const scale of [2 ** -1014, 2 ** -500, 2 ** 500, 2 ** 1019]) {
-        assert.deepEqual(linearSumAssignment({data: new Float64Array(base.map((v) => v * scale / 16)), rows: 5, cols: 7}).colInd,
+    for (const k of [-256, -100, 100, 252]) {
+        assert.deepEqual(linearSumAssignment({data: new Float64Array(base.map((v) => v * 2 ** k)), rows: 5, cols: 7}).colInd,
             want.colInd);
     }
-    // Costs near DBL_MAX next to subnormal costs cannot be scaled exactly.
-    const span = base.map((v) => v * 1e-310);
-    span[0] = 1.7e308;
-    assert.equal(status(() => linearSumAssignment({data: new Float64Array(span), rows: 5, cols: 7})), 10);
+    for (const k of [-257, 253]) {
+        assert.equal(status(() => linearSumAssignment({data: new Float64Array(base.map((v) => v * 2 ** k)), rows: 5, cols: 7})), 10);
+    }
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 64, 2, 3]), rows: 2, cols: 2})), 0);
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 64 * (1 + 2 ** -52), 2, 3]), rows: 2, cols: 2})), 10);
     // Exact oracle: a double is an integer multiple of 2^-1074 (BigInt sums).
     const exactBig = (x) => {
         if (x === 0) return 0n;
@@ -232,9 +234,10 @@ assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), row
         if (exponent !== 0n) mantissa = (mantissa | (1n << 52n)) << (exponent - 1n);
         return bits >> 63n ? -mantissa : mantissa;
     };
-    const optimal = (cost, rows, cols) => {
-        const got = linearSumAssignment({data: new Float64Array(cost), rows, cols}).colInd;
-        const total = (columns) => columns.reduce((acc, j, i) => acc + exactBig(cost[i * cols + j]), 0n);
+    const optimal = (cost, rows, cols, maximize = false) => {
+        const got = linearSumAssignment({data: new Float64Array(cost), rows, cols}, maximize).colInd;
+        const sign = maximize ? -1n : 1n;
+        const total = (columns) => columns.reduce((acc, j, i) => acc + sign * exactBig(cost[i * cols + j]), 0n);
         let best = null;
         const visit = (prefix) => {
             if (prefix.length === rows) {
@@ -248,27 +251,58 @@ assert.throws(() => clusterHdbscan({data: new Float64Array([-1e308, 1e308]), row
         assert.equal(total(got), best);
         return got;
     };
-    // Review 2026-10-13 P0: global centring returned [0, 1, 2] here and
-    // declared the +-1e308 matrix infeasible.
-    assert.deepEqual(optimal([-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1], 3, 3), [0, 2, 1]);
-    optimal([-1e308, 1e308, -1e308, 1e308], 2, 2);
+    // Review 2026-10-13 P0: global centring returned [0, 1, 2] for the 1e20
+    // matrix and declared the +-1e308 matrix infeasible. Both are outside the
+    // domain now; their in-domain analogues need exact sums.
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1]), rows: 3, cols: 3})), 10);
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([-1e308, 1e308, -1e308, 1e308]), rows: 2, cols: 2})), 10);
+    assert.deepEqual(optimal([-(2 ** 60), 2 ** 60, 2 ** 60, 2 ** 60, 1, 0, 2 ** 60, 0, 1], 3, 3), [0, 2, 1]);
+    optimal([-(2 ** 256), 2 ** 256, -(2 ** 256), 2 ** 256], 2, 2);
     let state = 12345;
     const random = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648; };
     for (let trial = 0; trial < 150; ++trial) {
         const rows = 2 + Math.floor(random() * 3), cols = rows + Math.floor(random() * 3);
-        const spread = [60, 300, 1000][trial % 3];
+        const low = Math.floor(random() * 450) - 256;
         const cost = Array.from({length: rows * cols}, () => {
-            const exponent = Math.min(1022, Math.floor(random() * 2 * spread) - spread);
+            if (random() < 0.1) return 0;
+            const exponent = low + Math.floor(random() * 63);
             return (random() < 0.5 ? -1 : 1) * (1 + Math.floor(random() * 4096) / 4096) * 2 ** exponent;
         });
-        optimal(cost, rows, cols);
+        optimal(cost, rows, cols, trial % 2 === 1);
+    }
+    // Review 2026-10-13 P0 (memory): a 1 x 32,000,000 zero matrix needed more
+    // than 2 GiB in WASM32; it is refused before any allocation.
+    {
+        const m = getModule(), ctx = Context.create();
+        const backing = m._malloc(32000000 * 8);
+        try {
+            assert.notEqual(backing, 0);
+            m.HEAPF64.fill(0, backing / 8, backing / 8 + 32000000);
+            const view = m._malloc(64), rows = m._malloc(8), cols = m._malloc(8), count = m._malloc(8);
+            try {
+                assert.equal(m.ccall("n4m_matrix_view_init_rowmajor", "number",
+                    ["number", "number", "i64", "i64", "number"], [view, backing, 1n, 32000000n, 1]), 0);
+                assert.equal(m.ccall("n4m_linear_sum_assignment", "number",
+                    ["number", "number", "number", "number", "number", "number"],
+                    [ctx.handle, view, 0, rows, cols, count]), 10);
+            } finally {
+                for (const p of [view, rows, cols, count]) m._free(p);
+            }
+        } finally {
+            m._free(backing);
+            ctx.destroy();
+        }
     }
     const cov = [2.0, 0.3, 0.1, 0.3, 1.0, -0.2, 0.1, -0.2, 0.5];
     const unitDraw = randomMultivariateNormal(new Float64Array(3), {data: new Float64Array(cov), rows: 3, cols: 3}, 6, 42n);
-    for (const k of [-509, 511]) {
+    for (const k of [-126, 127]) {
         const got = randomMultivariateNormal(new Float64Array(3),
             {data: new Float64Array(cov.map((v) => v * 4 ** k)), rows: 3, cols: 3}, 6, 42n);
         got.data.forEach((v, i) => assert.equal(v, unitDraw.data[i] * 2 ** k));
+    }
+    for (const k of [-127, 128]) {
+        assert.equal(status(() => randomMultivariateNormal(new Float64Array(3),
+            {data: new Float64Array(cov.map((v) => v * 4 ** k)), rows: 3, cols: 3}, 6, 42n)), 10);
     }
 }
 // Same assignment, Jaccard, normal-draw and Gaussian HDBSCAN gate as the

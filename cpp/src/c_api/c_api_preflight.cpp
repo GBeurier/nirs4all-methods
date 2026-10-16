@@ -26,9 +26,44 @@ using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
 constexpr long double max_hdbscan_products = 2500000000.0L;
-// Internal working copies stay below 50 million doubles (400 MB), which also
-// keeps every byte count representable in a 32-bit size_t (WASM32).
-constexpr long double max_buffer_doubles = 50000000.0L;
+// Cumulative working memory of one clustering-kernel call, checked before any
+// allocation: the WASM32 build has at most 2 GiB and aborts on a failed
+// allocation (C++ exceptions are not caught there), so each call stays below
+// 256 MiB.
+constexpr long double max_working_bytes = 268435456.0L;
+
+// Rule-13 numerical domain shared by the clustering kernels: finite values,
+// every nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^64 within
+// one input array. Inside it the kernels are exact or within their documented
+// precision; outside it they refuse before computing.
+constexpr int domain_exponent = 256;
+constexpr int domain_spread_exponent = 64;
+constexpr const char* domain_message =
+    "input outside the supported numerical domain (finite, nonzero |x| in "
+    "[2^-256, 2^256], max/min nonzero |x| <= 2^64)";
+
+struct DomainScan {
+    double low = std::numeric_limits<double>::infinity();
+    double high = 0.0;
+    bool finite = true;
+    void add(double v) noexcept {
+        if (!std::isfinite(v)) {
+            finite = false;
+            return;
+        }
+        const double magnitude = std::fabs(v);
+        if (magnitude == 0.0) return;
+        low = std::min(low, magnitude);
+        high = std::max(high, magnitude);
+    }
+    bool inside() const noexcept {
+        if (!finite) return false;
+        if (high == 0.0) return true;
+        return low >= std::ldexp(1.0, -domain_exponent) &&
+               high <= std::ldexp(1.0, domain_exponent) &&
+               high <= std::ldexp(low, domain_spread_exponent);
+    }
+};
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -588,28 +623,31 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
     if ((selection_method != 0 && selection_method != 1) ||
         (allow_single_cluster != 0 && allow_single_cluster != 1))
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid HDBSCAN selection flags");
+    // Working memory: the data copy plus about 512 bytes per row of
+    // distances, MST, linkage, condensed tree and per-point bookkeeping.
     if (static_cast<long double>(n) * n * p > max_hdbscan_products ||
-        static_cast<long double>(n) * p > max_buffer_doubles)
-        return fail(ctx, N4M_ERR_UNSUPPORTED, "HDBSCAN exceeds 2.5 billion distance-product budget");
+        8.0L * static_cast<long double>(n) * p + 512.0L * static_cast<long double>(n) >
+            max_working_bytes)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "HDBSCAN exceeds its 2.5e9 distance-product or 256 MiB memory budget");
+    DomainScan domain;
+    for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
+        const double x = at(*X, i, j);
+        if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite HDBSCAN input");
+        domain.add(x);
+    }
+    if (!domain.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         std::vector<double> data(static_cast<size_t>(n) * static_cast<size_t>(p));
-        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
-            const double x = at(*X, i, j);
-            if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite HDBSCAN input");
-            data[static_cast<size_t>(i) * static_cast<size_t>(p) + static_cast<size_t>(j)] = x;
-        }
+        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j)
+            data[static_cast<size_t>(i) * static_cast<size_t>(p) + static_cast<size_t>(j)] =
+                at(*X, i, j);
         ::n4m::core::hdbscan::Params params;
         params.min_cluster_size = min_cluster_size;
         params.min_samples = min_samples;
         params.selection = static_cast<::n4m::core::hdbscan::Selection>(selection_method);
         params.allow_single_cluster = allow_single_cluster != 0;
         const auto result = ::n4m::core::hdbscan::fit(data.data(), n, p, params);
-        if (result.error == ::n4m::core::hdbscan::Error::unrepresentable_distance)
-            return fail(ctx, N4M_ERR_UNSUPPORTED,
-                        "HDBSCAN distance is not representable in double precision");
-        if (result.error == ::n4m::core::hdbscan::Error::unrepresentable_density)
-            return fail(ctx, N4M_ERR_UNSUPPORTED,
-                        "HDBSCAN density (1/distance) or stability is not representable");
         // Every output has X.rows capacity; check before writing anything.
         const auto rows = static_cast<size_t>(n);
         if (result.error != ::n4m::core::hdbscan::Error::none || result.labels.size() != rows || result.membership.size() != rows ||
@@ -650,8 +688,9 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
     if (!ctx) return N4M_ERR_NULL_POINTER;
     if (!labels_a || !labels_b || !ari) return fail(ctx, N4M_ERR_NULL_POINTER, "null ARI buffer");
     if (n < 0) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative ARI length");
-    if (n > (int64_t{1} << 31))
-        return fail(ctx, N4M_ERR_UNSUPPORTED, "ARI supports at most 2^31 elements");
+    // Working memory: label pairs and two label copies, 32 bytes per element.
+    if (32.0L * static_cast<long double>(n) > max_working_bytes)
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "ARI exceeds its 256 MiB memory budget");
     try {
         *ari = nan_value;
         if (n < 2) return N4M_OK;
@@ -740,40 +779,30 @@ N4M_API n4m_status_t n4m_linear_sum_assignment(
     if (maximize != 0 && maximize != 1)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "maximize must be 0 or 1");
     const int64_t rows = cost->rows, cols = cost->cols;
-    if (static_cast<long double>(rows) * cols * std::min(rows, cols) > 100000000.0L ||
-        static_cast<long double>(rows) * cols > max_buffer_doubles)
-        return fail(ctx, N4M_ERR_UNSUPPORTED, "assignment exceeds 1e8 exact operations");
+    // Work: rows*cols*min(rows, cols) exact 192-bit additions and
+    // comparisons, at most 1e8. Memory, checked before any allocation: two
+    // copies of the costs (16 bytes per cell), three 32-byte exact values and
+    // four 8-byte indices per row or column.
+    const long double cells = static_cast<long double>(rows) * static_cast<long double>(cols);
+    if (cells * static_cast<long double>(std::min(rows, cols)) > 100000000.0L ||
+        16.0L * cells + 128.0L * static_cast<long double>(rows + cols) > max_working_bytes)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "assignment exceeds its 1e8 exact-operation or 256 MiB memory budget");
+    // NaN and -inf (after negation when maximizing) are invalid as in SciPy;
+    // +inf marks a forbidden pair and is not a numerical value.
+    DomainScan domain;
+    for (int64_t i = 0; i < rows; ++i) for (int64_t j = 0; j < cols; ++j) {
+        const double v = at(*cost, i, j);
+        if (std::isnan(v) || (std::isinf(v) && (v > 0) == (maximize != 0)))
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "assignment cost contains NaN or -inf");
+        if (std::isfinite(v)) domain.add(v);
+    }
+    if (!domain.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         std::vector<double> data(static_cast<size_t>(rows) * static_cast<size_t>(cols));
         for (int64_t i = 0; i < rows; ++i) for (int64_t j = 0; j < cols; ++j)
             data[static_cast<size_t>(i) * static_cast<size_t>(cols) + static_cast<size_t>(j)] =
                 at(*cost, i, j);
-        // The solver sums costs exactly (floating-point expansions), which is
-        // exact as long as no partial sum exceeds DBL_MAX. Dual values and
-        // path costs are sums of at most 4 * (min(rows, cols) + 1) costs, so
-        // when that many times the largest finite magnitude could reach
-        // 2^1020 the costs are scaled down by the smallest sufficient power of
-        // two. No value is subtracted. A cost that this scaling would not keep
-        // exact (it would fall below the normal range) is refused.
-        double largest = 0.0;
-        for (const double v : data)
-            if (std::isfinite(v)) largest = std::max(largest, std::fabs(v));
-        if (largest > 0.0) {
-            int exponent = 0, terms = 0;
-            std::frexp(largest, &exponent);
-            std::frexp(4.0 * static_cast<double>(std::min(rows, cols) + 1), &terms);
-            const int shift = std::max(0, exponent + terms - 1020);
-            if (shift > 0) {
-                for (double& v : data) {
-                    if (!std::isfinite(v) || v == 0.0) continue;
-                    const double scaled = std::ldexp(v, -shift);
-                    if (std::ldexp(scaled, shift) != v)
-                        return fail(ctx, N4M_ERR_UNSUPPORTED,
-                                    "assignment costs span more than the exact double range");
-                    v = scaled;
-                }
-            }
-        }
         *n_assigned = 0;
         const auto status = ::n4m::core::lsap::solve(static_cast<size_t>(rows),
                                                       static_cast<size_t>(cols), data.data(),
@@ -782,6 +811,8 @@ N4M_API n4m_status_t n4m_linear_sum_assignment(
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "assignment cost contains NaN or -inf");
         if (status == ::n4m::core::lsap::Status::infeasible)
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "assignment cost matrix is infeasible");
+        if (status == ::n4m::core::lsap::Status::overflow)
+            return fail(ctx, N4M_ERR_INTERNAL, "assignment exact-arithmetic bound exceeded");
         *n_assigned = std::min(rows, cols);
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -820,20 +851,28 @@ N4M_API n4m_status_t n4m_random_multivariate_normal(
     // and its d^3/6 cost are bounded independently of n, then the draws.
     const long double dd = static_cast<long double>(d) * static_cast<long double>(d);
     const long double draws = static_cast<long double>(n) * static_cast<long double>(d);
-    if (dd > max_buffer_doubles || dd * static_cast<long double>(d) / 6.0L > max_hdbscan_products ||
-        draws > max_buffer_doubles || draws * static_cast<long double>(d) > max_hdbscan_products)
+    if (8.0L * (dd + draws) > max_working_bytes ||
+        dd * static_cast<long double>(d) / 6.0L > max_hdbscan_products ||
+        draws * static_cast<long double>(d) > max_hdbscan_products)
         return fail(ctx, N4M_ERR_UNSUPPORTED,
-                    "multivariate normal exceeds its storage or 2.5 billion operation budget");
+                    "multivariate normal exceeds its 256 MiB memory or 2.5e9 operation budget");
+    // Mean and covariance (lower triangle) are each checked against the
+    // rule-13 domain before any computation.
+    DomainScan mean_domain, cov_domain;
+    for (int64_t j = 0; j < d; ++j) {
+        if (!std::isfinite(mean[j])) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite mean");
+        mean_domain.add(mean[j]);
+        for (int64_t k = 0; k <= j; ++k) {
+            const double c = at(*cov, j, k);
+            if (!std::isfinite(c)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite covariance");
+            cov_domain.add(c);
+        }
+    }
+    if (!mean_domain.inside() || !cov_domain.inside())
+        return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         const auto p = static_cast<size_t>(d);
         std::vector<double> L(p * p, 0.0);
-        for (size_t j = 0; j < p; ++j) {
-            if (!std::isfinite(mean[j]))
-                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite mean");
-            for (size_t k = 0; k <= j; ++k)
-                if (!std::isfinite(at(*cov, static_cast<int64_t>(j), static_cast<int64_t>(k))))
-                    return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite covariance");
-        }
         // The factor is computed on cov / 4^m, with 2^m near the largest
         // standard deviation, and the draws are rescaled by 2^m. Power-of-two
         // scaling is exact, so ordinary inputs give bit-identical draws, while
@@ -872,7 +911,7 @@ N4M_API n4m_status_t n4m_random_multivariate_normal(
             for (size_t k = 0; k <= j; ++k) sum += z[i * p + k] * L[j * p + k];
             out[i * p + j] = std::ldexp(sum, half) + mean[j];
             if (!std::isfinite(out[i * p + j]))
-                return fail(ctx, N4M_ERR_UNSUPPORTED, "multivariate normal draw is not representable");
+                return fail(ctx, N4M_ERR_INTERNAL, "multivariate normal draw is not finite");
         }
         return N4M_OK;
     } catch (const std::bad_alloc&) {

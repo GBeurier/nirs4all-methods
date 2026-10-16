@@ -19,9 +19,8 @@ hdbscan==0.8.44 (all BSD-3-Clause); none of them enters libn4m.
 - Permutations: successive numpy.random.default_rng(seed).permutation(n) draws
   from one generator (the 50 subsampling plans of 40 units with seed 7, among
   others).
-- HDBSCAN on multi-magnitude data (squared differences that overflow or
-  underflow), against scikit-learn HDBSCAN(metric="precomputed") on exact
-  math.dist distances.
+- HDBSCAN on data mixing magnitudes inside the rule-13 domain, against
+  scikit-learn HDBSCAN(metric="precomputed") on exact math.dist distances.
 - Large-n adjusted Rand indices with labelings a_i = i mod ka and
   b_i = (i // ka + shift (i mod 3)) mod kb (exact-integer scikit-learn).
 - HDBSCAN on Gaussian draws: the stable-tie scikit-learn reference of
@@ -163,32 +162,33 @@ def permutation_cases() -> list[dict]:
 
 
 def multiscale_hdbscan_cases() -> list[dict]:
-    """HDBSCAN on data whose squared differences overflow or underflow.
+    """HDBSCAN on data mixing magnitudes inside the rule-13 domain.
 
-    The reference runs scikit-learn HDBSCAN(metric="precomputed") on exact
-    distances from math.dist (scaled, overflow-safe). Every case has distinct
-    pairwise distances, so the MST and the partition do not depend on ties,
-    except the review case, whose expected partition [0,0,0,1,1,1,-1] does not
-    depend on its tie order, and the equal distances to one far outlier.
+    The domain is: nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <=
+    2^64 within the matrix. The reference runs scikit-learn
+    HDBSCAN(metric="precomputed") on exact math.dist distances. Every case
+    has distinct pairwise distances (so the MST and partition do not depend on
+    ties), except the review vector, whose expected partition does not depend
+    on its tie order, and the equal distances to one far outlier.
     """
     rng = np.random.default_rng(20261015)
-    blobs = np.vstack([rng.normal(0.0, 1.0, (8, 2)), rng.normal(30.0, 1.0, (8, 2))])
+    blobs = np.vstack([rng.normal(0.0, 1.0, (8, 2)), rng.normal(30.0, 1.0, (8, 2))]) + 5.0
     specs = [
-        ("review_1d_with_1e200", np.array([[0.0], [1.0], [3.0], [10.0], [11.0], [14.0], [1e200]]), 2, 2),
-        ("tiny_scale_1e-200", blobs * 1e-200, 4, 3),
-        ("huge_scale_1e170", blobs * 1e170, 4, 3),
-        ("unit_blobs_with_far_outlier", np.vstack([blobs, [[1e300, -1e300]]]), 4, 3),
-        ("tiny_columns_of_two_scales", np.c_[blobs[:, :1] * 1e-200, blobs[:, 1:] * 1e-250], 4, 3),
+        ("review_1d_with_2e60", np.array([[0.0], [1.0], [3.0], [10.0], [11.0], [14.0], [2.0**60]]), 2, 2),
+        ("blobs_at_2e-200", blobs * 2.0**-200, 4, 3),
+        ("blobs_at_2e180", blobs * 2.0**180, 4, 3),
+        ("blobs_with_outlier_at_2e40", np.vstack([blobs, [[2.0**40, -(2.0**40)]]]), 4, 3),
+        ("columns_at_2e-200_and_2e-250", np.c_[blobs[:, :1] * 2.0**-200, blobs[:, 1:] * 2.0**-250], 4, 3),
     ]
     cases = []
     for name, x, mcs, ms in specs:
+        nonzero = np.abs(x[x != 0])
+        assert nonzero.min() >= 2.0**-256 and nonzero.max() <= 2.0**256, name
+        assert nonzero.max() <= nonzero.min() * 2.0**64, name
         n = len(x)
         d = np.array([[math.dist(x[i], x[j]) for j in range(n)] for i in range(n)])
         off = d[np.triu_indices(n, 1)]
-        assert np.all(np.isfinite(off)), name
-        # Ties are allowed only among the distances to a single far point,
-        # which joins last whatever their order.
-        near = off[off < 1e299]
+        near = off[off < 2.0**39]
         assert name.startswith("review") or len(np.unique(near)) == len(near), name
         model = HDBSCAN(metric="precomputed", min_cluster_size=mcs, min_samples=ms, copy=True).fit(d)
         if name.startswith("review"):

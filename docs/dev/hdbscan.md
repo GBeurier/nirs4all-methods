@@ -51,57 +51,42 @@ The ARI is new native code, about 30 lines.
   lambda birth/death and stability. The result is deterministic for a given row order;
   callers that need order invariance must fix a canonical row order.
 
-## Distance guard (ABI 2.20)
+## Numerical domain and invariants (ABI 2.20)
 
-An independent review found that finite inputs such as `[0, 1e155, 2e155, 3e155]`
-overflowed the summed squared differences to infinity. Prim then kept its initial
-indices, emitted self-edges, and the condensed tree had seven nodes for four rows,
-written past the caller's `X.rows`-element buffers. A first fix scaled the whole
-matrix by a power of two; a second review showed that a global scale still flushed
-small differences to zero (`[0, 1, 3, 10, 11, 14, 1e200]` became all noise instead of
-`[0, 0, 0, 1, 1, 1, -1]`). The current guard, not present in scikit-learn, works per pair:
+Independent reviews found inputs at extreme magnitudes that broke the port: squared
+distances overflowing to infinity made Prim emit self-edges and a condensed tree with
+seven nodes for four rows, written past the caller's buffers (`[0, 1e155, 2e155,
+3e155]`); densities `1/d` and their excess-of-mass sums overflowed near the subnormal
+range (`1e-308 × [0, 1, 3, 10, 11, 14]` gave NaN persistence). Point fixes moved the
+defects to ever more extreme inputs, so the kernel now follows the rule-13 domain:
 
-- the plain sum of squared differences is kept when it is finite and at least
-  `2^-968`. Below that bound, squared differences may lose precision in the subnormal
-  range; above it, no term overflowed. Ordinary distances are therefore bit-identical
-  to the reference;
-- otherwise the distance is `s · sqrt(Σ (t_k / s)^2)` with `s = max_k |t_k|`, which
-  neither overflows nor underflows for representable distances;
-- a distance above `DBL_MAX` (detected on every pair Prim evaluates) returns
-  `N4M_ERR_UNSUPPORTED`;
-- every MST edge must join two distinct rows and two distinct components, and the
-  result sizes and tree order are checked before any output is written. Errors are
-  status codes, not C++ exceptions, because the WASM build does not catch exceptions.
+- finite X with every nonzero `|x|` in `[2^-256, 2^256]` and max/min nonzero `|x|`
+  `≤ 2^64`; anything else returns `N4M_ERR_UNSUPPORTED` ("input outside the supported
+  numerical domain ...") after one O(n·p) scan, before any computation;
+- inside the domain every nonzero coordinate difference lies in `[2^-308, 2^257]`, so
+  squared distances are normal doubles (sums over at most 5e7 columns stay below
+  `2^540`), densities `λ = 1/d ≤ 2^308` and stability sums `≤ n · 2^308` are finite,
+  and the scikit-learn operation order is kept unchanged: results equal the reference
+  and scaling X by `2^k` scales lambdas and stabilities by exactly `2^−k`;
+- every MST edge must join two distinct rows and two distinct components, and result
+  sizes and tree order are checked before any output is written; a working-memory
+  budget of 256 MiB is checked before allocating. Errors are status codes, not C++
+  exceptions, because the WASM build does not catch exceptions;
+- an `inf − inf` excess (a node born at zero distance whose points leave at zero
+  distance) counts as 0; scikit-learn would produce NaN, and no reference fixture
+  contains that case.
 
-`n4m_hdbscan_tests` and the JS/WASM test run the overflow reproduction with
-sentinel-guarded buffers. `parity/fixtures/cluster_matching_null_v1.json` adds five
-multi-magnitude cases (the review vector, blobs scaled by `1e-200` and `1e170`, unit
-blobs with an outlier at `(1e300, -1e300)`, and columns at `1e-200` and `1e-250`). Their
-reference is scikit-learn `HDBSCAN(metric="precomputed")` on exact `math.dist`
-distances; labels match up to permutation and membership within 1e-12.
-
-## Density guard (ABI 2.20, third review)
-
-With distances near the subnormal range, densities `λ = 1/d` and their excess-of-mass
-sums overflowed: `1e-308 × [0, 1, 3, 10, 11, 14]` gave NaN persistence and
-`1e-310` an infinite density for a positive distance, both with `N4M_OK`. Densities
-are now computed on MST weights divided by `2^e`, where `e` is the midpoint of the
-binary exponents of the smallest positive and the largest weight, so internal
-densities lie near 1. EOM comparisons, membership, GLOSH and persistence use these
-scaled values, which are exact power-of-two multiples, so ordinary results stay
-bit-identical. Lambdas and stabilities are published in `1/distance` units; a finite
-published value outside `[DBL_MIN, DBL_MAX]` returns `N4M_ERR_UNSUPPORTED` with
-nothing written. Zero distances keep the documented `+inf` lambdas; an `inf − inf`
-excess at zero distance counts as 0 (scikit-learn would produce NaN; no reference
-fixture contains that case).
-
-`n4m_cluster_robustness_tests` scales an irregular two-blob set with an outlier by
-`2^k`, `k ∈ {−1014, −1022, −500, −100, 0, 100, 500, 1000}`: every run either keeps
-labels, membership, GLOSH and persistence and scales lambdas and stabilities by
-`2^−k`, or is refused because those values are not representable (here `k = −1022`).
-Exact translations by `2^54` and `2^996` and a constant `1e300` column leave every
-output bit-identical. The JS/WASM test checks the same properties and the precise
-status code of the refusals.
+`n4m_hdbscan_tests` checks sentinel-guarded buffers at both domain edges (`2^-256`,
+`3 · 2^254`, spread exactly `2^64`) and just outside them, and the review inputs.
+`n4m_cluster_robustness_tests` scales an irregular blob set by `2^k`, `k ∈ {−1014, −257,
+−256, −200, −100, 100, 200, 252, 253, 1000}`: inside the domain all outputs are exact
+power-of-two rescalings, outside it the call is refused without writing. Exact
+translations by `2^54` and `2^200` and a constant `2^60` column leave every output
+bit-identical; a constant `1e300` column is refused. `parity/fixtures/
+cluster_matching_null_v1.json` adds five in-domain multi-magnitude cases (`[0, 1, 3, 10,
+11, 14, 2^60]`, blobs at `2^-200` and `2^180`, an outlier at `2^40`, columns at `2^-200`
+and `2^-250`) checked against scikit-learn `HDBSCAN(metric="precomputed")` on exact
+`math.dist` distances. The JS/WASM test checks the same boundaries and status codes.
 
 ## Tie order matters, including in the reference
 

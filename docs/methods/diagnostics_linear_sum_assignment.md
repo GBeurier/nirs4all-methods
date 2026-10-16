@@ -26,7 +26,7 @@ Matching clusters across partitions by maximum total Jaccard overlap, and other 
 
 ### Limits and validation
 
-Duals and path costs are exact sums of the input doubles, so the result is an exact optimum even where SciPy's double arithmetic loses small differences next to large costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned from last to first, unassigned columns first on equal reduced cost), so equal-cost solutions are reproducible but arbitrary. NaN and $-\infty$ costs are invalid; a matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is $O(rc\min(r,c))$ exact-arithmetic operations and is limited to 1e8.
+Inside the declared numerical domain (nonzero |cost| in [2^-256, 2^256], spread at most 2^64; other inputs are refused) duals and path costs are exact 192-bit fixed-point integers, so the result is an exact optimum even where SciPy's double arithmetic loses small differences next to large costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned from last to first, unassigned columns first on equal reduced cost), so equal-cost solutions are reproducible but arbitrary. NaN and $-\infty$ costs are invalid; a matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is $O(rc\min(r,c))$ exact-arithmetic operations and is limited to 1e8.
 
 ### Implementation
 
@@ -38,7 +38,7 @@ https://doi.org/10.1109/TAES.2016.140952; https://doi.org/10.1002/nav.3800020109
 
 ## Catalog note
 
-Rectangular linear sum assignment ported from SciPy 1.18.1 scipy.optimize.linear_sum_assignment (Crouse shortest augmenting path, BSD-3-Clause, cpp/src/core/optimization/_vendored), with SciPy tie order and exact (floating-point expansion) duals, so the result is an exact optimum. Reference gate: parity/generators/cluster_matching_null_v1.py -> parity/fixtures/cluster_matching_null_v1.json, cpp/tests/test_cluster_matching_null.cpp.
+Rectangular linear sum assignment ported from SciPy 1.18.1 scipy.optimize.linear_sum_assignment (Crouse shortest augmenting path, BSD-3-Clause, cpp/src/core/optimization/_vendored), with SciPy tie order and exact 192-bit fixed-point duals, so the result is an exact optimum; rule-13 numerical domain. Reference gate: parity/generators/cluster_matching_null_v1.py -> parity/fixtures/cluster_matching_null_v1.json, cpp/tests/test_cluster_matching_null.cpp.
 
 
 _See also_: [methods index](index.md).

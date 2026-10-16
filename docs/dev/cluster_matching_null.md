@@ -18,8 +18,9 @@ covariance regularization and the null protocol belong to the caller.
 
 ## Frozen semantics
 
-- Domains of validity are stated in each header: Gaussian draws factor a scaled
-  covariance; Jaccard refuses `n > 2^53`; assignment is exact (see below). `n4m_cluster_robustness_tests` checks
+- Domains of validity are stated in each header. Real-valued inputs (assignment
+  costs, Gaussian mean and covariance) follow the rule-13 domain; Gaussian draws factor
+  a scaled covariance; Jaccard and ARI take integer labels (`n ≤ 2^53`, `n ≤ 2^23`). `n4m_cluster_robustness_tests` checks
   scaling, translation and constant-column invariance for these kernels, HDBSCAN and
   ARI.
 - `n4m_cluster_jaccard_matrix`: negative labels are unassigned and belong to no cluster;
@@ -27,14 +28,21 @@ covariance regularization and the null protocol belong to the caller.
   |A_i ∩ B_j|)`, NaN when both clusters are empty. Callers restrict both labelings to the
   elements they share before the call.
 - `n4m_linear_sum_assignment`: the algorithm and tie rules of
-  `scipy.optimize.linear_sum_assignment`, evaluated in exact arithmetic (duals and path
-  costs are floating-point expansions, `cpp/src/core/common/expansion.hpp`), so the
-  result is an exact optimum. On random 2–4 × 2–6 matrices with signed costs whose
-  exponents span ±60 to ±600, SciPy's double version is suboptimal in 2–9 % of cases;
-  `n4m_cluster_robustness_tests` and the JS/WASM test check the exact optimum by
-  enumeration with independent exact sums (2240-bit integers, BigInt). Costs are never
-  centred; they are scaled by the smallest power of two that keeps the sums finite, and
-  refused if that scaling is not exact. A tall
+  `scipy.optimize.linear_sum_assignment`, evaluated in exact arithmetic. Inside the
+  rule-13 domain (nonzero `|cost|` in `[2^-256, 2^256]`, max/min nonzero `|cost|` `≤
+  2^64`, `+inf` forbidden pairs excluded) every cost is an integer multiple of `2^E`, `E`
+  the last mantissa bit of the smallest nonzero `|cost|`, below `2^119` units; duals,
+  reduced and path costs are kept as signed 192-bit integers in those units, with a
+  guard far above any reachable value. The result is an exact optimum. On random 2–4 ×
+  2–6 matrices with signed costs whose exponents span ±60 to ±600, SciPy's double
+  version is suboptimal in 2–9 % of cases; `n4m_cluster_robustness_tests` and the
+  JS/WASM test check the exact optimum by enumeration with independent exact sums
+  (2240-bit integers, BigInt) on in-domain matrices with exponents mixed over 63
+  binades, for minimisation, maximisation and transposed shapes. Costs are never
+  centred; inputs outside the domain are refused before computing. Work is bounded by
+  `rows·cols·min(rows, cols) ≤ 1e8` fixed-size operations and memory by
+  `16·rows·cols + 128·(rows + cols)` bytes `≤ 256 MiB`, both checked before any
+  allocation (a `1 × 32,000,000` matrix is refused). A tall
   matrix is solved on its transpose and the pairs are sorted by row; `maximize` negates
   the costs; `+inf` forbids a pair; NaN or `-inf` (after negation) is invalid; a missing
   feasible assignment is a numerical failure. Ties: in each augmenting-path search the
@@ -58,7 +66,7 @@ covariance regularization and the null protocol belong to the caller.
 `parity/generators/cluster_matching_null_v1.py` (test-only; pins NumPy 2.4.6, SciPy
 1.18.1, scikit-learn 1.9.1 and hdbscan 0.8.44) writes
 `parity/fixtures/cluster_matching_null_v1.json`. Its SHA-256 at generation is
-`ff6288f3df873b7a0589b7b25835c242db2afe6d08afeba6c74597b4eed13b27`. The cases are:
+`69b1a94bd53ce5e79ec62fe601381703ea79118a116dfbd5aa57c8b572b57e70`. The cases are:
 
 - twelve assignment matrices: square, wide, tall (transposed path), small-integer ties,
   constant (identity), tall constant maximized, forbidden `+inf` pairs, a maximized
@@ -76,7 +84,7 @@ covariance regularization and the null protocol belong to the caller.
   third dataset because of its unspecified MST tie order).
 
 Three large-n adjusted Rand indices (up to 3 million elements, values near 0) are
-checked within 1e-14 relative against exact-integer scikit-learn. Five multi-magnitude HDBSCAN cases (see `docs/dev/hdbscan.md`) use scikit-learn
+checked within 1e-14 relative against exact-integer scikit-learn. Five in-domain multi-magnitude HDBSCAN cases (see `docs/dev/hdbscan.md`) use scikit-learn
 `HDBSCAN(metric="precomputed")` on exact `math.dist` distances.
 
 `n4m_cluster_matching_null_tests` checks the assignments, Jaccard values and permutations
