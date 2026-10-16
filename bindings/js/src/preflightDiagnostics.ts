@@ -890,8 +890,10 @@ export function statsGroupMeans(X: Matrix, groupCodes: readonly number[],
 export interface RegressionScoresResult {
     rmse: number;
     mae: number;
-    /** 1 - SSE/SST; NaN (undefined) when y is constant. */
+    /** R^2 = r2 * 2^r2Exponent; NaN (undefined) when y is constant. */
     r2: number;
+    /** 0 whenever R^2 is a double; otherwise R^2 = -SSE/SST is scaled. */
+    r2Exponent: number;
 }
 
 /** RMSE, MAE and R² through n4m_stats_regression_scores (explicit residuals,
@@ -907,13 +909,13 @@ export function statsRegressionScores(yTrue: Float64Array, yPred: Float64Array):
         const t = scope.alloc(yTrue.length * 8), p = scope.alloc(yPred.length * 8);
         m.HEAPF64.set(yTrue, t / 8);
         m.HEAPF64.set(yPred, p / 8);
-        const out = scope.alloc(3 * 8);
+        const out = scope.alloc(4 * 8);
         const st = m.ccall("n4m_stats_regression_scores", "number",
             ["number", "number", "number", "i64", "number"],
             [scope.ctx.handle, t, p, BigInt(yTrue.length), out]) as number;
         checkStatus(st, scope.ctx.handle);
-        const r = copyF64(out, 3);
-        return { rmse: r[0]!, mae: r[1]!, r2: r[2]! };
+        const r = copyF64(out, 4);
+        return { rmse: r[0]!, mae: r[1]!, r2: r[2]!, r2Exponent: r[3]! };
     } finally {
         scope.close();
     }

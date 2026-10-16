@@ -106,11 +106,11 @@ void group_means_refusals(n4m_context_t* ctx) {
 
 void regression_exact(n4m_context_t* ctx) {
     // y = (1, 2, 3, 4), prediction (1, 3, 3, 2): SSE = 5, SAE = 3, SST = 5.
-    double out[3];
+    double out[4];
     REQUIRE(scores(ctx, {1, 2, 3, 4}, {1, 3, 3, 2}, out) == N4M_OK);
     REQUIRE(out[0] == std::sqrt(5.0 / 4.0));
     REQUIRE(out[1] == 0.75);
-    REQUIRE(out[2] == 0.0);
+    REQUIRE(out[2] == 0.0 && out[3] == 0.0);
     // Perfect fit and constant target (R^2 undefined, documented NaN).
     REQUIRE(scores(ctx, {1, 2, 3}, {1, 2, 3}, out) == N4M_OK);
     REQUIRE(out[0] == 0.0 && out[1] == 0.0 && out[2] == 1.0);
@@ -129,7 +129,7 @@ void regression_sweep(n4m_context_t* ctx) {
             ys.push_back(std::ldexp(y[i], k));
             ps.push_back(std::ldexp(p[i], k));
         }
-        double out[3];
+        double out[4];
         REQUIRE(scores(ctx, ys, ps, out) == N4M_OK);
         REQUIRE(out[0] == std::ldexp(std::sqrt(1.25), k));
         REQUIRE(out[1] == std::ldexp(0.75, k));
@@ -141,13 +141,13 @@ void regression_sweep(n4m_context_t* ctx) {
         ys.push_back(big + y[i]);
         ps.push_back(big + p[i]);
     }
-    double out[3];
+    double out[4];
     REQUIRE(scores(ctx, ys, ps, out) == N4M_OK);
     REQUIRE(out[0] == std::sqrt(1.25) && out[1] == 0.75 && out[2] == 0.0);
 }
 
 void regression_domain(n4m_context_t* ctx) {
-    double out[3];
+    double out[4];
     REQUIRE(scores(ctx, {std::ldexp(1.0, 256), std::ldexp(1.0, 255)}, {0.0, std::ldexp(1.0, 255)}, out) == N4M_OK);
     REQUIRE(scores(ctx, {std::ldexp(1.0, 257), 1.0}, {1.0, 1.0}, out) == N4M_ERR_UNSUPPORTED);
     REQUIRE(scores(ctx, {1.0, 2.0}, {std::ldexp(1.0, -300), 1.0}, out) == N4M_ERR_UNSUPPORTED);
@@ -160,7 +160,16 @@ void regression_domain(n4m_context_t* ctx) {
     // SST = 2^25, R^2 = -3.
     REQUIRE(scores(ctx, {std::ldexp(1.0, 65), std::ldexp(1.0, 65) + std::ldexp(1.0, 13)},
                    {std::ldexp(1.0, 65) + std::ldexp(1.0, 13), std::ldexp(1.0, 65)}, out) == N4M_OK);
-    REQUIRE(out[2] == -3.0);
+    REQUIRE(out[2] == -3.0 && out[3] == 0.0);
+    // R^2 beyond the double range inside D (Astra counter-example):
+    // y = (2^-255, 2^-254), prediction (2^256, 2^256). Rational oracle:
+    // SST = 2^-511 exactly; SSE = (2^256 - 2^-255)^2 + (2^256 - 2^-254)^2
+    // = 2^513 (1 - 3 * 2^-512 + ...), so SSE/SST = 2^1024 (1 - ~2^-510) and
+    // R^2 = 1 - SSE/SST rounds to -2^1024 = -0.5 * 2^1025.
+    REQUIRE(scores(ctx, {std::ldexp(1.0, -255), std::ldexp(1.0, -254)},
+                   {std::ldexp(1.0, 256), std::ldexp(1.0, 256)}, out) == N4M_OK);
+    REQUIRE(std::isfinite(out[0]) && out[0] == std::ldexp(1.0, 256));
+    REQUIRE(out[2] == -0.5 && out[3] == 1025.0);
     REQUIRE(scores(ctx, {1.0, std::numeric_limits<double>::infinity()}, {1.0, 1.0}, out) ==
             N4M_ERR_INVALID_ARGUMENT);
     REQUIRE(n4m_stats_regression_scores(ctx, nullptr, nullptr, 1, out) == N4M_ERR_NULL_POINTER);

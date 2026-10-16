@@ -15,7 +15,10 @@ ABI 2.20.0. No model-state serialization format changes.
   computed as double-double (TwoSum) sums divided once by the group size.
   Regression scores are RMSE, MAE and R² computed from explicit residuals
   and from deviations around a double-double mean, with every sum in
-  double-double. R² is NaN (undefined) for a constant target.
+  double-double. R² is returned as a significand and a power-of-two
+  exponent: R² below the double range (SSE/SST ≥ 2^999, possible inside
+  the domain) is published scaled, never as -Inf. R² is NaN (undefined)
+  for a constant target.
   Both kernels declare a numerical domain: finite values and every nonzero
   |x| in [2^-256, 2^256]; regression scores, which depend on differences,
   also need a spread of at most 2^32 per input array (rule 15, shared
