@@ -1192,6 +1192,35 @@
       "links": [
         {
           "kind": "doi",
+          "value": "10.1080/01621459.1977.10480998"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1093/biomet/58.3.545"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/01621459.1977.10480998"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1093/biomet/58.3.545"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variance_components.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_variance_components.cpp"
+        }
+      ],
+      "page": "diagnostics_variance_components"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
           "value": "10.1021/ac00023a016"
         },
         {
@@ -3604,6 +3633,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "74bac3e69827acceb0ea8fd58d57fb80045a4f1db155f2fd7f9e57b4bb7ea703"
+    "docs/_extras/scientific_remaining.py": "0ea1aa66fe1f2fc8dd539b27c63cb5da0612296aba3df8008ab813f0a7959195"
   }
 }
