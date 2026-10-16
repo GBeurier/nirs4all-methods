@@ -1718,6 +1718,59 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "docs/dev/hdbscan.md",
     ),
+    "diagnostics_group_means": _entry(
+        "Equal-weight per-group column means",
+        "Arithmetic mean of replicate measurements, summed with the error-free TwoSum "
+        "transformation of Møller (1965), *Quasi double-precision in floating point addition*, "
+        "BIT 5, 37–50, https://doi.org/10.1007/BF01975722.",
+        "For each group $g$ and column $j$ the kernel returns $\\bar x_{gj}=\\frac1{n_g}\\sum_{i:g(i)=g}x_{ij}$, "
+        "with equal weight per row. The sum is a double-double (TwoSum) accumulation divided "
+        "once by $n_g$ with a fused remainder: relative error of order $n\\varepsilon$ for same-sign "
+        "values, absolute error of order $n\\varepsilon\\max|x|$ otherwise.",
+        "Aggregating homogeneous technical repeats of one physical sample (same instrument and "
+        "campaign) into one row before fitting or validation, so repeats never weigh as "
+        "independent samples.",
+        "Declared numerical domain: finite values and every nonzero $|x|$ in $[2^{-256}, 2^{256}]$ "
+        "(a summary, so no spread limit); outside it the kernel returns "
+        "`N4M_ERR_UNSUPPORTED`. Every group needs at least one row; nonfinite values are refused "
+        "(no mask). The mean is not a robust location estimate and does not reconcile repeats "
+        "from different contexts.",
+        "The ABI-2 symbol `n4m_stats_group_means` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsGroupMeans`. "
+        "`cpp/tests/test_group_means.cpp` checks exact dyadic means, a $2^{52}$ offset, scale "
+        "sweeps, both sides of the domain boundaries and refusals.",
+        "https://doi.org/10.1007/BF01975722; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_group_means.cpp",
+    ),
+    "diagnostics_regression_scores": _entry(
+        "RMSE, MAE and R² from explicit residuals",
+        "Standard regression scores, summed with the error-free TwoSum transformation of "
+        "Møller (1965), *Quasi double-precision in floating point addition*, BIT 5, 37–50, "
+        "https://doi.org/10.1007/BF01975722.",
+        "With residuals $e_i=y_i-\\hat y_i$, $\\mathrm{RMSE}=\\sqrt{\\sum e_i^2/n}$, "
+        "$\\mathrm{MAE}=\\sum|e_i|/n$ and $R^2=1-\\sum e_i^2/\\sum (y_i-\\bar y)^2$. The mean "
+        "$\\bar y$ is a double-double value and every deviation is explicit; all sums are "
+        "double-double, so no large nearly-equal accumulations are subtracted.",
+        "Scoring out-of-fold predictions and reference predictors (for example a fold-train mean) "
+        "on identical rows.",
+        "Declared numerical domain: finite values, every nonzero $|x|$ in $[2^{-256}, 2^{256}]$ and "
+        "a spread $\\max|x|/\\min_{x\\ne0}|x|\\le 2^{32}$ per vector; outside it the kernel "
+        "returns `N4M_ERR_UNSUPPORTED`. RMSE and MAE have relative errors of order $n\\varepsilon$, "
+        "$R^2$ an absolute error of order $n\\varepsilon(1+SSE/SST)$; $R^2$ is NaN (undefined) "
+        "when $y$ is constant.",
+        "The ABI-2 symbol `n4m_stats_regression_scores` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsRegressionScores`. "
+        "`cpp/tests/test_group_means.cpp` checks exact dyadic scores, scale sweeps, a $2^{52}$ "
+        "offset, an exact one-ulp case and the domain boundaries.",
+        "https://doi.org/10.1007/BF01975722; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "cpp/tests/test_group_means.cpp",
+    ),
     "diagnostics_permanova": _entry(
         "PERMANOVA of one categorical term on Euclidean distances",
         "Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, "

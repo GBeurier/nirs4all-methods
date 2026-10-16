@@ -602,6 +602,36 @@ N4M_API n4m_status_t n4m_stats_pca_monitor(
     double* monitored_t2, double* monitored_q, int32_t* effective_components,
     int64_t* out_counts, double* out_thirteen);
 
+/* Declared numerical domain D of the n4m_stats_group_means and
+ * n4m_stats_regression_scores kernels: finite values and every nonzero |x|
+ * in [2^-256, 2^256]; regression scores, which depend on differences, also
+ * require a spread max|x| / min nonzero |x| <= 2^32 inside each input array
+ * (rule 15; group means are a summary and are exempt). Outside D they return
+ * N4M_ERR_UNSUPPORTED with the context message "input outside the supported
+ * numerical domain (...)" before computing; nonfinite values are
+ * N4M_ERR_INVALID_ARGUMENT.
+ *
+ * Equal-weight per-group column means of the rows of X (n x k, any positive
+ * strides). group_codes has n entries in [0, n_groups); every group needs at
+ * least one row (n_groups <= n). Each mean is a double-double (TwoSum) sum
+ * divided once by the group size: within D no partial sum overflows; the
+ * relative error is of order n eps for same-sign values and the absolute
+ * error of order n eps max|x| otherwise. out_means is n_groups x k row-major; out_counts receives the rows
+ * per group. Generic aggregation of homogeneous technical repeats. */
+N4M_API n4m_status_t n4m_stats_group_means(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int64_t n_groups, double* out_means, int64_t* out_counts);
+
+/* RMSE, MAE and R^2 of paired vectors (n >= 1), with the domain D above for
+ * y_true and y_pred. Residuals and deviations from a
+ * double-double mean are explicit and summed in double-double, so no large
+ * nearly-equal accumulations are subtracted. RMSE and MAE have relative
+ * errors of order n eps; R^2 an absolute error of order n eps (1 + SSE/SST). out_three = {RMSE, MAE, R^2};
+ * R^2 = 1 - SSE/SST is NaN ("undefined") when y_true is constant. */
+N4M_API n4m_status_t n4m_stats_regression_scores(
+    n4m_context_t* ctx, const double* y_true, const double* y_pred, int64_t n,
+    double* out_three);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,

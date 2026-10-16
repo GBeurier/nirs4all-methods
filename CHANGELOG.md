@@ -10,6 +10,29 @@ ABI 2.20.0. No model-state serialization format changes.
 
 ### Added
 
+- Public ABI 2.20.0 `n4m_stats_group_means` and `n4m_stats_regression_scores`.
+  Group means are equal-weight per-group column means of a strided matrix,
+  computed as double-double (TwoSum) sums divided once by the group size.
+  Regression scores are RMSE, MAE and R² computed from explicit residuals
+  and from deviations around a double-double mean, with every sum in
+  double-double. R² is NaN (undefined) for a constant target.
+  Both kernels declare a numerical domain: finite values and every nonzero
+  |x| in [2^-256, 2^256]; regression scores, which depend on differences,
+  also need a spread of at most 2^32 per input array (rule 15, shared
+  `N4M_DOMAIN_MAX_SPREAD_LOG2`). Precision: relative error of order n eps
+  for the means of same-sign data, RMSE and MAE; absolute error of order
+  n eps (1 + SSE/SST) for R².
+  Outside this domain they refuse with `N4M_ERR_UNSUPPORTED` ("input
+  outside the supported numerical domain"); nonfinite values return
+  `N4M_ERR_INVALID_ARGUMENT`.
+  nirs4all-preflight uses them to aggregate technical repeats and to score
+  its validation probe.
+  New JS/WASM wrappers: `statsGroupMeans` and `statsRegressionScores`.
+  Catalog entries: `diagnostics.group_means` and
+  `diagnostics.regression_scores`.
+  `n4m_group_means_tests` covers exact dyadic cases, scale sweeps from
+  2^-200 to 2^200, a 2^52 offset, a one-ulp case, and both sides of the
+  domain boundaries; the JS test mirrors it.
 - Public ABI 2.20.0 generic statistics: `n4m_stats_correlation_test`
   (Pearson or Spearman correlation with a seeded two-sided permutation
   p-value, NumPy `default_rng` permutation parity) and `n4m_stats_bh_adjust`
