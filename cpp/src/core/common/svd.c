@@ -36,6 +36,13 @@
  *
  * with eps = 4 * DBL_EPSILON (paranoid; tighter than the standard 1
  * ULP test). Zero-norm columns are skipped to keep the rotation finite.
+ *
+ * There is no early stop on norm reduction: a small but genuine direction
+ * keeps rotating until it converges. Termination on exactly
+ * rank-deficient inputs comes from the resolution floor
+ * (N4M_SVD_FLOOR_EXP): a null column that the rotations keep shrinking
+ * without orthogonalising falls below it and is reported as an exact zero
+ * singular value with a zero U column.
  */
 
 #include "svd.h"
@@ -54,7 +61,135 @@
  * orthogonalisation criterion within ~2 bits of the machine precision. */
 static const double N4M_SVD_EPS = 4.0 * DBL_EPSILON;
 
+/* Resolution floor of the Jacobi iteration, relative to the scaled input
+ * (max|a| in [0.5, 1)): a column of norm below 2^N4M_SVD_FLOOR_EXP has a
+ * squared norm below 2^-1000, where the rotation algebra no longer resolves
+ * it. It takes no further rotation and its singular value is reported as
+ * exactly 0. Inputs are refused when their own nonzero entries reach that
+ * level (N4M_SVD_MAX_SPREAD_EXP), so a column can only fall below the floor
+ * through cancellation, i.e. sigma < 2^-500 * max|A| from in-range entries:
+ * exact rank deficiency in floating point (e.g. +-1 designs where one row
+ * is the opposite of another, whose null column the rotations shrink by
+ * ~eps per sweep without ever orthogonalising it). */
+#define N4M_SVD_FLOOR_EXP (-500)
+
 static const double N4M_SVD_ZERO_TOL = 1e-300;
+
+/* Magnitude domain (see svd.h).
+ *
+ * The factorisations run on A * 2^-e with max|A| * 2^-e in [0.5, 1)
+ * (power-of-two scaling is exact, and every algorithm here is homogeneous,
+ * so results are bit-identical to an unscaled run whenever the unscaled run
+ * neither overflows nor underflows). The read-only helpers skip the copy
+ * when the input already lies in [2^-N4M_SVD_SAFE_EXP, 2^N4M_SVD_SAFE_EXP)
+ * with its smallest nonzero magnitude above 2^-N4M_SVD_SAFE_MIN_EXP, where
+ * squares and Gram sums cannot underflow.
+ *
+ * Resolution: nonzero entries smaller than 2^-N4M_SVD_MAX_SPREAD_EXP times
+ * the largest one would have squares below the normal range once scaled.
+ * Such inputs are refused explicitly (N4M_ERR_NUMERICAL_FAILURE) instead
+ * of silently losing those entries. */
+#define N4M_SVD_SAFE_EXP 128
+#define N4M_SVD_SAFE_MIN_EXP 400
+#define N4M_SVD_MAX_SPREAD_EXP 480
+
+/* Scans A: non-finite entries or a dynamic range (max|a| / min nonzero
+ * |a|) above 2^N4M_SVD_MAX_SPREAD_EXP are an explicit error. Sets *e to the
+ * frexp exponent of max|A| when the input must be scaled (always, or
+ * outside the safe band), else to 0. */
+static n4m_status_t pow2_scale_exponent(const double* A, size_t count,
+                                        int always, int* e) {
+    double maxabs = 0.0;
+    double minabs = HUGE_VAL;
+    for (size_t i = 0; i < count; ++i) {
+        if (!isfinite(A[i])) {
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        const double a = fabs(A[i]);
+        if (a > maxabs) {
+            maxabs = a;
+        }
+        if (a > 0.0 && a < minabs) {
+            minabs = a;
+        }
+    }
+    *e = 0;
+    if (maxabs == 0.0) {
+        return N4M_OK;
+    }
+    int ex_max = 0;
+    int ex_min = 0;
+    (void)frexp(maxabs, &ex_max);
+    (void)frexp(minabs, &ex_min);
+    if (ex_max - ex_min > N4M_SVD_MAX_SPREAD_EXP) {
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    if (always || ex_max > N4M_SVD_SAFE_EXP || ex_max < -N4M_SVD_SAFE_EXP ||
+        ex_min < -N4M_SVD_SAFE_MIN_EXP) {
+        *e = ex_max;
+    }
+    return N4M_OK;
+}
+
+static void scale_pow2(double* A, size_t count, int e) {
+    for (size_t i = 0; i < count; ++i) {
+        A[i] = ldexp(A[i], -e);
+    }
+}
+
+/* Smallest magnitude published for a significant value: below 2^-1042 a
+ * subnormal keeps fewer than 32 significant bits. */
+#define N4M_SVD_MIN_PUBLISHED_EXP (-1042)
+
+/* Multiplies values[0..count) by 2^e. A value that is significant in the
+ * scaled space (|v| > tol * max|v|) must stay finite and at least
+ * 2^N4M_SVD_MIN_PUBLISHED_EXP in magnitude after the multiplication;
+ * otherwise it is not representable and the call fails instead of
+ * publishing Inf or a value flushed towards zero. */
+static n4m_status_t unscale_pow2(double* values, int64_t count, int e,
+                                 double tol) {
+    if (e == 0) {
+        return N4M_OK;
+    }
+    double vmax = 0.0;
+    for (int64_t i = 0; i < count; ++i) {
+        if (fabs(values[i]) > vmax) {
+            vmax = fabs(values[i]);
+        }
+    }
+    for (int64_t i = 0; i < count; ++i) {
+        const int significant = fabs(values[i]) > tol * vmax;
+        values[i] = ldexp(values[i], e);
+        if (!isfinite(values[i]) ||
+            (significant &&
+             fabs(values[i]) < ldexp(1.0, N4M_SVD_MIN_PUBLISHED_EXP))) {
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+    }
+    return N4M_OK;
+}
+
+/* Input scaled into [0.5, 1) when outside the safe band: a copy for the
+ * read-only helpers, NULL (use A) otherwise. */
+static n4m_status_t scaled_input(const double* A, size_t count, int* e,
+                                 double** copy) {
+    *copy = NULL;
+    const n4m_status_t st = pow2_scale_exponent(A, count, 0, e);
+    if (st != N4M_OK || *e == 0) {
+        return st;
+    }
+    *copy = (double*)malloc(count * sizeof(double));
+    if (*copy == NULL) {
+        return N4M_ERR_OUT_OF_MEMORY;
+    }
+    memcpy(*copy, A, count * sizeof(double));
+    scale_pow2(*copy, count, *e);
+    return N4M_OK;
+}
+
+static double rank_tol(int64_t m, int64_t n) {
+    return (double)((m > n) ? m : n) * DBL_EPSILON;
+}
 
 /* Read / write helpers (kept inline-friendly via the compiler — no
  * function call overhead at -O2). */
@@ -159,18 +294,18 @@ static void householder_tridiagonal(double* V, int64_t n, double* d,
     }
 }
 
-static n4m_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
-                                                int64_t n, double* V) {
-    for (int64_t i = 1; i < n; ++i) {
-        e[i - 1] = e[i];
-    }
-    e[n - 1] = 0.0;
-
-    for (int64_t l = 0; l < n; ++l) {
-        int iter = 0;
+/* Implicit-shift QL (EISPACK tql2 / Numerical Recipes tqli) on the unreduced
+ * block [lo, hi] of the tridiagonal (d, e), accumulating rotations in V.
+ * Deflation uses the local test |e[m]| <= eps * (|d[m]| + |d[m+1]|), which
+ * only involves the block's own entries. *iter counts QL sweeps against the
+ * whole-matrix budget max_iter. */
+static n4m_status_t ql_block(double* d, double* e, int64_t lo, int64_t hi,
+                             int64_t n, double* V, int64_t* iter,
+                             int64_t max_iter) {
+    for (int64_t l = lo; l <= hi; ++l) {
         for (;;) {
             int64_t m = l;
-            for (; m < n - 1; ++m) {
+            for (; m < hi; ++m) {
                 const double dd = fabs(d[m]) + fabs(d[m + 1]);
                 if (fabs(e[m]) <= DBL_EPSILON * dd) {
                     break;
@@ -179,7 +314,7 @@ static n4m_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
             if (m == l) {
                 break;
             }
-            if (++iter > 64) {
+            if (++*iter > max_iter) {
                 return N4M_ERR_CONVERGENCE_FAILED;
             }
 
@@ -233,6 +368,73 @@ static n4m_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
     return N4M_OK;
 }
 
+/* Symmetric tridiagonal eigensolver organised like LAPACK dsteqr:
+ *
+ *  - The matrix is split once into unreduced blocks at every e[m] passing
+ *    the local test |e[m]| <= eps * (|d[m]| + |d[m+1]|) (exact zeros
+ *    included). Each block is iterated on its own, so a small block
+ *    decoupled from a large one keeps its relative accuracy.
+ *  - A block whose largest entry lies outside [2^-N4M_SVD_SAFE_EXP,
+ *    2^N4M_SVD_SAFE_EXP) is multiplied by the exact power of two mapping it
+ *    into [0.5, 1) before iterating (subnormal or huge blocks) and its
+ *    eigenvalues are scaled back; an eigenvalue that overflows on the way
+ *    back is an explicit N4M_ERR_NUMERICAL_FAILURE. Blocks inside the band
+ *    run unscaled, bit-identical to the plain tql2 iteration.
+ *  - No absolute threshold: a subnormal spectrum is resolved like any other.
+ *  - Iteration budget: dsteqr's 30 QL sweeps per eigenvalue, shared by the
+ *    whole matrix (30 * n). */
+static n4m_status_t tridiagonal_ql_eigenvectors(double* d, double* e,
+                                                int64_t n, double* V) {
+    for (int64_t i = 1; i < n; ++i) {
+        e[i - 1] = e[i];
+    }
+    e[n - 1] = 0.0;
+
+    const int64_t max_iter = 30 * n;
+    int64_t iter = 0;
+    for (int64_t lo = 0; lo < n;) {
+        int64_t hi = lo;
+        while (hi < n - 1 &&
+               fabs(e[hi]) > DBL_EPSILON * (fabs(d[hi]) + fabs(d[hi + 1]))) {
+            ++hi;
+        }
+        if (hi > lo) {
+            double bmax = 0.0;
+            for (int64_t i = lo; i <= hi; ++i) {
+                bmax = fmax(bmax, fabs(d[i]));
+                if (i < hi) {
+                    bmax = fmax(bmax, fabs(e[i]));
+                }
+            }
+            int ex = 0;
+            (void)frexp(bmax, &ex);
+            const int scale =
+                (ex > N4M_SVD_SAFE_EXP || ex < -N4M_SVD_SAFE_EXP) ? ex : 0;
+            if (scale != 0) {
+                for (int64_t i = lo; i <= hi; ++i) {
+                    d[i] = ldexp(d[i], -scale);
+                    e[i] = ldexp(e[i], -scale);
+                }
+            }
+            const n4m_status_t st =
+                ql_block(d, e, lo, hi, n, V, &iter, max_iter);
+            if (st != N4M_OK) {
+                return st;
+            }
+            if (scale != 0) {
+                for (int64_t i = lo; i <= hi; ++i) {
+                    d[i] = ldexp(d[i], scale);
+                    if (!isfinite(d[i])) {
+                        return N4M_ERR_NUMERICAL_FAILURE;
+                    }
+                }
+            }
+        }
+        lo = hi + 1;
+    }
+    return N4M_OK;
+}
+
 static n4m_status_t symmetric_eigh(double* A, int64_t n, double* eigvals,
                                    double* V) {
     if (A == NULL || eigvals == NULL || V == NULL) {
@@ -278,10 +480,17 @@ n4m_status_t n4m_symmetric_eigh(const double* A, int64_t n, double* eigvals,
     if (work == NULL) {
         return N4M_ERR_OUT_OF_MEMORY;
     }
-    memcpy(work, A, nn * sizeof(double));
-    const n4m_status_t st = symmetric_eigh(work, n, eigvals, V);
+    int e = 0;
+    n4m_status_t st = pow2_scale_exponent(A, nn, 0, &e);
+    if (st == N4M_OK) {
+        memcpy(work, A, nn * sizeof(double));
+        scale_pow2(work, nn, e);
+        st = symmetric_eigh(work, n, eigvals, V);
+    }
     free(work);
-    return st;
+    return (st == N4M_OK)
+               ? unscale_pow2(eigvals, n, e, (double)n * DBL_EPSILON)
+               : st;
 }
 
 static void sort_eigpairs_desc(double* V, double* eigvals, int64_t n) {
@@ -312,8 +521,16 @@ n4m_status_t n4m_svd_compact(double* A, int64_t m, int64_t n,
         return N4M_ERR_NULL_POINTER;
     }
 
+    int e = 0;
+    const n4m_status_t scan =
+        pow2_scale_exponent(A, (size_t)m * (size_t)n, 1, &e);
+    if (scan != N4M_OK) {
+        return scan;
+    }
+    scale_pow2(A, (size_t)m * (size_t)n, e);
     if (m >= n) {
-        return svd_compact_tall(A, m, n, U, S, Vt);
+        const n4m_status_t tall = svd_compact_tall(A, m, n, U, S, Vt);
+        return (tall == N4M_OK) ? unscale_pow2(S, n, e, rank_tol(m, n)) : tall;
     }
 
     /* Wide case (m < n): the standard one-sided Jacobi on the columns
@@ -394,7 +611,7 @@ n4m_status_t n4m_svd_compact(double* A, int64_t m, int64_t n,
             }
         }
     }
-    return N4M_OK;
+    return unscale_pow2(S, k, e, rank_tol(m, n));
 }
 
 n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
@@ -406,19 +623,27 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
     if (A == NULL || U == NULL || S == NULL || Vt == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
+    int e = 0;
+    double* scaled = NULL;
+    const n4m_status_t scan =
+        scaled_input(A, (size_t)m * (size_t)n, &e, &scaled);
+    if (scan != N4M_OK) {
+        return scan;
+    }
+    const double* As = (scaled != NULL) ? scaled : A;
 
     double* G = (double*)calloc((size_t)m * (size_t)m, sizeof(double));
     double* Ug = (double*)malloc((size_t)m * (size_t)m * sizeof(double));
     double* L = (double*)malloc((size_t)m * sizeof(double));
     double* colbuf = (double*)malloc((size_t)m * sizeof(double));
     if (G == NULL || Ug == NULL || L == NULL || colbuf == NULL) {
-        free(G); free(Ug); free(L); free(colbuf);
+        free(G); free(Ug); free(L); free(colbuf); free(scaled);
         return N4M_ERR_OUT_OF_MEMORY;
     }
 
     for (int64_t c = 0; c < n; ++c) {
         for (int64_t i = 0; i < m; ++i) {
-            colbuf[i] = A[(size_t)i * (size_t)n + (size_t)c];
+            colbuf[i] = As[(size_t)i * (size_t)n + (size_t)c];
         }
         for (int64_t i = 0; i < m; ++i) {
             const double ai = colbuf[i];
@@ -439,7 +664,7 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
     const n4m_status_t st = symmetric_eigh(G, m, L, Ug);
     free(G);
     if (st != N4M_OK) {
-        free(Ug); free(L);
+        free(Ug); free(L); free(scaled);
         return st;
     }
     sort_eigpairs_desc(Ug, L, m);
@@ -467,7 +692,7 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
         double* v4 = Vt + (size_t)4 * (size_t)n;
         memset(Vt, 0, (size_t)5 * (size_t)n * sizeof(double));
         for (int64_t i = 0; i < m; ++i) {
-            const double* row = A + (size_t)i * (size_t)n;
+            const double* row = As + (size_t)i * (size_t)n;
             const double* urow = U + (size_t)i * (size_t)k;
             const double u0 = urow[0];
             const double u1 = urow[1];
@@ -498,7 +723,7 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
         for (int64_t j = 0; j < n; ++j) {
             double acc[8] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
             for (int64_t i = 0; i < m; ++i) {
-                const double aij = A[(size_t)i * (size_t)n + (size_t)j];
+                const double aij = As[(size_t)i * (size_t)n + (size_t)j];
                 const double* urow = U + (size_t)i * (size_t)k;
                 for (int64_t comp = 0; comp < k; ++comp) {
                     acc[comp] += aij * urow[comp];
@@ -517,7 +742,7 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
                 for (int64_t j = 0; j < n; ++j) {
                     double acc = 0.0;
                     for (int64_t i = 0; i < m; ++i) {
-                        acc += A[(size_t)i * (size_t)n + (size_t)j] *
+                        acc += As[(size_t)i * (size_t)n + (size_t)j] *
                                U[(size_t)i * (size_t)k + (size_t)comp];
                     }
                     vrow[j] = acc * inv_sigma;
@@ -555,7 +780,8 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m,
 
     free(Ug);
     free(L);
-    return N4M_OK;
+    free(scaled);
+    return unscale_pow2(S, k, e, rank_tol(m, n));
 }
 
 n4m_status_t n4m_svd_truncated_tall_gram(const double* A, int64_t m,
@@ -567,17 +793,25 @@ n4m_status_t n4m_svd_truncated_tall_gram(const double* A, int64_t m,
     if (A == NULL || U == NULL || S == NULL || Vt == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
+    int e = 0;
+    double* scaled = NULL;
+    const n4m_status_t scan =
+        scaled_input(A, (size_t)m * (size_t)n, &e, &scaled);
+    if (scan != N4M_OK) {
+        return scan;
+    }
+    const double* As = (scaled != NULL) ? scaled : A;
 
     double* G = (double*)calloc((size_t)n * (size_t)n, sizeof(double));
     double* V = (double*)malloc((size_t)n * (size_t)n * sizeof(double));
     double* L = (double*)malloc((size_t)n * sizeof(double));
     if (G == NULL || V == NULL || L == NULL) {
-        free(G); free(V); free(L);
+        free(G); free(V); free(L); free(scaled);
         return N4M_ERR_OUT_OF_MEMORY;
     }
 
     for (int64_t r = 0; r < m; ++r) {
-        const double* row = A + (size_t)r * (size_t)n;
+        const double* row = As + (size_t)r * (size_t)n;
         for (int64_t i = 0; i < n; ++i) {
             const double ai = row[i];
             double* grow = G + (size_t)i * (size_t)n;
@@ -596,7 +830,7 @@ n4m_status_t n4m_svd_truncated_tall_gram(const double* A, int64_t m,
     const n4m_status_t st = symmetric_eigh(G, n, L, V);
     free(G);
     if (st != N4M_OK) {
-        free(V); free(L);
+        free(V); free(L); free(scaled);
         return st;
     }
     sort_eigpairs_desc(V, L, n);
@@ -613,7 +847,7 @@ n4m_status_t n4m_svd_truncated_tall_gram(const double* A, int64_t m,
         }
 
         for (int64_t r = 0; r < m; ++r) {
-            const double* row = A + (size_t)r * (size_t)n;
+            const double* row = As + (size_t)r * (size_t)n;
             double acc = 0.0;
             for (int64_t j = 0; j < n; ++j) {
                 acc += row[j] * vrow[j];
@@ -643,7 +877,8 @@ n4m_status_t n4m_svd_truncated_tall_gram(const double* A, int64_t m,
 
     free(V);
     free(L);
-    return N4M_OK;
+    free(scaled);
+    return unscale_pow2(S, k, e, rank_tol(m, n));
 }
 
 static uint64_t splitmix64_next(uint64_t x) {
@@ -662,27 +897,49 @@ static double deterministic_omega(int64_t row, int64_t col) {
     return 2.0 * unit - 1.0;
 }
 
+static double column_norm2(const double* col, int64_t rows, int64_t cols) {
+    double norm2 = 0.0;
+    for (int64_t i = 0; i < rows; ++i) {
+        const double v = col[(size_t)i * (size_t)cols];
+        norm2 += v * v;
+    }
+    return norm2;
+}
+
+/* Gram-Schmidt on the columns of the row-major (rows x cols) matrix A. A
+ * column that loses more than half its squared norm to the projections is
+ * projected a second time (Kahan's "twice is enough"); a column whose
+ * residual is at rounding level relative to its original norm is linearly
+ * dependent on the previous ones (rank-deficient A, sketch wider than the
+ * rank) and is zeroed instead of normalising rounding noise. */
 static void orthonormalize_columns(double* A, int64_t rows, int64_t cols) {
+    const double dependent_rtol2 =
+        (double)rows * N4M_SVD_EPS * N4M_SVD_EPS;
     for (int64_t c = 0; c < cols; ++c) {
         double* col_c = A + (size_t)c;
-        for (int64_t prev = 0; prev < c; ++prev) {
-            const double* col_prev = A + (size_t)prev;
-            double dot = 0.0;
-            for (int64_t i = 0; i < rows; ++i) {
-                dot += col_c[(size_t)i * (size_t)cols] *
-                       col_prev[(size_t)i * (size_t)cols];
+        const double norm2_in = column_norm2(col_c, rows, cols);
+        double norm2 = norm2_in;
+        for (int pass = 0; pass < 2; ++pass) {
+            for (int64_t prev = 0; prev < c; ++prev) {
+                const double* col_prev = A + (size_t)prev;
+                double dot = 0.0;
+                for (int64_t i = 0; i < rows; ++i) {
+                    dot += col_c[(size_t)i * (size_t)cols] *
+                           col_prev[(size_t)i * (size_t)cols];
+                }
+                for (int64_t i = 0; i < rows; ++i) {
+                    col_c[(size_t)i * (size_t)cols] -=
+                        dot * col_prev[(size_t)i * (size_t)cols];
+                }
             }
-            for (int64_t i = 0; i < rows; ++i) {
-                col_c[(size_t)i * (size_t)cols] -=
-                    dot * col_prev[(size_t)i * (size_t)cols];
+            const double before = norm2;
+            norm2 = column_norm2(col_c, rows, cols);
+            if (c == 0 || norm2 >= 0.5 * before) {
+                break;
             }
         }
-        double norm2 = 0.0;
-        for (int64_t i = 0; i < rows; ++i) {
-            const double v = col_c[(size_t)i * (size_t)cols];
-            norm2 += v * v;
-        }
-        if (!(norm2 > N4M_SVD_ZERO_TOL) || !isfinite(norm2)) {
+        if (!(norm2 > N4M_SVD_ZERO_TOL) || !isfinite(norm2) ||
+            norm2 <= dependent_rtol2 * norm2_in) {
             for (int64_t i = 0; i < rows; ++i) {
                 col_c[(size_t)i * (size_t)cols] = 0.0;
             }
@@ -705,6 +962,14 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
     if (A == NULL || U == NULL || S == NULL || Vt == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
+    int e = 0;
+    double* scaled = NULL;
+    const n4m_status_t scan =
+        scaled_input(A, (size_t)m * (size_t)n, &e, &scaled);
+    if (scan != N4M_OK) {
+        return scan;
+    }
+    const double* As = (scaled != NULL) ? scaled : A;
 
     int64_t l = k + 8;
     if (l > k_full) l = k_full;
@@ -721,6 +986,7 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
     if (Omega == NULL || Q == NULL || Z == NULL || B == NULL ||
         Ub == NULL || Sb == NULL || Vtb == NULL) {
         free(Omega); free(Q); free(Z); free(B); free(Ub); free(Sb); free(Vtb);
+        free(scaled);
         return N4M_ERR_OUT_OF_MEMORY;
     }
 
@@ -733,7 +999,7 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
 
     memset(Q, 0, (size_t)m * (size_t)l * sizeof(double));
     for (int64_t i = 0; i < m; ++i) {
-        const double* row = A + (size_t)i * (size_t)n;
+        const double* row = As + (size_t)i * (size_t)n;
         double* qrow = Q + (size_t)i * (size_t)l;
         for (int64_t j = 0; j < n; ++j) {
             const double aij = row[j];
@@ -748,7 +1014,7 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
     for (int iter = 0; iter < power_iter; ++iter) {
         memset(Z, 0, (size_t)n * (size_t)l * sizeof(double));
         for (int64_t i = 0; i < m; ++i) {
-            const double* row = A + (size_t)i * (size_t)n;
+            const double* row = As + (size_t)i * (size_t)n;
             const double* qrow = Q + (size_t)i * (size_t)l;
             for (int64_t j = 0; j < n; ++j) {
                 double* zrow = Z + (size_t)j * (size_t)l;
@@ -762,7 +1028,7 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
 
         memset(Q, 0, (size_t)m * (size_t)l * sizeof(double));
         for (int64_t i = 0; i < m; ++i) {
-            const double* row = A + (size_t)i * (size_t)n;
+            const double* row = As + (size_t)i * (size_t)n;
             double* qrow = Q + (size_t)i * (size_t)l;
             for (int64_t j = 0; j < n; ++j) {
                 const double aij = row[j];
@@ -777,7 +1043,7 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
 
     memset(B, 0, (size_t)l * (size_t)n * sizeof(double));
     for (int64_t i = 0; i < m; ++i) {
-        const double* row = A + (size_t)i * (size_t)n;
+        const double* row = As + (size_t)i * (size_t)n;
         const double* qrow = Q + (size_t)i * (size_t)l;
         for (int64_t c = 0; c < l; ++c) {
             double* brow = B + (size_t)c * (size_t)n;
@@ -791,6 +1057,7 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
     const n4m_status_t st = n4m_svd_compact(B, l, n, Ub, Sb, Vtb);
     if (st != N4M_OK) {
         free(Omega); free(Q); free(Z); free(B); free(Ub); free(Sb); free(Vtb);
+        free(scaled);
         return st;
     }
 
@@ -830,7 +1097,8 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
     }
 
     free(Omega); free(Q); free(Z); free(B); free(Ub); free(Sb); free(Vtb);
-    return N4M_OK;
+        free(scaled);
+    return unscale_pow2(S, k, e, rank_tol(m, n));
 }
 
 static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
@@ -851,9 +1119,10 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
     }
 
     /* Jacobi sweeps. */
+    const double floor2 = ldexp(1.0, 2 * N4M_SVD_FLOOR_EXP);
     int converged = 0;
     for (int sweep = 0; sweep < N4M_SVD_MAX_SWEEPS && !converged; ++sweep) {
-        converged = 1;
+        int rotated = 0;
         for (int64_t p = 0; p < n - 1; ++p) {
             for (int64_t q = p + 1; q < n; ++q) {
                 /* Compute three inner products: alpha = a_p^T a_p,
@@ -870,12 +1139,19 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                     gamma += ap * aq;
                 }
 
-                /* Convergence test for this pair. */
-                const double tol = N4M_SVD_EPS * sqrt(alpha * beta);
-                if (fabs(gamma) <= tol) {
+                /* Convergence test for this pair. A column below the
+                 * resolution floor takes no rotation (see
+                 * N4M_SVD_FLOOR_EXP). */
+                /* sqrt(alpha * beta) unless that product underflows
+                 * (weak columns), where it would zero the threshold. */
+                const double ab = alpha * beta;
+                const double tol =
+                    N4M_SVD_EPS *
+                    ((ab >= DBL_MIN) ? sqrt(ab) : sqrt(alpha) * sqrt(beta));
+                if (fabs(gamma) <= tol || alpha < floor2 || beta < floor2) {
                     continue;
                 }
-                converged = 0;
+                rotated = 1;
 
                 /* Compute the Givens rotation diagonalising the 2x2
                  * Gram block [[alpha, gamma], [gamma, beta]].
@@ -892,7 +1168,9 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                  * 4e, Algorithm 8.4.3. */
                 const double tau = (alpha - beta) / (2.0 * gamma);
                 double t;
-                if (tau >= 0.0) {
+                if (fabs(tau) > 0x1p500) {
+                    t = 0.5 / tau; /* tau^2 would overflow; t = 1/(2 tau) */
+                } else if (tau >= 0.0) {
                     t = 1.0 / (tau + sqrt(1.0 + tau * tau));
                 } else {
                     t = 1.0 / (tau - sqrt(1.0 + tau * tau));
@@ -920,6 +1198,10 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                 }
             }
         }
+        if (!rotated) {
+            converged = 1;
+            break;
+        }
     }
 
     if (!converged) {
@@ -943,7 +1225,7 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
             const double v = A_at(A, n, i, j);
             s2 += v * v;
         }
-        sigmas[j] = sqrt(s2);
+        sigmas[j] = (s2 < floor2) ? 0.0 : sqrt(s2);
     }
 
     /* Build the permutation that sorts sigmas in descending order. */

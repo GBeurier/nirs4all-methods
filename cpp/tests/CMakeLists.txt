@@ -199,7 +199,8 @@ if(TARGET n4m_c_static)
         test_internal_cv.cpp
         test_internal_optimization.cpp
         test_internal_sweep.cpp
-        test_internal_linalg.cpp)
+        test_internal_linalg.cpp
+        test_internal_svd_degenerate.cpp)
     target_link_libraries(n4m_internal_tests PRIVATE n4m_c_static)
     target_include_directories(n4m_internal_tests PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}

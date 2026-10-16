@@ -159,6 +159,10 @@ int run_internal_cv_tests();
 // test_internal_linalg.cpp (same binary, static archive). Returns its failures.
 int run_internal_linalg_tests();
 
+// Degenerate / rank-deficient SVD and symmetric-eigen tests (NumPy goldens)
+// live in test_internal_svd_degenerate.cpp. Returns its failures.
+int run_internal_svd_degenerate_tests();
+
 // Moment-sweep internal accelerators live in test_internal_sweep.cpp.
 int run_internal_sweep_tests();
 
@@ -176,6 +180,7 @@ int main() {
     g_failures += run_internal_sweep_tests();
     g_failures += run_internal_optimization_tests();
     g_failures += run_internal_linalg_tests();
+    g_failures += run_internal_svd_degenerate_tests();
     if (g_failures == 0) {
         std::printf("=== n4m_internal_tests: all RNG choice/bounded parity OK ===\n");
         return 0;
