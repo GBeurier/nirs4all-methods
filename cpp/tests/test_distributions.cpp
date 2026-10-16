@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: CECILL-2.1
 // Chi-square and F quantiles against SciPy 1.18.1 stats.chi2.ppf / stats.f.ppf
 // (parity/generators/variance_components_v1.py, "quantile_grid"), including
-// tails at 1e-12 and 1 - 1e-12 and degrees of freedom from 1/2 to 1e8. The two
+// tails at 1e-12 and 1 - 1e-12 and degrees of freedom from 1/2 to 1e8, and
+// the domain boundary (tail 2^-64 accepted, 2^-65 refused). The two
 // lower-tail points at df = 1e8 come from mpmath (SciPy is ~3e-6 off there).
 #include "core/common/distributions.hpp"
 
@@ -131,11 +132,45 @@ int main() {
             ++failures;
         }
     };
-    for (const auto& r : chi_grid) check(dist::chi2_quantile(r[0], r[1]), r[2], "chi2", r[0], r[1], 0);
-    for (const auto& r : f_grid) check(dist::f_quantile(r[0], r[1], r[2]), r[3], "F", r[0], r[1], r[2]);
-    // Outside the domain: NaN, never a silent value.
-    if (!std::isnan(dist::chi2_quantile(0.0, 3)) || !std::isnan(dist::chi2_quantile(0.5, 0.25)) ||
-        !std::isnan(dist::f_quantile(1.0, 2, 3)) || !std::isnan(dist::f_quantile(0.5, 3, 1e12)))
+    // Grid points p > 1/2 are upper quantiles of the tail 1 - p (exact in double).
+    auto chi = [](double p, double df) {
+        return p <= 0.5 ? dist::chi2_quantile(p, df, false) : dist::chi2_quantile(1.0 - p, df, true);
+    };
+    auto fq = [](double p, double d1, double d2) {
+        return p <= 0.5 ? dist::f_quantile(p, d1, d2, false) : dist::f_quantile(1.0 - p, d1, d2, true);
+    };
+    for (const auto& r : chi_grid) check(chi(r[0], r[1]), r[2], "chi2", r[0], r[1], 0);
+    for (const auto& r : f_grid) check(fq(r[0], r[1], r[2]), r[3], "F", r[0], r[1], r[2]);
+    // Domain boundary, inside: tail 2^-64 on both sides. SciPy 1.18.1 for the
+    // chi-square and the lower F tail; mpmath 1.4.1 (40 digits) for the upper
+    // F tail, where SciPy returns inf.
+    const double t = 0x1p-64;
+    const double chi_bound[][3] = {
+        {1, 4.616155521099511e-39, 83.81940406418438},
+        {7, 1.2616877861160633e-05, 106.2800472580404},
+        {100, 19.400062200564484, 287.1767636672565},
+        {1e4, 8769.622913389314, 11338.955350596494}};
+    for (const auto& r : chi_bound) {
+        check(dist::chi2_quantile(t, r[0], false), r[1], "chi2 lower 2^-64", t, r[0], 0);
+        check(dist::chi2_quantile(t, r[0], true), r[2], "chi2 upper 2^-64", t, r[0], 0);
+    }
+    const double f_bound[][4] = {
+        {3, 8, 1.0897060773801424e-13, 218886.00202842976},
+        {8, 3, 4.568588172532459e-06, 9176786481765.684},
+        {999, 2000, 0.5978144385529399, 1.625933698523698}};
+    for (const auto& r : f_bound) {
+        check(dist::f_quantile(t, r[0], r[1], false), r[2], "F lower 2^-64", t, r[0], r[1]);
+        check(dist::f_quantile(t, r[0], r[1], true), r[3], "F upper 2^-64", t, r[0], r[1]);
+    }
+    // Outside the domain (tail below 2^-64 or above 1/2, df outside
+    // [1/2, 2^31]): NaN, never a silent value.
+    const double out_tail = 0x1p-65;
+    if (!std::isnan(dist::chi2_quantile(out_tail, 3, false)) ||
+        !std::isnan(dist::chi2_quantile(out_tail, 3, true)) ||
+        !std::isnan(dist::chi2_quantile(0.5000001, 3, false)) ||
+        !std::isnan(dist::chi2_quantile(0.25, 0.25, false)) ||
+        !std::isnan(dist::f_quantile(out_tail, 2, 3, true)) ||
+        !std::isnan(dist::f_quantile(0.25, 3, 0x1p32, false)))
         ++failures;
     std::printf("distributions: worst relative error %.3g\n", worst);
     return failures ? 1 : 0;
