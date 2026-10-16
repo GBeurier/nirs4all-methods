@@ -8,6 +8,16 @@
 extern "C" {
 #endif
 
+/* Supported numerical domain D of the Preflight statistics kernels: finite
+ * values, every nonzero |x| in [2^-256, 2^256], and inside one input array
+ * max nonzero |x| / min nonzero |x| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2. With a
+ * spread below 2^53, subtracting two values of one input never erases their
+ * difference. Kernels that use it refuse other inputs with
+ * N4M_ERR_UNSUPPORTED and the message "input outside the supported numerical
+ * domain (...)". Labels/codes, summaries and Holm/BH p-values are exempt
+ * from the spread limit. */
+#define N4M_DOMAIN_MAX_SPREAD_LOG2 32
+
 /* Preflight diagnostics. All outputs are caller-owned. X and matrix outputs
  * accept positive element strides and F64 only. PCA requires n>=2, p>=1,
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
@@ -186,31 +196,26 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  * a residual-mean correction, so eta^2 and F are translation invariant.
  * categorical=1 with levels * classes > 10 million cells returns
  * N4M_ERR_UNSUPPORTED before any table allocation or statistic.
- * Supported numerical domain D: finite targets whose nonzero |y| lie in
- * [2^-256, 2^256] with max/min nonzero |y| <= 2^64 (exact zeros allowed;
- * categorical class codes are labels and are not domain-checked). Inputs
- * outside D return N4M_ERR_UNSUPPORTED with the message "input outside the
- * supported numerical domain (...)" before any computation. Inside D the
- * centered copy is rescaled by exact powers of two chosen from max|y| and
- * from the centered variation, so eta^2, F, V and the permutation counts are
- * scale invariant and translation invariant up to the rounding of the
- * shifted inputs; F cannot overflow inside D (F <= n * 2^232).
- * Accuracy: eta^2 is a ratio of sums of O(1) scaled centered terms with no
- * subtraction of accumulated quantities; its absolute error is of order
- * n * DBL_EPSILON (equal level means give exactly 0 on dyadic data).
- * V^2 = chi^2 / (n (min(levels, classes) - 1)) with chi^2 accumulated from
- * exact integer residuals d = O*n - r*c as sum d^2/(n r c): nonnegative
- * terms, relative error O(cells * DBL_EPSILON), exactly 0 at independence
- * (n <= 3e9 for categorical targets). SSW is computed from the original
- * targets, each level scaled by its own power of two and centered on its own
- * values, and the level sums are combined by exponents, so a within-level
- * spread is never erased by another level's magnitude; SSW has relative
- * error O(n * DBL_EPSILON). F = eta^2 SST/(levels-1) / (SSW/(n-levels)) is
- * therefore accurate relative to SSB when SSB is not small, and to an
- * absolute error of order n * DBL_EPSILON * SST/SSW * (n-levels)/(levels-1)
- * near eta^2 = 0. F is NaN only when every level is constant (SSW = 0
- * exactly) or n == levels; an F that overflows, or falls below DBL_MIN while
- * eta^2 > 0, returns N4M_ERR_NUMERICAL_FAILURE. */
+ * Supported numerical domain D: continuous targets in D (nonzero |y| in
+ * [2^-256, 2^256], max/min nonzero |y| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2,
+ * exact zeros allowed; categorical class codes are labels and are not
+ * checked). Inputs outside D return N4M_ERR_UNSUPPORTED before any
+ * computation. Inside D the results are scale invariant (exact power-of-two
+ * rescaling) and translation invariant up to the rounding of the shifted
+ * inputs, and F cannot overflow (F <= n * 2^168).
+ * Accuracy, stated conservatively: eta^2 and V have an absolute error of at
+ * most about c * n * DBL_EPSILON (c a small constant); eta^2 = 0 and V = 0
+ * are returned exactly for equal level means on dyadic data and at exact
+ * independence. V^2 = chi^2 / (n (min(levels, classes) - 1)), with chi^2
+ * summed from exact integer residuals O*n - r*c (nonnegative terms;
+ * n <= 3e9 for categorical targets). SSW is summed from per-level residuals
+ * of the original targets (each level scaled and centered on its own), so it
+ * has a relative error of about c * n * DBL_EPSILON. F = eta^2 SST/(levels-1)
+ * / (SSW/(n-levels)) therefore has a relative error of about c * n *
+ * DBL_EPSILON when eta^2 is not small, and otherwise an absolute error of
+ * about c * n * DBL_EPSILON * (SST/SSW) * (n-levels)/(levels-1). F is NaN
+ * only when every level is constant or n == levels; an F that is not a
+ * normal double while eta^2 > 0 returns N4M_ERR_NUMERICAL_FAILURE. */
 N4M_API n4m_status_t n4m_preflight_factor_association(
     n4m_context_t* ctx, const int64_t* factor_codes, const double* targets,
     int64_t n, int32_t categorical, int32_t n_permutations, uint64_t seed,
@@ -219,8 +224,10 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
 /* Holm step-down adjusted p-values for one family of m >= 1 hypotheses.
  * Inputs must lie in [0, 1]; adjusted[i] = min(1, max_{j<=rank(i)}
  * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm").
- * Nonzero p-values must lie in [2^-256, 1] with max/min nonzero p <= 2^64
- * (domain D; zeros allowed), otherwise N4M_ERR_UNSUPPORTED. */
+ * No spread limit (no subtraction is performed): nonzero p-values must be
+ * normal, p >= 2^-1022 (DBL_MIN); subnormal p-values return
+ * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain
+ * (nonzero p-values >= 2^-1022)"). */
 N4M_API n4m_status_t n4m_preflight_holm_adjust(
     n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
 
@@ -243,13 +250,11 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
  *       is NaN.
  * b counts permuted |r| >= |observed r| - sqrt(DBL_EPSILON). out_two =
  * {b, executed B}; no permutation runs when the coefficient is undefined.
- * Both vectors must lie in the same supported domain D as
- * n4m_preflight_factor_association (each vector checked separately; outside
- * D: N4M_ERR_UNSUPPORTED) and use its translation- and scale-stable
- * centering (r is a ratio of sums
- * of O(1) scaled centered terms, so its absolute error is of order
- * n * DBL_EPSILON; the denominator is >= 1/4 after rescaling and never
- * underflows; exactly uncorrelated dyadic data give r = 0). */
+ * Both vectors must lie in the supported domain D (each checked
+ * separately; outside D: N4M_ERR_UNSUPPORTED) and use the same scale- and
+ * translation-stable centering as n4m_preflight_factor_association. The
+ * absolute error of r is at most about c * n * DBL_EPSILON; exactly
+ * uncorrelated dyadic data give r = 0. */
 N4M_API n4m_status_t n4m_stats_correlation_test(
     n4m_context_t* ctx, const double* x, const double* y, int64_t n,
     int32_t method, int32_t n_permutations, uint64_t seed,
@@ -282,8 +287,8 @@ N4M_API n4m_status_t n4m_stats_correlation_exact(
 /* Benjamini-Hochberg step-up adjusted p-values for one family of m >= 1
  * hypotheses. Inputs must lie in [0, 1]; with p_(1) <= ... <= p_(m),
  * adjusted p_(i) = min(1, min_{j>=i} m p_(j) / j), as R p.adjust("BH")
- * (domain D as for Holm, otherwise N4M_ERR_UNSUPPORTED; positive p-values
- * stay positive)
+ * (same domain as Holm: no spread limit, subnormal p-values refused;
+ * positive p-values stay positive)
  * and statsmodels multipletests(method="fdr_bh"). Controls the false
  * discovery rate under independence or positive regression dependence. */
 N4M_API n4m_status_t n4m_stats_bh_adjust(

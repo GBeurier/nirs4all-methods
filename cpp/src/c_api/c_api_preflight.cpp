@@ -28,16 +28,30 @@ constexpr long double max_hdbscan_products = 2500000000.0L;
 // Contingency-table budget of the categorical association kernels (cells).
 constexpr size_t max_table_cells = 10000000;
 
-// Supported numerical domain D (preflight robustness rule 13): finite values,
+// Supported numerical domain D (preflight robustness rules 13 and 15): finite values,
 // every nonzero |x| in [2^-256, 2^256] and, inside one input array,
-// max nonzero |x| / min nonzero |x| <= 2^64. Exact zeros are always allowed.
+// max nonzero |x| / min nonzero |x| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2 (metrics.h).
+// Exact zeros are always allowed.
 // Inputs outside D are refused before any computation.
 constexpr double domain_low = 0x1p-256;
 constexpr double domain_high = 0x1p256;
-constexpr double domain_spread = 0x1p64;
+constexpr double domain_spread = static_cast<double>(1ULL << N4M_DOMAIN_MAX_SPREAD_LOG2);
 constexpr const char* domain_message =
     "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^64)";
+    "max/min nonzero |x| <= 2^32)";
+static_assert(N4M_DOMAIN_MAX_SPREAD_LOG2 == 32, "update domain_message with the spread");
+
+// Holm and BH only multiply p-values by small integers or ratios and take
+// running min/max: no subtraction, so no spread limit. Their domain is
+// p in [0, 1] (checked by the callers) with nonzero p >= 2^-1022: subnormal
+// p-values are refused rather than carried with reduced precision.
+constexpr const char* p_value_domain_message =
+    "input outside the supported numerical domain (nonzero p-values >= 2^-1022)";
+bool p_values_in_domain(const double* p, size_t n) noexcept {
+    for (size_t i = 0; i < n; ++i)
+        if (p[i] != 0.0 && p[i] < DBL_MIN) return false;
+    return true;
+}
 
 // One O(n) pre-pass; inputs are already known to be finite.
 bool in_numerical_domain(const double* values, size_t n) noexcept {
@@ -1223,8 +1237,8 @@ N4M_API n4m_status_t n4m_preflight_holm_adjust(
         for (int64_t i = 0; i < m; ++i)
             if (!(p_values[i] >= 0.0 && p_values[i] <= 1.0))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "p-values must lie in [0, 1]");
-        if (!in_numerical_domain(p_values, static_cast<size_t>(m)))
-            return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        if (!p_values_in_domain(p_values, static_cast<size_t>(m)))
+            return fail(ctx, N4M_ERR_UNSUPPORTED, p_value_domain_message);
         std::vector<int64_t> order(static_cast<size_t>(m));
         std::iota(order.begin(), order.end(), int64_t{0});
         std::stable_sort(order.begin(), order.end(),
@@ -1331,8 +1345,8 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
         for (int64_t i = 0; i < m; ++i)
             if (!(p_values[i] >= 0.0 && p_values[i] <= 1.0))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "p-values must lie in [0, 1]");
-        if (!in_numerical_domain(p_values, static_cast<size_t>(m)))
-            return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        if (!p_values_in_domain(p_values, static_cast<size_t>(m)))
+            return fail(ctx, N4M_ERR_UNSUPPORTED, p_value_domain_message);
         std::vector<int64_t> order(static_cast<size_t>(m));
         std::iota(order.begin(), order.end(), int64_t{0});
         std::stable_sort(order.begin(), order.end(),
