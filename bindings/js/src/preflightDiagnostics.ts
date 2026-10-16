@@ -198,6 +198,36 @@ function validatePermutation(nPermutations: number, seed: number | bigint): bigi
     return seed64;
 }
 
+export interface VarianceComponentsRemlResult {
+    /** REML s2_between per feature (NaN when undefined). */
+    sigma2Between: Float64Array;
+    sigma2Within: Float64Array;
+    /** ICC(1) = s2b / (s2b + s2w). */
+    icc: Float64Array;
+    /** Restricted log-likelihood, statsmodels MixedLM convention. */
+    logLikelihood: Float64Array;
+    nGroups: number[];
+    nObservations: number[];
+    /** Local maxima of the restricted likelihood compared. */
+    remlCandidates: number[];
+    bisectionIterations: number[];
+    /** 0 interior, 1 insufficient, 2 s2b=0 boundary, 3 zero total variance,
+     * 4 s2w=0 boundary, 5 not converged. */
+    status: Int32Array;
+}
+
+export interface VarianceComponentsIntervalsResult {
+    /** Exact chi-square interval of the within-group SD, [lower, upper] per feature. */
+    sdChiSquare: Float64Array;
+    /** Exact F interval of the balanced ANOVA ICC(1,1); NaN when unbalanced. */
+    iccExactF: Float64Array;
+    /** Cluster-bootstrap percentile interval of the pooled within-group SD. */
+    sdBootstrap: Float64Array;
+    /** Cluster-bootstrap percentile interval of the REML ICC(1). */
+    iccBootstrap: Float64Array;
+    nValidReplicates: number[];
+}
+
 function validateMatrix(X: Matrix): void {
     if (!Number.isSafeInteger(X.rows) || !Number.isSafeInteger(X.cols) ||
         X.rows < 1 || X.cols < 1 || X.data.length !== X.rows * X.cols) {
@@ -1037,6 +1067,100 @@ export function statsPcaMonitor(reference: Matrix, monitored: Matrix, maxCompone
             monitoredTotalVariance: o[3]!, centroidDistance: o[4]!,
             centroidSubspaceDistance: o[5]!, centroidResidualDistance: o[6]!, centroidT2: o[7]!,
             retainedFraction: o[8]!,
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+function pairs(r: Float64Array, cols: number, offset: number): Float64Array {
+    const out = new Float64Array(2 * cols);
+    for (let j = 0; j < cols; ++j) {
+        out[2 * j] = r[8 * j + offset]!;
+        out[2 * j + 1] = r[8 * j + offset + 1]!;
+    }
+    return out;
+}
+
+/** One-way random-effects variance components by REML, per feature. */
+export function statsVarianceComponentsReml(X: Matrix,
+    groupIds: readonly (number | bigint)[], validMask?: Uint8Array): VarianceComponentsRemlResult {
+    validateMatrix(X);
+    if (groupIds.length !== X.rows || (validMask && validMask.length !== X.data.length)) {
+        throw new RangeError("variance-components group or mask length mismatch");
+    }
+    validateGroupIds(groupIds);
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const groups = scope.i64(groupIds);
+        const mask = validMask ? scope.alloc(validMask.length) : 0;
+        const out = scope.alloc(X.cols * 64), status = scope.alloc(X.cols * 4);
+        if (validMask) m.HEAPU8.set(validMask, mask);
+        const st = m.ccall("n4m_stats_variance_components_reml", "number",
+            Array(6).fill("number"), [ctx.handle, x.viewPtr, groups, mask, out, status]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, X.cols * 8);
+        const field = (k: number) => Float64Array.from({length: X.cols}, (_, j) => r[8 * j + k]!);
+        const count = (k: number) => Array.from({length: X.cols}, (_, j) => r[8 * j + k]!);
+        return {
+            sigma2Between: field(0), sigma2Within: field(1), icc: field(2), logLikelihood: field(3),
+            nGroups: count(4), nObservations: count(5), remlCandidates: count(6),
+            bisectionIterations: count(7),
+            status: new Int32Array(m.HEAP32.slice(status / 4, status / 4 + X.cols)),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+/** Exact and cluster-bootstrap confidence intervals of the same model.
+ * clusterIds (optional) names the resampling unit; the seed is a uint64. */
+export function statsVarianceComponentsIntervals(X: Matrix,
+    groupIds: readonly (number | bigint)[], options: {
+        confidence: number; nBootstrap: number; seed: number | bigint;
+        clusterIds?: readonly (number | bigint)[]; validMask?: Uint8Array;
+    }): VarianceComponentsIntervalsResult {
+    validateMatrix(X);
+    const { confidence, nBootstrap, seed, clusterIds, validMask } = options;
+    if (groupIds.length !== X.rows || (clusterIds && clusterIds.length !== X.rows) ||
+        (validMask && validMask.length !== X.data.length)) {
+        throw new RangeError("variance-components group, cluster or mask length mismatch");
+    }
+    if (!(confidence > 0 && confidence < 1) || !Number.isInteger(nBootstrap) ||
+        nBootstrap < 0 || nBootstrap > 100_000) {
+        throw new RangeError("invalid confidence or bootstrap count");
+    }
+    validateGroupIds(groupIds);
+    if (clusterIds) validateGroupIds(clusterIds);
+    if (typeof seed === "number" && !Number.isSafeInteger(seed)) {
+        throw new RangeError("seeds supplied as numbers must be safe integers");
+    }
+    const seed64 = BigInt(seed);
+    if (seed64 < 0n || seed64 >= (1n << 64n)) throw new RangeError("seed is outside uint64 range");
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const groups = scope.i64(groupIds);
+        const clusters = clusterIds ? scope.i64(clusterIds) : 0;
+        const mask = validMask ? scope.alloc(validMask.length) : 0;
+        const out = scope.alloc(X.cols * 64), valid = scope.alloc(X.cols * 8);
+        if (validMask) m.HEAPU8.set(validMask, mask);
+        const st = m.ccall("n4m_stats_variance_components_intervals", "number",
+            ["number", "number", "number", "number", "number", "number", "number", "i64",
+                "number", "number"],
+            [ctx.handle, x.viewPtr, groups, clusters, mask, confidence, nBootstrap, seed64,
+                out, valid]) as number;
+        checkStatus(st, ctx.handle);
+        const r = copyF64(out, X.cols * 8);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            sdChiSquare: pairs(r, X.cols, 0), iccExactF: pairs(r, X.cols, 2),
+            sdBootstrap: pairs(r, X.cols, 4), iccBootstrap: pairs(r, X.cols, 6),
+            nValidReplicates: Array.from({length: X.cols}, (_, j) =>
+                Number(dv.getBigInt64(valid + j * 8, true))),
         };
     } finally {
         scope.close();

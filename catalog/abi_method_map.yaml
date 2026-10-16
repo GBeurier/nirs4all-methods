@@ -90,6 +90,7 @@ method_prefix:
   diagnostics.bh_adjust: n4m_stats_bh_adjust
   diagnostics.permanova: n4m_stats_permanova
   diagnostics.permdisp: n4m_stats_permdisp
+  diagnostics.variance_components: n4m_stats_variance_components
 
   # ---- filters ----
   filters.composite: n4m_outlier_detection_composite

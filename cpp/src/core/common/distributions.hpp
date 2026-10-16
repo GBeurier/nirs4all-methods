@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: CECILL-2.1
+// Chi-square and F distribution functions for exact confidence intervals.
+//
+// The regularized incomplete gamma uses its power series below a+1 and its
+// Legendre continued fraction above (DLMF 8.7.1, 8.9.2); the regularized
+// incomplete beta uses its continued fraction (DLMF 8.17.22) on the side
+// where it converges. Both continued fractions use the modified Lentz method.
+// The prefactors x^a e^-x / Gamma(a) and x^a (1-x)^b / B(a,b) are formed
+// without cancellation for large parameters: with phi(t) = t - 1 - log t
+// (series near t = 1) and the Stirling remainder of log Gamma (a >= 15),
+//   log[x^a e^-x / Gamma(a)] = -a phi(x/a) + log(a/(2 pi))/2 - delta(a),
+// and the analogous form around x0 = a/(a+b) for the beta (DLMF 5.11.1;
+// the bd0 device of Loader 2000). Lower and upper tails are both evaluated
+// directly, never as 1 minus a value close to 1.
+//
+// Quantiles take the probability of the requested tail (lower or upper), so
+// an upper quantile such as chi2_{1-a/2} never forms 1 - a/2 in double; they
+// bisect that tail on log x (chi-square) or on the logit t of the beta
+// variable (F = (d2/d1) e^t, with log Y = -log1p(e^-t) and
+// log(1 - Y) = -log1p(e^t) formed directly from t).
+//
+// Accuracy (measured, not proven): on the test grids (SciPy 1.18.1, mpmath
+// 1.4.1, and the closed forms of chi-square(2) and F(2, nu), F(nu, 2) for nu
+// up to 2^31 and tails down to 2^-64) the relative error stays below 1e-10
+// (worst observed 5e-12). Away from those grids no bound is proven.
+//
+// Domain: tail probability in [2^-64, 1/2]; degrees of freedom in
+// [1/2, 2^31]; a chi-square quantile in [1e-300, 1e300] and an F quantile in
+// [e^-700, e^700] times d2/d1. Outside it the quantile is NaN; callers refuse.
+#ifndef N4M_CORE_COMMON_DISTRIBUTIONS_HPP
+#define N4M_CORE_COMMON_DISTRIBUTIONS_HPP
+
+namespace n4m::core::distributions {
+
+// Lower and upper regularized incomplete gamma P(a, x), Q(a, x).
+double regularized_gamma_p(double a, double x) noexcept;
+double regularized_gamma_q(double a, double x) noexcept;
+
+// Chi-square and F quantiles of a lower (upper = false) or upper tail
+// probability (NaN outside the domain above).
+double chi2_quantile(double tail, double df, bool upper) noexcept;
+double f_quantile(double tail, double d1, double d2, bool upper) noexcept;
+
+}  // namespace n4m::core::distributions
+
+#endif  // N4M_CORE_COMMON_DISTRIBUTIONS_HPP

@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.permdisp` · _Cata
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_permdisp`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L310). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_permdisp`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L319). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -26,7 +26,7 @@ Reporting whether groups differ in spread, alongside a PERMANOVA whose location 
 
 ### Limits and validation
 
-The residual-permutation test is approximate. Dispersion differences neither validate nor invalidate exchangeability or a PERMANOVA result. Only centroids are offered (not the spatial median variant). Inputs outside the supported numerical domain (nonzero $|x|$ in $[2^{-256},2^{256}]$, max/min nonzero $|x|$ at most $2^{32}$) return `N4M_ERR_UNSUPPORTED` before any computation. A pseudo-F is undefined only when its residual SS is exactly zero; otherwise it is published with a resolution ratio (a conservative first-order error estimate of the residual SS divided by it) and flagged numerically unresolved when that ratio is at least 1. Workloads above 250 million operations return `N4M_ERR_UNSUPPORTED`.
+The residual-permutation test is approximate. Dispersion differences neither validate nor invalidate exchangeability or a PERMANOVA result. Only centroids are offered (not the spatial median variant). Inputs outside the supported numerical domain (nonzero $|x|$ in $[2^{-256},2^{256}]$, max/min nonzero $|x|$ at most $2^{64}$) return `N4M_ERR_UNSUPPORTED` before any computation; a pseudo-F whose residual SS is not resolved above rounding is reported undefined. Workloads above 250 million operations return `N4M_ERR_UNSUPPORTED`.
 
 ### Implementation
 

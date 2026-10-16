@@ -976,35 +976,6 @@
       "links": [
         {
           "kind": "doi",
-          "value": "10.1002/wics.1375"
-        },
-        {
-          "kind": "doi",
-          "value": "10.1016/j.jspi.2013.03.018"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1002/wics.1375"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1016/j.jspi.2013.03.018"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/domain_shift_v1.json"
-        }
-      ],
-      "page": "diagnostics_energy_distance"
-    },
-    {
-      "links": [
-        {
-          "kind": "doi",
           "value": "10.1007/b138696"
         },
         {
@@ -1071,35 +1042,6 @@
         }
       ],
       "page": "diagnostics_holm_adjust"
-    },
-    {
-      "links": [
-        {
-          "kind": "doi",
-          "value": "10.1002/0471725331"
-        },
-        {
-          "kind": "doi",
-          "value": "10.1080/00401706.1995.10485888"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1002/0471725331"
-        },
-        {
-          "kind": "url",
-          "value": "https://doi.org/10.1080/00401706.1995.10485888"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp"
-        },
-        {
-          "kind": "url",
-          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/domain_shift_v1.json"
-        }
-      ],
-      "page": "diagnostics_pca_monitor"
     },
     {
       "links": [
@@ -1245,6 +1187,35 @@
         }
       ],
       "page": "diagnostics_regression_metrics"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1080/01621459.1977.10480998"
+        },
+        {
+          "kind": "doi",
+          "value": "10.1093/biomet/58.3.545"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/01621459.1977.10480998"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1093/biomet/58.3.545"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variance_components.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_variance_components.cpp"
+        }
+      ],
+      "page": "diagnostics_variance_components"
     },
     {
       "links": [
@@ -3662,6 +3633,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "05ac4d287875698d74d94d03c5ebdc2ea37ddcd15a76084bee3dd5b277668dac"
+    "docs/_extras/scientific_remaining.py": "e00e2a6ab607ea70a5024af6e0990e5dbaac6840bd83019e9c5df9355c808b32"
   }
 }
