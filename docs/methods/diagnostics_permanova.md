@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.permanova` · _Cat
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_permanova`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L360) · [`n4m_stats_permanova_freedman_lane`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L309). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_permanova`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L362) · [`n4m_stats_permanova_freedman_lane`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L309). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
