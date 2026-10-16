@@ -1142,7 +1142,12 @@ static n4m_status_t svd_compact_tall(double* A, int64_t m, int64_t n,
                 /* Convergence test for this pair. A column below the
                  * resolution floor takes no rotation (see
                  * N4M_SVD_FLOOR_EXP). */
-                const double tol = N4M_SVD_EPS * sqrt(alpha * beta);
+                /* sqrt(alpha * beta) unless that product underflows
+                 * (weak columns), where it would zero the threshold. */
+                const double ab = alpha * beta;
+                const double tol =
+                    N4M_SVD_EPS *
+                    ((ab >= DBL_MIN) ? sqrt(ab) : sqrt(alpha) * sqrt(beta));
                 if (fabs(gamma) <= tol || alpha < floor2 || beta < floor2) {
                     continue;
                 }

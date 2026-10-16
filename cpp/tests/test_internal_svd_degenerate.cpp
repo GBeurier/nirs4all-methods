@@ -624,6 +624,44 @@ void test_review_round_two() {
     }
 }
 
+
+// Multiprecision (mpmath) references for the third review round: weak
+// directions produced by cancellation (B_n(t) blocks, a Kronecker product).
+// Contract (rule 14): every singular value within the ABSOLUTE bound
+// 16 * max(m,n) * eps * sigma_max, every squared value of the Gram path
+// within 16 * max(m,n) * eps * sigma_max^2; checked per component, under row
+// and column reversal, and the iteration must converge (no status 8).
+void test_multiprecision_goldens() {
+    for (const MpGolden& g : kMpGoldens) {
+        const int64_t m = g.m, n = g.n, k = std::min(m, n);
+        const double s0 = g.sv_desc[0];
+        const double bound = 16.0 * static_cast<double>(std::max(m, n)) * DBL_EPSILON * s0;
+        for (int perm = 0; perm < 4; ++perm) {
+            Mat A(static_cast<size_t>(m * n));
+            for (int64_t i = 0; i < m; ++i)
+                for (int64_t j = 0; j < n; ++j)
+                    A[at((perm & 1) ? m - 1 - i : i, (perm & 2) ? n - 1 - j : j, n)] =
+                        g.A[at(i, j, n)];
+            Mat U(static_cast<size_t>(m * k)), S(static_cast<size_t>(k)),
+                Vt(static_cast<size_t>(k * n)), W = A;
+            const n4m_status_t st =
+                n4m_svd_compact(W.data(), m, n, U.data(), S.data(), Vt.data());
+            SVD_CHECK(g.name, st == N4M_OK);
+            if (st == N4M_OK)
+                for (int64_t c = 0; c < k; ++c)
+                    SVD_CHECK(g.name, std::fabs(S[static_cast<size_t>(c)] -
+                                                g.sv_desc[c]) <= bound);
+            SVD_CHECK(g.name, n4m_svd_truncated_tall_gram(A.data(), m, n, k, U.data(), S.data(),
+                                                          Vt.data()) == N4M_OK);
+            for (int64_t c = 0; c < k; ++c) {
+                const double sc = S[static_cast<size_t>(c)];
+                SVD_CHECK(g.name, std::fabs(sc * sc - g.sv_desc[c] * g.sv_desc[c]) <=
+                                      bound * s0);
+            }
+        }
+    }
+}
+
 }  // namespace
 
 // Entry point invoked from the n4m_internal_tests main (test_internal_rng_choice.cpp).
@@ -636,6 +674,7 @@ int run_internal_svd_degenerate_tests() {
     test_large_repeated_spectra();
     test_magnitude_sweep();
     test_review_round_two();
+    test_multiprecision_goldens();
     if (g_svd_failures == 0) {
         std::printf("[internal] degenerate SVD/eigh vs numpy %s ... ok\n", kSvdGoldenNumpyVersion);
     } else {

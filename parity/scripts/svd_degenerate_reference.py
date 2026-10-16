@@ -22,6 +22,7 @@ from __future__ import annotations
 import pathlib
 import platform
 
+import mpmath as mp
 import numpy as np
 
 OUT = (
@@ -206,6 +207,48 @@ def svd_cases() -> list[tuple[str, np.ndarray, bool]]:
     return cases
 
 
+def bidiag(n: int, t) -> list[list]:
+    """B_n(t): t on the diagonal, 1 on the superdiagonal (det = t^n)."""
+    return [
+        [t if i == j else (1 if j == i + 1 else 0) for j in range(n)] for i in range(n)
+    ]
+
+
+def stacked_opposite(a: list[list], scale) -> list[list]:
+    """scale * [A; -A]: exactly centred, so the PCA sees it unchanged."""
+    return [[scale * v for v in row] for row in a] + [
+        [-scale * v for v in row] for row in a
+    ]
+
+
+def multiprecision_cases() -> list[tuple[str, list[list]]]:
+    """Review families whose small singular values come from cancellation."""
+    two = mp.mpf(2)
+    kron = [[1, mp.mpf(3) / 4], [mp.mpf(1) / 2, 1]]
+    b6 = bidiag(6, two**-50)
+    a12 = [
+        [b6[i // 2][j // 2] * kron[i % 2][j % 2] for j in range(12)] for i in range(12)
+    ]
+    reversed_cols = [list(reversed(row)) for row in stacked_opposite(a12, 1)]
+    return [
+        # 8th variance ~2^-881/15: far below the resolution, unresolved.
+        ("b8_plateau", stacked_opposite(bidiag(8, two**-63), two**63)),
+        # Last variance ~2^-1093/15: not even representable, unresolved.
+        ("b8_tiny", stacked_opposite(bidiag(8, two**-60), two**-67)),
+        # B_6(2^-50) (x) [[1,3/4],[1/2,1]], [A; -A], columns reversed.
+        ("b6_kron", reversed_cols),
+    ]
+
+
+def multiprecision_singular_values(rows: list[list]) -> list:
+    return sorted(mp.svd_r(mp.matrix(rows), compute_uv=False), reverse=True)
+
+
+def fmt_mp(values) -> str:
+    """Exact-to-double rendering (values below the double range become 0)."""
+    return ", ".join(repr(float(v)) for v in values)
+
+
 def fmt(values) -> str:
     return ", ".join(repr(float(v)) for v in np.asarray(values, dtype=float).ravel())
 
@@ -317,6 +360,30 @@ def main() -> None:
     lines.append("                   const double* explained_var; int relative; };")
     lines.append("static const PcaGolden kPcaGoldens[] = {")
     lines.extend(pca_entries)
+    lines.append("};")
+    # Multiprecision (mpmath, 600 digits) references: matrix entries (exact
+    # dyadic values), singular values and centred variances sigma^2/(n-1).
+    mp.mp.dps = 600
+    lines.append(f"// mpmath {mp.__version__}, {mp.mp.dps} digits.")
+    mp_entries = []
+    for idx, (name, rows) in enumerate(multiprecision_cases()):
+        s = multiprecision_singular_values(rows)
+        var = [v * v / (len(rows) - 1) for v in s]
+        m, n = len(rows), len(rows[0])
+        lines.append(
+            f"static const double kMpA{idx}[] = {{{fmt_mp(v for r in rows for v in r)}}};"
+        )
+        lines.append(f"static const double kMpS{idx}[] = {{{fmt_mp(s)}}};")
+        lines.append(f"static const double kMpVar{idx}[] = {{{fmt_mp(var)}}};")
+        mp_entries.append(
+            f'    {{"{name}", {m}, {n}, kMpA{idx}, kMpS{idx}, kMpVar{idx}}},'
+        )
+    lines.append(
+        "struct MpGolden { const char* name; int m; int n; const double* A; const double* sv_desc;"
+    )
+    lines.append("                  const double* variances; };")
+    lines.append("static const MpGolden kMpGoldens[] = {")
+    lines.extend(mp_entries)
     lines.append("};")
     OUT.write_text("\n".join(lines) + "\n")
     print(f"wrote {OUT}")
