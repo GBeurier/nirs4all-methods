@@ -480,7 +480,20 @@ const balanced = statsVarianceComponentsIntervals({
 vcNear(balanced.iccExactF[0], 0.7838941809128407, 1e-10);
 vcNear(balanced.iccExactF[1], 0.9968006295172774, 1e-10);
 assert.equal(balanced.nValidReplicates[0], 0);
-// Rule 13 domain: nonzero |x| in [2^-256, 2^256] and spread <= 2^64 (raw
+// Searle bounds with 3 groups use F(2, nu) quantiles: closed form
+// (nu/2) expm1(-2 log(p)/nu) for the upper tail and reciprocity for
+// F(nu, 2). Data 10 i +- 1: MSB = 100 r, MSW = r/(r-1), F = 100 (r-1).
+for (const r of [2, 10, 1000]) {
+    const data = [], groups = [];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < r; j++) { groups.push(i); data.push(10 * i + (j % 2 === 0 ? 1 : -1)); }
+    const nu = 3 * (r - 1), F = 100 * (r - 1), p = 0.025;
+    const fl = F / (0.5 * nu * Math.expm1(-2 * Math.log(p) / nu));
+    const fu = F / (0.5 * nu * Math.expm1(-2 * Math.log1p(-p) / nu));
+    const ci = statsVarianceComponentsIntervals({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups, { confidence: 0.95, nBootstrap: 0, seed: 0 });
+    vcNear(ci.iccExactF[0], (fl - 1) / (fl + r - 1), 1e-10);
+    vcNear(ci.iccExactF[1], (fu - 1) / (fu + r - 1), 1e-10);
+}
+// Rules 13/15 domain: nonzero |x| in [2^-256, 2^256] and spread <= 2^32 (raw
 // values and the differences the statistic uses). Inside: exact 2^k
 // identities; outside: N4mError with status 10 (UNSUPPORTED), never a value.
 const twoGroups = [0, 0, 1, 1];
@@ -506,9 +519,9 @@ accepted([2 ** 256, 2 ** 255, 2 ** 254], g3);
 refused([2 ** 256 * (1 + 2 ** -52), 2 ** 255, 2 ** 254], g3);
 accepted([2 ** -256, 2 ** -255, 2 ** -254], g3);
 refused([2 ** -257, 2 ** -255, 2 ** -254], g3);
-accepted([1, 2 ** 64, 2], g3);
-refused([1, 2 ** 65, 2], g3);
-accepted([1, 1 + 2 ** -50, 2 ** 10], g001);
-refused([1, 1 + 2 ** -52, 2 ** 12], g001);
+accepted([1, 2 ** 32, 2], g3);
+refused([1, 2 ** 33, 2], g3);
+accepted([1, 1 + 2 ** -20, 2 ** 10], g001);
+refused([1, 1 + 2 ** -22, 2 ** 12], g001);
 refused([-1e300, -9e299, 9e299, 1e300], twoGroups);
 console.log("variance components: ok");

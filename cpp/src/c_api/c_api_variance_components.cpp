@@ -29,14 +29,14 @@ constexpr long double max_bootstrap_work = 2500000000.0L;
 // Per replicate and feature: the group scan plus the grid and bisections.
 constexpr long double bootstrap_fit_work = 1024.0L;
 constexpr int32_t max_bootstrap = 100000;
-// Supported numerical domain (lead rule 13): every nonzero |x| in
-// [2^-256, 2^256], and max/min nonzero |x| <= 2^64 over the raw values and
+// Supported numerical domain (lead rules 13/15): every nonzero |x| in
+// [2^-256, 2^256], and max/min nonzero |x| <= 2^32 over the raw values and
 // over the centred values of each feature. Outside it the call is refused.
-constexpr int domain_exponent = 256;
-constexpr int domain_spread = 64;
+constexpr int domain_exponent = N4M_DOMAIN_MAX_MAGNITUDE_LOG2;
+constexpr int domain_spread = N4M_DOMAIN_MAX_SPREAD_LOG2;
 constexpr const char* domain_message =
     "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^64)";
+    "max/min nonzero |x| <= 2^32)";
 
 
 size_t sz(int64_t v) noexcept { return static_cast<size_t>(v); }
@@ -152,33 +152,44 @@ void scan_column(const n4m_matrix_view_t& X, int64_t j, const std::vector<int64_
     for (int64_t k : out.index) out.groups.push_back(all[sz(k)]);
 }
 
-// Spread max/min of the nonzero magnitudes within 2^64; zeros are allowed.
-bool spread_ok(const std::vector<double>& a, const std::vector<double>& b) noexcept {
+// Spread max/min of the nonzero magnitudes within 2^32; zeros are allowed.
+bool spread_ok(const std::vector<double>& values) noexcept {
     double lo = 0.0, hi = 0.0;
-    for (const auto* values : {&a, &b})
-        for (double v : *values) {
-            const double m = std::abs(v);
-            if (m == 0.0) continue;
-            lo = lo == 0.0 ? m : std::min(lo, m);
-            hi = std::max(hi, m);
-        }
+    for (double v : values) {
+        const double m = std::abs(v);
+        if (m == 0.0) continue;
+        lo = lo == 0.0 ? m : std::min(lo, m);
+        hi = std::max(hi, m);
+    }
     return hi == 0.0 || hi <= std::ldexp(lo, domain_spread);
 }
 
-// Rule 13 pre-pass over every feature, before any computation: unmasked
-// values must be finite, every nonzero |x| in [2^-256, 2^256], and the
-// spread max/min of nonzero magnitudes <= 2^64 over the raw values and over
-// the differences the statistic uses (column-centred values together with
-// the per-group residuals).
+// Spread of the pairwise differences the statistic depends on, measured on
+// the raw values themselves: (max - min) over the smallest nonzero gap
+// between sorted values must stay within 2^32. Gaps of nearby doubles are
+// exact (Sterbenz), so rounding residues of derived quantities (means,
+// residuals) never trigger a refusal.
+bool differences_ok(std::vector<double> values) {
+    std::sort(values.begin(), values.end());
+    double gap = 0.0;
+    for (size_t i = 1; i < values.size(); ++i) {
+        const double d = values[i] - values[i - 1];
+        if (d > 0.0) gap = gap == 0.0 ? d : std::min(gap, d);
+    }
+    return gap == 0.0 || values.back() - values.front() <= std::ldexp(gap, domain_spread);
+}
+
+// Rule 13/15 pre-pass over every feature, before any computation: unmasked
+// values must be finite, every nonzero |x| in [2^-256, 2^256], and both the
+// magnitudes and the pairwise differences of the values of a feature span at
+// most 2^32 (N4M_DOMAIN_MAX_SPREAD_LOG2).
 n4m_status_t check_domain(n4m_context_t* ctx, const n4m_matrix_view_t& X,
-                          const std::vector<int64_t>& group, int64_t n_groups,
                           const uint8_t* mask) {
     if (X.rows > (int64_t{1} << 31))
         return fail(ctx, N4M_ERR_UNSUPPORTED, "more than 2^31 rows (quantile domain)");
     const auto* data = static_cast<const double*>(X.data);
     const double lowest = std::ldexp(1.0, -domain_exponent);
     const double highest = std::ldexp(1.0, domain_exponent);
-    const std::vector<double> none;
     std::vector<double> values;
     for (int64_t j = 0; j < X.cols; ++j) {
         values.clear();
@@ -192,9 +203,8 @@ n4m_status_t check_domain(n4m_context_t* ctx, const n4m_matrix_view_t& X,
                 return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
             values.push_back(x);
         }
-        if (!spread_ok(values, none)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
-        const auto cen = centre_column(X, j, group, n_groups, mask);
-        if (!spread_ok(cen.c, cen.residual)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        if (!spread_ok(values) || !differences_ok(values))
+            return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     }
     return N4M_OK;
 }
@@ -232,7 +242,7 @@ N4M_API n4m_status_t n4m_stats_variance_components_reml(
     try {
         int64_t n_groups = 0;
         const auto group = dense(group_ids, X->rows, n_groups);
-        const auto domain = check_domain(ctx, *X, group, n_groups, valid_mask);
+        const auto domain = check_domain(ctx, *X, valid_mask);
         if (domain != N4M_OK) return domain;
         Column column;
         constexpr long double ln2 = 0.693147180559945309417232121458176568L;
@@ -279,7 +289,7 @@ N4M_API n4m_status_t n4m_stats_variance_components_intervals(
     try {
         int64_t n_groups = 0, n_units = 0;
         const auto group = dense(group_ids, X->rows, n_groups);
-        const auto domain = check_domain(ctx, *X, group, n_groups, valid_mask);
+        const auto domain = check_domain(ctx, *X, valid_mask);
         if (domain != N4M_OK) return domain;
         std::vector<int64_t> unit_of(sz(n_groups));
         if (cluster_ids) {

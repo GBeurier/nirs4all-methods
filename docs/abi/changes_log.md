@@ -134,12 +134,14 @@ cannot overflow; the overflow refusal remains as a guard.
 Add two caller-buffer operations in `n4m/metrics.h`. Earlier symbols are
 unchanged and no serialized format changes.
 
-Supported numerical domain (lead rule 13), checked over every feature before
-any computation: each nonzero |x| in [2^-256, 2^256], and max/min nonzero |x|
-<= 2^64 over the raw values and over the differences the statistic uses
-(column-centred values with the per-group residuals). Outside it both calls
-return `N4M_ERR_UNSUPPORTED` with "input outside the supported numerical
-domain (...)". Inside it, results are translation and scale invariant: each
+Supported numerical domain (lead rules 13/15), checked over every feature
+before any computation: each nonzero |x| in [2^-256, 2^256], max/min nonzero
+|x| <= 2^32 (`N4M_DOMAIN_MAX_SPREAD_LOG2`), and the same bound on the
+pairwise differences, measured on the raw values as (max - min) over the
+smallest nonzero gap between sorted values (exact gaps, so rounding residues
+of means never trigger a refusal). Outside it both calls return
+`N4M_ERR_UNSUPPORTED` with "input outside the supported numerical domain
+(...)". Inside it, results are translation and scale invariant: each
 feature is rescaled by exact powers of two chosen from its centred variation,
 and within-group residuals are centred per group from the original values and
 keep their own exponent.
@@ -173,8 +175,12 @@ nominal; `parity/generators/variance_components_coverage.py`, recorded in
 `parity/fixtures/variance_components_coverage_v1.json`). Chi-square and F
 quantiles (`core/common/distributions.cpp`) take the probability of the
 requested tail, so an upper quantile never forms 1 - a/2, use
-cancellation-free prefactors and hold 1e-10 relative accuracy for tails in
-[2^-64, 1/2] and df in [1/2, 2^31]. Bootstrap work above 2.5e9 operations,
+cancellation-free prefactors (the logarithms of the beta coordinates come
+straight from the logit with log1p, and the first continued-fraction
+denominator uses 1 - x when x is close to 1), for tails in [2^-64, 1/2] and
+df in [1/2, 2^31]. Measured relative error on the test grids (SciPy, mpmath,
+closed forms of chi-square(2) and F(2, nu), F(nu, 2) up to nu = 2^31): worst
+5e-12, tests assert 1e-10; no bound is proven elsewhere. Bootstrap work above 2.5e9 operations,
 `B x features x (groups + 1024)`, returns `N4M_ERR_UNSUPPORTED`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)

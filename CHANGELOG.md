@@ -91,8 +91,8 @@ ABI 2.20.0. No model-state serialization format changes.
   `n4m_stats_variance_components_intervals` (exact chi-square interval of the
   within-group SD, exact F interval of the balanced ICC(1,1), seeded
   cluster-bootstrap percentile intervals of the pooled SD and REML ICC with
-  NumPy-parity PCG64 draws). Supported numerical domain (rule 13): nonzero
-  |x| in [2^-256, 2^256], spread <= 2^64 over values and differences;
+  NumPy-parity PCG64 draws). Supported numerical domain (rules 13/15):
+  nonzero |x| in [2^-256, 2^256], spread <= 2^32 over values and differences;
   outside it both calls refuse with `N4M_ERR_UNSUPPORTED`. The percentile
   intervals are not coverage-calibrated: 0.86-0.94 measured at 95 % nominal
   (`parity/generators/variance_components_coverage.py`); BCa was rejected
