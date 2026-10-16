@@ -187,7 +187,7 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
  * categorical=1 with levels * classes > 10 million cells returns
  * N4M_ERR_UNSUPPORTED before any table allocation or statistic.
  * Supported numerical domain D: finite targets whose nonzero |y| lie in
- * [2^-256, 2^256] with max/min nonzero |y| <= 2^64 (exact zeros allowed;
+ * [2^-256, 2^256] with max/min nonzero |y| <= 2^32 (exact zeros allowed;
  * categorical class codes are labels and are not domain-checked). Inputs
  * outside D return N4M_ERR_UNSUPPORTED with the message "input outside the
  * supported numerical domain (...)" before any computation. Inside D the
@@ -219,8 +219,9 @@ N4M_API n4m_status_t n4m_preflight_factor_association(
 /* Holm step-down adjusted p-values for one family of m >= 1 hypotheses.
  * Inputs must lie in [0, 1]; adjusted[i] = min(1, max_{j<=rank(i)}
  * (m-j+1) p_(j)) with a stable ascending order, as R p.adjust("holm").
- * Nonzero p-values must lie in [2^-256, 1] with max/min nonzero p <= 2^64
- * (domain D; zeros allowed), otherwise N4M_ERR_UNSUPPORTED. */
+ * Nonzero p-values must lie in [2^-256, 1] (magnitude bounds of domain D;
+ * p-values are exempt from its spread bound; zeros allowed), otherwise
+ * N4M_ERR_UNSUPPORTED. */
 N4M_API n4m_status_t n4m_preflight_holm_adjust(
     n4m_context_t* ctx, const double* p_values, int64_t m, double* adjusted);
 
@@ -307,20 +308,31 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * SS is zero); p = (1+b)/(1+B).
  * Numerical domain D (shared by n4m_stats_permanova_freedman_lane and
  * n4m_stats_permdisp): X finite, every nonzero |x| in [2^-256, 2^256] and
- * max/min nonzero |x| <= 2^64 over the whole matrix (exact zeros allowed),
- * the same D as the association kernels. Outside D the call returns N4M_ERR_UNSUPPORTED, before any
- * computation, with the context message "input outside the supported
- * numerical domain (...)". Inside D each column is centred (exact
- * power-of-two prescale, shift to its first row, compensated mean) and all
- * columns are expressed in one power-of-two unit chosen from the CENTRED
- * variation, so constant columns and common offsets do not change any output,
- * and the rescaling is exact: no varying column is erased and no squared term
- * underflows. Every sum of squares is a sum of squared terms (residuals are
+ * max/min nonzero |x| <= 2^32 over the whole matrix (exact zeros allowed),
+ * the same D as the association kernels (N4M_DOMAIN_MAX_SPREAD_LOG2 = 32).
+ * Outside D the call returns N4M_ERR_UNSUPPORTED, before any computation,
+ * with the context message "input outside the supported numerical domain
+ * (...)". Inside D each column is centred (exact power-of-two prescale, shift
+ * to its first row, compensated mean) and all columns are expressed in one
+ * power-of-two unit chosen from the CENTRED variation, so constant columns
+ * and common offsets do not change any output and the rescaling is exact: no
+ * varying column is erased and no squared term underflows. Centring rounds
+ * each value by about n DBL_EPSILON times the largest |x| of its column,
+ * which the spread bound keeps below about n 2^-20 times the smallest nonzero
+ * |x|. Every sum of squares is a sum of squared terms (residuals are
  * projected explicitly, never obtained as a difference of totals)
  * accumulated in long double, and F and all ratios are formed in the scaled
- * unit. A pseudo-F (and its test) is NaN when the residual SS is at or below
- * its rounding resolution gamma^2 times the projected SS, gamma = 16
- * (rank + 2) sqrt(n k) DBL_EPSILON (a backward-error estimate). Published sums
+ * unit; for a well-conditioned design the relative error of a sum of
+ * squares is about c n DBL_EPSILON and its absolute error about c n
+ * DBL_EPSILON times the raw sum of squares. A pseudo-F is NaN (undefined, no
+ * test) only when its residual SS is exactly zero. Otherwise it is published
+ * with a resolution ratio, the error estimate of the residual SS divided by
+ * it: estimate = gamma^2 n sum_j max_i |x_ij|^2, gamma = 4 (rank + k + 2) n
+ * DBL_EPSILON (rank = design rank, groups for PERMDISP), a conservative
+ * first-order estimate, not a proof. A ratio >= 1 sets the "numerically
+ * unresolved" flag: F and its test are still computed but the residual SS,
+ * hence F, is not resolved above rounding; below 1 the relative error of the
+ * residual SS is about 2 sqrt(ratio). Published sums
  * of squares (and PERMDISP distances) carry an exponent: the true value is
  * out * 2^(*ss_exponent); it is 0, with true values written, when every
  * positive value is a normal double (always the case for ss_total inside
@@ -333,19 +345,22 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * Requires n >= 2, k >= 1, finite X, at most 2048 term levels, 0 <=
  * n_permutations <= 1000000 and (2n(k+1) + 2 levels^2 k)(B+1) + levels n <=
  * 250 million operations (N4M_ERR_UNSUPPORTED otherwise).
- * out_thirteen (caller-owned, NaN when undefined):
+ * out_fifteen (caller-owned, NaN when undefined):
  *   [0] ss_total  [1] ss_strata  [2] ss_term  [3] ss_residual
  *   [4] R^2 = ss_term/ss_total  [5] partial R^2 = ss_term/(ss_term+ss_residual)
  *   [6] pseudo-F = (ss_term/df_term)/(ss_residual/df_residual)
  *   [7] df_term  [8] df_residual  [9] term levels  [10] strata
  *   [11] log10 prod_s (n_s!/prod_a n_as!), the number of distinct
  *        within-strata level assignments (an upper bound on distinct outcomes)
- *   [12] Monte Carlo p-value.
+ *   [12] Monte Carlo p-value
+ *   [13] resolution ratio of the residual SS (+inf when it is 0)
+ *   [14] 1 when the pseudo-F is numerically unresolved (ratio >= 1), else 0
+ *   ([13], [14] NaN when df_term or df_residual is 0).
  * out_two = {b, executed B}; *ss_exponent: true SS = out[0..3] * 2^exponent. */
 N4M_API n4m_status_t n4m_stats_permanova(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* strata_codes, int32_t n_permutations, uint64_t seed,
-    double* out_thirteen, int64_t* out_two, int32_t* ss_exponent);
+    double* out_fifteen, int64_t* out_two, int32_t* ss_exponent);
 
 /* Partial PERMANOVA of one categorical term given the additive main effects
  * of n_conditions categorical factors, tested by Freedman-Lane permutation of
@@ -358,7 +373,10 @@ N4M_API n4m_status_t n4m_stats_permanova(
  * df_term = rank(full) - rank(reduced), 0 when the term is aliased with the
  * conditions; df_residual = n - rank(full). pseudo-F =
  * (SS_term/df_term)/(SS_residual/df_residual), SS_term = SS(full) -
- * SS(reduced). Monte Carlo test (n_permutations > 0 and a defined pseudo-F):
+ * SS(reduced). The reduced-model residuals are projected off the reduced
+ * design twice; SS_term and SS_residual come from one projection of them on
+ * the full design, so the partial R^2 is SS_term/(SS_term + SS_residual).
+ * Monte Carlo test (n_permutations > 0 and a defined pseudo-F):
  * PCG64 as numpy.random.default_rng(seed); the b-th draw perm =
  * rng.permutation(n) gives data fitted_reduced[i] + residual[perm[i]], refitted
  * on both designs; b counts pseudo-F_perm >= F_obs - sqrt(DBL_EPSILON) (+inf
@@ -368,16 +386,18 @@ N4M_API n4m_status_t n4m_stats_permanova(
  * the design is generated: at most 4096 design columns c, n c <= 32 Mi
  * values (256 MiB) and 2 n c^2 + 4 n k (c+1)(B+1) <= 250 million
  * operations.
- * out_twelve (NaN when undefined): [0] ss_total [1] ss_reduced (model SS of
+ * out_fourteen (NaN when undefined): [0] ss_total [1] ss_reduced (model SS of
  * the reduced design) [2] ss_term [3] ss_residual [4] ss_term/ss_total
  * [5] partial R^2 ss_term/(ss_term+ss_residual) [6] pseudo-F [7] df_term
  * [8] df_residual [9] rank of the reduced design (intercept included)
- * [10] log10(n!), the distinct residual permutations bound [11] p-value.
+ * [10] log10(n!), the distinct residual permutations bound [11] p-value
+ * [12] resolution ratio of the residual SS [13] numerically unresolved flag
+ * (as n4m_stats_permanova [13], [14]).
  * out_two = {b, executed B}; *ss_exponent: true SS = out[0..3] * 2^exponent. */
 N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* condition_codes, int32_t n_conditions, int32_t n_permutations,
-    uint64_t seed, double* out_twelve, int64_t* out_two, int32_t* ss_exponent);
+    uint64_t seed, double* out_fourteen, int64_t* out_two, int32_t* ss_exponent);
 
 /* PERMDISP (Anderson 2006), as vegan betadisper(type = "centroid") with
  * permutest: Euclidean distances of the rows of X to their group centroid,
@@ -395,14 +415,17 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
  * operations.
  * distances has n elements; group_mean_distances has capacity n and
  * receives one mean per group in ascending code order.
- * out_six: [0] F (NaN with one group, n == groups or an unresolved within SS)
+ * out_eight: [0] F (NaN with one group, n == groups or a zero within SS)
  * [1] df1 = groups-1 [2] df2 = n-groups [3] groups
- * [4] log10(n!/prod n_g!) [5] Monte Carlo p-value; out_two = {b, executed B};
+ * [4] log10(n!/prod n_g!) [5] Monte Carlo p-value [6] resolution ratio of
+ * the within SS of the distances [7] numerically unresolved flag (as
+ * n4m_stats_permanova [13], [14]; NaN with one group or n == groups);
+ * out_two = {b, executed B};
  * *distance_exponent: true distance = out * 2^exponent (both arrays). */
 N4M_API n4m_status_t n4m_stats_permdisp(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
     int32_t n_permutations, uint64_t seed, double* distances,
-    double* group_mean_distances, double* out_six, int64_t* out_two,
+    double* group_mean_distances, double* out_eight, int64_t* out_two,
     int32_t* distance_exponent);
 
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */

@@ -127,6 +127,12 @@ export interface PermanovaResult {
     log10DistinctPermutations: number;
     /** Monte Carlo (1+b)/(1+B); NaN without an executed test. */
     pValue: number;
+    /** Error estimate of the residual SS divided by it (+Infinity when the
+     * residual SS is 0; NaN when the pseudo-F has no df). */
+    residualResolution: number;
+    /** True when the residual SS is not resolved above rounding
+     * (residualResolution >= 1): the pseudo-F is published but unresolved. */
+    fNumericallyUnresolved: boolean;
     nAtLeastObserved: number;
     nPermutationsExecuted: number;
 }
@@ -149,6 +155,12 @@ export interface FreedmanLaneResult {
     rankReduced: number;
     log10DistinctPermutations: number;
     pValue: number;
+    /** Error estimate of the residual SS divided by it (+Infinity when the
+     * residual SS is 0; NaN when the pseudo-F has no df). */
+    residualResolution: number;
+    /** True when the residual SS is not resolved above rounding
+     * (residualResolution >= 1): the pseudo-F is published but unresolved. */
+    fNumericallyUnresolved: boolean;
     nAtLeastObserved: number;
     nPermutationsExecuted: number;
 }
@@ -166,6 +178,10 @@ export interface PermdispResult {
     nGroups: number;
     log10DistinctPermutations: number;
     pValue: number;
+    /** Error estimate of the within SS of the distances divided by it. */
+    residualResolution: number;
+    /** True when F is published but not resolved above rounding. */
+    fNumericallyUnresolved: boolean;
     nAtLeastObserved: number;
     nPermutationsExecuted: number;
 }
@@ -759,19 +775,20 @@ export function statsPermanova(X: Matrix, termCodes: readonly (number | bigint)[
         const x = scope.matrix(X.data, X.rows, X.cols);
         const term = scope.i64(termCodes);
         const strata = strataCodes ? scope.i64(strataCodes) : 0;
-        const out = scope.alloc(13 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
+        const out = scope.alloc(15 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
         const st = m.ccall("n4m_stats_permanova", "number",
             ["number", "number", "number", "number", "number", "i64", "number", "number", "number"],
             [ctx.handle, x.viewPtr, term, strata, nPermutations, seed64, out, counts,
                 exponent]) as number;
         checkStatus(st, ctx.handle);
-        const r = copyF64(out, 13);
+        const r = copyF64(out, 15);
         const dv = new DataView(m.HEAPU8.buffer);
         return {
             ssExponent: dv.getInt32(exponent, true),
             ssTotal: r[0]!, ssStrata: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!,
             r2: r[4]!, partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!,
             nLevels: r[9]!, nStrata: r[10]!, log10DistinctPermutations: r[11]!, pValue: r[12]!,
+            residualResolution: r[13]!, fNumericallyUnresolved: r[14] === 1,
             nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
             nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
         };
@@ -796,21 +813,21 @@ export function statsPermdisp(X: Matrix, groupCodes: readonly (number | bigint)[
         const x = scope.matrix(X.data, X.rows, X.cols);
         const groups = scope.i64(groupCodes);
         const distances = scope.alloc(X.rows * 8), means = scope.alloc(X.rows * 8);
-        const out = scope.alloc(6 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
+        const out = scope.alloc(8 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
         const st = m.ccall("n4m_stats_permdisp", "number",
             ["number", "number", "number", "number", "i64", "number", "number", "number", "number",
                 "number"],
             [ctx.handle, x.viewPtr, groups, nPermutations, seed64, distances, means, out,
                 counts, exponent]) as number;
         checkStatus(st, ctx.handle);
-        const r = copyF64(out, 6);
+        const r = copyF64(out, 8);
         const dv = new DataView(m.HEAPU8.buffer);
         return {
             distanceExponent: dv.getInt32(exponent, true),
             distances: copyF64(distances, X.rows),
             groupMeanDistances: copyF64(means, r[3]!),
             f: r[0]!, df1: r[1]!, df2: r[2]!, nGroups: r[3]!, log10DistinctPermutations: r[4]!,
-            pValue: r[5]!,
+            pValue: r[5]!, residualResolution: r[6]!, fNumericallyUnresolved: r[7] === 1,
             nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
             nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
         };
@@ -841,20 +858,21 @@ export function statsPermanovaFreedmanLane(X: Matrix, termCodes: readonly (numbe
         const rowMajor: (number | bigint)[] = [];
         for (let i = 0; i < X.rows; i++) for (const c of conditionCodes) rowMajor.push(c[i]!);
         const conditions = conditionCodes.length ? scope.i64(rowMajor) : 0;
-        const out = scope.alloc(12 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
+        const out = scope.alloc(14 * 8), counts = scope.alloc(16), exponent = scope.alloc(4);
         const st = m.ccall("n4m_stats_permanova_freedman_lane", "number",
             ["number", "number", "number", "number", "number", "number", "i64", "number", "number",
                 "number"],
             [ctx.handle, x.viewPtr, term, conditions, conditionCodes.length, nPermutations, seed64,
                 out, counts, exponent]) as number;
         checkStatus(st, ctx.handle);
-        const r = copyF64(out, 12);
+        const r = copyF64(out, 14);
         const dv = new DataView(m.HEAPU8.buffer);
         return {
             ssExponent: dv.getInt32(exponent, true),
             ssTotal: r[0]!, ssReduced: r[1]!, ssTerm: r[2]!, ssResidual: r[3]!, r2: r[4]!,
             partialR2: r[5]!, pseudoF: r[6]!, dfTerm: r[7]!, dfResidual: r[8]!, rankReduced: r[9]!,
             log10DistinctPermutations: r[10]!, pValue: r[11]!,
+            residualResolution: r[12]!, fNumericallyUnresolved: r[13] === 1,
             nAtLeastObserved: Number(dv.getBigInt64(counts, true)),
             nPermutationsExecuted: Number(dv.getBigInt64(counts + 8, true)),
         };

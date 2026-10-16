@@ -25,7 +25,7 @@ using namespace n4m_testing;
 int32_t g_exp = 0;
 
 struct Permanova {
-    double v[13];
+    double v[15];
     int64_t counts[2];
 };
 
@@ -150,7 +150,7 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
         std::vector<int64_t> cond(nrows * columns.size());
         for (size_t i = 0; i < nrows; ++i)
             for (size_t c = 0; c < columns.size(); ++c) cond[i * columns.size() + c] = columns[c][i];
-        double fl[12];
+        double fl[14];
         int64_t fcounts[2] = {};
         const auto fseed = static_cast<uint64_t>(integer(s, "seed", flo, fhi));
         REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term.data(), cond.data(),
@@ -174,7 +174,7 @@ void gate_case(n4m_context_t* ctx, const std::string& s, size_t lo, size_t hi) {
     if (s.find("\"permdisp\"", lo) < hi) {
         const auto [dlo, dhi] = object_span(s, "permdisp", lo, hi);
         const auto n = static_cast<size_t>(rows);
-        std::vector<double> dist(n), means(n), out(6);
+        std::vector<double> dist(n), means(n), out(8);
         int64_t counts[2] = {};
         const auto dseed = static_cast<uint64_t>(integer(s, "seed", dlo, dhi));
         REQUIRE(n4m_stats_permdisp(ctx, &X, term.data(), b, dseed, dist.data(), means.data(),
@@ -222,22 +222,22 @@ Outputs run_kernel(n4m_context_t* ctx, int which, std::vector<double> x, int64_t
     REQUIRE(n4m_matrix_view_init_rowmajor(&X, x.data(), 12, cols, N4M_DTYPE_F64) == N4M_OK);
     int64_t counts[2] = {};
     if (which == 0) {
-        double v[13];
+        double v[15];
         o.status = n4m_stats_permanova(ctx, &X, kTerm, kStrata, 199, 7, v, counts, &g_exp);
         o.ss = {v[0], v[1], v[2], v[3]};
-        o.ratios = {v[4], v[5], v[6], v[7], v[8], v[12]};
+        o.ratios = {v[4], v[5], v[6], v[7], v[8], v[12], v[14]};
     } else if (which == 1) {
-        double v[12];
+        double v[14];
         o.status = n4m_stats_permanova_freedman_lane(ctx, &X, kTerm, kStrata, 1, 199, 7, v, counts, &g_exp);
         o.ss = {v[0], v[1], v[2], v[3]};
-        o.ratios = {v[4], v[5], v[6], v[7], v[8], v[9], v[11]};
+        o.ratios = {v[4], v[5], v[6], v[7], v[8], v[9], v[11], v[13]};
     } else {
         std::vector<double> dist(12), means(12);
-        double v[6];
+        double v[8];
         o.status = n4m_stats_permdisp(ctx, &X, kTerm, 199, 7, dist.data(), means.data(), v, counts, &g_exp);
         o.ss = dist;
         o.ss.insert(o.ss.end(), means.begin(), means.begin() + 3);
-        o.ratios = {v[0], v[1], v[2], v[5]};
+        o.ratios = {v[0], v[1], v[2], v[5], v[7]};
     }
     o.counts = {counts[0], counts[1]};
     o.exponent = g_exp;
@@ -332,34 +332,43 @@ void robustness_sweep(n4m_context_t* ctx) {
             for (double& v : x) v = offset + std::ldexp(v, k);
             check_refused(ctx, run_kernel(ctx, which, x, 2), names[which]);
         }
-        // Constant columns inside D (spread 2^60 / 2^-3 = 2^63) change nothing;
-        // a 1e308 constant column is outside D and refused.
-        for (const double huge : {std::ldexp(1.0, 60), 1e308}) {
+        // Constant columns inside D (spread 2^28 / 2^-3 = 2^31) change
+        // nothing; 2^30 (spread 2^33) and 1e308 constant columns are outside
+        // D and refused.
+        for (const double huge : {std::ldexp(1.0, 28), std::ldexp(1.0, 30), 1e308}) {
             std::vector<double> x;
             for (int i = 0; i < 12; ++i) {
                 x.push_back(huge);
                 x.push_back(kBase[2 * i]);
-                x.push_back(-std::ldexp(1.0, 59));
+                x.push_back(-std::ldexp(1.0, 27));
                 x.push_back(kBase[2 * i + 1]);
                 x.push_back(0.125);
             }
             const Outputs got = run_kernel(ctx, which, x, 5);
-            if (huge < 1e300)
+            if (huge < std::ldexp(1.0, 29))
                 check_scaled(base, got, power, 0, names[which]);
             else
                 check_refused(ctx, got, names[which]);
         }
-        // Mixed signed exponents in one matrix inside D: column 2^28 next to
-        // column -2^-28 (value spread 2^60). Column 2 weighs 2^-112 in every
-        // sum: the results equal the column-1-only results scaled by 2^56.
-        std::vector<double> one(12), mixed(24);
+        // Mixed signed exponents in one matrix inside D: column 2^13 next to
+        // a column -2^-13 (term level + 1) (value spread 21 * 2^26 < 2^31).
+        // Column 2 is constant within each term level, so it adds nothing
+        // to the PERMDISP distances and weighs about 2^-52 in every other
+        // sum: the results equal the column-1-only results scaled by 2^13
+        // (2^26 for sums of squares). The data at 2^28 / -2^-28 (spread
+        // above 2^56) are refused.
+        std::vector<double> one(12), mixed(24), wide(24);
         for (int i = 0; i < 12; ++i) {
             one[static_cast<size_t>(i)] = kBase[2 * i];
-            mixed[static_cast<size_t>(2 * i)] = std::ldexp(kBase[2 * i], 28);
-            mixed[static_cast<size_t>(2 * i + 1)] = -std::ldexp(kBase[2 * i + 1], -28);
+            mixed[static_cast<size_t>(2 * i)] = std::ldexp(kBase[2 * i], 13);
+            mixed[static_cast<size_t>(2 * i + 1)] =
+                -std::ldexp(static_cast<double>(kTerm[i] + 1), -13);
+            wide[static_cast<size_t>(2 * i)] = std::ldexp(kBase[2 * i], 28);
+            wide[static_cast<size_t>(2 * i + 1)] = -std::ldexp(kBase[2 * i + 1], -28);
         }
-        check_scaled(run_kernel(ctx, which, one, 1), run_kernel(ctx, which, mixed, 2), power, 28,
+        check_scaled(run_kernel(ctx, which, one, 1), run_kernel(ctx, which, mixed, 2), power, 13,
                      names[which]);
+        check_refused(ctx, run_kernel(ctx, which, wide, 2), names[which]);
     }
     // Value-range boundaries: 2^256 and 2^-256 are inside D, the next binade
     // outside. Six values {0, 0, 0, a, a, a}: SS_total = 6 (a/2)^2.
@@ -381,14 +390,16 @@ void robustness_sweep(n4m_context_t* ctx) {
 }
 
 // Astra P0 cancellation: balanced 2x2, 4 rows per cell, y = 10B + 3A +
-// 1e-10 * {-3,-1,1,3}. The residual SS (~8e-19) must come from explicit
+// 1e-8 * {-3,-1,1,3} (value spread 13 / 1e-8 < 2^31, inside D; the round-2
+// 1e-10 deviations are now outside D). The residual SS (~8e-15) must come
+// from explicit
 // residuals, not SS_reduced_residual - SS_term. Reference: long double
 // within-cell deviations of the stored doubles (the additive model fits the
 // cell means exactly here).
 void cancellation_case(n4m_context_t* ctx) {
     double y[16];
     int64_t a[16], b[16];
-    const double dev[4] = {-3e-10, -1e-10, 1e-10, 3e-10};
+    const double dev[4] = {-3e-8, -1e-8, 1e-8, 3e-8};
     for (int i = 0; i < 16; ++i) {
         a[i] = (i / 4) % 2;
         b[i] = i / 8;
@@ -401,13 +412,14 @@ void cancellation_case(n4m_context_t* ctx) {
         m /= 4.0L;
         for (int i = 0; i < 4; ++i) rss += (static_cast<long double>(y[4 * c + i]) - m) * (static_cast<long double>(y[4 * c + i]) - m);
     }
-    REQUIRE(rss > 7e-19L && rss < 9e-19L);
+    REQUIRE(rss > 7e-15L && rss < 9e-15L);
     const long double f = 36.0L * 13.0L / rss;  // SS_A = 16 * 1.5^2 = 36 on 1 df
     auto Y = view(y, 16, 1);
-    double fl[12];
+    double fl[14];
     int64_t counts[2];
     REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, a, b, 1, 99, 3, fl, counts, &g_exp) == N4M_OK);
     REQUIRE(fl[3] > 0.0 && std::abs(fl[3] - static_cast<double>(rss)) <= 1e-3 * static_cast<double>(rss));
+    REQUIRE(fl[12] < 1.0 && fl[13] == 0.0);
     REQUIRE(std::isfinite(fl[6]) && std::abs(fl[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
     REQUIRE(counts[0] == 0 && counts[1] == 99);
     Permanova r{};
@@ -416,55 +428,190 @@ void cancellation_case(n4m_context_t* ctx) {
     REQUIRE(std::isfinite(r.v[6]) && std::abs(r.v[6] - static_cast<double>(f)) <= 1e-3 * static_cast<double>(f));
 }
 
-// Dyadic fixture (Astra rounds 3 and 4): 16 balanced rows, A, B in {-1, +1},
-// residual r alternating +-1 in each cell; columns 2^p B and 2^q (A + r).
-// Nonzero |x| are 2^p and 2^(q+1). Inside D at the spread boundary
-// (p = 33, q = -32: max/min exactly 2^64), A given B is exact: SS_A = SS_res = 2^(2q+4), F = 13,
-// partial R^2 = 1/2; PERMDISP by B gives distances 2^q |A + r| in
-// {0, 2^(q+1)} with group means 2^q and F = 0. With p = 34 (spread 2^65) or
-// the round-4 columns 2^600 / 2^-500 the input is outside D and refused:
-// the small column is never silently erased.
-void dyadic_case(n4m_context_t* ctx) {
-    const auto fixture = [](int p, int q, double* x, int64_t* a, int64_t* b) {
-        for (int i = 0; i < 16; ++i) {
-            const int cell = i / 4;
-            a[i] = cell < 2 ? -1 : 1;
-            b[i] = cell % 2 == 0 ? -1 : 1;
-            const double r = i % 2 == 0 ? 1.0 : -1.0;
-            x[2 * i] = std::ldexp(static_cast<double>(b[i]), p);
-            x[2 * i + 1] = std::ldexp(static_cast<double>(a[i]) + r, q);
-        }
-    };
-    double x[32];
-    int64_t a[16], b[16];
-    fixture(33, -32, x, a, b);
-    auto X = view(x, 16, 2);
-    const long double ss_a = std::ldexp(1.0L, -60);
-    double fl[12];
-    int64_t counts[2];
-    REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, a, b, 1, 99, 5, fl, counts, &g_exp) == N4M_OK);
-    REQUIRE(g_exp == 0 && true_value(fl[2], 0) == ss_a && true_value(fl[3], 0) == ss_a);
-    REQUIRE(std::abs(fl[6] - 13.0) <= 1e-12 * 13.0 && std::abs(fl[5] - 0.5) <= 1e-12);
-    REQUIRE(fl[7] == 1 && fl[8] == 13 && counts[1] == 99);
-    Permanova r{};
-    REQUIRE(permanova(ctx, X, a, b, 99, 5, r) == N4M_OK);
-    REQUIRE(g_exp == 0 && true_value(r.v[2], 0) == ss_a && true_value(r.v[3], 0) == ss_a);
-    REQUIRE(std::abs(r.v[6] - 13.0) <= 1e-12 * 13.0 && std::abs(r.v[5] - 0.5) <= 1e-12);
-    double dist[16], means[16], out6[6];
-    REQUIRE(n4m_stats_permdisp(ctx, &X, b, 0, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
-    for (int i = 0; i < 16; ++i) {
-        const double want = std::abs(static_cast<double>(a[i]) + (i % 2 == 0 ? 1.0 : -1.0));
-        REQUIRE(g_exp == 0 && dist[i] == std::ldexp(want, -32));
+// Dyadic fixture (Astra rounds 3 to 5): balanced rows, `per_cell` per cell
+// of A, B in {-1, +1}, residual r alternating +-1 in each cell; columns
+// 2^p B and 2^q (A + r). Nonzero |x| are 2^p and 2^(q+1). A given B is
+// exact: SS_A = SS_res = n 2^(2q), partial R^2 = 1/2, F = n - 3 (13, 21, 29
+// for 16, 24, 32 rows); PERMDISP by B gives distances 2^q |A + r| in
+// {0, 2^(q+1)} with group means 2^q and F = 0. p = 16, q = -17 is the
+// spread boundary 2^32 (inside D); the 24- and 32-row variants have
+// normalisations that are not powers of two, so the Freedman-Lane partial
+// R^2 must use the term + residual SS of one projection (round 5 P0-2).
+// p = 17 (spread 2^33), the round-4 boundary p = 33, q = -32 (2^64) and
+// 2^600 / 2^-500 are outside D and refused.
+void dyadic_fixture(int p, int q, int per_cell, std::vector<double>& x, std::vector<int64_t>& a,
+                    std::vector<int64_t>& b) {
+    const int n = 4 * per_cell;
+    x.assign(static_cast<size_t>(2 * n), 0.0);
+    a.assign(static_cast<size_t>(n), 0);
+    b.assign(static_cast<size_t>(n), 0);
+    for (int i = 0; i < n; ++i) {
+        const int cell = i / per_cell;
+        const auto u = static_cast<size_t>(i);
+        a[u] = cell < 2 ? -1 : 1;
+        b[u] = cell % 2 == 0 ? -1 : 1;
+        const double r = i % 2 == 0 ? 1.0 : -1.0;
+        x[2 * u] = std::ldexp(static_cast<double>(b[u]), p);
+        x[2 * u + 1] = std::ldexp(static_cast<double>(a[u]) + r, q);
     }
-    REQUIRE(means[0] == std::ldexp(1.0, -32) && means[1] == std::ldexp(1.0, -32));
-    REQUIRE(out6[0] == 0.0);
-    for (const auto& [p, q] : {std::pair<int, int>{34, -32}, std::pair<int, int>{600, -500}}) {
-        fixture(p, q, x, a, b);
+}
+
+bool rel_near(double got, double want, double tol = 1e-12) {
+    return std::abs(got - want) <= tol * std::abs(want);
+}
+
+void dyadic_case(n4m_context_t* ctx) {
+    std::vector<double> x;
+    std::vector<int64_t> a, b;
+    int64_t counts[2];
+    for (int per_cell : {4, 6, 8}) {
+        dyadic_fixture(16, -17, per_cell, x, a, b);
+        const int n = 4 * per_cell;
+        auto X = view(x.data(), n, 2);
+        const double ss_a = std::ldexp(static_cast<double>(n), -34);
+        double fl[14];
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, a.data(), b.data(), 1, 99, 5, fl, counts,
+                                                  &g_exp) == N4M_OK);
+        REQUIRE(g_exp == 0 && rel_near(fl[2], ss_a) && rel_near(fl[3], ss_a));
+        REQUIRE(rel_near(fl[6], n - 3.0) && rel_near(fl[5], 0.5));
+        REQUIRE(fl[7] == 1 && fl[8] == n - 3 && counts[1] == 99);
+        REQUIRE(fl[12] < 1e-3 && fl[13] == 0.0);
+        Permanova r{};
+        REQUIRE(permanova(ctx, X, a.data(), b.data(), 99, 5, r) == N4M_OK);
+        REQUIRE(g_exp == 0 && rel_near(r.v[2], ss_a) && rel_near(r.v[3], ss_a));
+        REQUIRE(rel_near(r.v[6], n - 3.0) && rel_near(r.v[5], 0.5));
+        REQUIRE(r.v[13] < 1e-3 && r.v[14] == 0.0);
+        std::vector<double> dist(static_cast<size_t>(n)), means(static_cast<size_t>(n));
+        double out8[8];
+        REQUIRE(n4m_stats_permdisp(ctx, &X, b.data(), 0, 1, dist.data(), means.data(), out8, counts,
+                                   &g_exp) == N4M_OK);
+        for (int i = 0; i < n; ++i) {
+            const auto u = static_cast<size_t>(i);
+            const double want = std::abs(static_cast<double>(a[u]) + (i % 2 == 0 ? 1.0 : -1.0));
+            REQUIRE(g_exp == 0 && dist[u] == std::ldexp(want, -17));
+        }
+        REQUIRE(means[0] == std::ldexp(1.0, -17) && means[1] == std::ldexp(1.0, -17));
+        REQUIRE(out8[0] == 0.0 && out8[7] == 0.0);
+    }
+    for (const auto& [p, q] : {std::pair<int, int>{17, -17}, std::pair<int, int>{33, -32},
+                               std::pair<int, int>{600, -500}}) {
+        dyadic_fixture(p, q, 4, x, a, b);
+        auto X = view(x.data(), 16, 2);
+        double fl[14], dist[16], means[16], out8[8];
         Outputs o;
-        o.status = n4m_stats_permanova_freedman_lane(ctx, &X, a, b, 1, 0, 1, fl, counts, &g_exp);
+        o.status = n4m_stats_permanova_freedman_lane(ctx, &X, a.data(), b.data(), 1, 0, 1, fl,
+                                                     counts, &g_exp);
         check_refused(ctx, o, "dyadic outside D");
-        o.status = n4m_stats_permdisp(ctx, &X, b, 0, 1, dist, means, out6, counts, &g_exp);
+        Permanova r{};
+        o.status = permanova(ctx, X, a.data(), b.data(), 0, 1, r);
         check_refused(ctx, o, "dyadic outside D");
+        o.status = n4m_stats_permdisp(ctx, &X, b.data(), 0, 1, dist, means, out8, counts, &g_exp);
+        check_refused(ctx, o, "dyadic outside D");
+    }
+}
+
+// Round 5 P0-1: an offset stratum next to a varying one. X = [c, c, c, c,
+// 1, 2, 3, 4], strata B = [0 0 0 0 1 1 1 1], term A = [0 0 1 1 0 0 1 1].
+// Additive strata + term model (rational oracle): SS_A = 2, SS_res = 3,
+// F = (2/1)/(3/5) = 10/3, partial R^2 = 0.4; PERMDISP by B gives distances
+// [0 0 0 0 1.5 0.5 0.5 1.5]. c = 2^31 is inside D (spread 2^31) and exact;
+// c = 2^60 (spread 2^60, whose global shift used to erase the stratum-1
+// differences) is outside D and refused.
+void offset_strata_case(n4m_context_t* ctx) {
+    int64_t term[8] = {0, 0, 1, 1, 0, 0, 1, 1}, strata[8] = {0, 0, 0, 0, 1, 1, 1, 1};
+    int64_t counts[2];
+    for (int e : {31, 60}) {
+        const double c = std::ldexp(1.0, e);
+        double x[8] = {c, c, c, c, 1, 2, 3, 4};
+        auto X = view(x, 8, 1);
+        Permanova r{};
+        double fl[14], dist[8], means[8], out8[8];
+        const auto st = permanova(ctx, X, term, strata, 0, 1, r);
+        if (e == 60) {
+            Outputs o;
+            o.status = st;
+            check_refused(ctx, o, "offset strata");
+            o.status = n4m_stats_permanova_freedman_lane(ctx, &X, term, strata, 1, 0, 1, fl, counts,
+                                                         &g_exp);
+            check_refused(ctx, o, "offset strata");
+            o.status = n4m_stats_permdisp(ctx, &X, strata, 0, 1, dist, means, out8, counts, &g_exp);
+            check_refused(ctx, o, "offset strata");
+            continue;
+        }
+        REQUIRE(st == N4M_OK && g_exp == 0);
+        REQUIRE(rel_near(r.v[2], 2.0) && rel_near(r.v[3], 3.0) && rel_near(r.v[6], 10.0 / 3.0));
+        REQUIRE(rel_near(r.v[5], 0.4) && r.v[14] == 0.0);
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term, strata, 1, 0, 1, fl, counts,
+                                                  &g_exp) == N4M_OK);
+        REQUIRE(rel_near(fl[2], 2.0) && rel_near(fl[3], 3.0) && rel_near(fl[6], 10.0 / 3.0));
+        REQUIRE(rel_near(fl[5], 0.4) && fl[13] == 0.0);
+        REQUIRE(n4m_stats_permdisp(ctx, &X, strata, 0, 1, dist, means, out8, counts, &g_exp) ==
+                N4M_OK);
+        const double want[8] = {0, 0, 0, 0, 1.5, 0.5, 0.5, 1.5};
+        for (int i = 0; i < 8; ++i) REQUIRE(g_exp == 0 && dist[i] == want[i]);
+    }
+}
+
+// Round 5 P0-3: F is published whenever the residual SS is positive; the
+// error estimate only flags it. (a) 16 rows, columns A in {-1, +1} and
+// 2^-31 r (r alternating +-1 in each A group; spread 2^31, inside D):
+// SS_term = 16, SS_res = 16 2^-62, F = 14 2^62, resolved. The round-5
+// columns A and 2^-50 r (spread 2^50) are outside D and refused. (b) A
+// residual made only of one-ulp differences ({1, 1 + 2^-52, 1, 1} vs
+// {3, 3, 3, 3}) gives a positive residual SS below its error estimate: F is
+// finite and flagged numerically unresolved, with a ratio >= 1. (c) An
+// exactly zero residual SS leaves F undefined (NaN), ratio +inf, flagged.
+void resolution_case(n4m_context_t* ctx) {
+    int64_t counts[2];
+    {
+        double x[32];
+        int64_t term[16];
+        for (int i = 0; i < 16; ++i) {
+            term[i] = i < 8 ? -1 : 1;
+            x[2 * i] = static_cast<double>(term[i]);
+            x[2 * i + 1] = std::ldexp(i % 2 == 0 ? 1.0 : -1.0, -31);
+        }
+        auto X = view(x, 16, 2);
+        Permanova r{};
+        REQUIRE(permanova(ctx, X, term, nullptr, 0, 1, r) == N4M_OK);
+        REQUIRE(g_exp == 0 && r.v[2] == 16.0 && rel_near(r.v[3], std::ldexp(16.0, -62)));
+        REQUIRE(rel_near(r.v[6], std::ldexp(14.0, 62)) && r.v[13] < 1e-3 && r.v[14] == 0.0);
+        double fl[14];
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term, nullptr, 0, 0, 1, fl, counts,
+                                                  &g_exp) == N4M_OK);
+        REQUIRE(rel_near(fl[6], std::ldexp(14.0, 62)) && fl[13] == 0.0);
+        for (int i = 0; i < 16; ++i) x[2 * i + 1] = std::ldexp(i % 2 == 0 ? 1.0 : -1.0, -50);
+        Outputs o;
+        o.status = permanova(ctx, X, term, nullptr, 0, 1, r);
+        check_refused(ctx, o, "2^-50 column");
+    }
+    {
+        double x[8] = {1, 1 + std::ldexp(1.0, -52), 1, 1, 3, 3, 3, 3};
+        int64_t term[8] = {0, 0, 0, 0, 1, 1, 1, 1};
+        auto X = view(x, 8, 1);
+        Permanova r{};
+        REQUIRE(permanova(ctx, X, term, nullptr, 99, 1, r) == N4M_OK);
+        REQUIRE(r.v[3] > 0.0 && std::isfinite(r.v[6]) && r.v[6] > 0.0);
+        REQUIRE(r.v[13] >= 1.0 && r.v[14] == 1.0 && r.counts[1] == 99);
+        double fl[14];
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term, nullptr, 0, 0, 1, fl, counts,
+                                                  &g_exp) == N4M_OK);
+        REQUIRE(fl[3] > 0.0 && std::isfinite(fl[6]) && fl[12] >= 1.0 && fl[13] == 1.0);
+    }
+    {
+        double x[4] = {1, 1, 3, 3};
+        int64_t term[4] = {0, 0, 1, 1};
+        auto X = view(x, 4, 1);
+        Permanova r{};
+        REQUIRE(permanova(ctx, X, term, nullptr, 99, 1, r) == N4M_OK);
+        REQUIRE(r.v[3] == 0.0 && std::isnan(r.v[6]) && r.v[5] == 1.0);
+        REQUIRE(std::isinf(r.v[13]) && r.v[14] == 1.0 && r.counts[1] == 0);
+        double dist[4], means[4], out8[8];
+        double y[4] = {0, 2, 5, 7};  // distances 1, 1, 1, 1: zero within SS
+        auto Y = view(y, 4, 1);
+        REQUIRE(n4m_stats_permdisp(ctx, &Y, term, 0, 1, dist, means, out8, counts, &g_exp) ==
+                N4M_OK);
+        REQUIRE(std::isnan(out8[0]) && std::isinf(out8[6]) && out8[7] == 1.0);
     }
 }
 
@@ -478,7 +625,7 @@ void size_limits(n4m_context_t* ctx) {
         term[i] = static_cast<int64_t>(i % 2);
     }
     auto X = view(x.data(), 20000, 1);
-    double fl[12];
+    double fl[14];
     int64_t counts[2];
     REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term.data(), levels.data(), 1, 0, 1, fl,
                                               counts, &g_exp) == N4M_ERR_UNSUPPORTED);
@@ -513,7 +660,7 @@ int main() {
         double tiny[6] = {-1e-162, -1e-162, -1e-162, 1e-162, 1e-162, 1e-162};
         int64_t halves6[6] = {0, 0, 0, 1, 1, 1};
         REQUIRE(permanova(ctx, view(tiny, 6, 1), halves6, nullptr, 0, 1, r) == N4M_ERR_UNSUPPORTED);
-        double tdist[6], tmeans[6], tout[6];
+        double tdist[6], tmeans[6], tout[8];
         int64_t tcounts[2];
         auto T = view(tiny, 6, 1);
         REQUIRE(n4m_stats_permdisp(ctx, &T, halves6, 0, 1, tdist, tmeans, tout, tcounts, &g_exp)
@@ -521,7 +668,7 @@ int main() {
 
         // Freedman-Lane with no condition: fitted = mean, so each draw is the
         // free permutation of the data and b equals the one-way golden (93).
-        double fl[12];
+        double fl[14];
         int64_t fcounts[2];
         REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &Y, fa, nullptr, 0, 999, 17, fl, fcounts, &g_exp)
                 == N4M_OK);
@@ -562,7 +709,7 @@ int main() {
         double d[5] = {0, 2, 10, 14, 18};
         int64_t gd[5] = {7, 7, 3, 3, 3};
         auto D = view(d, 5, 1);
-        double dist[5], means[5], out6[6];
+        double dist[5], means[5], out6[8];
         int64_t counts[2];
         REQUIRE(n4m_stats_permdisp(ctx, &D, gd, 0, 1, dist, means, out6, counts, &g_exp) == N4M_OK);
         REQUIRE(near(dist[0], 1) && near(dist[1], 1) && near(dist[2], 4) && near(dist[3], 0) &&
@@ -578,6 +725,8 @@ int main() {
         robustness_sweep(ctx);
         cancellation_case(ctx);
         dyadic_case(ctx);
+        offset_strata_case(ctx);
+        resolution_case(ctx);
         size_limits(ctx);
 
         // Reference gate.
