@@ -326,21 +326,21 @@ void test_pcr_illconditioned() {
     }
 }
 
-// Scale equivariance of the NIPALS PLS regression and PCR fits without
-// autoscaling (center_x = center_y = 1, scale_x = scale_y = 0), the settings
-// used by the preflight probe. Fitting X 2^k, Y 2^m must give coefficients
-// B 2^(m-k), intercept 2^m y_mean (N4M_MODEL_INTERCEPT is the scikit-learn
-// intercept_ of predict = (X - x_mean) B + intercept) and predictions
-// 2^m yhat; before the fix the
-// absolute DBL_EPSILON thresholds inside both fits made them refuse with
-// N4M_ERR_NUMERICAL_FAILURE from X 2^-30 or Y 2^-60 onwards.
+// Scale equivariance of the PLS regression solvers and PCR without
+// autoscaling (center_x = center_y = 1, scale_x = scale_y = 0, the preflight
+// probe settings). Fitting X 2^k, Y 2^m must scale every fitted array by an
+// exact power of two (coefficients by 2^(m-k), intercept and predictions by
+// 2^m); before the fix the solvers' absolute DBL_EPSILON thresholds refused
+// such data with N4M_ERR_NUMERICAL_FAILURE (from X 2^-30 or Y 2^-30/2^-60
+// depending on the solver).
 //
-// Independent reference: scikit-learn 1.7.2 PLSRegression(n_components=3,
-// scale=False) and PCA(n_components=3, svd_solver="full") + LinearRegression
-// (PCR), NumPy 2.2.6, fitted on the base data below and rescaled analytically.
-// scikit-learn itself is not used on the rescaled data: its own absolute
-// epsilon thresholds make PLSRegression collapse to a zero model for
-// Y 2^-60, so only the base-scale fit is a valid oracle.
+// References: scikit-learn 1.7.2 PLSRegression(n_components=3, scale=False)
+// (one target: every PLS solver; two targets: NIPALS) and PCA(n_components=3,
+// svd_solver="full") + LinearRegression (PCR), NumPy 2.2.6, plus the analytic
+// two-target references below, all fitted on the base data and rescaled
+// analytically. scikit-learn itself is not used
+// on the rescaled data: its own absolute epsilon thresholds collapse
+// PLSRegression to a zero model at Y 2^-60.
 constexpr std::int64_t kScaleN = 12;
 constexpr std::int64_t kScaleP = 6;
 constexpr std::int32_t kScaleA = 3;
@@ -358,7 +358,7 @@ constexpr double kScaleY2[kScaleN * 2] = {
     2.0172, 1.0212, 6.0458, 0.1926, 4.7421, -0.281, 2.2906, 1.8502,
     5.3699, 2.9417, 0.2102, 3.3368, 4.7835, 0.976, 2.5479, 3.5449,
     -0.3046, 4.0861, 3.1338, -0.3399, 4.6288, 4.0054, 2.7718, 2.5964};
-// Coefficients, p x q row-major.
+// scikit-learn coefficients, p x q row-major.
 constexpr double kScalePlsCoefY1[kScaleP] = {
     0.4957614061724583, -1.381677405563282, 0.514726893875039,
     2.580185279507641, -1.2169935455968648, 2.4340614676208925};
@@ -374,16 +374,61 @@ constexpr double kScalePcrCoefY2[kScaleP * 2] = {
     1.0849870020018442, -0.28684733153814906, 1.2297408628741704, -1.2781534393212208,
     -1.3908828952499093, -0.10487458205601959, 1.3752137732947596, -0.5728917833534646};
 
-struct ScaledFit {
-    std::vector<double> coefficients;   // p x q
-    std::vector<double> intercept;      // q
-    std::vector<double> predictions;    // n x q, on the scaled training X
+// Analytic two-target references (NumPy 2.2.6, p x q row-major): regression
+// deflation with exact dominant singular vectors of X'Y (the converged NIPALS
+// limit, shared by the kernel, orthogonal-scores, SVD, power and randomized
+// SVD solvers), and de Jong's (1993) SIMPLS. scikit-learn's default tol=1e-6
+// NIPALS stops ~5e-6 short of the former on this design.
+constexpr double kScaleExactCoefY2[kScaleP * 2] = {
+    0.4973933947810975, 2.5052955832490746, -1.2807422950667673, 0.38070661558248864,
+    0.3885082082101655, -0.6375563871303572, 2.6515308894065996, -0.59236011867862,
+    -1.274772713729894, -0.1300636165886849, 2.4360764274911926, 0.3755312787663398};
+constexpr double kScaleSimplsCoefY2[kScaleP * 2] = {
+    0.5207946575018618, 2.5313352885842972, -1.279134232007274, 0.37839292312303313,
+    0.35816837979798144, -0.66155341696253, 2.687190982374273, -0.5623000956881986,
+    -1.2706326836444113, -0.1267563242881262, 2.4304343674427282, 0.3806905005590011};
+
+// Agreement with the references, relative to their largest magnitude. The
+// iterative two-target cases run with a tight solver tolerance so that they
+// reach the exact-singular-vector limit (observed error <= 2e-14).
+constexpr double kScaleReferenceTol = 1e-10;
+
+// Units of a fitted array: fitting X 2^k, Y 2^m scales it by 2^(x k + y m).
+struct Units {
+    int x;
+    int y;
 };
 
-ScaledFit fit_scaled(n4m_algorithm_t algorithm, n4m_solver_t solver,
-                     const double* y, std::int64_t q, int k, int m) {
+struct ScaleCase {
+    const char* tag;
+    n4m_algorithm_t algorithm;
+    n4m_solver_t solver;
+    const double* y;
+    std::int64_t q;
+    const double* reference;   // base-scale coefficients
+    double solver_tol;         // 0: default convergence tolerance
+    Units weights, loadings, y_loadings, scores, y_scores;
+};
+
+// The fitted arrays checked for exact equivariance, with their units taken
+// from the ScaleCase (rotations share the weights' units, coefficients are
+// always 2^(m - k)).
+struct ScaledFit {
+    std::vector<double> arrays[7];      // coefficients, W, P, Q, R, T, U
+    std::vector<double> intercept;
+    std::vector<double> predictions;    // on the scaled training X
+};
+
+constexpr n4m_model_array_t kSweepArrays[7] = {
+    N4M_MODEL_COEFFICIENTS, N4M_MODEL_WEIGHTS_W, N4M_MODEL_LOADINGS_P, N4M_MODEL_Y_LOADINGS_Q,
+    N4M_MODEL_ROTATIONS_R, N4M_MODEL_SCORES_T, N4M_MODEL_Y_SCORES_U};
+constexpr const char* kSweepArrayNames[7] = {
+    "coefficients", "weights_w", "loadings_p", "y_loadings_q", "rotations_r", "scores_t",
+    "y_scores_u"};
+
+ScaledFit fit_scaled(const ScaleCase& c, int k, int m) {
     std::vector<double> xs(kScaleX, kScaleX + kScaleN * kScaleP);
-    std::vector<double> ys(y, y + kScaleN * q);
+    std::vector<double> ys(c.y, c.y + kScaleN * c.q);
     for (double& v : xs) v = std::ldexp(v, k);
     for (double& v : ys) v = std::ldexp(v, m);
 
@@ -391,29 +436,38 @@ ScaledFit fit_scaled(n4m_algorithm_t algorithm, n4m_solver_t solver,
     n4m_config_t* cfg = nullptr;
     n4m_model_t* model = nullptr;
     N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_context_set_seed(ctx, kRandomizedSvdFixtureSeed) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, kScaleA) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, algorithm) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, solver) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, c.algorithm) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, c.solver) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_config_set_center_x(cfg, 1) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_config_set_center_y(cfg, 1) == N4M_OK);
     N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_store_scores(cfg, 1) == N4M_OK);
+    if (c.solver_tol > 0.0) {
+        N4M_TEST_REQUIRE(n4m_config_set_tol(cfg, c.solver_tol) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_config_set_max_iter(cfg, 10000) == N4M_OK);
+    }
     n4m_matrix_view_t Xv{}, Yv{};
     N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, xs.data(), kScaleN, kScaleP,
                                                    N4M_DTYPE_F64) == N4M_OK);
-    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Yv, ys.data(), kScaleN, q,
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Yv, ys.data(), kScaleN, c.q,
                                                    N4M_DTYPE_F64) == N4M_OK);
     const n4m_status_t st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
     if (st != N4M_OK) {
-        throw std::runtime_error("fit refused at X 2^" + std::to_string(k) + ", Y 2^" +
-                                 std::to_string(m) + " with status " + std::to_string(st));
+        throw std::runtime_error(std::string(c.tag) + ": fit refused at X 2^" + std::to_string(k) +
+                                 ", Y 2^" + std::to_string(m) + " with status " +
+                                 std::to_string(st));
     }
     ScaledFit out;
     n4m_array_t* arr = nullptr;
-    N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_COEFFICIENTS, &arr) == N4M_OK);
-    out.coefficients = array_values(arr);
-    n4m_array_free(arr);
+    for (std::size_t i = 0; i < 7; ++i) {
+        N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, kSweepArrays[i], &arr) == N4M_OK);
+        out.arrays[i] = array_values(arr);
+        n4m_array_free(arr);
+    }
     N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_INTERCEPT, &arr) == N4M_OK);
     out.intercept = array_values(arr);
     n4m_array_free(arr);
@@ -432,65 +486,99 @@ double max_abs(const double* v, std::size_t n) {
     return out;
 }
 
-void check_scale_sweep(n4m_algorithm_t algorithm, n4m_solver_t solver, const double* y,
-                       std::int64_t q, const double* ref_coef, const char* tag) {
+void check_scale_sweep(const ScaleCase& c) {
     const auto p = static_cast<std::size_t>(kScaleP);
     const auto n = static_cast<std::size_t>(kScaleN);
-    const auto nq = static_cast<std::size_t>(q);
-    // Base-scale reference intercept (= y_mean) and predictions from the sklearn coefficients.
+    const auto nq = static_cast<std::size_t>(c.q);
+    // Base-scale reference intercept (= y_mean, the scikit-learn intercept_ of
+    // predict = (X - x_mean) B + intercept) and predictions.
     std::vector<double> x_mean(p, 0.0), y_mean(nq, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t j = 0; j < p; ++j) x_mean[j] += kScaleX[i * p + j] / static_cast<double>(n);
-        for (std::size_t t = 0; t < nq; ++t) y_mean[t] += y[i * nq + t] / static_cast<double>(n);
+        for (std::size_t t = 0; t < nq; ++t) y_mean[t] += c.y[i * nq + t] / static_cast<double>(n);
     }
     std::vector<double> ref_pred(n * nq, 0.0);
     for (std::size_t i = 0; i < n; ++i)
         for (std::size_t t = 0; t < nq; ++t) {
             double s = y_mean[t];
-            for (std::size_t j = 0; j < p; ++j) s += (kScaleX[i * p + j] - x_mean[j]) * ref_coef[j * nq + t];
+            for (std::size_t j = 0; j < p; ++j) s += (kScaleX[i * p + j] - x_mean[j]) * c.reference[j * nq + t];
             ref_pred[i * nq + t] = s;
         }
-    const double coef_norm = max_abs(ref_coef, p * nq);
+    const double coef_norm = max_abs(c.reference, p * nq);
     const double y_mean_norm = max_abs(y_mean.data(), nq);
     const double pred_norm = max_abs(ref_pred.data(), n * nq);
+    const Units units[7] = {{-1, 1}, c.weights, c.loadings, c.y_loadings, c.weights, c.scores,
+                            c.y_scores};
 
-    const ScaledFit base = fit_scaled(algorithm, solver, y, q, 0, 0);
+    const ScaledFit base = fit_scaled(c, 0, 0);
     constexpr int kExponents[] = {0, 30, -30, 60, -60, 200, -200};
     for (int k : kExponents) {
         for (int m : kExponents) {
-            const ScaledFit fit = k == 0 && m == 0 ? base : fit_scaled(algorithm, solver, y, q, k, m);
-            const std::string where = std::string(tag) + " X 2^" + std::to_string(k) +
+            const ScaledFit fit = k == 0 && m == 0 ? base : fit_scaled(c, k, m);
+            const std::string where = std::string(c.tag) + " X 2^" + std::to_string(k) +
                                       ", Y 2^" + std::to_string(m);
+            // Power-of-two scaling is exact, so every fitted array must be
+            // exactly equivariant.
+            for (std::size_t a = 0; a < 7; ++a) {
+                N4M_TEST_REQUIRE(fit.arrays[a].size() == base.arrays[a].size());
+                const int e = -(units[a].x * k + units[a].y * m);
+                for (std::size_t i = 0; i < fit.arrays[a].size(); ++i) {
+                    if (std::ldexp(fit.arrays[a][i], e) != base.arrays[a][i])
+                        throw std::runtime_error(where + ": " + kSweepArrayNames[a] +
+                                                 " not exactly equivariant");
+                }
+            }
             for (std::size_t i = 0; i < p * nq; ++i) {
-                const double got = std::ldexp(fit.coefficients[i], k - m);
-                // Power-of-two scaling is exact, so the fit must be exactly equivariant.
-                if (got != base.coefficients[i])
-                    throw std::runtime_error(where + ": coefficient not exactly equivariant");
-                if (std::fabs(got - ref_coef[i]) > 1e-9 * coef_norm)
-                    throw std::runtime_error(where + ": coefficient differs from scikit-learn");
+                const double got = std::ldexp(fit.arrays[0][i], k - m);
+                if (std::fabs(got - c.reference[i]) > kScaleReferenceTol * coef_norm)
+                    throw std::runtime_error(where + ": coefficient differs from the reference");
             }
             for (std::size_t t = 0; t < nq; ++t) {
                 const double got = std::ldexp(fit.intercept[t], -m);
                 if (std::fabs(got - y_mean[t]) > 1e-12 * y_mean_norm)
-                    throw std::runtime_error(where + ": intercept differs from scikit-learn");
+                    throw std::runtime_error(where + ": intercept differs from the reference");
             }
             for (std::size_t i = 0; i < n * nq; ++i) {
                 const double got = std::ldexp(fit.predictions[i], -m);
-                if (std::fabs(got - ref_pred[i]) > 1e-9 * pred_norm)
-                    throw std::runtime_error(where + ": prediction differs from scikit-learn");
+                if (std::fabs(got - ref_pred[i]) > kScaleReferenceTol * pred_norm)
+                    throw std::runtime_error(where + ": prediction differs from the reference");
             }
         }
     }
 }
 
-void test_nipals_scale_equivariance() {
-    check_scale_sweep(N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS, kScaleY1, 1, kScalePlsCoefY1, "nipals y1");
-    check_scale_sweep(N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS, kScaleY2, 2, kScalePlsCoefY2, "nipals y2");
-}
+// Latent-array units per solver convention (weights, loadings, Y loadings,
+// X scores, Y scores), mirroring the solver code:
+// unit X weights, t = X w, p = X't / t't, q = Y't / t't, u = Y q / q'q;
+constexpr Units kW0{0, 0}, kP0{0, 0}, kQ{-1, 1}, kT1{1, 0}, kU1{1, 0};
+// u = Y c / c'c with unit Y weights c, or u = y for one target;
+constexpr Units kURaw{0, 1};
+// unit-norm X scores: w = r / ||X r||, p = X't, q = Y't, u = Y q / q'q.
+constexpr Units kWInv{-1, 0}, kP1{1, 0}, kQ1{0, 1}, kT0{0, 0}, kU0{0, 0};
 
-void test_pcr_scale_equivariance() {
-    check_scale_sweep(N4M_ALGO_PCR, N4M_SOLVER_SVD, kScaleY1, 1, kScalePcrCoefY1, "pcr y1");
-    check_scale_sweep(N4M_ALGO_PCR, N4M_SOLVER_SVD, kScaleY2, 2, kScalePcrCoefY2, "pcr y2");
+constexpr ScaleCase kScaleCases[] = {
+    {"nipals y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS, kScaleY1, 1, kScalePlsCoefY1, 0.0, kW0, kP0, kQ, kT1, kU1},
+    {"nipals y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS, kScaleY2, 2, kScalePlsCoefY2, 0.0, kW0, kP0, kQ, kT1, kU1},
+    {"pcr y1", N4M_ALGO_PCR, N4M_SOLVER_SVD, kScaleY1, 1, kScalePcrCoefY1, 0.0, kW0, kP0, kQ, kT1, kU1},
+    {"pcr y2", N4M_ALGO_PCR, N4M_SOLVER_SVD, kScaleY2, 2, kScalePcrCoefY2, 0.0, kW0, kP0, kQ, kT1, kU1},
+    {"simpls y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_SIMPLS, kScaleY1, 1, kScalePlsCoefY1, 0.0, kWInv, kP1, kQ1, kT0, kU0},
+    {"simpls y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_SIMPLS, kScaleY2, 2, kScaleSimplsCoefY2, 0.0, kWInv, kP1, kQ1, kT0, kU0},
+    {"kernel y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_KERNEL_ALGORITHM, kScaleY1, 1, kScalePlsCoefY1, 0.0, kWInv, kP1, kQ1, kT0, kU0},
+    {"kernel y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_KERNEL_ALGORITHM, kScaleY2, 2, kScaleExactCoefY2, 1e-24, kWInv, kP1, kQ1, kT0, kU0},
+    {"wide kernel y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_WIDE_KERNEL, kScaleY1, 1, kScalePlsCoefY1, 0.0, kWInv, kP1, kQ1, kT0, kU0},
+    {"wide kernel y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_WIDE_KERNEL, kScaleY2, 2, kScaleExactCoefY2, 1e-24, kWInv, kP1, kQ1, kT0, kU0},
+    {"orthogonal scores y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_ORTHOGONAL_SCORES, kScaleY1, 1, kScalePlsCoefY1, 0.0, kW0, kP0, kQ, kT1, kURaw},
+    {"orthogonal scores y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_ORTHOGONAL_SCORES, kScaleY2, 2, kScaleExactCoefY2, 1e-14, kW0, kP0, kQ, kT1, kU1},
+    {"svd y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_SVD, kScaleY1, 1, kScalePlsCoefY1, 0.0, kW0, kP0, kQ, kT1, kURaw},
+    {"svd y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_SVD, kScaleY2, 2, kScaleExactCoefY2, 1e-24, kW0, kP0, kQ, kT1, kURaw},
+    {"power y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_POWER, kScaleY1, 1, kScalePlsCoefY1, 0.0, kW0, kP0, kQ, kT1, kURaw},
+    {"power y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_POWER, kScaleY2, 2, kScaleExactCoefY2, 1e-24, kW0, kP0, kQ, kT1, kURaw},
+    {"randomized svd y1", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_RANDOMIZED_SVD, kScaleY1, 1, kScalePlsCoefY1, 0.0, kW0, kP0, kQ, kT1, kURaw},
+    {"randomized svd y2", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_RANDOMIZED_SVD, kScaleY2, 2, kScaleExactCoefY2, 1e-24, kW0, kP0, kQ, kT1, kURaw},
+};
+
+void test_pls_scale_equivariance() {
+    for (const ScaleCase& c : kScaleCases) check_scale_sweep(c);
 }
 
 }  // namespace
@@ -502,8 +590,7 @@ void register_models_pls_tests(n4m_testing::Runner& r) {
     r.run("models_pls/randomized_svd",     test_randomized_svd);
     r.run("models_pls/pcr",                test_pcr);
     r.run("models_pls/pcr_illconditioned", test_pcr_illconditioned);
-    r.run("models_pls/nipals_scale_equivariance", test_nipals_scale_equivariance);
-    r.run("models_pls/pcr_scale_equivariance",    test_pcr_scale_equivariance);
+    r.run("models_pls/scale_equivariance", test_pls_scale_equivariance);
     r.run("models_pls/kernel",             test_kernel);
     r.run("models_pls/wide_kernel",        test_wide_kernel);
     r.run("models_pls/orthogonal_scores",  test_orthogonal_scores);

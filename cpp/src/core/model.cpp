@@ -29,25 +29,73 @@ constexpr std::uint64_t kSplitMixGolden = 0x9E3779B97F4A7C15ull;
     return static_cast<unsigned long long>(value);
 }
 
-// Exact power-of-two rescaling of a centred working matrix so that its
-// largest |value| lies in [1, 2). The absolute epsilon thresholds of the
-// scikit-learn-compatible NIPALS/PCR code then act at a fixed relative scale,
-// and fits of X 2^k, Y 2^m are exactly equivariant (power-of-two scaling is
-// exact). Returns the exponent e applied (data multiplied by 2^-e).
-int rescale_to_unit_exponent(std::vector<double>& values) noexcept {
-    double largest = 0.0;
-    for (double v : values) largest = std::max(largest, std::fabs(v));
-    if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
-    const int e = std::ilogb(largest);
-    if (e != 0)
-        for (double& v : values) v = std::ldexp(v, -e);
-    return e;
-}
+// Units of a fitted latent array: when the solver sees X 2^ex and Y 2^ey, the
+// array scales by 2^(x * ex + y * ey).
+struct ScaleUnits {
+    int x;
+    int y;
+};
+
+struct LatentUnits {
+    ScaleUnits weights_w;
+    ScaleUnits loadings_p;
+    ScaleUnits y_loadings_q;
+    ScaleUnits scores_t;
+    ScaleUnits y_scores_u;
+};
+
+// Unit X weights, t = X w, p = X't / t't, q = Y't / t't, u = Y q / q'q
+// (NIPALS, PCR, orthogonal scores with several targets).
+constexpr LatentUnits kUnitWeightUnits{{0, 0}, {0, 0}, {-1, 1}, {1, 0}, {1, 0}};
+// As above, but u = Y c / c'c with a unit Y weight c, or u = y for one target
+// (SVD, power, randomized SVD, orthogonal scores with one target).
+constexpr LatentUnits kUnitWeightRawYScoreUnits{{0, 0}, {0, 0}, {-1, 1}, {1, 0}, {0, 1}};
+// Unit-norm X scores t, p = X't, q = Y't, u = Y q / q'q (SIMPLS, kernel).
+constexpr LatentUnits kUnitScoreUnits{{-1, 0}, {1, 0}, {0, 1}, {0, 0}, {0, 0}};
 
 void scale_by_power_of_two(std::vector<double>& values, int e) noexcept {
-    if (e != 0)
+    if (e != 0) {
         for (double& v : values) v = std::ldexp(v, e);
+    }
 }
+
+// Exact power-of-two rescaling of the centred working matrices of a PLS-family
+// fit so that each largest |value| lies in [1, 2). The absolute epsilon
+// thresholds of the scikit-learn-compatible solvers then act at a fixed
+// relative scale, and since power-of-two scaling is exact, fits of X 2^k,
+// Y 2^m are exactly equivariant. restore() maps the latent arrays back to the
+// caller's units before rotations and coefficients are formed.
+class UnitScaling {
+public:
+    UnitScaling(std::vector<double>& x, std::vector<double>& y) noexcept
+        : ex_(normalise(x)), ey_(normalise(y)) {}
+
+    void restore(::n4m::core::Model& model, std::vector<double>& scores_t,
+                 std::vector<double>& y_scores_u, const LatentUnits& units) const noexcept {
+        scale_by_power_of_two(model.weights_w, exponent(units.weights_w));
+        scale_by_power_of_two(model.loadings_p, exponent(units.loadings_p));
+        scale_by_power_of_two(model.y_loadings_q, exponent(units.y_loadings_q));
+        scale_by_power_of_two(scores_t, exponent(units.scores_t));
+        scale_by_power_of_two(y_scores_u, exponent(units.y_scores_u));
+    }
+
+private:
+    static int normalise(std::vector<double>& values) noexcept {
+        double largest = 0.0;
+        for (double v : values) largest = std::max(largest, std::fabs(v));
+        if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
+        const int e = std::ilogb(largest);
+        scale_by_power_of_two(values, -e);
+        return e;
+    }
+
+    [[nodiscard]] int exponent(ScaleUnits units) const noexcept {
+        return units.x * ex_ + units.y * ey_;
+    }
+
+    int ex_;
+    int ey_;
+};
 
 [[nodiscard]] double dot(const std::vector<double>& a,
                          const std::vector<double>& b) noexcept {
@@ -1597,10 +1645,7 @@ n4m_status_t fit_pls_regression_nipals(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
-    // Work at unit scale: weights and X loadings are invariant, Y loadings
-    // scale by 2^(ey - ex), X and Y scores by 2^ex (restored below).
-    const int ex = rescale_to_unit_exponent(xk);
-    const int ey = rescale_to_unit_exponent(yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -1825,10 +1870,8 @@ n4m_status_t fit_pls_regression_nipals(
             y_scores_u[idx(row, a, comp)] = y_scores[row];
         }
     }
-    scale_by_power_of_two(model->y_loadings_q, ey - ex);
-    scale_by_power_of_two(scores_t, ex);
-    scale_by_power_of_two(y_scores_u, ex);
 
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -2426,6 +2469,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -2625,6 +2669,8 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
         }
     }
 
+    unit_scaling.restore(*model, scores_t, y_scores_u,
+                         q == 1U ? kUnitWeightRawYScoreUnits : kUnitWeightUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -2691,6 +2737,7 @@ n4m_status_t fit_pls_regression_kernel(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -2905,6 +2952,7 @@ n4m_status_t fit_pls_regression_kernel(
         }
     }
 
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitScoreUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -2971,6 +3019,7 @@ n4m_status_t fit_pls_regression_svd(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3071,6 +3120,7 @@ n4m_status_t fit_pls_regression_svd(
         }
     }
 
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -3137,6 +3187,7 @@ n4m_status_t fit_pls_regression_power(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3237,6 +3288,7 @@ n4m_status_t fit_pls_regression_power(
         }
     }
 
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -3303,6 +3355,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3407,6 +3460,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
         }
     }
 
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -3473,10 +3527,7 @@ n4m_status_t fit_pcr_svd(
                           model->x_mean, model->x_scale, xs);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, ys);
-    // Work at unit scale (see rescale_to_unit_exponent): directions are
-    // invariant, Y loadings scale by 2^(ey - ex), X and Y scores by 2^ex.
-    const int ex = rescale_to_unit_exponent(xs);
-    const int ey = rescale_to_unit_exponent(ys);
+    const UnitScaling unit_scaling(xs, ys);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3630,10 +3681,7 @@ n4m_status_t fit_pcr_svd(
             y_scores_u.data(), a);
     }
 
-    scale_by_power_of_two(model->y_loadings_q, ey - ex);
-    scale_by_power_of_two(scores_t, ex);
-    scale_by_power_of_two(y_scores_u, ex);
-
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;
@@ -3700,6 +3748,7 @@ n4m_status_t fit_pls_regression_simpls(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    const UnitScaling unit_scaling(xk, yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3843,6 +3892,7 @@ n4m_status_t fit_pls_regression_simpls(
         }
     }
 
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitScoreUnits);
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
         return status;

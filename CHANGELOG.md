@@ -8,22 +8,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
-- NIPALS PLS regression (`models.pls.pls_regression`, solver `nipals`) and
-  PCR (`models.pls.pcr`) without autoscaling are now scale-equivariant.
-  Their scikit-learn-compatible absolute `DBL_EPSILON` thresholds refused
-  finite data with `N4M_ERR_NUMERICAL_FAILURE` from X 2^-30 or Y 2^-60
-  onwards (and NIPALS lost equivariance at Y 2^30). Both fits now work on the
-  centred matrices rescaled by an exact power of two to a largest magnitude in
-  [1, 2) and restore the scale afterwards, so fitting X 2^k, Y 2^m gives
-  exactly 2^(m-k) times the coefficients. Results are bit-identical when the
-  centred data already lie at that scale; otherwise NIPALS moves by at most a
-  few 1e-12 relative (the solver's absolute `+eps` terms now act at unit
-  scale) and PCR is bit-identical. New C++ and JS/WASM sweeps over
-  k, m in {0, +-30, +-60, +-200} check exact equivariance and agreement with a
-  scikit-learn 1.7.2 `PLSRegression(scale=False)` / PCA + linear regression
-  reference. The other PLS regression solvers (SIMPLS, kernel, wide kernel,
-  orthogonal scores, SVD, power, randomized SVD) keep absolute thresholds
-  without autoscaling.
+- PLS regression (`models.pls.pls_regression`, every solver: NIPALS, SIMPLS,
+  orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD) and PCR
+  (`models.pls.pcr`) without autoscaling are now scale-equivariant. Their
+  scikit-learn-compatible absolute `DBL_EPSILON` thresholds refused finite
+  data with `N4M_ERR_NUMERICAL_FAILURE` from X 2^-30 or Y 2^-30/2^-60 onwards
+  (NIPALS also lost equivariance at Y 2^30, and PCR returned zero Y scores at
+  X 2^30). One shared step rescales the centred X and Y by exact powers of
+  two to a largest magnitude in [1, 2) and maps every latent array back to
+  the caller's units, so fitting X 2^k, Y 2^m scales coefficients by exactly
+  2^(m-k) and every weight, loading, rotation and score by its exact power
+  of two. On every compared case where they previously succeeded, SIMPLS,
+  orthogonal scores, kernel, wide kernel, SVD, power and randomized SVD are
+  bit-identical; PCR is bit-identical except for the stored Y scores it
+  previously zeroed; NIPALS coefficients move by at most a few 1e-12
+  relative and its latent arrays by up to ~4e-7 relative when Y was much
+  larger than X (the solver's absolute `+eps` normalization terms now act at
+  unit scale). C++ sweeps over
+  k, m in {0, +-30, +-60, +-200} (one and two targets) check exact
+  equivariance of every fitted array and agreement with scikit-learn 1.7.2
+  `PLSRegression(scale=False)` / PCA + linear regression and NumPy analytic
+  references (exact-singular-vector deflation, de Jong SIMPLS); a JS/WASM
+  sweep checks the same on predictions.
 
 ## [1.3.6] - 2026-10-13
 
