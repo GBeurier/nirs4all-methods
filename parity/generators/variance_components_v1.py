@@ -159,8 +159,8 @@ def balanced_intervals(y, alpha=0.05):
             "sd_chi2": [np.sqrt(ssw / stats.chi2.ppf(1 - alpha / 2, df)), np.sqrt(ssw / stats.chi2.ppf(alpha / 2, df))]}
 
 out["C"]["intervals"] = balanced_intervals(np.array(C_y).reshape(3, 2))
-# Large balanced design y_ij = i/100 + (j-1)/2, 1000 groups of 3 (df 2000).
-out["large"] = balanced_intervals([[0.01 * i + 0.5 * (j - 1) for j in range(3)] for i in range(1000)])
+# Large balanced design y_ij = i + 50 (j-1), 1000 groups of 3 (df 2000).
+out["large"] = balanced_intervals([[i + 50.0 * (j - 1) for j in range(3)] for i in range(1000)])
 # One within df: groups {0,0,1}, y = 1, 3, 10, SSW = 2.
 out["one_df_sd_chi2"] = [np.sqrt(2 / stats.chi2.ppf(0.975, 1)), np.sqrt(2 / stats.chi2.ppf(0.025, 1))]
 json.dump(out, open(sys.argv[1], "w"), indent=1, default=float)

@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats.variance_components`** · _Fully-qualified_: `n4m.stat
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_variance_components_intervals`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L478) · [`n4m_stats_variance_components_reml`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L449). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_variance_components_intervals`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L490) · [`n4m_stats_variance_components_reml`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L461). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -26,7 +26,7 @@ Repeatability of spectral bands from technical replicates when samples carry une
 
 ### Limits and validation
 
-The model assumes normal, homoscedastic within-group errors and independent groups; the chi-square interval of the within SD needs only the first two. The balanced exact interval is not truncated to [0, 1]. Bootstrap percentiles are unreliable with few resampling units; replicates without within-group degrees of freedom are counted as invalid. Boundary estimates ($\sigma_b^2=0$ or $\sigma_w^2=0$) are flagged per feature. Measured percentile coverage at 95 % nominal is 0.86-0.94 for 20 to 60 groups (`parity/generators/variance_components_coverage.py`); the intervals are exploratory. With K distinct group sizes the score has the sign of a polynomial of degree at most 4K-3, so balanced designs are unimodal; for unbalanced designs a likelihood maximum lying inside one grid cell (1/8 decade of gamma) can be missed. Supported domain: nonzero |x| in [2^-256, 2^256] with spread <= 2^64; outside it the call is refused.
+The model assumes normal, homoscedastic within-group errors and independent groups; the chi-square interval of the within SD needs only the first two. The balanced exact interval is not truncated to [0, 1]. Bootstrap percentiles are unreliable with few resampling units; replicates without within-group degrees of freedom are counted as invalid. Boundary estimates ($\sigma_b^2=0$ or $\sigma_w^2=0$) are flagged per feature. Measured percentile coverage at 95 % nominal is 0.86-0.94 for 20 to 60 groups (`parity/generators/variance_components_coverage.py`); the intervals are exploratory. With K distinct group sizes the score has the sign of a polynomial of degree at most 4K-3, so balanced designs are unimodal; for unbalanced designs a likelihood maximum lying inside one grid cell (1/8 decade of gamma) can be missed. Supported domain: nonzero |x| in [2^-256, 2^256] with spread <= 2^32; outside it the call is refused.
 
 ### Implementation
 

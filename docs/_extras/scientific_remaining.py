@@ -1762,7 +1762,7 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "With K distinct group sizes the score has the sign of a polynomial of degree at most "
         "4K-3, so balanced designs are unimodal; for unbalanced designs a likelihood maximum "
         "lying inside one grid cell (1/8 decade of gamma) can be missed. Supported domain: "
-        "nonzero |x| in [2^-256, 2^256] with spread <= 2^64; outside it the call is refused.",
+        "nonzero |x| in [2^-256, 2^256] with spread <= 2^32; outside it the call is refused.",
         "The ABI-2 symbols `n4m_stats_variance_components_reml` and "
         "`n4m_stats_variance_components_intervals` in `n4m/metrics.h` are implemented in "
         "`cpp/src/c_api/c_api_variance_components.cpp` and `cpp/src/core/variance_components.cpp`, "

@@ -171,21 +171,46 @@ int main() {
         REQUIRE(relative(e.out[1], 0.28402777778428895, 1e-10));
         REQUIRE(rel(e.out[3], -8.257664780966449, 1e-12));
 
-        // Large balanced design, df = 2000 and F(999, 2000): y_ij = i/100 + (j-1)/2.
+        // Large balanced design, df = 2000 and F(999, 2000): y_ij = i + 50 (j-1).
         std::vector<int64_t> gl;
         std::vector<double> yl;
         for (int64_t i = 0; i < 1000; ++i)
             for (int j = 0; j < 3; ++j) {
                 gl.push_back(i);
-                yl.push_back(0.01 * static_cast<double>(i) + 0.5 * (j - 1));
+                // 100 x (i/100 + (j-1)/2): exact integers, so the value at
+                // i = 50, j = 0 is an exact zero, not a 1e-17 rounding residue
+                // that would break the rule-15 spread. ICC and the F interval
+                // are scale invariant; the SD bounds scale by 100.
+                yl.push_back(static_cast<double>(i) + 50.0 * (j - 1));
             }
         auto l = reml(ctx, yl, gl);
         REQUIRE(l.status == 0 && relative(l.out[2], 0.970617042115573, 1e-10));
         auto il = intervals(ctx, yl, gl, 0.95);
-        REQUIRE(relative(il[0], 0.4849751429481101, 1e-10));
-        REQUIRE(relative(il[1], 0.5159925697716798, 1e-10));
+        REQUIRE(relative(il[0], 48.49751429481101, 1e-10));
+        REQUIRE(relative(il[1], 51.59925697716798, 1e-10));
         REQUIRE(relative(il[2], 0.9673880863930334, 1e-10));
         REQUIRE(relative(il[3], 0.9735827791418388, 1e-10));
+
+        // Searle bounds with g = 3 groups use F(2, nu) quantiles, nu = 3(r-1):
+        // closed form (nu/2) expm1(-2 log(p)/nu) (upper) and reciprocity
+        // F_{1-a/2}(nu, 2) = 1 / lower quantile of F(2, nu). Data 10 i +- 1
+        // give MSB = 100 r, MSW = r/(r-1), F = 100 (r-1).
+        for (int r : {2, 10, 1000}) {
+            std::vector<double> y3;
+            std::vector<int64_t> g3s;
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < r; ++j) {
+                    g3s.push_back(i);
+                    y3.push_back(10.0 * i + (j % 2 == 0 ? 1.0 : -1.0));
+                }
+            const double nu = 3.0 * (r - 1), F = 100.0 * (r - 1), p = 0.025;
+            const double upper = 0.5 * nu * std::expm1(-2.0 * std::log(p) / nu);
+            const double lower = 0.5 * nu * std::expm1(-2.0 * std::log1p(-p) / nu);
+            const double fl = F / upper, fu = F / lower, rr = r;
+            auto i3 = intervals(ctx, y3, g3s, 0.95);
+            REQUIRE(relative(i3[2], (fl - 1) / (fl + rr - 1), 1e-10));
+            REQUIRE(relative(i3[3], (fu - 1) / (fu + rr - 1), 1e-10));
+        }
 
         // One within df: SSW = 2, chi2_{0.025,1} = 9.8207e-4.
         auto one = intervals(ctx, {1.0, 3.0, 10.0}, {0, 0, 1}, 0.95);
@@ -272,7 +297,7 @@ int main() {
             REQUIRE(ih[0] > 0 && std::isfinite(ih[1]) && std::isfinite(ih[3]));
         }
 
-        // Rule 13 domain: nonzero |x| in [2^-256, 2^256], spread <= 2^64 over
+        // Rules 13/15 domain: nonzero |x| in [2^-256, 2^256], spread <= 2^32 over
         // raw and centred values. Both sides of every boundary; outside, both
         // entry points refuse with N4M_ERR_UNSUPPORTED before computing.
         {
@@ -290,26 +315,25 @@ int main() {
             REQUIRE(inside({bottom, 2 * bottom, 4 * bottom}));
             REQUIRE(outside({std::nextafter(bottom, 0.0), 2 * bottom, 4 * bottom}));
             REQUIRE(inside({0.0, bottom, 2 * bottom}));          // zeros are allowed
-            REQUIRE(inside({1.0, std::ldexp(1.0, 64), 2.0}));     // raw spread 2^64
-            REQUIRE(outside({1.0, std::ldexp(1.0, 65), 2.0}));    // raw spread 2^65
-            // Spread of the differences the statistic uses: with groups
-            // {0, 0, 1}, {1, 1 + 2^-50, 2^10} has a within residual 2^-51
-            // against a centred value ~(2/3) 2^10 (spread ~2^60.4); with
-            // 1 + 2^-52 and 2^12 the spread is ~2^64.4.
+            REQUIRE(inside({1.0, std::ldexp(1.0, 32), 2.0}));     // raw spread 2^32
+            REQUIRE(outside({1.0, std::ldexp(1.0, 33), 2.0}));    // raw spread 2^33
+            // Spread of the pairwise differences (rule 15, 2^32): range over
+            // the smallest nonzero gap of the sorted values. {1, 1 + 2^-20,
+            // 2^10}: (2^10 - 1)/2^-20 ~ 2^30; {1, 1 + 2^-22, 2^12}: ~2^34.
             const std::vector<int64_t> g001{0, 0, 1};
             auto in3 = [&](const std::vector<double>& y) {
                 return reml_status(ctx, y, g001) == N4M_OK && intervals_status(ctx, y, g001) == N4M_OK;
             };
-            REQUIRE(in3({1.0, 1.0 + std::ldexp(1.0, -50), std::ldexp(1.0, 10)}));
-            REQUIRE(reml_status(ctx, {1.0, 1.0 + std::ldexp(1.0, -52), std::ldexp(1.0, 12)}, g001) ==
+            REQUIRE(in3({1.0, 1.0 + std::ldexp(1.0, -20), std::ldexp(1.0, 10)}));
+            REQUIRE(reml_status(ctx, {1.0, 1.0 + std::ldexp(1.0, -22), std::ldexp(1.0, 12)}, g001) ==
                     N4M_ERR_UNSUPPORTED);
-            // Inside, the within SS keeps full precision: SSW = 2 (2^-51)^2 =
-            // 2^-101 exactly, so the chi-square SD bounds are sqrt(2^-101/q)
+            // Inside, the within SS keeps full precision: SSW = 2 (2^-21)^2 =
+            // 2^-41 exactly, so the chi-square SD bounds are sqrt(2^-41/q)
             // with SciPy q = chi2_{0.975,1} = 5.023886187314888 and
             // chi2_{0.025,1} = 0.0009820691171752555.
-            auto fine = intervals(ctx, {1.0, 1.0 + std::ldexp(1.0, -50), std::ldexp(1.0, 10)}, g001, 0.95);
-            REQUIRE(relative(fine[0], std::sqrt(std::ldexp(1.0, -101) / 5.023886187314888), 1e-10));
-            REQUIRE(relative(fine[1], std::sqrt(std::ldexp(1.0, -101) / 0.0009820691171752555), 1e-10));
+            auto fine = intervals(ctx, {1.0, 1.0 + std::ldexp(1.0, -20), std::ldexp(1.0, 10)}, g001, 0.95);
+            REQUIRE(relative(fine[0], std::sqrt(std::ldexp(1.0, -41) / 5.023886187314888), 1e-10));
+            REQUIRE(relative(fine[1], std::sqrt(std::ldexp(1.0, -41) / 0.0009820691171752555), 1e-10));
             // A masked out-of-domain value is ignored; one masked feature
             // outside the domain still refuses the whole call.
             std::vector<double> pair_cols{1.0, 1e300, 3.0, 4.0, 5.0, 6.0};

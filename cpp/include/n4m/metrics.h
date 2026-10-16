@@ -8,6 +8,16 @@
 extern "C" {
 #endif
 
+/* Supported numerical domain of the Preflight kernels (lead rules 13/15):
+ * every nonzero |x| in [2^-N4M_DOMAIN_MAX_MAGNITUDE_LOG2,
+ * 2^N4M_DOMAIN_MAX_MAGNITUDE_LOG2] and, wherever a statistic depends on
+ * differences between input values, per row max/min nonzero |x| <=
+ * 2^N4M_DOMAIN_MAX_SPREAD_LOG2. Inputs outside are refused before computing
+ * with N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain").
+ * Exempt: summaries (magnitude bound only) and integer labels/codes. */
+#define N4M_DOMAIN_MAX_MAGNITUDE_LOG2 256
+#define N4M_DOMAIN_MAX_SPREAD_LOG2 32
+
 /* Preflight diagnostics. All outputs are caller-owned. X and matrix outputs
  * accept positive element strides and F64 only. PCA requires n>=2, p>=1,
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
@@ -410,8 +420,10 @@ N4M_API n4m_status_t n4m_stats_permdisp(
  * X.rows x X.cols bytes, nonzero = valid; unmasked X values must be finite.
  * Every group with >= 1 valid value enters, singletons included.
  * Supported numerical domain (checked first, over every feature): each
- * nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^64 over the
- * raw values and over the centred values; outside it the call returns
+ * nonzero |x| in [2^-256, 2^256] and max/min nonzero |x| <= 2^32
+ * (N4M_DOMAIN_MAX_SPREAD_LOG2) over the nonzero magnitudes and over the
+ * pairwise differences of each feature ((max - min) / smallest nonzero gap
+ * between sorted values); outside it the call returns
  * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain").
  * Inside it, each feature is rescaled by exact powers of two chosen
  * from its CENTRED variation (translation and scale invariant: shifting by
