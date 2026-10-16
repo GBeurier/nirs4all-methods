@@ -8,6 +8,16 @@
 extern "C" {
 #endif
 
+/* Supported numerical domain of the Preflight kernels (lead rules 13/15):
+ * every nonzero |x| in [2^-N4M_DOMAIN_MAX_MAGNITUDE_LOG2,
+ * 2^N4M_DOMAIN_MAX_MAGNITUDE_LOG2] and, wherever a statistic depends on
+ * differences between input values, per row max/min nonzero |x| <=
+ * 2^N4M_DOMAIN_MAX_SPREAD_LOG2. Inputs outside are refused before computing
+ * with N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain").
+ * Exempt: summaries (magnitude bound only) and integer labels/codes. */
+#define N4M_DOMAIN_MAX_MAGNITUDE_LOG2 256
+#define N4M_DOMAIN_MAX_SPREAD_LOG2 32
+
 /* Preflight diagnostics. All outputs are caller-owned. X and matrix outputs
  * accept positive element strides and F64 only. PCA requires n>=2, p>=1,
  * 1<=k<=min(n,p); scores is n x k, loadings k x p, eigenvalues has k
@@ -55,7 +65,7 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
  * using index=-1 and distance=NaN when too few eligible neighbors remain.
  * All input values must be finite. k>0; callers own every buffer.
  * Supported domain D: every nonzero |x| in [2^-256, 2^256] and per row,
- * max/min nonzero |x| <= 2^64; otherwise N4M_ERR_UNSUPPORTED ("input outside
+ * max/min nonzero |x| <= 2^32; otherwise N4M_ERR_UNSUPPORTED ("input outside
  * the supported numerical domain") before computing. Inside D
  * distances use a compensated sum (relative error < 4u); two candidates
  * within 2^-45 (relative) of each other are ordered exactly from
@@ -84,7 +94,7 @@ N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
  * A zero denominator or no eligible rows yields NaN contrast, with N4M_OK
  * and coverage still reported. Continuous targets must lie in the supported
  * domain D (every nonzero |y| in [2^-256, 2^256], max/min nonzero |y| <=
- * 2^64), else N4M_ERR_UNSUPPORTED; category codes are labels and are not
+ * 2^32), else N4M_ERR_UNSUPPORTED; category codes are labels and are not
  * bounded by D. Inside D the variance uses a double-double mean and
  * compensated sums; out_four[0] = 1 - ratio carries an absolute error of a
  * few u times the ratio. */
@@ -156,16 +166,18 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
  * = valid; unmasked X must be finite and cols >= window_length. The value is
  * a noise proxy under a locally polynomial signal, never an SNR.
  * Supported numerical domain D: every nonzero valid |x| in [2^-256, 2^256]
- * and, per row, max/min nonzero valid |x| <= 2^64; otherwise
+ * and, per row, max/min nonzero valid |x| <= 2^32; otherwise
  * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain")
  * before computing. Inside D the residual of each evaluable window is
  * computed from that window alone as sum_{k>0} w_k (2 x_j - x_{j+k} -
- * x_{j-k}): the weights are double-double (Gram polynomials, cross-checked
- * against the Savitzky-Golay engine), each second difference is kept exactly
- * as three doubles until the double-double weighted sum, rounded once. So
- * values outside every evaluable window never change the results, exact
- * offsets cancel exactly, power-of-two scaling is exactly equivariant, and
- * |r - r_exact| <= 2^-95 sum_k |w_k| |c_k| against the exact SG weights. */
+ * x_{j-k}) with double-double Savitzky-Golay weights (Gram polynomials,
+ * cross-checked against the SG engine) and exact second differences, rounded
+ * once. Values outside every evaluable window never change the results, and
+ * exact offsets cancel exactly. Precision (honest, conservative): each
+ * residual has absolute error <= 2 W eps sum_k |c_k| max_k |w_k| against the
+ * exact SG residual (W window length, eps = 2^-52, coefficient errors and the
+ * final rounding included); squares, sums, the square root and the gain add
+ * a relative error of a few eps. These are rounding-level discrepancies. */
 N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
     int32_t window_length, int32_t polyorder, double* band_noise,
@@ -186,8 +198,7 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
  * mean absolute deviation, n = cols, z the SNV row (0 for a constant row);
  * for a group of r > 1 rows, max member B + (4u + 2 r u^2) max member |z|.
  * X must be finite with cols >= 2. Supported domain D: every nonzero |x| in
- * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64 (the centred
- * spread max|x| / range is then below 2^53 for any non-constant row);
+ * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^32;
  * otherwise N4M_ERR_UNSUPPORTED before computing. Added in ABI 2.20. */
 N4M_API n4m_status_t n4m_preflight_snv_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
@@ -206,7 +217,7 @@ N4M_API n4m_status_t n4m_preflight_snv_compute(
  * rows) are set to 1 for rows in at least one pair, else 0. out_counts
  * receives [total pairs within tolerance, candidate pairs compared]. All
  * values must be finite. Supported domain D: every nonzero |x| in
- * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64; otherwise
+ * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^32; otherwise
  * N4M_ERR_UNSUPPORTED before computing. Inside D the decisions are exact. A fast estimate on power-of-two rescaled differences
  * (exact halves when some q - r overflows) decides when it is farther than
  * 2^-45 (relative) from the tolerance; otherwise the sign of

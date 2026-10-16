@@ -26,7 +26,7 @@ ABI 2.20.0 (project version unchanged until release).
 - Supported numerical domain of the Preflight kernels (`n4m_preflight_snv_compute`,
   `n4m_preflight_noise_proxy_compute`, `n4m_preflight_pairs_within_tolerance`):
   every nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero
-  |x| <= 2^64. Inputs outside are refused before computing with
+  |x| <= 2^32 (`N4M_DOMAIN_MAX_SPREAD_LOG2`, lead rule 15). Inputs outside are refused before computing with
   `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain").
   Inside, results are correct to the documented precision. The machinery that
   only served out-of-domain inputs (halved differences, 1/8 prescaling,
@@ -35,6 +35,15 @@ ABI 2.20.0 (project version unchanged until release).
   (continuous targets). `n4m_preflight_summary_compute` keeps only the
   magnitude bound, since its compensated moments and quartiles need no
   spread bound.
+
+- Noise proxy precision contract made honest. Each residual has an absolute
+  error of at most `2 W eps sum|c_k| max|w_k|` against the exact
+  Savitzky-Golay residual, which includes the coefficient errors and the
+  final binary64 rounding. The former `2^-95 sum|w_k||c_k|` claim did not
+  hold: a zero exact weight gave a 2e-33 proxy, and the residual is rounded
+  to binary64. Tests compare with exact rational SG residuals (windows 3,
+  13 and 31) and check that no window/order pair of the validated SG domain
+  is refused inside D.
 
 ### Fixed (ABI 2.18 Preflight kernels)
 
