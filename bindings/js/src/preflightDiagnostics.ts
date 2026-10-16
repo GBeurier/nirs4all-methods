@@ -11,7 +11,7 @@ export interface PreflightPcaResult {
     eigenvalues: Float64Array;
     /** [trace(C), trace(C*C)] over the full centered covariance spectrum. */
     fullMoments: readonly [number, number];
-    /** Absolute accuracy bound of every eigenvalue (16 max(n,p) eps lambda_max). */
+    /** Conservative absolute accuracy threshold of the eigenvalues (16 max(n,p) eps lambda_max). */
     resolution: number;
     /** 1 when the component's variance is not above `resolution` (not rank). */
     unresolved: Uint8Array;

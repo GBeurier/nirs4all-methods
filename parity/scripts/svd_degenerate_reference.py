@@ -221,22 +221,41 @@ def stacked_opposite(a: list[list], scale) -> list[list]:
     ]
 
 
-def multiprecision_cases() -> list[tuple[str, list[list]]]:
-    """Review families whose small singular values come from cancellation."""
-    two = mp.mpf(2)
+def kron_b6(t) -> list[list]:
+    """[A; -A], A = B_6(t) (x) [[1,3/4],[1/2,1]], columns reversed."""
     kron = [[1, mp.mpf(3) / 4], [mp.mpf(1) / 2, 1]]
-    b6 = bidiag(6, two**-50)
+    b6 = bidiag(6, t)
     a12 = [
         [b6[i // 2][j // 2] * kron[i % 2][j % 2] for j in range(12)] for i in range(12)
     ]
-    reversed_cols = [list(reversed(row)) for row in stacked_opposite(a12, 1)]
+    return [list(reversed(row)) for row in stacked_opposite(a12, 1)]
+
+
+def weak_row(t) -> list[list]:
+    """[A; -A], A = [[-1,1,-1],[-1,-1,-1],[1,-1,1],[-t,t,t]]."""
+    a = [[-1, 1, -1], [-1, -1, -1], [1, -1, 1], [-t, t, t]]
+    return stacked_opposite(a, 1)
+
+
+def multiprecision_cases() -> list[tuple[str, list[list], bool]]:
+    """Review families whose small singular values come from cancellation.
+
+    The flag tells whether the matrix lies in the preflight PCA domain
+    (nonzero |x| in [2^-128, 2^128], max/min nonzero |x| <= 2^32).
+    """
+    two = mp.mpf(2)
     return [
-        # 8th variance ~2^-881/15: far below the resolution, unresolved.
-        ("b8_plateau", stacked_opposite(bidiag(8, two**-63), two**63)),
-        # Last variance ~2^-1093/15: not even representable, unresolved.
-        ("b8_tiny", stacked_opposite(bidiag(8, two**-60), two**-67)),
-        # B_6(2^-50) (x) [[1,3/4],[1/2,1]], [A; -A], columns reversed.
-        ("b6_kron", reversed_cols),
+        # Review round 3, outside the preflight domain (spreads 2^63, 2^60,
+        # 2^51): kernel tests only; the preflight PCA refuses them.
+        ("b8_plateau", stacked_opposite(bidiag(8, two**-63), two**63), False),
+        ("b8_tiny", stacked_opposite(bidiag(8, two**-60), two**-67), False),
+        ("b6_kron", kron_b6(two**-50), False),
+        # Same families inside the domain (spread <= 2^31).
+        ("b8_plateau_d", stacked_opposite(bidiag(8, two**-30), 1), True),
+        ("b8_tiny_d", stacked_opposite(bidiag(8, two**-30), two**-97), True),
+        ("b6_kron_d", kron_b6(two**-30), True),
+        # Weak but resolved third variance (4t^2/7 ~ 3e-13 lambda_1).
+        ("weak_resolved_d", weak_row(two**-20), True),
     ]
 
 
@@ -366,7 +385,7 @@ def main() -> None:
     mp.mp.dps = 600
     lines.append(f"// mpmath {mp.__version__}, {mp.mp.dps} digits.")
     mp_entries = []
-    for idx, (name, rows) in enumerate(multiprecision_cases()):
+    for idx, (name, rows, in_domain) in enumerate(multiprecision_cases()):
         s = multiprecision_singular_values(rows)
         var = [v * v / (len(rows) - 1) for v in s]
         m, n = len(rows), len(rows[0])
@@ -376,12 +395,12 @@ def main() -> None:
         lines.append(f"static const double kMpS{idx}[] = {{{fmt_mp(s)}}};")
         lines.append(f"static const double kMpVar{idx}[] = {{{fmt_mp(var)}}};")
         mp_entries.append(
-            f'    {{"{name}", {m}, {n}, kMpA{idx}, kMpS{idx}, kMpVar{idx}}},'
+            f'    {{"{name}", {m}, {n}, kMpA{idx}, kMpS{idx}, kMpVar{idx}, {int(in_domain)}}},'
         )
     lines.append(
         "struct MpGolden { const char* name; int m; int n; const double* A; const double* sv_desc;"
     )
-    lines.append("                  const double* variances; };")
+    lines.append("                  const double* variances; int preflight_domain; };")
     lines.append("static const MpGolden kMpGoldens[] = {")
     lines.extend(mp_entries)
     lines.append("};")

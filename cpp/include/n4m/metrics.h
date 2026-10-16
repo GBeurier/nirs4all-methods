@@ -15,7 +15,7 @@ extern "C" {
  * sum(lambda^2), over the FULL centered covariance spectrum (ddof=1).
  * The moments remain exact when PCA is truncated or approximated.
  * Supported numerical domain: every nonzero |x| in [2^-128, 2^128] and
- * max/min nonzero |x| <= 2^64 (exact zeros allowed); anything else returns
+ * max/min nonzero |x| <= 2^32 (exact zeros allowed); anything else returns
  * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain")
  * before computing. Inside it each column is centred in an exactly rescaled
  * space (compensated two-term mean) and the decomposition runs at one
@@ -23,22 +23,24 @@ extern "C" {
  * have no influence, translations change nothing beyond the input's
  * rounding, and scaling X by 2^s scales eigenvalues and full_moments[0] by
  * 4^s, full_moments[1] by 16^s and scores by 2^s (loadings invariant).
- * Accuracy: every eigenvalue is accurate to the ABSOLUTE bound
- * resolution = 16 * max(n,p) * DBL_EPSILON * lambda_max; relative accuracy
- * of smaller variances is not guaranteed. A component whose variance is not
- * above that bound is unresolved: its eigenvalue and scores are published
- * as 0 (its loading row stays a unit vector). Resolved eigenvalues, the
- * resolution and both moments are normal doubles. This 2.19 entry point
- * cannot flag unresolved components; n4m_preflight_pca_compute_resolved
- * (ABI 2.20) returns the resolution and the per-component flags. */
+ * Accuracy (absolute only): eigenvalues carry an absolute error of order
+ * max(n,p) * DBL_EPSILON * lambda_max, as for any backward-stable SVD; no
+ * relative accuracy is claimed for smaller variances. The conservative
+ * threshold resolution = 16 * max(n,p) * DBL_EPSILON * lambda_max separates
+ * resolved components from unresolved ones: a component whose variance is
+ * not above it is published with eigenvalue and scores 0 (its loading row
+ * stays a unit vector). Resolved eigenvalues, the resolution and both
+ * moments are normal doubles. This 2.19 entry point cannot flag unresolved
+ * components; n4m_preflight_pca_compute_resolved (ABI 2.20) returns the
+ * resolution and the per-component flags. */
 N4M_API n4m_status_t n4m_preflight_pca_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
     const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
     double* eigenvalues, double* full_moments);
 
 /* ABI 2.20. n4m_preflight_pca_compute with its accuracy contract made
- * explicit: resolution (one element) receives the absolute accuracy bound of
- * the eigenvalues, 16 * max(n,p) * DBL_EPSILON * lambda_max, and unresolved
+ * explicit: resolution (one element) receives the conservative absolute
+ * accuracy threshold 16 * max(n,p) * DBL_EPSILON * lambda_max, and unresolved
  * (k bytes) receives 1 for a component whose variance is not above it
  * (published as 0, with zero scores) and 0 otherwise. Callers must not count
  * unresolved components as numerical rank or read their variance as a

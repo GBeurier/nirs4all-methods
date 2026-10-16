@@ -47,13 +47,14 @@ n4m_status_t check_view(n4m_context_t* ctx, const n4m_matrix_view_t* v) noexcept
     return N4M_OK;
 }
 
-// Supported numerical domain (rule 13) of the PCA kernel: every nonzero
-// |x| in [2^-pca_domain_exp, 2^pca_domain_exp] and max/min nonzero |x| <=
-// 2^domain_spread_exp. The PCA declares a magnitude bound tighter than 2^256
-// because trace(C^2) is quartic in X: with |x| <= 2^128 every published
-// value (eigenvalues, both moments, scores) is a normal double.
+// Supported numerical domain (rules 13 and 15) of the PCA kernel: every
+// nonzero |x| in [2^-pca_domain_exp, 2^pca_domain_exp] and max/min nonzero
+// |x| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2. The PCA declares a magnitude bound
+// tighter than 2^256 because trace(C^2) is quartic in X: with |x| <= 2^128
+// every published value (resolved eigenvalues, resolution, both moments,
+// scores) is a normal double.
 constexpr int pca_domain_exp = 128;
-constexpr int domain_spread_exp = 64;
+constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
 // Absolute accuracy of the PCA variances, in units of max(n,p)*eps*lambda_max.
 constexpr double pca_resolution_factor = 16.0;
 
@@ -192,10 +193,10 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
             if (maxabs > 0.0 &&
                 (maxabs > std::ldexp(1.0, pca_domain_exp) ||
                  minabs < std::ldexp(1.0, -pca_domain_exp) ||
-                 maxabs > std::ldexp(minabs, domain_spread_exp)))
+                 maxabs > std::ldexp(minabs, N4M_DOMAIN_MAX_SPREAD_LOG2)))
                 return fail(ctx, N4M_ERR_UNSUPPORTED,
                             "input outside the supported numerical domain (finite, nonzero |x| "
-                            "in [2^-128, 2^128], max/min nonzero |x| <= 2^64)");
+                            "in [2^-128, 2^128], max/min nonzero |x| <= 2^32)");
         }
         // Centre every column in its own exactly rescaled space (max|x| in
         // [0.5, 1)), then bring all centred columns to one power-of-two scale
@@ -273,9 +274,11 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
         n4m_pca_fit_t fit{};
         const auto st = n4m_pca_fit(data.data(), n, p, k, 0, &fit);
         if (st != N4M_OK) return fail(ctx, st, "PCA fit failed");
-        // Accuracy contract (rule 14): every variance is accurate to the
-        // absolute bound pca_resolution_factor * max(n,p) * eps * lambda_max.
-        // A component not above it is unresolved: flagged, and published
+        // Accuracy contract (rule 14): variances carry an absolute error of
+        // order max(n,p) * eps * lambda_max (backward-stable SVD). The
+        // conservative threshold pca_resolution_factor * max(n,p) * eps *
+        // lambda_max separates resolved components; a component not above it
+        // is unresolved: flagged, and published
         // with a zero variance and zero scores (its loading row stays a unit
         // vector of the orthonormal basis). Decided in the rescaled space,
         // where every resolved value maps to a normal double.
