@@ -49,8 +49,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
   inside D.
 
+- The preflight PCA no longer uses the randomized sketch on large truncated
+  requests, whose error the published resolution did not cover (a first
+  variance 7 % low with `N4M_OK`). It now eigendecomposes the smaller-side
+  Gram matrix with the converged QL solver for every n, p and k. The 2.19
+  entry point validates `k` before allocating and keeps allocations inside
+  its exception barrier.
+- Hotelling T² uses only resolved directions and computes its UCL with the
+  rank actually used. Before, an exactly collinear column gave a
+  rounding-level direction that T² amplified (2.998 instead of 4113/2428).
+
 ### Added
 
+- ABI 2.20.0: `n4m_outlier_detection_hotelling_t2_resolved` publishes the
+  rank used by Hotelling T²; the `utilities.hotelling_t2` procedure reports
+  it as `n_components_used`.
 - ABI 2.20.0: `n4m_preflight_pca_compute_resolved` publishes the PCA
   resolution bound and a per-component `unresolved` flag (rule-14 accuracy
   contract). The JS `preflightPca` wrapper returns `resolution` and

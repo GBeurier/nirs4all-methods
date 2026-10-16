@@ -147,7 +147,7 @@ function copyF64(ptr: number, n: number): Float64Array {
     return new Float64Array(getModule().HEAPF64.slice(ptr / 8, ptr / 8 + n));
 }
 
-/** Centered PCA using the native Methods SVD. Output matrices are row-major. */
+/** Centered PCA (exact Gram eigendecomposition in Methods). Output matrices are row-major. */
 export function preflightPca(X: Matrix, k: number): PreflightPcaResult {
     validateMatrix(X);
     if (!Number.isInteger(k) || k < 1 || k > Math.min(X.rows, X.cols)) {
