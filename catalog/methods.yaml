@@ -10311,7 +10311,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "Equal-weight per-group column means (double-double sums divided once), used to aggregate homogeneous technical repeats before fitting. Declared numerical domain D (nonzero |x| in [2^-256, 2^256], spread <= 2^64), refused outside. Exact dyadic, sweep and boundary checks in cpp/tests/test_group_means.cpp."
+    notes: "Equal-weight per-group column means (double-double sums divided once), used to aggregate homogeneous technical repeats before fitting. Declared numerical domain (nonzero |x| in [2^-256, 2^256]; summary, no spread limit), refused outside. Exact dyadic, sweep and boundary checks in cpp/tests/test_group_means.cpp."
     namespace: "stats"
     leaf: "group_means"
     fq_name: "n4m.stats.group_means"
@@ -10348,7 +10348,7 @@ methods:
     vendored_licenses: []
     bindings: {}
     publications: []
-    notes: "RMSE, MAE and R2 from explicit residuals and deviations around a double-double mean, summed in double-double. Declared numerical domain D (nonzero |x| in [2^-256, 2^256], spread <= 2^64), refused outside; R2 NaN when y is constant. Exact dyadic, sweep, offset and boundary checks in cpp/tests/test_group_means.cpp."
+    notes: "RMSE, MAE and R2 from explicit residuals and deviations around a double-double mean, summed in double-double. Declared numerical domain (nonzero |x| in [2^-256, 2^256], spread <= 2^32), refused outside; R2 NaN when y is constant. Exact dyadic, sweep, offset and boundary checks in cpp/tests/test_group_means.cpp."
     namespace: "stats"
     leaf: "regression_scores"
     fq_name: "n4m.stats.regression_scores"

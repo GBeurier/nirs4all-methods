@@ -30,7 +30,7 @@ feature_flags: []
 vendored_licenses: []
 bindings: {}
 publications: []
-notes: "RMSE, MAE and R2 from explicit residuals and deviations around a double-double mean, summed in double-double. Declared numerical domain D (nonzero |x| in [2^-256, 2^256], spread <= 2^64), refused outside; R2 NaN when y is constant. Exact dyadic, sweep, offset and boundary checks in cpp/tests/test_group_means.cpp."
+notes: "RMSE, MAE and R2 from explicit residuals and deviations around a double-double mean, summed in double-double. Declared numerical domain (nonzero |x| in [2^-256, 2^256], spread <= 2^32), refused outside; R2 NaN when y is constant. Exact dyadic, sweep, offset and boundary checks in cpp/tests/test_group_means.cpp."
 c_surface:
   - "n4m_stats_regression_scores"
 fq_name: "n4m.stats.regression_scores"

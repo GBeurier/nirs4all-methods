@@ -75,14 +75,15 @@ void group_means_domain(n4m_context_t* ctx) {
     std::vector<double> m;
     std::vector<int64_t> c;
     const auto run = [&](std::vector<double> x) { return means(ctx, x, static_cast<int64_t>(x.size()), 1, std::vector<int64_t>(x.size(), 0), 1, m, c); };
-    // Inside D at its boundaries.
+    // Inside D at its magnitude boundaries; a mean is a summary, so a wide
+    // spread is accepted and the dyadic mean stays exact.
     REQUIRE(run({std::ldexp(1.0, 256), std::ldexp(1.0, 192)}) == N4M_OK);
     REQUIRE(run({std::ldexp(1.0, -256), std::ldexp(1.0, -192)}) == N4M_OK);
-    REQUIRE(run({1.0, std::ldexp(1.0, 64), 0.0}) == N4M_OK);
-    // Outside D: magnitude or spread.
+    REQUIRE(run({1.0, std::ldexp(1.0, 100), 0.0}) == N4M_OK);
+    REQUIRE(m[0] == (1.0 + std::ldexp(1.0, 100)) / 3.0);
+    // Outside D: magnitude.
     REQUIRE(run({std::ldexp(1.0, 257)}) == N4M_ERR_UNSUPPORTED);
     REQUIRE(run({std::ldexp(1.0, -257)}) == N4M_ERR_UNSUPPORTED);
-    REQUIRE(run({1.0, std::ldexp(1.0, 65)}) == N4M_ERR_UNSUPPORTED);
     REQUIRE(run({std::numeric_limits<double>::max()}) == N4M_ERR_UNSUPPORTED);
     const char* message = n4m_context_last_error(ctx);
     REQUIRE(message && std::string(message).find("supported numerical domain") != std::string::npos);
@@ -150,7 +151,10 @@ void regression_domain(n4m_context_t* ctx) {
     REQUIRE(scores(ctx, {std::ldexp(1.0, 256), std::ldexp(1.0, 255)}, {0.0, std::ldexp(1.0, 255)}, out) == N4M_OK);
     REQUIRE(scores(ctx, {std::ldexp(1.0, 257), 1.0}, {1.0, 1.0}, out) == N4M_ERR_UNSUPPORTED);
     REQUIRE(scores(ctx, {1.0, 2.0}, {std::ldexp(1.0, -300), 1.0}, out) == N4M_ERR_UNSUPPORTED);
-    REQUIRE(scores(ctx, {1.0, std::ldexp(1.0, 65)}, {1.0, 1.0}, out) == N4M_ERR_UNSUPPORTED);
+    // Spread limit 2^32 (rule 15), both sides.
+    REQUIRE(scores(ctx, {1.0, std::ldexp(1.0, 32)}, {1.0, 1.0}, out) == N4M_OK);
+    REQUIRE(scores(ctx, {1.0, std::ldexp(1.0, 33)}, {1.0, 1.0}, out) == N4M_ERR_UNSUPPORTED);
+    REQUIRE(scores(ctx, {1.0, 2.0}, {1.0, std::ldexp(1.0, 33)}, out) == N4M_ERR_UNSUPPORTED);
     // Inside D, a deviation of one ulp next to 2^65 keeps R^2 exact:
     // y = (2^65, 2^65 + 2^13), prediction (2^65 + 2^13, 2^65): SSE = 2 * 2^26,
     // SST = 2^25, R^2 = -3.
