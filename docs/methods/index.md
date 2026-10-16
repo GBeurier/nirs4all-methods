@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **220**. Additional Python reference
+_Total catalogued native methods_: **223**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -273,11 +273,14 @@ Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-b
 | [`adjusted_rand_index`](diagnostics_adjusted_rand_index.md) | `n4m.metrics.clustering.adjusted_rand_index` | `n4m.metrics.clustering` | C |
 | [`pls_diagnostics`](diagnostics_pls_diagnostics.md) | `n4m.metrics.diagnostics.pls_diagnostics` | `n4m.metrics.diagnostics` | C |
 | [`pls_monitoring`](pls_monitoring.md) | `n4m.metrics.diagnostics.pls_monitoring` | `n4m.metrics.diagnostics` | C |
+| [`bh_adjust`](diagnostics_bh_adjust.md) | `n4m.metrics.multiple_testing.bh_adjust` | `n4m.metrics.multiple_testing` | C |
 | [`holm_adjust`](diagnostics_holm_adjust.md) | `n4m.metrics.multiple_testing.holm_adjust` | `n4m.metrics.multiple_testing` | C |
 | [`qualification`](diagnostics_preflight_qualification.md) | `n4m.metrics.preflight.qualification` | `n4m.metrics.preflight` | C |
 | [`approximate_press`](approximate_press.md) | `n4m.metrics.scoring.approximate_press` | `n4m.metrics.scoring` | C |
 | [`one_se_rule`](one_se_rule.md) | `n4m.metrics.scoring.one_se_rule` | `n4m.metrics.scoring` | C |
 | [`regression_metrics`](diagnostics_regression_metrics.md) | `n4m.metrics.scoring.regression_metrics` | `n4m.metrics.scoring` | C |
+| [`correlation_test`](diagnostics_correlation_test.md) | `n4m.metrics.statistics.correlation_test` | `n4m.metrics.statistics` | C |
+| [`factor_association_exact`](diagnostics_factor_association_exact.md) | `n4m.metrics.statistics.factor_association_exact` | `n4m.metrics.statistics` | C |
 
 ## decomposition — flexible PCA / SVD
 

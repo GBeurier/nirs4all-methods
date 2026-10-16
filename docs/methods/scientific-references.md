@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **227**
+- Curated records: **230**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `09a6fe945c7d274a7da54dfaa6bd175c8d10fda963c853aeb190ca509a0df549`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `89cd3aed815d928ebd7c982b49250d75397af6e2addd2e9e2ee851ddca9e6a06`
 
 ## References by documentation page
 
@@ -429,6 +429,24 @@ Nikzad-Langerodi, R., Zellinger, W., Saminger-Platz, S. & Moser, B. A. (2018). *
 Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193–218, https://doi.org/10.1007/BF01908075.
 
 **Provenance:** https://doi.org/10.1007/BF01908075; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_hdbscan.cpp
+
+### [`diagnostics_bh_adjust`](diagnostics_bh_adjust.md) — Benjamini–Hochberg adjusted p-values
+
+Benjamini & Hochberg (1995), *Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing*, Journal of the Royal Statistical Society B 57(1), 289–300, https://doi.org/10.1111/j.2517-6161.1995.tb02031.x; Benjamini & Yekutieli (2001), *The control of the false discovery rate in multiple testing under dependency*, Annals of Statistics 29(4), 1165–1188, https://doi.org/10.1214/aos/1013699998.
+
+**Provenance:** https://doi.org/10.1111/j.2517-6161.1995.tb02031.x; https://doi.org/10.1214/aos/1013699998; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_correlation_test`](diagnostics_correlation_test.md) — Pearson and Spearman correlation with a permutation test
+
+Pearson (1895), *Note on regression and inheritance in the case of two parents*, Proceedings of the Royal Society of London 58, 240–242, https://doi.org/10.1098/rspl.1895.0041; Spearman (1904), *The proof and measurement of association between two things*, American Journal of Psychology 15(1), 72–101, https://doi.org/10.2307/1412159; Phipson & Smyth (2010), *Permutation P-values Should Never Be Zero*, Statistical Applications in Genetics and Molecular Biology 9(1), https://doi.org/10.2202/1544-6115.1585.
+
+**Provenance:** https://doi.org/10.1098/rspl.1895.0041; https://doi.org/10.2307/1412159; https://doi.org/10.2202/1544-6115.1585; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_factor_association_exact`](diagnostics_factor_association_exact.md) — Exact permutation distribution of a factor-target association
+
+No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.
+
+**Provenance:** https://doi.org/10.1007/b138696; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
 
 ### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
 

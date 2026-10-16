@@ -1,5 +1,70 @@
 # ABI — Changes Log
 
+## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
+
+Add four generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19
+signatures are unchanged and no serialized format changes.
+
+`n4m_stats_correlation_test` returns the Pearson (method 0) or Spearman
+(method 1, average ranks for ties) correlation of paired finite vectors, the
+distinct-value counts of both vectors, a log10 upper bound on distinct
+permutation outcomes and an optional two-sided Monte Carlo permutation p-value
+`(1+b)/(1+B)`. Draws permute `y` over all units as one block with PCG64 seeded
+as `numpy.random.default_rng`; the b-th draw equals NumPy's b-th
+`permutation(n)`. Ties use `|r| >= |observed| - sqrt(DBL_EPSILON)`. A constant
+vector gives NaN and runs no permutation. Work above 250 million operations
+returns `N4M_ERR_UNSUPPORTED`. `n4m_stats_bh_adjust` returns
+Benjamini-Hochberg step-up adjusted p-values (R `p.adjust("BH")`).
+`n4m_stats_factor_association_exact` and `n4m_stats_correlation_exact`
+enumerate the distinct arrangements of the side with fewer arrangements (at
+most `max_arrangements` <= 1e7) and return their count, the exact p-value and
+the minimal attainable exact p-value with the maximum statistic.
+
+Behavior fix in 2.19 `n4m_preflight_factor_association`: targets were divided
+by max|y| and centered on a naive mean, so a large common offset leaked into
+the between-group sum (two identical groups `1e16 + {0, 2, 4}` gave eta^2 =
+0.27, F = 1.5). Targets are now centered after an exact power-of-two scaling,
+a shift to the first target and a residual-mean correction; eta^2 and F are
+translation invariant. Permutation draws and counts are unchanged.
+
+Domain of validity (ABI 2.20 association kernels): any finite doubles. The
+centered copy is rescaled by exact powers of two chosen from max|y| and then
+from the centered variation, so eta^2, F, V, r, rho, permutation counts and
+exact distributions are invariant to scaling by 2^k over the whole double
+range (subnormals included) and to large translations (up to the rounding
+of the shifted inputs). SSW is computed from per-level residuals (each level
+centered on its own values) at their own scale, never as SST - SSB; an F
+that overflows, or underflows while SSB > 0, returns
+`N4M_ERR_NUMERICAL_FAILURE`. Holm and BH keep positive p-values positive.
+
+Precision contract (revised): SSW is computed from the original targets with
+a per-level power-of-two scale and per-level centering, level sums combined
+by exponents, so a within-level spread next to a huge level (levels
+{0, 1e-100} and {1e300}) is kept and its unrepresentable F is refused instead
+of returning F = NaN with OK; F is NaN only when every level is constant.
+Cramer's V is computed from chi^2 accumulated over exact integer residuals
+`O*n - r*c` (nonnegative terms, exactly 0 at independence) instead of
+`sum(O^2/E) - n`, which gave V = 1.5e-8 for a 2x9 table with one unit per
+cell. eta^2, V and r have absolute error of order n * DBL_EPSILON; F is
+relatively accurate when SSB is not small and absolutely accurate near 0
+(see metrics.h). Categorical targets are limited to n <= 3e9.
+
+Supported numerical domain (preflight rule 13): continuous targets of the
+factor-association kernels (Monte Carlo and exact) and both correlation
+vectors must be finite with every nonzero |x| in
+[2^-256, 2^256] and max/min nonzero |x| <= 2^32 per input array (rule 15,
+public macro `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32` in `n4m/metrics.h`; exact zeros
+allowed; categorical codes are labels and are not checked). A cheap O(n)
+pre-pass refuses other inputs with `N4M_ERR_UNSUPPORTED` and the message
+"input outside the supported numerical domain (nonzero |x| in [2^-256,
+2^256], max/min nonzero |x| <= 2^32)" before any computation. Inside D an F
+cannot overflow (F <= n 2^168); the overflow refusal remains as a guard.
+Precision is documented conservatively in metrics.h (errors of about
+c * n * DBL_EPSILON, absolute for eta^2, V and r).
+Holm and BH are exempt from the spread rule (they perform no subtraction):
+p-values must be finite, in [0, 1], and nonzero p >= 2^-1022; subnormal
+p-values are refused with `N4M_ERR_UNSUPPORTED`.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

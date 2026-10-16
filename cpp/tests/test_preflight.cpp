@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 #include "n4m/metrics.h"
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -151,10 +152,13 @@ int main() {
                 ==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(n4m_preflight_factor_association(ctx,two_levels,spread,1,0,0,1,assoc,perm_counts)
                 ==N4M_ERR_INVALID_ARGUMENT);
-        // Extreme magnitudes are scaled before sums: eta^2 stays 27/29.
-        double yh[6]={1e307,2e307,3e307,7e307,8e307,9e307};
+        // Large magnitudes inside the supported domain are scaled before
+        // sums: eta^2 stays 27/29; 1e307 lies outside D and is refused.
+        double yh[6]={1e70,2e70,3e70,7e70,8e70,9e70};
         REQUIRE(n4m_preflight_factor_association(ctx,fa,yh,6,0,0,1,assoc,perm_counts)==N4M_OK);
         REQUIRE(near(assoc[0],27.0/29.0) && near(assoc[1],54));
+        for (double& v : yh) v *= 1e237;
+        REQUIRE(n4m_preflight_factor_association(ctx,fa,yh,6,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
         // Holm (R p.adjust "holm", hand-computed): sorted 0.005,0.01,0.03,0.04
         // -> 0.02, 0.03, 0.06, max(0.04,0.06).
         double pv[4]={0.01,0.04,0.03,0.005}, adj[4];
@@ -168,6 +172,327 @@ int main() {
         REQUIRE(near(adj[0],1) && near(adj[1],1));
         double invalid_p[1]={1.5};
         REQUIRE(n4m_preflight_holm_adjust(ctx,invalid_p,1,adj)==N4M_ERR_INVALID_ARGUMENT);
+        // Correlation test. Hand values: x=1..5, y={2,4,5,4,5}: Pearson
+        // r=6/sqrt(60); Spearman on average ranks y={1,2.5,4.5,2.5,4.5}:
+        // rho=7/sqrt(90); 5!/(1!2!2!)=30 distinct y arrangements. Permutation
+        // counts b are test-only goldens from an independent NumPy 2.2.6 /
+        // SciPy 1.15.3 reference: rng=np.random.default_rng(seed); b = #{draws
+        // perm=rng.permutation(n) with |scipy.stats.pearsonr/spearmanr(x,
+        // y[perm]).statistic| >= |observed| - sqrt(eps)} over B=999.
+        double cx[5]={1,2,3,4,5}, cy[5]={2,4,5,4,5}, corr[5]; int64_t corr_counts[2];
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,0,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],6.0/std::sqrt(60.0)) && near(corr[1],5) && near(corr[2],3));
+        REQUIRE(near(corr[3],std::log10(30.0)));
+        REQUIRE(corr_counts[0]==133 && corr_counts[1]==999 && near(corr[4],134.0/1000.0));
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,1,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],7.0/std::sqrt(90.0)) && corr_counts[0]==201);
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,0,999,
+                    UINT64_C(18446744073709551557),corr,corr_counts)==N4M_OK);
+        REQUIRE(corr_counts[0]==124);
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,1,999,
+                    UINT64_C(18446744073709551557),corr,corr_counts)==N4M_OK);
+        REQUIRE(corr_counts[0]==190);
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy,5,1,0,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(std::isnan(corr[4]) && corr_counts[1]==0);
+        // Ties in both vectors; SciPy coefficients and NumPy counts.
+        double tx[10]={1,1,2,2,3,3,4,4,5,5}, ty[10]={3,1,4,1,5,9,2,6,5,3};
+        REQUIRE(n4m_stats_correlation_test(ctx,tx,ty,10,0,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.33196440215590134) && corr_counts[0]==373);
+        REQUIRE(n4m_stats_correlation_test(ctx,tx,ty,10,1,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.4099457958749614) && corr_counts[0]==241);
+        REQUIRE(n4m_stats_correlation_test(ctx,tx,ty,10,1,999,
+                    UINT64_C(18446744073709551557),corr,corr_counts)==N4M_OK);
+        REQUIRE(corr_counts[0]==225);
+        // Monotone with an outlier: Spearman 0.979..., Pearson 0.757...;
+        // no draw reaches either observed value (b=0, p=1/1000).
+        double mx[12]={0.5,1.1,1.9,2.4,3.0,3.3,4.2,4.8,5.1,6.0,6.7,7.5};
+        double my[12]={0.9,1.2,1.1,2.0,2.6,2.4,3.9,3.7,5.5,7.9,9.8,30.0};
+        REQUIRE(n4m_stats_correlation_test(ctx,mx,my,12,0,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.7570003200136561) && corr_counts[0]==0);
+        REQUIRE(near(corr[4],1.0/1000.0));
+        REQUIRE(n4m_stats_correlation_test(ctx,mx,my,12,1,999,17,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],0.9790209790209792) && corr_counts[0]==0);
+        // Scale invariance at large and small magnitudes inside D.
+        double hx[5]={1e70,2e70,3e70,4e70,5e70}, hy[5]={-2e-70,-4e-70,-5e-70,-4e-70,-5e-70};
+        REQUIRE(n4m_stats_correlation_test(ctx,hx,hy,5,0,0,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],-6.0/std::sqrt(60.0)));
+        // Constant vectors: undefined coefficient, no permutation.
+        double zx[4]={0.0,-0.0,0.0,-0.0}, sy4[4]={1,2,3,4};
+        REQUIRE(n4m_stats_correlation_test(ctx,zx,sy4,4,1,99,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(std::isnan(corr[0]) && near(corr[1],1) && std::isnan(corr[4]) && corr_counts[1]==0);
+        REQUIRE(near(corr[3],0.0));
+        double nonfinite[4]={1,2,std::nan(""),4};
+        REQUIRE(n4m_stats_correlation_test(ctx,nonfinite,sy4,4,0,0,1,corr,corr_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_correlation_test(ctx,sy4,sy4,4,2,0,1,corr,corr_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_correlation_test(ctx,sy4,sy4,1,0,0,1,corr,corr_counts)
+                ==N4M_ERR_INVALID_ARGUMENT);
+        // Translation invariance (review P0-1): two identical groups at 1e16
+        // have eta^2 = F = 0; {0,2,4} vs {6,8,10} shifted by 1e16 keep
+        // eta^2 = 54/70 and F = 54/(16/4) = 13.5 (hand values).
+        int64_t halves[6]={0,0,0,1,1,1};
+        double same16[6]={1e16,1e16+2,1e16+4,1e16,1e16+2,1e16+4};
+        REQUIRE(n4m_preflight_factor_association(ctx,halves,same16,6,0,0,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(std::abs(assoc[0])<1e-15 && std::abs(assoc[1])<1e-15);
+        double apart16[6]={1e16,1e16+2,1e16+4,1e16+6,1e16+8,1e16+10};
+        REQUIRE(n4m_preflight_factor_association(ctx,halves,apart16,6,0,0,1,assoc,perm_counts)==N4M_OK);
+        REQUIRE(relative_near(assoc[0],54.0/70.0) && relative_near(assoc[1],13.5));
+        double x16[5]={1e16,1e16+2,1e16+4,1e16+6,1e16+8};
+        REQUIRE(n4m_stats_correlation_test(ctx,x16,cy,5,0,0,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],6.0/std::sqrt(60.0)));
+        double cy16[5]={1e16+4,1e16+8,1e16+10,1e16+8,1e16+10};
+        REQUIRE(n4m_stats_correlation_test(ctx,cx,cy16,5,0,0,1,corr,corr_counts)==N4M_OK);
+        REQUIRE(relative_near(corr[0],6.0/std::sqrt(60.0)));
+        // Exact enumeration (review P1-1). References: brute force over all
+        // n! permutations with SciPy 1.15.3 statistics (chi2_contingency,
+        // pearsonr, spearmanr) and NumPy 2.2.6, as exact fractions.
+        double exact[4];
+        int64_t f22[8]={0,0,0,0,1,1,1,1}; double y22[8]={0,0,0,0,1,1,1,1};
+        REQUIRE(n4m_stats_factor_association_exact(ctx,f22,y22,8,1,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],70) && near(exact[1],1.0/35.0) && near(exact[2],1.0/35.0));
+        REQUIRE(near(exact[3],1.0));
+        REQUIRE(n4m_stats_factor_association_exact(ctx,fa,ya,6,0,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],20) && near(exact[1],0.1) && near(exact[2],0.1));
+        REQUIRE(near(exact[3],27.0/29.0));
+        REQUIRE(n4m_stats_factor_association_exact(ctx,fc,yc,7,1,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],35) && near(exact[1],17.0/35.0) && near(exact[2],1.0/35.0));
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,0,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[0],30) && near(exact[1],2.0/15.0) && near(exact[2],1.0/15.0));
+        REQUIRE(near(exact[3],0.9036961141150641));
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,1000,exact)==N4M_OK);
+        REQUIRE(near(exact[1],0.2) && near(exact[2],1.0/15.0) && near(exact[3],0.9486832980505138));
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,29,exact)==N4M_ERR_UNSUPPORTED);
+        REQUIRE(n4m_stats_correlation_exact(ctx,cx,cy,5,1,0,exact)==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_factor_association_exact(ctx,one_level,spread,3,0,10,exact)==N4M_OK);
+        REQUIRE(near(exact[0],1) && std::isnan(exact[1]) && std::isnan(exact[3]));
+        // Oversized categorical spaces (review P0): 65536 levels x 65536
+        // classes = 2^32 cells would wrap to 0 in 32-bit size_t. Both APIs
+        // refuse before any allocation or statistic.
+        {
+            const int64_t big = 65536;
+            std::vector<int64_t> codes(static_cast<size_t>(big));
+            std::vector<double> classes(static_cast<size_t>(big));
+            for (int64_t i = 0; i < big; ++i) {
+                codes[static_cast<size_t>(i)] = i;
+                classes[static_cast<size_t>(i)] = static_cast<double>(i);
+            }
+            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),classes.data(),big,1,
+                        100000,exact)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),big,1,0,1,
+                        assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            // Continuous: no table; 65536! arrangements exceed the cap.
+            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),classes.data(),big,0,
+                        100000,exact)==N4M_ERR_UNSUPPORTED);
+            // Within the table budget, the Monte Carlo work budget still refuses.
+            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),3000,1,999,1,
+                        assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+        }
+        // Supported numerical domain D (rule 13): finite, nonzero |x| in
+        // [2^-256, 2^256], max/min nonzero |x| <= 2^64 per input array, exact
+        // zeros allowed. Inside D results are checked against exact
+        // references; outside D every kernel returns N4M_ERR_UNSUPPORTED.
+        {
+            const auto rel = [](double a, double b) {
+                return std::abs(a - b) <= 1e-12 * std::abs(b);
+            };
+            double xz4[4]={1,2,3,4};
+            const double lo = std::ldexp(1.0,-256), hi = std::ldexp(1.0,256);
+            const double below = std::nextafter(lo, 0.0), above = std::nextafter(hi, HUGE_VAL);
+            const double sp = std::ldexp(1.0,N4M_DOMAIN_MAX_SPREAD_LOG2), sp_above = std::nextafter(sp, HUGE_VAL);
+            const double sp_inv = std::ldexp(1.0,-64), sp_inv_below = std::nextafter(sp_inv, 0.0);
+            // Boundaries on both sides, for every kernel that reads magnitudes.
+            int64_t f4b[4]={0,0,1,1};
+            const double inside[][4] = {{lo, 2*lo, 3*lo, 0.0}, {hi/4, hi/2, hi, 0.0},
+                                        {1.0, 2.0, sp, 0.0}, {-lo, 0.0, lo*sp, -lo}};
+            REQUIRE(sp == 4294967296.0);  // rule 15: spread 2^32
+            const double outside[][4] = {{below, 2*lo, 3*lo, 0.0}, {hi/4, hi/2, above, 0.0},
+                                         {1.0, 2.0, sp_above, 0.0}, {-lo, 0.0, 2*lo*sp, -lo},
+                                         {1.0, 0.0, std::ldexp(1.0,33), 0.0}};
+            for (const auto& v : inside) {
+                double y4[4] = {v[0], v[1], v[2], v[3]};
+                REQUIRE(n4m_preflight_factor_association(ctx,f4b,y4,4,0,0,1,assoc,perm_counts)==N4M_OK);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,f4b,y4,4,0,100,exact)==N4M_OK);
+                REQUIRE(n4m_stats_correlation_test(ctx,y4,xz4,4,0,0,1,corr,corr_counts)==N4M_OK);
+                REQUIRE(n4m_stats_correlation_test(ctx,xz4,y4,4,1,0,1,corr,corr_counts)==N4M_OK);
+                REQUIRE(n4m_stats_correlation_exact(ctx,y4,xz4,4,0,100,exact)==N4M_OK);
+            }
+            for (const auto& v : outside) {
+                double y4[4] = {v[0], v[1], v[2], v[3]};
+                REQUIRE(n4m_preflight_factor_association(ctx,f4b,y4,4,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,f4b,y4,4,0,100,exact)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_test(ctx,y4,xz4,4,0,0,1,corr,corr_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_test(ctx,xz4,y4,4,1,0,1,corr,corr_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_exact(ctx,y4,xz4,4,0,100,exact)==N4M_ERR_UNSUPPORTED);
+            }
+            // Holm/BH have no spread limit (no subtraction): p = 1 next to
+            // 1e-25 or 2^-1022 is accepted; only subnormal p are refused.
+            double pin[2]={sp_inv_below,1.0}, padj[2];
+            REQUIRE(n4m_preflight_holm_adjust(ctx,pin,2,padj)==N4M_OK && padj[0]==2*sp_inv_below);
+            REQUIRE(n4m_stats_bh_adjust(ctx,pin,2,padj)==N4M_OK && padj[0]==2*sp_inv_below);
+            double wide_p[2]={1e-25,1.0};
+            REQUIRE(n4m_preflight_holm_adjust(ctx,wide_p,2,padj)==N4M_OK && padj[0]==2e-25 && padj[1]==1.0);
+            REQUIRE(n4m_stats_bh_adjust(ctx,wide_p,2,padj)==N4M_OK && padj[0]==2e-25 && padj[1]==1.0);
+            double pmin[2]={DBL_MIN,1.0}, psub[2]={std::nextafter(DBL_MIN,0.0),1.0};
+            REQUIRE(n4m_preflight_holm_adjust(ctx,pmin,2,padj)==N4M_OK && padj[0]==2*DBL_MIN);
+            REQUIRE(n4m_stats_bh_adjust(ctx,pmin,2,padj)==N4M_OK && padj[0]==2*DBL_MIN);
+            REQUIRE(n4m_preflight_holm_adjust(ctx,psub,2,padj)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_stats_bh_adjust(ctx,psub,2,padj)==N4M_ERR_UNSUPPORTED);
+            double pzero[2]={0.0,1.0};
+            REQUIRE(n4m_preflight_holm_adjust(ctx,pzero,2,padj)==N4M_OK && padj[0]==0.0);
+            // Categorical targets are labels: codes are not domain-checked.
+            int64_t fcat[4]={0,0,1,1}; double cbig[4]={0.0,9007199254740991.0,0.0,1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,fcat,cbig,4,1,0,1,assoc,perm_counts)==N4M_OK);
+
+            // Scale sweep inside D: 2^k data keep eta^2 = 27/29, F = 54,
+            // r = 6/sqrt(60), rho = 7/sqrt(90), the NumPy counts and the exact
+            // distributions; the same data outside D are refused.
+            for (int k : {-240, -100, 0, 100, 240}) {
+                double ys[6], xs5[5], ys5[5];
+                for (int i = 0; i < 6; ++i) ys[i] = std::ldexp(ya[i], k);
+                for (int i = 0; i < 5; ++i) {
+                    xs5[i] = std::ldexp(cx[i], k);
+                    ys5[i] = std::ldexp(cy[i], -k / 2);
+                }
+                REQUIRE(n4m_preflight_factor_association(ctx,fa,ys,6,0,999,17,assoc,perm_counts)==N4M_OK);
+                REQUIRE(rel(assoc[0],27.0/29.0) && rel(assoc[1],54.0) && perm_counts[0]==93);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,fa,ys,6,0,1000,exact)==N4M_OK);
+                REQUIRE(near(exact[0],20) && near(exact[1],0.1) && near(exact[2],0.1));
+                REQUIRE(n4m_stats_correlation_test(ctx,xs5,ys5,5,0,999,17,corr,corr_counts)==N4M_OK);
+                REQUIRE(rel(corr[0],6.0/std::sqrt(60.0)) && corr_counts[0]==133);
+                REQUIRE(n4m_stats_correlation_test(ctx,xs5,ys5,5,1,999,17,corr,corr_counts)==N4M_OK);
+                REQUIRE(rel(corr[0],7.0/std::sqrt(90.0)) && corr_counts[0]==201);
+                REQUIRE(n4m_stats_correlation_exact(ctx,xs5,ys5,5,0,1000,exact)==N4M_OK);
+                REQUIRE(near(exact[1],2.0/15.0) && near(exact[2],1.0/15.0));
+            }
+            for (int k : {-1060, -1022, -300, 300, 1000}) {
+                double ys[6];
+                for (int i = 0; i < 6; ++i) ys[i] = std::ldexp(ya[i], k);
+                REQUIRE(n4m_preflight_factor_association(ctx,fa,ys,6,0,999,17,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_factor_association_exact(ctx,fa,ys,6,0,1000,exact)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_correlation_test(ctx,ys,ya,6,1,999,17,corr,corr_counts)==N4M_ERR_UNSUPPORTED);
+            }
+            // Translations inside D: 1e16 + 2y (ulp 2) and 2^200 + y 2^150
+            // (ulp 2^148); 1e300 is outside D.
+            const double offsets[2][2] = {{1e16, 1.0}, {std::ldexp(1.0, 200), std::ldexp(1.0, 149)}};
+            for (const auto& o : offsets) {
+                double ys[6], xs5[5];
+                for (int i = 0; i < 6; ++i) ys[i] = o[0] + 2.0 * o[1] * ya[i];
+                for (int i = 0; i < 5; ++i) xs5[i] = o[0] + 2.0 * o[1] * cx[i];
+                REQUIRE(n4m_preflight_factor_association(ctx,fa,ys,6,0,999,17,assoc,perm_counts)==N4M_OK);
+                REQUIRE(rel(assoc[0],27.0/29.0) && rel(assoc[1],54.0) && perm_counts[0]==93);
+                REQUIRE(n4m_stats_correlation_test(ctx,xs5,cy,5,0,999,17,corr,corr_counts)==N4M_OK);
+                REQUIRE(rel(corr[0],6.0/std::sqrt(60.0)) && corr_counts[0]==133);
+            }
+            double far[6];
+            for (int i = 0; i < 6; ++i) far[i] = 1e300 + std::ldexp(ya[i], 950);
+            REQUIRE(n4m_preflight_factor_association(ctx,fa,far,6,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+
+            // Mixed exponents inside D, exact references. Levels {0, 2^-30}
+            // | {1}: SSW = 2^-61 from per-level residuals; F = SSB/SSW =
+            // 1.5372286713774735e18 (exact rational, Python fractions).
+            int64_t f3[3]={0,0,1};
+            double gap[3]={0.0,std::ldexp(1.0,-30),1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,gap,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[1],1.5372286713774735e18) && rel(assoc[0],1.0));
+            // Signed mixture {-2^-15, 2^-15} | {2^15}: SSW = 2^-29,
+            // SSB = (2/3) 2^30, F = (2/3) 2^59.
+            double mixed[3]={-std::ldexp(1.0,-15),std::ldexp(1.0,-15),std::ldexp(1.0,15)};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,mixed,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[1],std::ldexp(2.0/3.0,59)) && rel(assoc[0],1.0));
+            // The review's extreme mixtures lie outside D: explicit refusal.
+            double huge[3]={0.0,1e-100,1e300}, denorm[3]={0.0,std::ldexp(1.0,-1074),1.0};
+            double wide[3]={0.0,std::ldexp(1.0,-520),1.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,huge,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,denorm,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,wide,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
+            // Truly zero within-level variance: F undefined (NaN), status OK.
+            double flat[3]={5.0,5.0,7.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,flat,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[0],1.0) && std::isnan(assoc[1]));
+            // Near-zero effect: {0, 2} | {d, 2+d}, d = 2^-20: eta^2 =
+            // d^2/(4+d^2), F = d^2/2 (rational references).
+            const double dl = std::ldexp(1.0,-20);
+            double near0[4]={0.0,2.0,dl,2.0+dl};
+            REQUIRE(n4m_preflight_factor_association(ctx,f4b,near0,4,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(rel(assoc[0],dl*dl/(4.0+dl*dl)) && rel(assoc[1],dl*dl/2.0));
+            // Exactly zero effect: equal level means give eta^2 = F = 0.
+            double zero_effect[4]={0.0,2.0,2.0,0.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f4b,zero_effect,4,0,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(assoc[0]==0.0 && assoc[1]==0.0);
+            // Cramer's V at independence: a 2x9 table with one unit per cell
+            // has chi-square = V = 0 exactly.
+            int64_t rows18[18]; double cols18[18];
+            for (int i = 0; i < 18; ++i) { rows18[i] = i / 9; cols18[i] = i % 9; }
+            REQUIRE(n4m_preflight_factor_association(ctx,rows18,cols18,18,1,0,1,assoc,perm_counts)==N4M_OK);
+            REQUIRE(assoc[0]==0.0 && assoc[1]==0.0);
+            // Near independence: [[m, m+1], [m+1, m]] has chi-square =
+            // 4/(4m+2) and V = 1/(2m+1) exactly (rational reference).
+            for (int64_t m : {50, 1000}) {
+                std::vector<int64_t> rr; std::vector<double> cc;
+                const int64_t cells[4] = {m, m + 1, m + 1, m};
+                for (int k = 0; k < 4; ++k)
+                    for (int64_t j = 0; j < cells[k]; ++j) { rr.push_back(k / 2); cc.push_back(k % 2); }
+                const auto nn = static_cast<int64_t>(rr.size());
+                REQUIRE(n4m_preflight_factor_association(ctx,rr.data(),cc.data(),nn,1,0,1,assoc,perm_counts)==N4M_OK);
+                const double md = static_cast<double>(m);
+                REQUIRE(rel(assoc[0],1.0/(2.0*md+1.0)) && rel(assoc[1],4.0/(4.0*md+2.0)));
+            }
+            // Correlation with mixed exponents inside D: x = {1, 2, 2^20},
+            // y = {1, 2, 3}: r = 0.8660258167378264859... (exact rational
+            // r^2 evaluated with Python fractions); ranks give rho = 1.
+            double xm[3]={1.0,2.0,std::ldexp(1.0,20)}, ym[3]={1,2,3};
+            REQUIRE(n4m_stats_correlation_test(ctx,xm,ym,3,0,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(rel(corr[0],0.8660258167378265));
+            REQUIRE(n4m_stats_correlation_test(ctx,xm,ym,3,1,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(rel(corr[0],1.0));
+            // Exactly uncorrelated (dyadic): r = rho = 0.
+            double yz[4]={1,-1,-1,1};
+            REQUIRE(n4m_stats_correlation_test(ctx,xz4,yz,4,0,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(corr[0]==0.0);
+            REQUIRE(n4m_stats_correlation_test(ctx,xz4,yz,4,1,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(corr[0]==0.0);
+            // Large offset next to a small step inside D: y = 2^200 +
+            // {0, 0, 2^150, 2^150} against x = {1, 2, 3, 4}: r = 2/sqrt(5).
+            const double o200 = std::ldexp(1.0,200), s150 = std::ldexp(1.0,150);
+            double yo[4]={o200,o200,o200+s150,o200+s150};
+            REQUIRE(n4m_stats_correlation_test(ctx,xz4,yo,4,0,0,1,corr,corr_counts)==N4M_OK);
+            REQUIRE(rel(corr[0],2.0/std::sqrt(5.0)));
+            // Holm and BH: small normal p-values scale exactly; subnormal
+            // ones are refused.
+            for (int k : {-100, -200, -260, -500, -1000}) {
+                double tiny[4], h[4], b[4];
+                for (int i = 0; i < 4; ++i) tiny[i] = std::ldexp(pv[i], k);
+                REQUIRE(n4m_preflight_holm_adjust(ctx,tiny,4,h)==N4M_OK);
+                REQUIRE(n4m_stats_bh_adjust(ctx,tiny,4,b)==N4M_OK);
+                const double holm_ref[4]={0.03,0.06,0.06,0.02}, bh_ref[4]={0.02,0.04,0.04,0.02};
+                for (int i = 0; i < 4; ++i) {
+                    REQUIRE(rel(std::ldexp(h[i],-k),holm_ref[i]) && rel(std::ldexp(b[i],-k),bh_ref[i]));
+                    REQUIRE(b[i] <= h[i]);
+                }
+            }
+            for (int k : {-1060}) {
+                double tiny[4], h[4];
+                for (int i = 0; i < 4; ++i) tiny[i] = std::ldexp(pv[i], k);
+                REQUIRE(n4m_preflight_holm_adjust(ctx,tiny,4,h)==N4M_ERR_UNSUPPORTED);
+                REQUIRE(n4m_stats_bh_adjust(ctx,tiny,4,h)==N4M_ERR_UNSUPPORTED);
+            }
+        }
+        // Benjamini-Hochberg: statsmodels 0.15.0 multipletests(fdr_bh) and
+        // SciPy 1.15.3 false_discovery_control(method="bh") reference values.
+        double bh[6];
+        REQUIRE(n4m_stats_bh_adjust(ctx,pv,4,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.02) && near(bh[1],0.04) && near(bh[2],0.04) && near(bh[3],0.02));
+        REQUIRE(n4m_stats_bh_adjust(ctx,tied,3,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.03) && near(bh[1],0.03) && near(bh[2],0.9));
+        REQUIRE(n4m_stats_bh_adjust(ctx,capped,2,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.8) && near(bh[1],0.8));
+        double six[6]={0.001,0.2,0.5,0.03,0.04,0.049};
+        REQUIRE(n4m_stats_bh_adjust(ctx,six,6,bh)==N4M_OK);
+        REQUIRE(near(bh[0],0.006) && near(bh[1],0.24) && near(bh[2],0.5));
+        REQUIRE(near(bh[3],0.0735) && near(bh[4],0.0735) && near(bh[5],0.0735));
+        REQUIRE(n4m_stats_bh_adjust(ctx,invalid_p,1,bh)==N4M_ERR_INVALID_ARGUMENT);
+        REQUIRE(n4m_stats_bh_adjust(ctx,pv,0,bh)==N4M_ERR_INVALID_ARGUMENT);
         REQUIRE(std::isnan(contrast[0]) && near(contrast[2],1) && near(contrast[3],1));
         // Noise proxy, window 5 / quadratic: SG weights (-3,12,17,12,-3)/35,
         // white-noise residual gain^2 = (18/35)^2 + 2(12/35)^2 + 2(3/35)^2
