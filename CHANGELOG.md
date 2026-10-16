@@ -27,45 +27,48 @@ ABI 2.20.0. No model-state serialization format changes.
   `default_rng(seed).permutation(n)` draws from one Methods PCG64 stream, for
   seeded subsampling plans; JS/WASM `randomPermutations`.
 
+### Changed
+
+- Rule-13 numerical domain for the clustering kernels with real inputs
+  (`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment`,
+  `n4m_random_multivariate_normal`): finite values, every nonzero `|x|` in
+  `[2^-256, 2^256]` and max/min nonzero `|x|` `<= 2^64` per input array.
+  Outside it the call returns `N4M_ERR_UNSUPPORTED` ("input outside the
+  supported numerical domain ...") before computing; inside it results are
+  correct (exact optimum for the assignment, reference operation order for
+  HDBSCAN, exact `2^k` scaling). Each kernel also checks a cumulative
+  working-memory budget of 256 MiB before allocating, because the WASM32
+  build (2 GiB maximum, C++ exceptions not caught) aborts on a failed
+  allocation. ARI and Jaccard take integer labels: no numerical domain, but
+  memory and size limits (`n <= 2^23` for ARI, `n <= 2^53` for Jaccard).
+
 ### Fixed
 
 - `n4m_cluster_hdbscan` (since ABI 2.19.0, Methods 1.3.6) could write past
   the caller's buffers: with finite inputs whose squared distances overflow
   (for example `[0, 1e155, 2e155, 3e155]`), Prim produced self-edges and the
-  condensed tree had more nodes than rows. Each pair whose plain sum of
-  squares overflows or falls below `2^-968` is now recomputed with a scaled
-  accumulation (ordinary distances unchanged and bit-identical), so small
-  representable distances are no longer flushed to zero
-  (`[0, 1, 3, 10, 11, 14, 1e200]` gives `[0, 0, 0, 1, 1, 1, -1]`). Distances
-  above `DBL_MAX` return `N4M_ERR_UNSUPPORTED`, MST edges and tree sizes are
-  validated, and nothing is written when an invariant fails. Sentinel and
-  multi-magnitude regression tests run natively and in WASM.
-- Third review (systematic robustness pass over the clustering kernels):
-  `n4m_cluster_hdbscan` accumulated densities `1/distance` unscaled, so
-  `1e-308 x [0,1,3,10,11,14]` overflowed the stability sums (persistence NaN)
-  and `1e-310` gave an infinite density for a positive distance, with
-  `N4M_OK`. Densities are now accumulated on MST weights divided by `2^e` and
-  published in `1/distance` units; an unrepresentable published lambda or
-  stability returns `N4M_ERR_UNSUPPORTED`, and `inf - inf` excess at zero
-  distance counts as 0 instead of NaN. `n4m_preflight_adjusted_rand_index`
-  uses exact 128-bit pair-count products (no cancellation near 0).
-  `n4m_linear_sum_assignment` keeps its duals and path costs as exact sums
-  of the input doubles (floating-point expansions): the result is an exact
-  optimum, also for mixed signs and wide exponent spreads where SciPy's
-  double arithmetic can be suboptimal; costs are only scaled by a power of
-  two when sums could overflow, never centred (a first centring version
-  returned `[0,1,2]` instead of `[0,2,1]` for
-  `[[-1e20,1e20,1e20],[1e20,1,0],[1e20,0,1]]` and declared
-  `[[-1e308,1e308],[-1e308,1e308]]` infeasible). Work limit
-  `rows*cols*min(rows,cols) <= 1e8`.
-  `n4m_random_multivariate_normal` factors a scaled covariance (no
-  underflow for tiny covariances). Magnitude, translation and
-  constant-column property tests (`n4m_cluster_robustness_tests`, JS/WASM).
-- `n4m_random_multivariate_normal` (new in this release) checks the Cholesky
-  storage and cost (`d*d <= 5e7`, `d^3/6 <= 2.5e9`) and the draws
-  (`n*d <= 5e7`, `n*d*d <= 2.5e9`) before any allocation, including `n = 0`;
-  `n4m_linear_sum_assignment` and `n4m_cluster_hdbscan` bound their working
-  copies to 5e7 values.
+  condensed tree had more nodes than rows. Such inputs are now outside the
+  numerical domain and refused; inside it squared distances, densities and
+  stability sums stay normal doubles. MST edges and tree sizes are validated
+  and nothing is written when an invariant fails. `inf - inf` excess at zero
+  distance counts as 0 instead of NaN. Sentinel, domain-boundary and
+  multi-magnitude regression tests (scikit-learn on exact distances) run
+  natively and in WASM.
+- `n4m_preflight_adjusted_rand_index` uses exact integer pair counts and
+  128-bit numerator and denominator (no cancellation near 0).
+- `n4m_linear_sum_assignment` keeps duals, reduced and path costs as exact
+  signed 192-bit integers in units of the last mantissa bit of the smallest
+  nonzero cost: the result is an exact optimum, also where SciPy's double
+  arithmetic is suboptimal (signed costs with spread exponents). Costs are
+  never centred. Work limit `rows*cols*min(rows,cols) <= 1e8` exact
+  operations; memory `16*rows*cols + 128*(rows+cols)` bytes at most 256 MiB
+  (a `1 x 32,000,000` matrix is refused).
+- `n4m_random_multivariate_normal` checks storage, Cholesky cost and draws
+  before any allocation, including `n = 0`.
+- Property tests (`n4m_cluster_robustness_tests`, JS/WASM): domain
+  boundaries on both sides, `2^k` sweeps, exact translations, constant
+  columns, mixed-exponent assignments against an exact enumeration with an
+  independent oracle, memory refusals.
 
 ## [1.3.6] - 2026-10-13
 

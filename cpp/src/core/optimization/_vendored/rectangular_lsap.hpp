@@ -6,8 +6,8 @@
 // LICENSE.scipy.txt in this directory for the upstream licence.
 //
 // Frozen semantics (scipy.optimize.linear_sum_assignment, evaluated in exact
-// arithmetic: duals and path costs are exact sums of the input doubles, so
-// the result is an exact optimum):
+// 192-bit fixed-point arithmetic on the input doubles, so the result is an
+// exact optimum; the caller restricts costs to the rule-13 domain):
 //   * a tall matrix (cols < rows) is solved on its transpose and the pairs are
 //     returned sorted by row; maximize negates the costs first;
 //   * NaN or -inf costs (after negation) are invalid; +inf marks a forbidden
@@ -25,7 +25,7 @@
 
 namespace n4m::core::lsap {
 
-enum class Status : std::int32_t { ok = 0, invalid = 1, infeasible = 2 };
+enum class Status : std::int32_t { ok = 0, invalid = 1, infeasible = 2, overflow = 3 };
 
 // cost is row-major rows x cols. On ok, row_ind/col_ind receive
 // min(rows, cols) pairs in increasing row order.

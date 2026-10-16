@@ -7,9 +7,9 @@ scipy/optimize/rectangular_lsap/rectangular_lsap.cpp from SciPy 1.18.1
 control flow, tie rules and floating-point operation order are kept so the
 algorithm and its tie rules are those of scipy.optimize.linear_sum_assignment;
 index types, the -1 sentinels and the C++ casts were adapted to the n4m
-warning profile, and the dual variables and path costs are kept as exact sums
-of the input doubles (floating-point expansions, see
-cpp/src/core/common/expansion.hpp), so every comparison is exact.
+warning profile, and the dual variables and path costs are kept as exact
+signed 192-bit integers in units of the last mantissa bit of the smallest
+nonzero cost, so every comparison is exact.
 
 Reference:
   D. F. Crouse. On implementing 2D rectangular assignment algorithms.

@@ -1594,9 +1594,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "variables. A $+\\infty$ cost forbids a pair.",
         "Matching clusters across partitions by maximum total Jaccard overlap, and other "
         "one-to-one assignment problems.",
-        "Duals and path costs are exact sums of the input doubles, so the result is an exact "
-        "optimum even where SciPy's double arithmetic loses small differences next to large "
-        "costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned "
+        "Inside the declared numerical domain (nonzero |cost| in [2^-256, 2^256], spread at most "
+        "2^64; other inputs are refused) duals and path costs are exact 192-bit fixed-point "
+        "integers, so the result is an exact optimum even where SciPy's double arithmetic loses "
+        "small differences next to large costs. Among optimal assignments, the returned one follows SciPy's tie order (columns scanned "
         "from last to first, unassigned columns first on equal reduced cost), so equal-cost "
         "solutions are reproducible but arbitrary. NaN and $-\\infty$ costs are invalid; a "
         "matrix without a feasible assignment returns `N4M_ERR_NUMERICAL_FAILURE`. Cost is "

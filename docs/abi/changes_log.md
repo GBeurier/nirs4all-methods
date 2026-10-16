@@ -16,25 +16,19 @@ factor of the lower triangle of `cov`; a covariance that is not numerically
 positive definite returns `N4M_ERR_NUMERICAL_FAILURE`. `n4m_random_permutations`
 writes successive `default_rng(seed).permutation(n)` draws of one PCG64 stream.
 
-Behaviour fix in `n4m_cluster_hdbscan` (signature unchanged): finite inputs whose
-squared distances overflowed made Prim emit self-edges and a condensed tree larger
-than the documented `X.rows` capacity, so the call wrote past caller buffers. A pair
-whose plain sum of squares overflows or falls below `2^-968` is now recomputed by a
-scaled accumulation; other distances are unchanged. Distances above `DBL_MAX` return
-`N4M_ERR_UNSUPPORTED`, working copies above 5e7 values too, and size invariants are
-checked before any output is written. `n4m_random_multivariate_normal` checks its
-Cholesky and draw limits before any allocation, also for `n = 0`.
-
-Robustness pass (no signature change): `n4m_cluster_hdbscan` accumulates densities on
-MST weights divided by `2^e` and refuses (`N4M_ERR_UNSUPPORTED`) a published lambda or
-stability outside the normal range, instead of returning NaN persistence or infinite
-densities for positive distances; `inf - inf` excess at zero distance counts as 0.
-`n4m_preflight_adjusted_rand_index` computes exact integer numerators and denominators
-(n ≤ 2^31). `n4m_linear_sum_assignment` computes duals and path costs exactly (floating-point
-expansions; exact optimum, SciPy tie order on exact values, no centring, power-of-two
-scaling only against overflow, work limit `rows*cols*min <= 1e8`).
-`n4m_random_multivariate_normal` factors a power-of-two-scaled covariance.
-`n4m_cluster_jaccard_matrix` refuses n > 2^53. Each header states its domain of validity.
+Behaviour changes (signatures unchanged). Rule-13 numerical domain for
+`n4m_cluster_hdbscan`, `n4m_linear_sum_assignment` and `n4m_random_multivariate_normal`:
+finite values, every nonzero `|x|` in `[2^-256, 2^256]`, max/min nonzero `|x|` `<= 2^64`
+per input array; outside it `N4M_ERR_UNSUPPORTED` with the message "input outside the
+supported numerical domain ..." before computing. Each call checks a 256 MiB working-memory
+budget before allocating (the WASM32 build aborts on a failed allocation).
+`n4m_cluster_hdbscan` no longer writes past caller buffers for overflowing inputs (now
+refused) and validates MST edges and tree sizes before writing; `inf - inf` excess at
+zero distance counts as 0. `n4m_preflight_adjusted_rand_index` computes exact integer
+numerators and denominators (n ≤ 2^23 by memory). `n4m_linear_sum_assignment` returns an
+exact optimum (192-bit fixed-point duals, SciPy tie order on exact values, no centring,
+`rows*cols*min <= 1e8`). `n4m_cluster_jaccard_matrix` refuses n > 2^53. Each header states
+its domain of validity.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
