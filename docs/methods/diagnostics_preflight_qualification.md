@@ -4,7 +4,7 @@ _Namespace_: **`n4m.metrics.preflight`** · _Fully-qualified_: `n4m.metrics.pref
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_preflight_factor_association`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L257) · [`n4m_preflight_local_contrast`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L101) · [`n4m_preflight_nearest_neighbors`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L73) · [`n4m_preflight_noise_proxy_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L181) · [`n4m_preflight_pairs_within_tolerance`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L227) · [`n4m_preflight_pca_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L28) · [`n4m_preflight_repeatability_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L43) · [`n4m_preflight_snv_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L203) · [`n4m_preflight_summary_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L59). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_preflight_factor_association`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L285) · [`n4m_preflight_local_contrast`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L84) · [`n4m_preflight_nearest_neighbors`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L61) · [`n4m_preflight_noise_proxy_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L237) · [`n4m_preflight_pairs_within_tolerance`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L255) · [`n4m_preflight_pca_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L27) · [`n4m_preflight_repeatability_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L42) · [`n4m_preflight_summary_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L52). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -38,7 +38,7 @@ https://doi.org/10.1021/ac60214a047; https://doi.org/10.1037/0033-2909.86.2.420;
 
 ## Catalog note
 
-Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test; ABI 2.20: SNV with per-row rounding bounds). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts.
+Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts.
 
 
 _See also_: [methods index](index.md).

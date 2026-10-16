@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **226**
-- Curated scientific records: **233**
-- Resolved documentation pages: **226**
+- Catalog entries: **222**
+- Curated scientific records: **229**
+- Resolved documentation pages: **222**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -70,19 +70,15 @@ This generated report records the documentation source used for each catalog ent
 | `augmentation.wavelength.wavelength_stretch` | [aug_wavelength_stretch](aug_wavelength_stretch.md) | curated |
 | `diagnostics.adjusted_rand_index` | [diagnostics_adjusted_rand_index](diagnostics_adjusted_rand_index.md) | curated |
 | `diagnostics.approximate_press` | [approximate_press](approximate_press.md) | curated |
-| `diagnostics.bh_adjust` | [diagnostics_bh_adjust](diagnostics_bh_adjust.md) | curated |
-| `diagnostics.correlation_test` | [diagnostics_correlation_test](diagnostics_correlation_test.md) | curated |
-| `diagnostics.factor_association_exact` | [diagnostics_factor_association_exact](diagnostics_factor_association_exact.md) | curated |
+| `diagnostics.cluster_jaccard_matrix` | [diagnostics_cluster_jaccard_matrix](diagnostics_cluster_jaccard_matrix.md) | curated |
 | `diagnostics.hdbscan` | [diagnostics_hdbscan](diagnostics_hdbscan.md) | curated |
 | `diagnostics.holm_adjust` | [diagnostics_holm_adjust](diagnostics_holm_adjust.md) | curated |
+| `diagnostics.linear_sum_assignment` | [diagnostics_linear_sum_assignment](diagnostics_linear_sum_assignment.md) | curated |
 | `diagnostics.model_selection` | [one_se_rule](one_se_rule.md) | curated |
-| `diagnostics.permanova` | [diagnostics_permanova](diagnostics_permanova.md) | curated |
-| `diagnostics.permdisp` | [diagnostics_permdisp](diagnostics_permdisp.md) | curated |
 | `diagnostics.pls_diagnostics` | [diagnostics_pls_diagnostics](diagnostics_pls_diagnostics.md) | curated |
 | `diagnostics.pls_monitoring` | [pls_monitoring](pls_monitoring.md) | curated |
 | `diagnostics.preflight_qualification` | [diagnostics_preflight_qualification](diagnostics_preflight_qualification.md) | curated |
 | `diagnostics.regression_metrics` | [diagnostics_regression_metrics](diagnostics_regression_metrics.md) | curated |
-| `diagnostics.variance_components` | [diagnostics_variance_components](diagnostics_variance_components.md) | curated |
 | `filters.composite` | [filter_composite](filter_composite.md) | curated |
 | `filters.correlation` | [filter_correlation](filter_correlation.md) | curated |
 | `filters.high_leverage` | [filter_leverage](filter_leverage.md) | curated |

@@ -73,6 +73,8 @@ excludes:
     - "diagnostics.regression_scores"
     - "diagnostics.permdisp"
     - "diagnostics.variance_components"
+    - "diagnostics.cluster_jaccard_matrix"
+    - "diagnostics.linear_sum_assignment"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |

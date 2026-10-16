@@ -12,6 +12,8 @@ import {
     statsEnergyDistance, statsPcaMonitor,
     statsVarianceComponentsReml, statsVarianceComponentsIntervals,
     ppCreate, ppTransform, ppDestroy, preflightSnv,
+    clusterJaccardMatrix, linearSumAssignment,
+    randomMultivariateNormal, randomPermutations, getModule, makeMatrixView, Context,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -867,6 +869,217 @@ for (const c of permanovaFixture.cases) {
         const w = runBoth(wide, p + 1);
         assert.deepEqual([...w.e.energy], [...unit.e.energy]);
         assert.deepEqual([w.m.nBeyondQ, w.m.nBeyondT2], [unit.m.nBeyondQ, unit.m.nBeyondT2]);
+    }
+}
+// Overflowing squared distances once produced 7 tree nodes for 4 rows; such
+// inputs are now outside the rule-13 domain and refused with status 10.
+const unit = clusterHdbscan({data: new Float64Array([0, 1, 2, 3]), rows: 4, cols: 1},
+    {minClusterSize: 2, minSamples: 2});
+const edge = clusterHdbscan({data: new Float64Array([0, 2 ** 254, 2 ** 255, 3 * 2 ** 254]), rows: 4, cols: 1},
+    {minClusterSize: 2, minSamples: 2});
+assert.deepEqual(edge.labels, unit.labels);
+for (const data of [[0, 1e155, 2e155, 3e155], [-1e308, 1e308]]) {
+    assert.throws(() => clusterHdbscan({data: new Float64Array(data), rows: data.length, cols: 1},
+        {minClusterSize: 2, minSamples: 2}), (e) => e.status === 10);
+}
+// Review 2026-10-13 P0: a 65536 x 65536 overlapping covariance view with n = 0
+// made d*d wrap to 0 in WASM32 and the Cholesky factor be written into an empty
+// vector. The limits are now checked first and the call is refused.
+{
+    const m = getModule(), ctx = Context.create();
+    const backing = makeMatrixView(new Float64Array(131071).fill(1), 131071, 1);
+    const mean = m._malloc(65536 * 8);
+    try {
+        m.HEAPF64.fill(0, mean / 8, mean / 8 + 65536);
+        assert.equal(m.ccall("n4m_matrix_view_init_strided", "number",
+            ["number", "number", "i64", "i64", "i64", "i64", "number"],
+            [backing.viewPtr, backing.dataPtr, 65536n, 65536n, 1n, 1n, 1]), 0);
+        const before = m.HEAPF64[0];
+        assert.equal(m.ccall("n4m_random_multivariate_normal", "number",
+            ["number", "i64", "number", "number", "i64", "number"],
+            [ctx.handle, 1n, mean, backing.viewPtr, 0n, 0]), 10 /* N4M_ERR_UNSUPPORTED */);
+        assert.equal(m.HEAPF64[0], before);
+    } finally {
+        m._free(mean); backing.free(); ctx.destroy();
+    }
+}
+// Rules 13/15 domain (same rules as n4m_cluster_robustness_tests): finite,
+// nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^32. Inside it the
+// results are exact power-of-two rescalings or exact optima; outside it every
+// kernel refuses with N4M_ERR_UNSUPPORTED (10) and no trap.
+{
+    const status = (fn) => { try { fn(); return 0; } catch (e) { return e.status ?? -1; } };
+    const line = [0, 1, 3, 10, 11, 14];
+    const unitLine = clusterHdbscan({data: new Float64Array(line), rows: 6, cols: 1}, {minClusterSize: 2, minSamples: 2});
+    for (const k of [-256, -100, 100, 252]) {
+        const got = clusterHdbscan({data: new Float64Array(line.map((v) => v * 2 ** k)), rows: 6, cols: 1},
+            {minClusterSize: 2, minSamples: 2});
+        assert.deepEqual(got.labels, unitLine.labels);
+        assert.deepEqual(Array.from(got.persistence), Array.from(unitLine.persistence));
+        got.tree.forEach((node, i) => assert.equal(node.stability, unitLine.tree[i].stability * 2 ** -k));
+    }
+    // Outside: below 2^-256, above 2^256, and the review's 1e-308 / 1e-310.
+    for (const factor of [2 ** -257, 2 ** 253, 1e-308, 1e-310]) {
+        const code = status(() => clusterHdbscan({data: new Float64Array(line.map((v) => v * factor)), rows: 6, cols: 1},
+            {minClusterSize: 2, minSamples: 2}));
+        assert.equal(code, 10, `hdbscan x ${factor}`);
+    }
+    // Spread edge: max/min nonzero |x| = 2^32 accepted, one ulp more refused.
+    const hdbscanStatus = (values) => status(() => clusterHdbscan({data: new Float64Array(values), rows: values.length, cols: 1},
+        {minClusterSize: 2, minSamples: 2}));
+    assert.equal(hdbscanStatus([1, 2, 2 ** 32]), 0);
+    assert.equal(hdbscanStatus([1, 2, 2 ** 32 * (1 + 2 ** -52)]), 10);
+    const base = Array.from({length: 35}, (_, i) => 1 + ((i * 7.31) % 9));
+    const want = linearSumAssignment({data: new Float64Array(base), rows: 5, cols: 7});
+    for (const k of [-256, -100, 100, 252]) {
+        assert.deepEqual(linearSumAssignment({data: new Float64Array(base.map((v) => v * 2 ** k)), rows: 5, cols: 7}).colInd,
+            want.colInd);
+    }
+    for (const k of [-257, 253]) {
+        assert.equal(status(() => linearSumAssignment({data: new Float64Array(base.map((v) => v * 2 ** k)), rows: 5, cols: 7})), 10);
+    }
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 32, 2, 3]), rows: 2, cols: 2})), 0);
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([1, 2 ** 32 * (1 + 2 ** -52), 2, 3]), rows: 2, cols: 2})), 10);
+    // Exact oracle: a double is an integer multiple of 2^-1074 (BigInt sums).
+    const exactBig = (x) => {
+        if (x === 0) return 0n;
+        const dv = new DataView(new ArrayBuffer(8));
+        dv.setFloat64(0, x);
+        const bits = dv.getBigUint64(0);
+        const exponent = (bits >> 52n) & 0x7ffn;
+        let mantissa = bits & ((1n << 52n) - 1n);
+        if (exponent !== 0n) mantissa = (mantissa | (1n << 52n)) << (exponent - 1n);
+        return bits >> 63n ? -mantissa : mantissa;
+    };
+    const optimal = (cost, rows, cols, maximize = false) => {
+        const got = linearSumAssignment({data: new Float64Array(cost), rows, cols}, maximize).colInd;
+        const sign = maximize ? -1n : 1n;
+        const total = (columns) => columns.reduce((acc, j, i) => acc + sign * exactBig(cost[i * cols + j]), 0n);
+        let best = null;
+        const visit = (prefix) => {
+            if (prefix.length === rows) {
+                const t = total(prefix);
+                if (best === null || t < best) best = t;
+                return;
+            }
+            for (let j = 0; j < cols; ++j) if (!prefix.includes(j)) visit([...prefix, j]);
+        };
+        visit([]);
+        assert.equal(total(got), best);
+        return got;
+    };
+    // Review 2026-10-13 P0: global centring returned [0, 1, 2] for the 1e20
+    // matrix and declared the +-1e308 matrix infeasible. Both are outside the
+    // domain now; their analogues at the domain edges keep the exact optimum.
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([-1e20, 1e20, 1e20, 1e20, 1, 0, 1e20, 0, 1]), rows: 3, cols: 3})), 10);
+    assert.equal(status(() => linearSumAssignment({data: new Float64Array([-1e308, 1e308, -1e308, 1e308]), rows: 2, cols: 2})), 10);
+    assert.deepEqual(optimal([-(2 ** 32), 2 ** 32, 2 ** 32, 2 ** 32, 1, 0, 2 ** 32, 0, 1], 3, 3), [0, 2, 1]);
+    optimal([-(2 ** 256), 2 ** 256, -(2 ** 256), 2 ** 256], 2, 2);
+    let state = 12345;
+    const random = () => { state = (state * 1103515245 + 12345) % 2147483648; return state / 2147483648; };
+    for (let trial = 0; trial < 150; ++trial) {
+        const rows = 2 + Math.floor(random() * 3), cols = rows + Math.floor(random() * 3);
+        // Full 52-bit mantissas, exponents in [low, low + 31]: spread below 2^32.
+        const low = Math.floor(random() * 481) - 256;
+        const cost = Array.from({length: rows * cols}, () => {
+            if (random() < 0.1) return 0;
+            const exponent = low + Math.floor(random() * 32);
+            const fraction = (Math.floor(random() * 2 ** 26) * 2 ** 26 + Math.floor(random() * 2 ** 26)) / 2 ** 52;
+            return (random() < 0.5 ? -1 : 1) * (1 + fraction) * 2 ** exponent;
+        });
+        optimal(cost, rows, cols, trial % 2 === 1);
+    }
+    // Review 2026-10-13 P0 (memory): a 1 x 32,000,000 zero matrix needed more
+    // than 2 GiB in WASM32; it is refused before any allocation.
+    {
+        const m = getModule(), ctx = Context.create();
+        const backing = m._malloc(32000000 * 8);
+        try {
+            assert.notEqual(backing, 0);
+            m.HEAPF64.fill(0, backing / 8, backing / 8 + 32000000);
+            const view = m._malloc(64), rows = m._malloc(8), cols = m._malloc(8), count = m._malloc(8);
+            try {
+                assert.equal(m.ccall("n4m_matrix_view_init_rowmajor", "number",
+                    ["number", "number", "i64", "i64", "number"], [view, backing, 1n, 32000000n, 1]), 0);
+                assert.equal(m.ccall("n4m_linear_sum_assignment", "number",
+                    ["number", "number", "number", "number", "number", "number"],
+                    [ctx.handle, view, 0, rows, cols, count]), 10);
+            } finally {
+                for (const p of [view, rows, cols, count]) m._free(p);
+            }
+        } finally {
+            m._free(backing);
+            ctx.destroy();
+        }
+    }
+    const cov = [2.0, 0.3, 0.1, 0.3, 1.0, -0.2, 0.1, -0.2, 0.5];
+    const unitDraw = randomMultivariateNormal(new Float64Array(3), {data: new Float64Array(cov), rows: 3, cols: 3}, 6, 42n);
+    for (const k of [-126, 127]) {
+        const got = randomMultivariateNormal(new Float64Array(3),
+            {data: new Float64Array(cov.map((v) => v * 4 ** k)), rows: 3, cols: 3}, 6, 42n);
+        got.data.forEach((v, i) => assert.equal(v, unitDraw.data[i] * 2 ** k));
+    }
+    for (const k of [-127, 128]) {
+        assert.equal(status(() => randomMultivariateNormal(new Float64Array(3),
+            {data: new Float64Array(cov.map((v) => v * 4 ** k)), rows: 3, cols: 3}, 6, 42n)), 10);
+    }
+    const identity = {data: new Float64Array([1, 0, 0, 0, 1, 0, 0, 0, 1]), rows: 3, cols: 3};
+    assert.equal(status(() => randomMultivariateNormal(new Float64Array([1, 2 ** 32, 0]), identity, 3, 1n)), 0);
+    assert.equal(status(() => randomMultivariateNormal(new Float64Array([1, 2 ** 32 * (1 + 2 ** -52), 0]), identity, 3, 1n)), 10);
+}
+// Same assignment, Jaccard, normal-draw and Gaussian HDBSCAN gate as the
+// native n4m_cluster_matching_null_tests (NumPy 2.4.6, SciPy 1.18.1).
+const samePartition = (got, want, name) => {
+    const forward = new Map(), backward = new Map();
+    got.forEach((label, i) => {
+        assert.equal(label < 0, want[i] < 0, name);
+        if (label < 0) return;
+        assert.equal(forward.get(label) ?? want[i], want[i], name);
+        assert.equal(backward.get(want[i]) ?? label, label, name);
+        forward.set(label, want[i]); backward.set(want[i], label);
+    });
+};
+const nullFixture = JSON.parse(readFileSync(
+    new URL("../../../parity/fixtures/cluster_matching_null_v1.json", import.meta.url), "utf8"));
+for (const c of nullFixture.cases) {
+    if (c.kind === "assignment") {
+        const cost = {data: new Float64Array(c.cost_hex.map(hex)), rows: c.rows, cols: c.cols};
+        if (c.error) {
+            assert.throws(() => linearSumAssignment(cost, c.maximize === 1), c.name);
+            continue;
+        }
+        const got = linearSumAssignment(cost, c.maximize === 1);
+        assert.deepEqual(got.rowInd, c.row_ind, c.name);
+        assert.deepEqual(got.colInd, c.col_ind, c.name);
+    } else if (c.kind === "jaccard") {
+        const got = clusterJaccardMatrix(c.labels_a, c.labels_b, c.n_clusters_a, c.n_clusters_b);
+        assert.deepEqual(got.intersections, c.intersections, c.name);
+        assert.deepEqual(got.sizesA, c.sizes_a, c.name);
+        assert.deepEqual(got.sizesB, c.sizes_b, c.name);
+        c.jaccard_hex.map(hex).forEach((v, i) =>
+            assert.ok(Number.isNaN(v) ? Number.isNaN(got.jaccard.data[i]) : got.jaccard.data[i] === v, c.name));
+    } else if (c.kind === "normal") {
+        const got = randomMultivariateNormal(new Float64Array(c.mean_hex.map(hex)),
+            {data: new Float64Array(c.cov_hex.map(hex)), rows: c.d, cols: c.d}, c.n, BigInt(c.seed));
+        c.draws_hex.map(hex).forEach((v, i) => relativeNear(got.data[i], v));
+    } else if (c.kind === "multiscale_hdbscan") {
+        const got = clusterHdbscan({data: new Float64Array(c.input_hex.map(hex)), rows: c.rows, cols: c.cols},
+            {minClusterSize: c.min_cluster_size, minSamples: c.min_samples});
+        samePartition(got.labels, c.labels, c.name);
+        c.membership_hex.map(hex).forEach((v, i) => relativeNear(got.membership[i], v));
+    } else if (c.kind === "ari") {
+        const a = Array.from({length: c.n}, (_, i) => i % c.ka);
+        const b = Array.from({length: c.n}, (_, i) => (Math.floor(i / c.ka) + c.shift * (i % 3)) % c.kb);
+        const want = hex(c.ari_hex[0]);
+        assert.ok(Math.abs(preflightAdjustedRandIndex(a, b) - want) <= 1e-14 * Math.abs(want), c.name);
+    } else if (c.kind === "permutations") {
+        assert.deepEqual(randomPermutations(BigInt(c.seed), c.n, c.n_permutations), c.draws, c.name);
+    } else {
+        const x = randomMultivariateNormal(new Float64Array(c.d),
+            {data: new Float64Array(c.cov_hex.map(hex)), rows: c.d, cols: c.d}, c.n, BigInt(c.seed));
+        const got = clusterHdbscan(x, {minClusterSize: c.min_cluster_size, minSamples: c.min_samples});
+        assert.equal(got.nClusters, c.n_clusters, c.name);
+        samePartition(got.labels, c.labels, c.name);
     }
 }
 console.log("JS/WASM Preflight diagnostics passed");

@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **233**
+- Curated records: **229**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `e00e2a6ab607ea70a5024af6e0990e5dbaac6840bd83019e9c5df9355c808b32`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `fe60f5540846fc3a6229c5bedb3ecaf62812175126120f5799b12b4c3792c74f`
 
 ## References by documentation page
 
@@ -430,23 +430,11 @@ Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193
 
 **Provenance:** https://doi.org/10.1007/BF01908075; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_hdbscan.cpp
 
-### [`diagnostics_bh_adjust`](diagnostics_bh_adjust.md) — Benjamini–Hochberg adjusted p-values
+### [`diagnostics_cluster_jaccard_matrix`](diagnostics_cluster_jaccard_matrix.md) — Jaccard overlap between the clusters of two partitions
 
-Benjamini & Hochberg (1995), *Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing*, Journal of the Royal Statistical Society B 57(1), 289–300, https://doi.org/10.1111/j.2517-6161.1995.tb02031.x; Benjamini & Yekutieli (2001), *The control of the false discovery rate in multiple testing under dependency*, Annals of Statistics 29(4), 1165–1188, https://doi.org/10.1214/aos/1013699998.
+Jaccard (1912), *The distribution of the flora in the alpine zone*, New Phytologist 11(2), 37–50, https://doi.org/10.1111/j.1469-8137.1912.tb05611.x; Hennig (2007), *Cluster-wise assessment of cluster stability*, Computational Statistics & Data Analysis 52(1), 258–271, https://doi.org/10.1016/j.csda.2006.11.025.
 
-**Provenance:** https://doi.org/10.1111/j.2517-6161.1995.tb02031.x; https://doi.org/10.1214/aos/1013699998; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
-
-### [`diagnostics_correlation_test`](diagnostics_correlation_test.md) — Pearson and Spearman correlation with a permutation test
-
-Pearson (1895), *Note on regression and inheritance in the case of two parents*, Proceedings of the Royal Society of London 58, 240–242, https://doi.org/10.1098/rspl.1895.0041; Spearman (1904), *The proof and measurement of association between two things*, American Journal of Psychology 15(1), 72–101, https://doi.org/10.2307/1412159; Phipson & Smyth (2010), *Permutation P-values Should Never Be Zero*, Statistical Applications in Genetics and Molecular Biology 9(1), https://doi.org/10.2202/1544-6115.1585.
-
-**Provenance:** https://doi.org/10.1098/rspl.1895.0041; https://doi.org/10.2307/1412159; https://doi.org/10.2202/1544-6115.1585; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
-
-### [`diagnostics_factor_association_exact`](diagnostics_factor_association_exact.md) — Exact permutation distribution of a factor-target association
-
-No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.
-
-**Provenance:** https://doi.org/10.1007/b138696; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+**Provenance:** https://doi.org/10.1111/j.1469-8137.1912.tb05611.x; https://doi.org/10.1016/j.csda.2006.11.025; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json
 
 ### [`diagnostics_hdbscan`](diagnostics_hdbscan.md) — HDBSCAN* density-based hierarchical clustering
 
@@ -460,17 +448,11 @@ Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandina
 
 **Provenance:** https://www.jstor.org/stable/4615733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
 
-### [`diagnostics_permanova`](diagnostics_permanova.md) — PERMANOVA of one categorical term on Euclidean distances
+### [`diagnostics_linear_sum_assignment`](diagnostics_linear_sum_assignment.md) — Rectangular linear sum assignment
 
-Anderson (2001), *A new method for non-parametric multivariate analysis of variance*, Austral Ecology 26, 32–46, https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; McArdle & Anderson (2001), *Fitting multivariate models to community data: a comment on distance-based redundancy analysis*, Ecology 82, 290–297, https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; Anderson & ter Braak (2003), *Permutation tests for multi-factorial analysis of variance*, Journal of Statistical Computation and Simulation 73, 85–113, https://doi.org/10.1080/00949650215733; Anderson (2001), *Permutation tests for univariate or multivariate analysis of variance and regression*, Canadian Journal of Fisheries and Aquatic Sciences 58, 626–639, https://doi.org/10.1139/f00-178.
+Crouse (2016), *On implementing 2D rectangular assignment algorithms*, IEEE Transactions on Aerospace and Electronic Systems 52(4), 1679–1696, https://doi.org/10.1109/TAES.2016.140952; Kuhn (1955), *The Hungarian method for the assignment problem*, Naval Research Logistics Quarterly 2, 83–97, https://doi.org/10.1002/nav.3800020109.
 
-**Provenance:** https://doi.org/10.1111/j.1442-9993.2001.01070.pp.x; https://doi.org/10.1890/0012-9658(2001)082[0290:FMMTCD]2.0.CO;2; https://doi.org/10.1080/00949650215733; https://doi.org/10.1139/f00-178; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json
-
-### [`diagnostics_permdisp`](diagnostics_permdisp.md) — PERMDISP test of multivariate dispersion
-
-Anderson (2006), *Distance-based tests for homogeneity of multivariate dispersions*, Biometrics 62, 245–253, https://doi.org/10.1111/j.1541-0420.2005.00440.x.
-
-**Provenance:** https://doi.org/10.1111/j.1541-0420.2005.00440.x; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/permanova_v1.json
+**Provenance:** https://doi.org/10.1109/TAES.2016.140952; https://doi.org/10.1002/nav.3800020109; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/optimization/_vendored/rectangular_lsap.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json
 
 ### [`diagnostics_pls_diagnostics`](diagnostics_pls_diagnostics.md) — PLS model diagnostics: Hotelling T², Q residuals, and DModX
 
@@ -489,12 +471,6 @@ This kernel bundle has no single canonical paper. The noise proxy smooths with t
 No single paper defines this API bundle. RPD usage in NIR calibration is reviewed by Williams & Sobering (1993); RPIQ by Bellon-Maurel et al. (2010), https://doi.org/10.1016/j.trac.2010.07.005. RMSE, MAE, bias, SEP, R², and NRMSE use the explicit formulas in the implementation.
 
 **Provenance:** https://doi.org/10.1016/j.trac.2010.07.005; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/utilities/nirs_metrics.c
-
-### [`diagnostics_variance_components`](diagnostics_variance_components.md) — One-way random-effects variance components (REML) and their intervals
-
-Patterson & Thompson (1971), *Recovery of inter-block information when block sizes are unequal*, Biometrika 58(3), 545–554, https://doi.org/10.1093/biomet/58.3.545; Harville (1977), *Maximum Likelihood Approaches to Variance Component Estimation and to Related Problems*, JASA 72(358), 320–338, https://doi.org/10.1080/01621459.1977.10480998; Searle (1971), *Linear Models*, Wiley, for the exact balanced ICC interval.
-
-**Provenance:** https://doi.org/10.1093/biomet/58.3.545; https://doi.org/10.1080/01621459.1977.10480998; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/variance_components.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_variance_components.cpp
 
 ### [`ds`](ds.md) — Direct Standardisation
 
