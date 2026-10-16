@@ -36,7 +36,7 @@ constexpr int domain_exponent = 256;
 constexpr int domain_spread = 64;
 constexpr const char* domain_message =
     "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "spread <= 2^64)";
+    "max/min nonzero |x| <= 2^64)";
 
 
 size_t sz(int64_t v) noexcept { return static_cast<size_t>(v); }
