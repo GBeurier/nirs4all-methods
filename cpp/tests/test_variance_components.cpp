@@ -22,6 +22,7 @@
 #include <initializer_list>
 #include <limits>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #define REQUIRE(x) do { if (!(x)) throw std::runtime_error(#x); } while (false)
@@ -44,20 +45,31 @@ static Reml reml(n4m_context_t* ctx, std::vector<double> y, const std::vector<in
     REQUIRE(n4m_stats_variance_components_reml(ctx, &v, g.data(), nullptr, r.out, &r.status) == N4M_OK);
     return r;
 }
+static n4m_status_t reml_status(n4m_context_t* ctx, std::vector<double> y,
+                                const std::vector<int64_t>& g) {
+    Reml r{};
+    auto v = column(y);
+    return n4m_stats_variance_components_reml(ctx, &v, g.data(), nullptr, r.out, &r.status);
+}
+static n4m_status_t intervals_status(n4m_context_t* ctx, std::vector<double> y,
+                                     const std::vector<int64_t>& g) {
+    std::vector<double> out(8);
+    int64_t n_valid = 0;
+    auto v = column(y);
+    return n4m_stats_variance_components_intervals(ctx, &v, g.data(), nullptr, nullptr, 0.95, 0,
+                                                   0, out.data(), &n_valid);
+}
 static std::vector<double> intervals(n4m_context_t* ctx, std::vector<double> y,
                                      const std::vector<int64_t>& g, double confidence,
                                      const int64_t* clusters = nullptr, int32_t b = 0,
-                                     uint64_t seed = 0, int64_t* valid = nullptr,
-                                     int32_t* status = nullptr) {
+                                     uint64_t seed = 0, int64_t* valid = nullptr) {
     std::vector<double> out(8);
     int64_t n_valid = -1;
-    int32_t interval_status = -1;
     auto v = column(y);
     REQUIRE(n4m_stats_variance_components_intervals(ctx, &v, g.data(), clusters, nullptr,
                                                     confidence, b, seed, out.data(),
-                                                    &n_valid, &interval_status) == N4M_OK);
+                                                    &n_valid) == N4M_OK);
     if (valid) *valid = n_valid;
-    if (status) *status = interval_status;
     return out;
 }
 
@@ -99,11 +111,10 @@ int main() {
         std::vector<int64_t> bad = ca;
         bad[2] = 9;  // group 1 would span clusters 7 and 9
         std::vector<double> out(8);
-        int32_t ist = 0;
         std::vector<double> ya_copy = ya;
         auto v = column(ya_copy);
         REQUIRE(n4m_stats_variance_components_intervals(ctx, &v, ga.data(), bad.data(), nullptr,
-                                                        0.95, 10, 1, out.data(), &valid, &ist) ==
+                                                        0.95, 10, 1, out.data(), &valid) ==
                 N4M_ERR_INVALID_ARGUMENT);
 
         // B: balanced 4 x 3, MSB = 547/300, MSW = 17/600: REML = ANOVA.
@@ -244,63 +255,103 @@ int main() {
             REQUIRE(wit.out[3] > -1823.3671591194206);
         }
 
-        // P1-6 regression: 1e155 offsets, within spread 1e145. The variances
-        // (~1e290) are representable although (max |x|)^2 is not. Exact
-        // ANOVA from the actual doubles (Fraction): REML = ANOVA here.
+        // P1-6 regression at the top of the supported domain: offset 2^255
+        // with spread 2^210 x (-3, -1 | 1, 3), exact sums. The variances are
+        // exactly those of (-3, -1 | 1, 3) times 2^420: s2b = 7, s2w = 2,
+        // ICC 7/9, although (max |x|)^2 = 2^510 is far from them.
         {
-            const std::vector<double> yh{1e155 - 3e145, 1e155 - 1e145, 1e155 + 1e145, 1e155 + 3e145};
+            const double off = std::ldexp(1.0, 255), u = std::ldexp(1.0, 210);
+            const std::vector<double> yh{off - 3 * u, off - u, off + u, off + 3 * u};
             const std::vector<int64_t> gh{0, 0, 1, 1};
             auto hv = reml(ctx, yh, gh);
             REQUIRE(hv.status == 0);
-            REQUIRE(relative(hv.out[0], 7.000004539241947e+290, 1e-9));
-            REQUIRE(relative(hv.out[1], 1.9999999359517287e+290, 1e-9));
-            REQUIRE(relative(hv.out[2], 0.7777778953928032, 1e-9));
-            int32_t s6 = -1;
-            auto ih = intervals(ctx, yh, gh, 0.95, nullptr, 0, 0, nullptr, &s6);
-            REQUIRE(s6 == 0 && ih[0] > 0 && std::isfinite(ih[1]) && std::isfinite(ih[3]));
-            // Variances beyond DBL_MAX: explicit status 6, NaN values; the SD
-            // interval (~1e300) stays representable.
-            const std::vector<double> yo{-1e300, -9e299, 9e299, 1e300};
-            auto ov = reml(ctx, yo, gh);
-            REQUIRE(ov.status == 6 && std::isnan(ov.out[0]) && std::isnan(ov.out[2]));
-            auto io = intervals(ctx, yo, gh, 0.95, nullptr, 0, 0, nullptr, &s6);
-            REQUIRE(s6 == 0 && std::isfinite(io[0]) && io[0] > 0);
-            // Positive variances that underflow: explicit status 6.
-            const double tiny = std::ldexp(1.0, -1060);
-            auto uv = reml(ctx, {tiny, 3 * tiny, 9 * tiny, 15 * tiny}, gh);
-            REQUIRE(uv.status == 6 && std::isnan(uv.out[1]));
+            REQUIRE(relative(hv.out[0], std::ldexp(7.0, 420), 1e-12));
+            REQUIRE(relative(hv.out[1], std::ldexp(2.0, 420), 1e-12));
+            REQUIRE(relative(hv.out[2], 7.0 / 9.0, 1e-12));
+            auto ih = intervals(ctx, yh, gh, 0.95);
+            REQUIRE(ih[0] > 0 && std::isfinite(ih[1]) && std::isfinite(ih[3]));
         }
 
-        // Magnitude sweep (robustness rule): scaling by 2^k multiplies the
+        // Rule 13 domain: nonzero |x| in [2^-256, 2^256], spread <= 2^64 over
+        // raw and centred values. Both sides of every boundary; outside, both
+        // entry points refuse with N4M_ERR_UNSUPPORTED before computing.
+        {
+            const std::vector<int64_t> g3{0, 1, 1};
+            const double top = std::ldexp(1.0, 256), bottom = std::ldexp(1.0, -256);
+            auto inside = [&](const std::vector<double>& y) {
+                return reml_status(ctx, y, g3) == N4M_OK && intervals_status(ctx, y, g3) == N4M_OK;
+            };
+            auto outside = [&](const std::vector<double>& y) {
+                return reml_status(ctx, y, g3) == N4M_ERR_UNSUPPORTED &&
+                       intervals_status(ctx, y, g3) == N4M_ERR_UNSUPPORTED;
+            };
+            REQUIRE(inside({top, top / 2, top / 4}));
+            REQUIRE(outside({std::nextafter(top, 1e300), top / 2, top / 4}));
+            REQUIRE(inside({bottom, 2 * bottom, 4 * bottom}));
+            REQUIRE(outside({std::nextafter(bottom, 0.0), 2 * bottom, 4 * bottom}));
+            REQUIRE(inside({0.0, bottom, 2 * bottom}));          // zeros are allowed
+            REQUIRE(inside({1.0, std::ldexp(1.0, 64), 2.0}));     // raw spread 2^64
+            REQUIRE(outside({1.0, std::ldexp(1.0, 65), 2.0}));    // raw spread 2^65
+            // Spread of the differences the statistic uses: with groups
+            // {0, 0, 1}, {1, 1 + 2^-50, 2^10} has a within residual 2^-51
+            // against a centred value ~(2/3) 2^10 (spread ~2^60.4); with
+            // 1 + 2^-52 and 2^12 the spread is ~2^64.4.
+            const std::vector<int64_t> g001{0, 0, 1};
+            auto in3 = [&](const std::vector<double>& y) {
+                return reml_status(ctx, y, g001) == N4M_OK && intervals_status(ctx, y, g001) == N4M_OK;
+            };
+            REQUIRE(in3({1.0, 1.0 + std::ldexp(1.0, -50), std::ldexp(1.0, 10)}));
+            REQUIRE(reml_status(ctx, {1.0, 1.0 + std::ldexp(1.0, -52), std::ldexp(1.0, 12)}, g001) ==
+                    N4M_ERR_UNSUPPORTED);
+            // Inside, the within SS keeps full precision: SSW = 2 (2^-51)^2 =
+            // 2^-101 exactly, so the chi-square SD bounds are sqrt(2^-101/q)
+            // with SciPy q = chi2_{0.975,1} = 5.023886187314888 and
+            // chi2_{0.025,1} = 0.0009820691171752555.
+            auto fine = intervals(ctx, {1.0, 1.0 + std::ldexp(1.0, -50), std::ldexp(1.0, 10)}, g001, 0.95);
+            REQUIRE(relative(fine[0], std::sqrt(std::ldexp(1.0, -101) / 5.023886187314888), 1e-10));
+            REQUIRE(relative(fine[1], std::sqrt(std::ldexp(1.0, -101) / 0.0009820691171752555), 1e-10));
+            // A masked out-of-domain value is ignored; one masked feature
+            // outside the domain still refuses the whole call.
+            std::vector<double> pair_cols{1.0, 1e300, 3.0, 4.0, 5.0, 6.0};
+            n4m_matrix_view_t tv{};
+            REQUIRE(n4m_matrix_view_init_rowmajor(&tv, pair_cols.data(), 3, 2, N4M_DTYPE_F64) == N4M_OK);
+            const uint8_t hide_big[6] = {1, 0, 1, 1, 1, 1};
+            double o16[16];
+            int32_t s2[2];
+            REQUIRE(n4m_stats_variance_components_reml(ctx, &tv, g3.data(), hide_big, o16, s2) == N4M_OK);
+            REQUIRE(n4m_stats_variance_components_reml(ctx, &tv, g3.data(), nullptr, o16, s2) ==
+                    N4M_ERR_UNSUPPORTED);
+            const char* message = n4m_context_last_error(ctx);
+            REQUIRE(message && std::string(message).find("outside the supported numerical domain") !=
+                                   std::string::npos);
+        }
+
+        // Magnitude sweep inside the domain: scaling by 2^k multiplies the
         // variances by 2^2k, leaves the ICC unchanged and shifts the REML
-        // log-likelihood by -(N-1) k ln 2; unrepresentable variances give
-        // status 6, never a silent value. Translation by 2^52 (integer data)
-        // changes nothing.
+        // log-likelihood by -(N-1) k ln 2; translations by +-2^52 (integer
+        // data, exact sums) change nothing. Just outside, the call refuses.
         {
             std::vector<double> ia_data;
             for (double value : ya) ia_data.push_back(10.0 * value);  // integers 3..31
             const auto base = reml(ctx, ia_data, ga);
             REQUIRE(base.status == 0);
-            for (int k : {-1022, -500, -100, 0, 100, 500, 1000}) {
+            for (int k : {-258, -250, -100, 0, 100, 251, 252}) {
                 std::vector<double> scaled;
                 for (double value : ia_data) scaled.push_back(std::ldexp(value, k));
-                auto sk = reml(ctx, scaled, ga);
-                const double s2b = std::ldexp(base.out[0], 2 * k), s2w = std::ldexp(base.out[1], 2 * k);
-                if (std::isfinite(s2b) && s2w > 0 && std::isfinite(s2w) && std::fpclassify(s2w) == FP_NORMAL) {
-                    REQUIRE(sk.status == 0);
-                    REQUIRE(relative(sk.out[0], s2b, 1e-12) && relative(sk.out[1], s2w, 1e-12));
-                    REQUIRE(relative(sk.out[2], base.out[2], 1e-12));
-                    REQUIRE(rel(sk.out[3], base.out[3] - 11.0 * k * std::log(2.0), 1e-12));
-                } else {
-                    REQUIRE(sk.status == 6 && std::isnan(sk.out[0]));
+                // min 3 x 2^k >= 2^-256 and max 31 x 2^k <= 2^256.
+                const bool in_domain = k >= -257 && k <= 251;
+                if (!in_domain) {
+                    REQUIRE(reml_status(ctx, scaled, ga) == N4M_ERR_UNSUPPORTED);
+                    continue;
                 }
-                int32_t sst = -1;
-                auto ik = intervals(ctx, scaled, ga, 0.95, nullptr, 0, 0, nullptr, &sst);
-                const double lo = std::ldexp(0.24570003389152809 * 10.0, k);
-                if (std::isfinite(lo) && std::fpclassify(lo) == FP_NORMAL)
-                    REQUIRE(sst == 0 && relative(ik[0], lo, 1e-10));
-                else
-                    REQUIRE(sst == 6);
+                auto sk = reml(ctx, scaled, ga);
+                REQUIRE(sk.status == 0);
+                REQUIRE(relative(sk.out[0], std::ldexp(base.out[0], 2 * k), 1e-12));
+                REQUIRE(relative(sk.out[1], std::ldexp(base.out[1], 2 * k), 1e-12));
+                REQUIRE(relative(sk.out[2], base.out[2], 1e-12));
+                REQUIRE(rel(sk.out[3], base.out[3] - 11.0 * k * std::log(2.0), 1e-12));
+                auto ik = intervals(ctx, scaled, ga, 0.95);
+                REQUIRE(relative(ik[0], std::ldexp(2.4570003389152809, k), 1e-10));
             }
             for (double offset : {std::ldexp(1.0, 52), -std::ldexp(1.0, 52)}) {
                 std::vector<double> shifted;
@@ -309,15 +360,6 @@ int main() {
                 REQUIRE(t.status == 0 && relative(t.out[0], base.out[0], 1e-12) &&
                         relative(t.out[1], base.out[1], 1e-12) && relative(t.out[2], base.out[2], 1e-12));
             }
-            // Offset 2^996 with integer multiples of 2^944 (exact sums): the
-            // variances (~2^1890) overflow -> status 6; the ICC of the scaled
-            // problem is still the base ICC, checked through the SD interval.
-            std::vector<double> far;
-            for (double value : ia_data) far.push_back(std::ldexp(1.0, 996) + std::ldexp(value, 944));
-            REQUIRE(reml(ctx, far, ga).status == 6);
-            int32_t fst = -1;
-            auto fi = intervals(ctx, far, ga, 0.95, nullptr, 0, 0, nullptr, &fst);
-            REQUIRE(fst == 0 && relative(fi[0], std::ldexp(2.4570003389152809, 944), 1e-10));
         }
         // Invalid arguments.
         std::vector<double> bad_x{1.0, std::numeric_limits<double>::quiet_NaN(), 2.0, 3.0};
@@ -330,18 +372,17 @@ int main() {
         REQUIRE(n4m_stats_variance_components_reml(ctx, &bv, nullptr, nullptr, out.data(), st) ==
                 N4M_ERR_NULL_POINTER);
         REQUIRE(n4m_stats_variance_components_intervals(ctx, &bv, g4.data(), nullptr, hide, 1.0, 0,
-                                                        0, out.data(), &valid, st) ==
+                                                        0, out.data(), &valid) ==
                 N4M_ERR_INVALID_ARGUMENT);
         std::vector<double> wide(2 * 100, 1.0);
         n4m_matrix_view_t wv{};
         REQUIRE(n4m_matrix_view_init_rowmajor(&wv, wide.data(), 2, 100, N4M_DTYPE_F64) == N4M_OK);
         std::vector<double> wide_out(800);
         std::vector<int64_t> wide_valid(100);
-        std::vector<int32_t> wide_status(100);
         const int64_t g2[2] = {0, 0};
         REQUIRE(n4m_stats_variance_components_intervals(ctx, &wv, g2, nullptr, nullptr, 0.95,
                                                         100000, 0, wide_out.data(),
-                                                        wide_valid.data(), wide_status.data()) == N4M_ERR_UNSUPPORTED);
+                                                        wide_valid.data()) == N4M_ERR_UNSUPPORTED);
         n4m_context_destroy(ctx);
         std::puts("variance components: ok");
         return 0;

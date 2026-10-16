@@ -13,13 +13,14 @@
 // the bd0 device of Loader 2000). Lower and upper tails are both evaluated
 // directly, never as 1 minus a value close to 1.
 //
-// Quantiles bisect a monotone tail on log x (chi-square) or on the logit of
-// the beta variable (F = (d2/d1) e^t), choosing the lower tail for p <= 1/2
-// and the upper tail otherwise, to a relative resolution of a few ulps.
+// Quantiles take the probability of the requested tail (lower or upper), so
+// an upper quantile such as chi2_{1-a/2} never forms 1 - a/2 in double; they
+// bisect that tail on log x (chi-square) or on the logit of the beta
+// variable (F = (d2/d1) e^t) to a relative resolution of a few ulps.
 //
-// Domain: 0 < p < 1; degrees of freedom in [1/2, 2^31]; a chi-square
-// quantile in [1e-300, 1e300] and an F quantile in [e^-700, e^700] times
-// d2/d1. Outside it the quantile is NaN; callers turn NaN into a status.
+// Domain: tail probability in [2^-64, 1/2]; degrees of freedom in
+// [1/2, 2^31]; a chi-square quantile in [1e-300, 1e300] and an F quantile in
+// [e^-700, e^700] times d2/d1. Outside it the quantile is NaN; callers refuse.
 #ifndef N4M_CORE_COMMON_DISTRIBUTIONS_HPP
 #define N4M_CORE_COMMON_DISTRIBUTIONS_HPP
 
@@ -32,9 +33,10 @@ double regularized_gamma_q(double a, double x) noexcept;
 // independently by the caller (so either may be tiny).
 double regularized_beta(double a, double b, double x, double y) noexcept;
 
-// Chi-square and F quantiles, 0 < p < 1 (NaN outside the domain above).
-double chi2_quantile(double p, double df) noexcept;
-double f_quantile(double p, double d1, double d2) noexcept;
+// Chi-square and F quantiles of a lower (upper = false) or upper tail
+// probability (NaN outside the domain above).
+double chi2_quantile(double tail, double df, bool upper) noexcept;
+double f_quantile(double tail, double d1, double d2, bool upper) noexcept;
 
 }  // namespace n4m::core::distributions
 

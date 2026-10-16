@@ -237,6 +237,23 @@ for p in [1e-12, 1e-6, 0.025, 0.5, 0.975, 1 - 1e-6, 1 - 1e-12]:
             qs["chi2"].append([p, d, float(stats.chi2.ppf(p, d))])
     for d1, d2 in [(1, 1), (2, 1), (3, 8), (8, 3), (999, 2000), (1, 1e6), (1e6, 1), (5e5, 5e5)]:
         qs["f"].append([p, d1, d2, float(stats.f.ppf(p, d1, d2))])
+# Domain boundary: tail 2^-64 on both sides (SciPy; mpmath for the upper F
+# tail, where SciPy 1.18.1 returns inf).
+def mp_f_isf(tail, d1, d2):
+    mp.mp.dps = 40
+    a, b = mp.mpf(d1) / 2, mp.mpf(d2) / 2
+    sf = lambda lf: mp.betainc(b, a, 0, d2 / (d2 + d1 * mp.e ** lf), regularized=True)
+    lo, hi = mp.mpf(-50), mp.mpf(200)
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        if sf(mid) > tail: lo = mid
+        else: hi = mid
+    return float(mp.e ** ((lo + hi) / 2))
+t64 = 2.0 ** -64
+qs["boundary"] = {
+    "chi2": [[d, float(stats.chi2.ppf(t64, d)), float(stats.chi2.isf(t64, d))] for d in (1, 7, 100, 1e4)],
+    "f": [[a, b, float(stats.f.ppf(t64, a, b)), mp_f_isf(t64, a, b)] for a, b in ((3, 8), (8, 3), (999, 2000))],
+}
 out["quantile_grid"] = qs
 out["provenance"]["mpmath"] = mp.__version__
 json.dump(out, open(sys.argv[1], "w"), indent=1, default=float)

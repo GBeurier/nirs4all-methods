@@ -16,8 +16,20 @@
 // with step 1/8 (F the one-way ANOVA ratio). Every grid cell where f'
 // changes sign from - to + is refined by bisection on f', the boundary
 // gamma = 0 is a candidate when f'(0) >= 0, and the candidate with the
-// smallest f is retained. A minimum narrower than one grid cell can still
-// be missed; the count of candidates is reported.
+// smallest f is retained. The count of candidates is reported.
+//
+// Grid limitation (documented, not removed). With K distinct group sizes
+// r_k, u_k = r_k gamma + 1, D = prod u_k, S1 = D sum_i w_i (degree K-1),
+// Q = (U1 S1 - T1^2)/(D S1), sum w^2 e^2 = P2/(D^2 S1^2) (deg P2 <= 4K-4),
+// sum w^2 = R/D^2 (deg R <= 2K-2) and E = D S1 (SSW + Q) > 0 of degree
+// <= 2K-1, one gets
+//   f'(gamma) D S1 E = -(N-1) P2 + (S1^2 - R) E,
+// a polynomial of degree <= 4K-3 with D, S1, E > 0 on gamma >= 0. Hence f'
+// has at most 4K-3 roots: a balanced design (K = 1) has one stationary
+// point and the grid always finds the optimum. For K >= 2 two roots (a
+// whole local-minimum basin of f) inside one grid cell, a factor
+// 10^(1/8) = 1.334 in gamma, are not seen. Their spacing is not bounded
+// here, so the result is the best of the minima the grid resolves.
 //
 // Inputs live on an exact power-of-two scale chosen by the caller from the
 // centred variation of the feature (|centred value| < 1). Group means are on
@@ -42,7 +54,6 @@ enum Status : int32_t {
     zero_total = 3,         // no variation at all: ICC undefined
     within_boundary = 4,    // SSW = 0 with distinct means: s2w = 0, ICC = 1
     not_converged = 5,      // minimum beyond the search bound or failed bisection
-    not_representable = 6,  // a published value overflows or underflows a double
 };
 
 // One group observed in one feature: mean on the scaled axis, within SS in

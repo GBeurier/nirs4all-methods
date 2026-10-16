@@ -196,7 +196,7 @@ export interface VarianceComponentsRemlResult {
     remlCandidates: number[];
     bisectionIterations: number[];
     /** 0 interior, 1 insufficient, 2 s2b=0 boundary, 3 zero total variance,
-     * 4 s2w=0 boundary, 5 not converged, 6 not representable as a double. */
+     * 4 s2w=0 boundary, 5 not converged. */
     status: Int32Array;
 }
 
@@ -210,8 +210,6 @@ export interface VarianceComponentsIntervalsResult {
     /** Cluster-bootstrap percentile interval of the REML ICC(1). */
     iccBootstrap: Float64Array;
     nValidReplicates: number[];
-    /** 0, or 6 when a bound is not representable as a double. */
-    intervalStatus: Int32Array;
 }
 
 function validateMatrix(X: Matrix): void {
@@ -969,13 +967,12 @@ export function statsVarianceComponentsIntervals(X: Matrix,
         const clusters = clusterIds ? scope.i64(clusterIds) : 0;
         const mask = validMask ? scope.alloc(validMask.length) : 0;
         const out = scope.alloc(X.cols * 64), valid = scope.alloc(X.cols * 8);
-        const status = scope.alloc(X.cols * 4);
         if (validMask) m.HEAPU8.set(validMask, mask);
         const st = m.ccall("n4m_stats_variance_components_intervals", "number",
             ["number", "number", "number", "number", "number", "number", "number", "i64",
-                "number", "number", "number"],
+                "number", "number"],
             [ctx.handle, x.viewPtr, groups, clusters, mask, confidence, nBootstrap, seed64,
-                out, valid, status]) as number;
+                out, valid]) as number;
         checkStatus(st, ctx.handle);
         const r = copyF64(out, X.cols * 8);
         const dv = new DataView(m.HEAPU8.buffer);
@@ -984,7 +981,6 @@ export function statsVarianceComponentsIntervals(X: Matrix,
             sdBootstrap: pairs(r, X.cols, 4), iccBootstrap: pairs(r, X.cols, 6),
             nValidReplicates: Array.from({length: X.cols}, (_, j) =>
                 Number(dv.getBigInt64(valid + j * 8, true))),
-            intervalStatus: new Int32Array(m.HEAP32.slice(status / 4, status / 4 + X.cols)),
         };
     } finally {
         scope.close();

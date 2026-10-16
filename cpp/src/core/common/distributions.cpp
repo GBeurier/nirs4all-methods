@@ -138,6 +138,7 @@ double gamma_tail(double a, double x, bool lower) noexcept {
 }
 
 bool valid_df(double df) noexcept { return df >= 0.5 && df <= 0x1p31; }
+bool valid_tail(double tail) noexcept { return tail >= 0x1p-64 && tail <= 0.5; }
 
 // Bisection of a monotone tail on t in [lo, hi] until the bracket is a few
 // ulps wide: `below(t)` is true when the root lies above t.
@@ -165,32 +166,27 @@ double regularized_beta(double a, double b, double x, double y) noexcept {
     return 1.0 - std::exp(log_beta_prefactor(b, a, y, x)) * beta_fraction(b, a, y) / b;
 }
 
-double chi2_quantile(double p, double df) noexcept {
-    if (!(p > 0.0 && p < 1.0) || !valid_df(df)) return nan_value;
+double chi2_quantile(double tail, double df, bool upper) noexcept {
+    if (!valid_tail(tail) || !valid_df(df)) return nan_value;
     const double a = 0.5 * df;
     // t = log(x): the lower tail P(a, x/2) increases with t, Q decreases.
-    const bool lower = p <= 0.5;
-    const double target = lower ? p : 1.0 - p;
     const double lo = std::log(1e-300), hi = std::log(1e300);
     auto below = [&](double t) {
         const double x = 0.5 * std::exp(t);
-        return lower ? regularized_gamma_p(a, x) < target : regularized_gamma_q(a, x) > target;
+        return upper ? regularized_gamma_q(a, x) > tail : regularized_gamma_p(a, x) < tail;
     };
     if (!below(lo) || below(hi)) return nan_value;
     return std::exp(bisect(below, lo, hi));
 }
 
-double f_quantile(double p, double d1, double d2) noexcept {
-    if (!(p > 0.0 && p < 1.0) || !valid_df(d1) || !valid_df(d2)) return nan_value;
+double f_quantile(double tail, double d1, double d2, bool upper) noexcept {
+    if (!valid_tail(tail) || !valid_df(d1) || !valid_df(d2)) return nan_value;
     const double a = 0.5 * d1, b = 0.5 * d2;
     // t = logit(Y) with Y ~ Beta(a, b) and F = (d2/d1) e^t: Y = 1/(1+e^-t),
     // 1 - Y = 1/(1+e^t), both formed directly.
-    const bool lower = p <= 0.5;
-    const double target = lower ? p : 1.0 - p;
     auto below = [&](double t) {
         const double y = 1.0 / (1.0 + std::exp(-t)), z = 1.0 / (1.0 + std::exp(t));
-        return lower ? regularized_beta(a, b, y, z) < target
-                     : regularized_beta(b, a, z, y) > target;
+        return upper ? regularized_beta(b, a, z, y) > tail : regularized_beta(a, b, y, z) < tail;
     };
     const double lo = -700.0, hi = 700.0;
     if (!below(lo) || below(hi)) return nan_value;

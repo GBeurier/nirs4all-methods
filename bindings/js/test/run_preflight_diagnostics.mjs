@@ -480,22 +480,35 @@ const balanced = statsVarianceComponentsIntervals({
 vcNear(balanced.iccExactF[0], 0.7838941809128407, 1e-10);
 vcNear(balanced.iccExactF[1], 0.9968006295172774, 1e-10);
 assert.equal(balanced.nValidReplicates[0], 0);
-assert.equal(balanced.intervalStatus[0], 0);
-// Exponent-managed scaling: 1e155 offsets with 1e145 spread are exact
-// (Fraction reference); variances beyond DBL_MAX and positive variances
-// below the subnormal range return status 6 with NaN, never a silent value.
+// Rule 13 domain: nonzero |x| in [2^-256, 2^256] and spread <= 2^64 (raw
+// values and the differences the statistic uses). Inside: exact 2^k
+// identities; outside: N4mError with status 10 (UNSUPPORTED), never a value.
 const twoGroups = [0, 0, 1, 1];
-const huge = statsVarianceComponentsReml({ data: new Float64Array([1e155 - 3e145, 1e155 - 1e145, 1e155 + 1e145, 1e155 + 3e145]), rows: 4, cols: 1 }, twoGroups);
-assert.equal(huge.status[0], 0);
-vcNear(huge.sigma2Between[0], 7.000004539241947e+290, 1e-9);
-vcNear(huge.sigma2Within[0], 1.9999999359517287e+290, 1e-9);
-const over = statsVarianceComponentsReml({ data: new Float64Array([-1e300, -9e299, 9e299, 1e300]), rows: 4, cols: 1 }, twoGroups);
-assert.equal(over.status[0], 6);
-assert.ok(Number.isNaN(over.sigma2Between[0]) && Number.isNaN(over.icc[0]));
-const subnormal = 2 ** -1060;
-const under = statsVarianceComponentsReml({ data: new Float64Array([subnormal, 3 * subnormal, 9 * subnormal, 15 * subnormal]), rows: 4, cols: 1 }, twoGroups);
-assert.equal(under.status[0], 6);
-const overCi = statsVarianceComponentsIntervals({ data: new Float64Array([-1e300, -9e299, 9e299, 1e300]), rows: 4, cols: 1 }, twoGroups, { confidence: 0.95, nBootstrap: 0, seed: 0 });
-assert.equal(overCi.intervalStatus[0], 0);
-assert.ok(overCi.sdChiSquare[0] > 0 && Number.isFinite(overCi.sdChiSquare[1]));
+const off = 2 ** 255, u = 2 ** 210;
+const top = statsVarianceComponentsReml({ data: new Float64Array([off - 3 * u, off - u, off + u, off + 3 * u]), rows: 4, cols: 1 }, twoGroups);
+assert.equal(top.status[0], 0);
+vcNear(top.sigma2Between[0], 7 * 2 ** 420, 1e-12);
+vcNear(top.sigma2Within[0], 2 * 2 ** 420, 1e-12);
+vcNear(top.icc[0], 7 / 9, 1e-12);
+const refused = (data, groups) => {
+    for (const call of [
+        () => statsVarianceComponentsReml({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups),
+        () => statsVarianceComponentsIntervals({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups, { confidence: 0.95, nBootstrap: 0, seed: 0 }),
+    ]) {
+        assert.throws(call, e => e.status === 10 && /outside the supported numerical domain/.test(e.message));
+    }
+};
+const accepted = (data, groups) => {
+    assert.equal(statsVarianceComponentsReml({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups).status.length, 1);
+};
+const g3 = [0, 1, 1], g001 = [0, 0, 1];
+accepted([2 ** 256, 2 ** 255, 2 ** 254], g3);
+refused([2 ** 256 * (1 + 2 ** -52), 2 ** 255, 2 ** 254], g3);
+accepted([2 ** -256, 2 ** -255, 2 ** -254], g3);
+refused([2 ** -257, 2 ** -255, 2 ** -254], g3);
+accepted([1, 2 ** 64, 2], g3);
+refused([1, 2 ** 65, 2], g3);
+accepted([1, 1 + 2 ** -50, 2 ** 10], g001);
+refused([1, 1 + 2 ** -52, 2 ** 12], g001);
+refused([-1e300, -9e299, 9e299, 1e300], twoGroups);
 console.log("variance components: ok");
