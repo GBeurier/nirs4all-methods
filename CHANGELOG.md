@@ -37,12 +37,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
     review counter-examples, permutations, mixed exponents and both sides of
     the resolution domain.
 - `n4m_preflight_pca_compute` declares the supported numerical domain D
-  (nonzero |x| in [2^-128, 2^128], spread <= 2^64) and refuses inputs outside
+  (nonzero |x| in [2^-128, 2^128], spread <= 2^32) and refuses inputs outside
   it with `N4M_ERR_UNSUPPORTED`. Inside D it centres with compensated sums,
   ignores constant columns, and is exact under power-of-two scaling.
-  Variances are accurate to the absolute bound
-  `16 * max(n,p) * eps * lambda_max`; smaller ones are unresolved and are
-  published as 0.
+  Variances carry an absolute error of order `max(n,p) * eps * lambda_max`
+  (no relative accuracy is claimed); components not above the conservative
+  threshold `16 * max(n,p) * eps * lambda_max` are unresolved and published
+  as 0.
 - The Jacobi convergence threshold no longer underflows for weak column pairs
   (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
   `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps

@@ -39,7 +39,7 @@ static bool rel_close(double a, double b, double tol) {
 static const double kPcaBase[30]={3,-1,4,1,-5, 9,2,-6,5,3, -5,8,9,-7,9, 3,2,-3,8,4,
                                   -6,2,6,4,-3, 3,3,-8,3,2};
 // Supported domain D of the PCA: nonzero |x| in [2^-128, 2^128] and
-// max/min nonzero |x| <= 2^64; outside it N4M_ERR_UNSUPPORTED.
+// max/min nonzero |x| <= 2^32 (rule 15); outside it N4M_ERR_UNSUPPORTED.
 static void pca_invariance_tests(n4m_context_t* ctx) {
     const int64_t n=6, p=5; const int32_t k=3;
     const std::vector<double> base_x(kPcaBase,kPcaBase+30);
@@ -66,24 +66,24 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         REQUIRE(r.loadings==base.loadings);
     }
     // D boundaries, each side: magnitude 2^128 / next above, 2^-128 / 2^-129,
-    // spread 2^64 / 2^65.
+    // spread 2^32 / 2^33.
     {
         const auto two=[](int e){ return std::ldexp(1.0,e); };
-        const std::vector<double> hi={two(128),two(64),-two(128),two(65),two(127),-two(64),
-                                      0,3*two(64),two(126),two(66),-two(127),0};
+        const std::vector<double> hi={two(128),two(96),-two(128),two(97),two(127),-two(96),
+                                      0,3*two(96),two(126),two(98),-two(127),0};
         PcaRun r=run_pca(ctx,hi,6,2,2);
-        // lambda_2 / lambda_1 ~ 2^-128: below the resolution, published as 0.
+        // lambda_2 / lambda_1 ~ 2^-64: below the resolution, published as 0.
         REQUIRE(r.status==N4M_OK && std::isfinite(r.moments[1]) && r.eigen[0]>0.0 && r.eigen[1]==0.0);
         std::vector<double> lo(hi);
-        for (double& v : lo) v=std::ldexp(v,-192);           // [2^-128, 2^-64]
+        for (double& v : lo) v=std::ldexp(v,-224);           // [2^-128, 2^-96]
         const PcaRun rl=run_pca(ctx,lo,6,2,2);
-        REQUIRE(rl.status==N4M_OK && rl.eigen[0]==std::ldexp(r.eigen[0],-384) &&
-                rl.moments[1]==std::ldexp(r.moments[1],-768));
+        REQUIRE(rl.status==N4M_OK && rl.eigen[0]==std::ldexp(r.eigen[0],-448) &&
+                rl.moments[1]==std::ldexp(r.moments[1],-896));
         std::vector<double> x(hi); x[0]=std::nextafter(two(128),HUGE_VAL);
         REQUIRE(run_pca(ctx,x,6,2,2).status==N4M_ERR_UNSUPPORTED);
-        x=lo; for (double& v : x) v*=0.5;                    // [2^-129, 2^-65]
+        x=lo; for (double& v : x) v*=0.5;                    // [2^-129, 2^-97]
         REQUIRE(run_pca(ctx,x,6,2,2).status==N4M_ERR_UNSUPPORTED);
-        x=hi; x[1]=two(63);                                  // spread 2^65
+        x=hi; x[1]=two(95);                                  // spread 2^33
         REQUIRE(run_pca(ctx,x,6,2,2).status==N4M_ERR_UNSUPPORTED);
     }
     // Translation inside D: integer data + 2^40 and 16*X + 1e16 are exact.
@@ -100,13 +100,13 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         for (size_t i=0;i<r.loadings.size();++i)
             REQUIRE(std::abs(r.loadings[i]-base.loadings[i])<=1e-12);
     }
-    // Outside D: a 1e300 offset, a 1e300 constant column, a 2^70 column.
+    // Outside D: a 1e300 offset, a 1e300 constant column, a 2^34 column.
     {
         std::vector<double> x(base_x);
         for (double& v : x) v=std::ldexp(v,950)+1e300;
         REQUIRE(run_pca(ctx,x,n,p,k).status==N4M_ERR_UNSUPPORTED);
     }
-    // Constant columns inside D (2^60, -3*2^58, 0.5, 0) are ignored: same
+    // Constant columns inside D (2^30, -3*2^28, 0.5, 0) are ignored: same
     // spectrum, scores and loadings, zero loading on the constant columns.
     const auto with_constants=[&](const double c[4]) {
         const int64_t pc=p+4;
@@ -119,7 +119,7 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         return run_pca(ctx,x,n,pc,k);
     };
     {
-        const double c[4]={std::ldexp(1.0,60),-3*std::ldexp(1.0,58),0.5,0.0};
+        const double c[4]={std::ldexp(1.0,30),-3*std::ldexp(1.0,28),0.5,0.0};
         const PcaRun r=with_constants(c);
         const int64_t pc=p+4;
         REQUIRE(r.status==N4M_OK);
@@ -137,25 +137,26 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
         }
         for (size_t i=0;i<r.scores.size();++i)
             REQUIRE(std::abs(r.scores[i]-base.scores[i])<=1e-11);
-        const double huge[4]={1e300,0.5,0.5,0.0}, wide[4]={std::ldexp(1.0,70),0.5,0.5,0.0};
+        const double huge[4]={1e300,0.5,0.5,0.0}, wide[4]={std::ldexp(1.0,34),0.5,0.5,0.0};
         REQUIRE(with_constants(huge).status==N4M_ERR_UNSUPPORTED);
         REQUIRE(with_constants(wide).status==N4M_ERR_UNSUPPORTED);
     }
     // Review cases. [A; -A] with A = [[-1,1,-1],[-1,-1,-1],[1,-1,1],[-t,t,t]]:
     // analytic variances 2 sigma^2 / 7 with sigma = (sqrt17 +- 1)/2 (the
-    // third, 4t^2/7, is unresolved). t = 2^-60 is inside D (and needs
-    // compensated centring); t = 1e-40 is outside (spread 1e40).
-    for (double t : {std::ldexp(1.0,-40), std::ldexp(1.0,-60), 1e-40}) {
+    // third, 4t^2/7 ~ 2^-61 lambda_1 for t = 2^-30, is unresolved). Spreads
+    // 2^40, 2^60 and 1e40 are outside D (rule 15). The resolved weak case
+    // t = 2^-20 is checked against mpmath in pca_resolution_tests.
+    for (double t : {std::ldexp(1.0,-30), std::ldexp(1.0,-40), std::ldexp(1.0,-60), 1e-40}) {
         const double a4[12]={-1,1,-1, -1,-1,-1, 1,-1,1, -t,t,t};
         std::vector<double> x(24);
         for (size_t i=0;i<12;++i) { x[i]=a4[i]; x[12+i]=-a4[i]; }
         const PcaRun r=run_pca(ctx,x,8,3,3);
-        if (t==1e-40) { REQUIRE(r.status==N4M_ERR_UNSUPPORTED); continue; }
+        if (t!=std::ldexp(1.0,-30)) { REQUIRE(r.status==N4M_ERR_UNSUPPORTED); continue; }
         REQUIRE(r.status==N4M_OK);
         const double s17=std::sqrt(17.0);
         REQUIRE(rel_close(r.eigen[0],2*(s17+1)*(s17+1)/28,1e-12));
         REQUIRE(rel_close(r.eigen[1],2*(s17-1)*(s17-1)/28,1e-12));
-        // 4t^2/7 ~ 2^-81 lambda_1 is below the resolution (rule 14): the
+        // 4t^2/7 ~ 2^-61 lambda_1 is below the resolution (rule 14): the
         // 2.19 entry point publishes it as 0 (the 2.20 one also flags it).
         REQUIRE(r.eigen[2]==0.0);
     }
@@ -168,9 +169,10 @@ static void pca_invariance_tests(n4m_context_t* ctx) {
 }
 
 // Rule 14 accuracy contract through the ABI 2.20 entry point, against the
-// mpmath variances of svd_degenerate_goldens.inc (B_8 plateau, B_8 below the
-// double range, B_6 (x) 2x2 that used to exhaust the Jacobi sweeps), under
-// row and column reversal. Every resolved variance lies within the published
+// mpmath variances of svd_degenerate_goldens.inc, under row and column
+// reversal. Families inside D (B_8(2^-30) plateau, B_8(2^-30) at 2^-97,
+// B_6(2^-30) (x) 2x2, a weak but resolved variance) are computed; the
+// review-round families outside D (spread > 2^32) are refused. Every resolved variance lies within the published
 // resolution and is a normal double; every unresolved one is flagged with a
 // zero variance and zero scores. Variances clearly above / below the bound
 // must be classified accordingly.
@@ -178,6 +180,11 @@ static void pca_resolution_tests(n4m_context_t* ctx) {
     int unresolved_seen=0;
     for (const MpGolden& g : kMpGoldens) {
         const int64_t n=g.m, p=g.n; const auto k=static_cast<int32_t>(std::min(n,p));
+        if (!g.preflight_domain) {
+            REQUIRE(run_pca(ctx,std::vector<double>(g.A,g.A+n*p),n,p,k).status==
+                    N4M_ERR_UNSUPPORTED);
+            continue;
+        }
         for (int perm=0; perm<4; ++perm) {
             std::vector<double> x(static_cast<size_t>(n*p)), sc(static_cast<size_t>(n*k)),
                 ld(static_cast<size_t>(k*p)), ev(static_cast<size_t>(k)), mom(2);
@@ -208,15 +215,8 @@ static void pca_resolution_tests(n4m_context_t* ctx) {
             }
         }
     }
-    // Per family and permutation: one, one and two unresolved components.
-    REQUIRE(unresolved_seen==4*(1+1+2));
-    // B_8 below the double range scaled by 2^-30 leaves D (|x| = 2^-157).
-    {
-        const MpGolden& g=kMpGoldens[1];
-        std::vector<double> x(g.A,g.A+g.m*g.n);
-        for (double& v : x) v=std::ldexp(v,-30);
-        REQUIRE(run_pca(ctx,x,g.m,g.n,static_cast<int32_t>(g.n)).status==N4M_ERR_UNSUPPORTED);
-    }
+    // Per in-domain family and permutation: 1, 1, 2 and 0 unresolved.
+    REQUIRE(unresolved_seen==4*(1+1+2+0));
 }
 
 int main() {

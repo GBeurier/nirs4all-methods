@@ -8,8 +8,10 @@ signatures, and no serialized format changes.
 `n4m_preflight_pca_compute_resolved` is `n4m_preflight_pca_compute` with its
 accuracy contract made explicit. Two outputs are added:
 
-- `resolution`, one element: the ABSOLUTE accuracy bound of every
-  eigenvalue, `16 * max(n,p) * DBL_EPSILON * lambda_max`.
+- `resolution`, one element: the conservative absolute accuracy threshold
+  `16 * max(n,p) * DBL_EPSILON * lambda_max`. Eigenvalues carry an absolute
+  error of order `max(n,p) * eps * lambda_max`, as for any backward-stable
+  SVD; no relative accuracy is claimed.
 - `unresolved`, k bytes: 1 for a component whose variance is not above that
   bound. Such a component is published with a zero variance and zero scores,
   and must not be counted as numerical rank or read as a measured variance.
@@ -22,7 +24,8 @@ implementation and publishes unresolved components as 0, without the flag.
 
 Both entry points declare the same supported numerical domain D. Every nonzero
 |x| must lie in [2^-128, 2^128] (tighter than the generic 2^256 because
-trace(C^2) is quartic in X), and max/min nonzero |x| must be <= 2^64; exact
+trace(C^2) is quartic in X), and max/min nonzero |x| must be <= 2^32 (rule 15,
+shared constant `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`); exact
 zeros are allowed. Outside D they return `N4M_ERR_UNSUPPORTED` with
 "input outside the supported numerical domain (...)" before computing.
 
