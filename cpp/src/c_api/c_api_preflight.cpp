@@ -53,6 +53,8 @@ struct DomainScan {
         max = std::max(max, a);
         min = std::min(min, a);
     }
+    // Magnitude bound only (summaries need no spread bound).
+    bool in_magnitude() const { return ok; }
     bool in_domain() const {
         return ok && (max == 0.0 || max <= std::ldexp(min, domain_spread_exponent));
     }
@@ -391,7 +393,12 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
             scan.add(values[i]);
             v.push_back(values[i]);
         }
-        if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        // Summary: magnitude bound only. Mean, SD and quartiles are correct
+        // for any spread inside it (lead arbitration of rule 13).
+        if (!scan.in_magnitude())
+            return fail(ctx, N4M_ERR_UNSUPPORTED,
+                        "input outside the supported numerical domain (nonzero |x| in "
+                        "[2^-256, 2^256]; summaries have no spread bound)");
         std::fill(out_eight, out_eight + 8, nan_value);
         out_eight[0] = static_cast<double>(v.size());
         if (v.empty()) return N4M_OK;

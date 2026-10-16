@@ -331,9 +331,9 @@ bool ulp_close(double x, double y, int ulps) {
     return std::isfinite(x) && std::abs(x - y) <= ulps * 0x1p-52 * std::max(std::abs(y), 0x1p-1022);
 }
 
-// Summary (ABI 2.18) on the domain: exact rational oracle (mean, quartiles
-// within 1-2 ulp, SD within 1e-15), power-of-two equivariance, exact offsets
-// and both domain boundaries.
+// Summary (ABI 2.18) inside its magnitude bound: exact rational oracle (mean,
+// quartiles within 1-2 ulp, SD within 1e-15) for any spread, power-of-two
+// equivariance, exact offsets and both magnitude boundaries.
 void summary_checks(n4m_context_t* ctx) {
     const auto run = [&](std::vector<double> v, double* out) {
         return n4m_preflight_summary_compute(ctx, v.data(), nullptr,
@@ -367,8 +367,24 @@ void summary_checks(n4m_context_t* ctx) {
     std::vector<double> shifted(base);
     for (double& v : shifted) v = v * p2(148) + p2(200);
     REQUIRE(run(shifted, out) == N4M_OK && rel(out[4], ref[4] * p2(148), 1e-15));
-    REQUIRE(run({1.0, p2(64)}, out) == N4M_OK);
-    REQUIRE(run({1.0, std::nextafter(p2(64), INFINITY)}, out) == N4M_ERR_UNSUPPORTED);
+    // No spread bound for the summary (lead arbitration): 1e-20 next to 1 and
+    // 2^-256 next to 2^256 stay correct against the rational oracle;
+    // magnitudes outside [2^-256, 2^256] (1e-200, 1e200) are refused.
+    const SummaryGolden spread[] = {
+        {{1e-20, 1.0, 0.5, 1e-20, 2.0}, {0.7, 0.8366600265340756, 1e-20, 0.5, 1.0}},
+        {{8.636168555094445e-78, 1.157920892373162e+77, 0.0, -8.636168555094445e-78, 4.820814132776971e+60},
+         {2.315841784746324e+76, 5.178379655827216e+76, 0.0, 8.636168555094445e-78, 4.820814132776971e+60}},
+        {{1e-20, -1e-20, 1.0, 0.0}, {0.25, 0.5, -2.5e-21, 5e-21, 0.25}},
+        {{1.0, 1.0000000000000002, 1e-25, 7.0}, {2.25, 3.2015621187164243, 0.75, 1.0, 2.5}},
+    };
+    for (const auto& g : spread) {
+        REQUIRE(run(g.x, out) == N4M_OK);
+        REQUIRE(ulp_close(out[3], g.want[0], 1) && rel(out[4], g.want[1], 1e-15));
+        for (int c = 0; c < 3; ++c) REQUIRE(ulp_close(out[5 + c], g.want[static_cast<size_t>(2 + c)], 2));
+    }
+    REQUIRE(run({1.0, std::nextafter(p2(64), INFINITY)}, out) == N4M_OK);
+    REQUIRE(run({1e-200, 1.0}, out) == N4M_ERR_UNSUPPORTED);
+    REQUIRE(run({1e200, 1.0}, out) == N4M_ERR_UNSUPPORTED);
 }
 
 // Nearest neighbours (ABI 2.18): candidate orders where a naive double

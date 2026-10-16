@@ -39,9 +39,9 @@ N4M_API n4m_status_t n4m_preflight_repeatability_compute(
  * q25, median, q75. Quantiles use linear type-7 interpolation. The optional
  * mask has n bytes; zero excludes a value. Unmasked nonfinite values fail.
  * For no values, all fields except count=0 are NaN; SD is NaN for n<2.
- * Supported domain D: every nonzero |x| in [2^-256, 2^256] and over the unmasked values,
- * max/min nonzero |x| <= 2^64; otherwise N4M_ERR_UNSUPPORTED ("input outside
- * the supported numerical domain") before computing. Inside D the mean
+ * Supported domain: every nonzero unmasked |x| in [2^-256, 2^256], with no
+ * spread bound; otherwise N4M_ERR_UNSUPPORTED ("input outside the supported
+ * numerical domain") before computing. Inside it the mean
  * is a double-double from an unevaluated Neumaier pair (error <= (n u)^2
  * mean|x| + u |m|), the SD a compensated sum of squared deviations from it,
  * and each quartile a + w (b - a) with b - a kept exactly (within 2 ulp). */

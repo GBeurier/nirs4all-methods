@@ -305,9 +305,16 @@ for (const [x, [mean, sd, q1, med, q3]] of summaryGoldens) {
     rel(out[4], sd, 1e-15, `sd ${x}`);
     [q1, med, q3].forEach((q, c) => assert.ok(ulpClose(out[5 + c], q, 2), `q ${x}`));
 }
-unsupported(() => preflightSummary(new Float64Array([1, 0, 2 ** 64 + 2 ** 12])));
+// The summary has no spread bound: 1e-20 next to 1 against the rational oracle.
+{
+    const out = preflightSummary(new Float64Array([1e-20, 1, 0.5, 1e-20, 2]));
+    assert.ok(ulpClose(out[3], 0.7, 1) && ulpClose(out[5], 1e-20, 2));
+    rel(out[4], 0.8366600265340756, 1e-15);
+    assert.equal(preflightSummary(new Float64Array([1, 0, 2 ** 64 + 2 ** 12]))[0], 3);
+}
 unsupported(() => preflightSummary(new Float64Array([2 ** -257, 0])));
-assert.equal(preflightSummary(new Float64Array([1, 0, 2 ** 64]))[0], 3);
+unsupported(() => preflightSummary(new Float64Array([1e-200, 1])));
+unsupported(() => preflightSummary(new Float64Array([1e200, 1])));
 for (const [q, refs, order, dist] of knnGoldens) {
     const p = q.length, m = refs.length / p;
     const out = preflightNearestNeighbors(row(q), {data: new Float64Array(refs), rows: m, cols: p}, m);
