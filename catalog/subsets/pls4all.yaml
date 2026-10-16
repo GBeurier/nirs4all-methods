@@ -70,6 +70,7 @@ excludes:
     - "diagnostics.factor_association_exact"
     - "diagnostics.permanova"
     - "diagnostics.permdisp"
+    - "diagnostics.variance_components"
     - "preprocessing.signal_conversion.*"
     - "preprocessing.specialized.*"
 audience: |

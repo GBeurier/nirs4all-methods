@@ -10,6 +10,7 @@ import {
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
     clusterHdbscan, preflightAdjustedRandIndex, statsPermanova, statsPermdisp, statsPermanovaFreedmanLane, N4mError,
     statsEnergyDistance, statsPcaMonitor,
+    statsVarianceComponentsReml, statsVarianceComponentsIntervals,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -617,3 +618,81 @@ for (const c of permanovaFixture.cases) {
     }
 }
 console.log("JS/WASM Preflight diagnostics passed");
+
+// One-way REML and intervals: same independent references as
+// cpp/tests/test_variance_components.cpp (dense REML score equations with
+// NumPy 2.5.4 / SciPy 1.18.1; SciPy chi2/F quantiles; NumPy-drawn bootstrap).
+const vcNear = (actual, expected, tol) => assert.ok(
+    Math.abs(actual - expected) <= tol * Math.max(1, Math.abs(expected)), `${actual} != ${expected}`);
+const ga = [0, 0, 1, 1, 1, 2, 2, 2, 2, 3, 4, 4];
+const ya = { data: new Float64Array([1.0, 1.4, 2.2, 2.0, 2.9, 0.3, 0.9, 0.4, 0.8, 1.7, 3.1, 2.5]), rows: 12, cols: 1 };
+const vc = statsVarianceComponentsReml(ya, ga);
+assert.equal(vc.status[0], 0);
+vcNear(vc.sigma2Between[0], 0.7446105326226952, 1e-10);
+vcNear(vc.sigma2Within[0], 0.13630617544724544, 1e-10);
+vcNear(vc.icc[0], 0.8452678054592837, 1e-10);
+vcNear(vc.logLikelihood[0], -10.963218720046495, 1e-12);
+assert.deepEqual([vc.nGroups[0], vc.nObservations[0]], [5, 12]);
+const vci = statsVarianceComponentsIntervals(ya, ga, {
+    confidence: 0.95, nBootstrap: 40, seed: 12345n,
+    clusterIds: [7, 7, 7, 7, 7, 3, 3, 3, 3, 9, 5, 5],
+});
+vcNear(vci.sdChiSquare[0], 0.24570003389152809, 1e-10);
+vcNear(vci.sdChiSquare[1], 0.7563308737449301, 1e-10);
+assert.ok(Number.isNaN(vci.iccExactF[0]));
+assert.equal(vci.nValidReplicates[0], 40);
+vcNear(vci.sdBootstrap[0], 0.3094525017261184, 1e-10);
+vcNear(vci.sdBootstrap[1], 0.42426406871192857, 1e-10);
+assert.equal(vci.iccBootstrap[0], 0);
+vcNear(vci.iccBootstrap[1], 0.9233717840878614, 1e-8);
+const balanced = statsVarianceComponentsIntervals({
+    data: new Float64Array([1.0, 1.2, 0.9, 2.0, 2.3, 2.1, 0.2, 0.1, 0.5, 1.4, 1.6, 1.3]), rows: 12, cols: 1,
+}, [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3], { confidence: 0.95, nBootstrap: 0, seed: 0 });
+vcNear(balanced.iccExactF[0], 0.7838941809128407, 1e-10);
+vcNear(balanced.iccExactF[1], 0.9968006295172774, 1e-10);
+assert.equal(balanced.nValidReplicates[0], 0);
+// Searle bounds with 3 groups use F(2, nu) quantiles: closed form
+// (nu/2) expm1(-2 log(p)/nu) for the upper tail and reciprocity for
+// F(nu, 2). Data 10 i +- 1: MSB = 100 r, MSW = r/(r-1), F = 100 (r-1).
+for (const r of [2, 10, 1000]) {
+    const data = [], groups = [];
+    for (let i = 0; i < 3; i++) for (let j = 0; j < r; j++) { groups.push(i); data.push(10 * i + (j % 2 === 0 ? 1 : -1)); }
+    const nu = 3 * (r - 1), F = 100 * (r - 1), p = 0.025;
+    const fl = F / (0.5 * nu * Math.expm1(-2 * Math.log(p) / nu));
+    const fu = F / (0.5 * nu * Math.expm1(-2 * Math.log1p(-p) / nu));
+    const ci = statsVarianceComponentsIntervals({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups, { confidence: 0.95, nBootstrap: 0, seed: 0 });
+    vcNear(ci.iccExactF[0], (fl - 1) / (fl + r - 1), 1e-10);
+    vcNear(ci.iccExactF[1], (fu - 1) / (fu + r - 1), 1e-10);
+}
+// Rules 13/15 domain: nonzero |x| in [2^-256, 2^256] and spread <= 2^32 (raw
+// values and the differences the statistic uses). Inside: exact 2^k
+// identities; outside: N4mError with status 10 (UNSUPPORTED), never a value.
+const twoGroups = [0, 0, 1, 1];
+const off = 2 ** 255, u = 2 ** 210;
+const top = statsVarianceComponentsReml({ data: new Float64Array([off - 3 * u, off - u, off + u, off + 3 * u]), rows: 4, cols: 1 }, twoGroups);
+assert.equal(top.status[0], 0);
+vcNear(top.sigma2Between[0], 7 * 2 ** 420, 1e-12);
+vcNear(top.sigma2Within[0], 2 * 2 ** 420, 1e-12);
+vcNear(top.icc[0], 7 / 9, 1e-12);
+const refused = (data, groups) => {
+    for (const call of [
+        () => statsVarianceComponentsReml({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups),
+        () => statsVarianceComponentsIntervals({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups, { confidence: 0.95, nBootstrap: 0, seed: 0 }),
+    ]) {
+        assert.throws(call, e => e.status === 10 && /outside the supported numerical domain/.test(e.message));
+    }
+};
+const accepted = (data, groups) => {
+    assert.equal(statsVarianceComponentsReml({ data: new Float64Array(data), rows: data.length, cols: 1 }, groups).status.length, 1);
+};
+const g3 = [0, 1, 1], g001 = [0, 0, 1];
+accepted([2 ** 256, 2 ** 255, 2 ** 254], g3);
+refused([2 ** 256 * (1 + 2 ** -52), 2 ** 255, 2 ** 254], g3);
+accepted([2 ** -256, 2 ** -255, 2 ** -254], g3);
+refused([2 ** -257, 2 ** -255, 2 ** -254], g3);
+accepted([1, 2 ** 32, 2], g3);
+refused([1, 2 ** 33, 2], g3);
+accepted([1, 1 + 2 ** -20, 2 ** 10], g001);
+refused([1, 1 + 2 ** -22, 2 ** 12], g001);
+refused([-1e300, -9e299, 9e299, 1e300], twoGroups);
+console.log("variance components: ok");

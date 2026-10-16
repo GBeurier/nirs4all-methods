@@ -627,6 +627,8 @@ n4m_stats_pca_monitor
 n4m_stats_permanova
 n4m_stats_permanova_freedman_lane
 n4m_stats_permdisp
+n4m_stats_variance_components_intervals
+n4m_stats_variance_components_reml
 n4m_status_to_string
 n4m_transform_airpls_create
 n4m_transform_airpls_destroy

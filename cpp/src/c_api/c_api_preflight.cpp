@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "core/common/centring.hpp"
 #include "core/common/context.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/clustering/_vendored/hdbscan.hpp"
@@ -22,6 +23,8 @@
 #include "core/preprocessing/derivatives/savitzky_golay.h"
 
 namespace {
+using ::n4m::core::bounding_exponent;
+using ::n4m::core::center_in_place;
 using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
@@ -144,36 +147,6 @@ double log10_factorial_ratio(int64_t n, const std::vector<int64_t>& counts) noex
     double value = std::lgamma(static_cast<double>(n) + 1.0);
     for (int64_t c : counts) value -= std::lgamma(static_cast<double>(c) + 1.0);
     return value / std::log(10.0);
-}
-
-// Exponent e of a power of two bounding max|v|: max|v| * 2^-e in [1/2, 1).
-int bounding_exponent(const std::vector<double>& values) noexcept {
-    double largest = 0.0;
-    for (double v : values) largest = std::max(largest, std::abs(v));
-    int exponent = 0;
-    if (largest > 0.0) std::frexp(largest, &exponent);
-    return exponent;
-}
-
-// In-place centering without cancellation of a large common offset: shift
-// by the first value (exact for nearby values), subtract the mean, then the
-// residual mean.
-void center_in_place(std::vector<double>& v) noexcept {
-    if (v.empty()) return;
-    const double origin = v[0];
-    double mean = 0.0;
-    for (double& x : v) {
-        x -= origin;
-        mean += x;
-    }
-    mean /= static_cast<double>(v.size());
-    double residual = 0.0;
-    for (double& x : v) {
-        x -= mean;
-        residual += x;
-    }
-    residual /= static_cast<double>(v.size());
-    for (double& x : v) x -= residual;
 }
 
 // Centered copy, stable under translation and scale: values are divided by

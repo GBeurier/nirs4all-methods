@@ -113,7 +113,9 @@ add_library(n4m_core OBJECT
     core/uve_selection.cpp
     core/validation.cpp
     core/vip_spa_selection.cpp
-    core/vissa_selection.cpp)
+    core/vissa_selection.cpp
+    core/variance_components.cpp
+    core/common/distributions.cpp)
 if(N4M_WITH_CUDA)
     target_sources(n4m_core PRIVATE
         core/cuda_dispatch.cpp
