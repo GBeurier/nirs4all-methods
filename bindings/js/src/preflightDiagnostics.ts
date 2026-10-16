@@ -859,7 +859,7 @@ export interface GroupMeansResult {
 
 /** Equal-weight per-group column means (double-double sums): codes in
  * [0, nGroups), every group nonempty, values in the declared numerical domain
- * (nonzero |x| in [2^-256, 2^256], spread <= 2^64), else N4mError. */
+ * (nonzero |x| in [2^-256, 2^256]; a summary, so no spread limit), else N4mError. */
 export function statsGroupMeans(X: Matrix, groupCodes: readonly number[],
     nGroups: number): GroupMeansResult {
     validateMatrix(X);
@@ -896,7 +896,7 @@ export interface RegressionScoresResult {
 
 /** RMSE, MAE and R² through n4m_stats_regression_scores (explicit residuals,
  * double-double sums). Inputs outside the declared numerical domain
- * (nonzero |x| in [2^-256, 2^256], spread <= 2^64) throw N4mError
+ * (nonzero |x| in [2^-256, 2^256], spread <= 2^32) throw N4mError
  * ERR_UNSUPPORTED. */
 export function statsRegressionScores(yTrue: Float64Array, yPred: Float64Array): RegressionScoresResult {
     if (yTrue.length < 1 || yTrue.length !== yPred.length) {

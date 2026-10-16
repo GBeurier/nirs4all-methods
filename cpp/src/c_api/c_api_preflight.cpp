@@ -1942,15 +1942,16 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PERMDISP internal error"); }
 }
 
-// ---- Declared numerical domain D (lead rule 13), shared constants ----------
-// Finite values, every nonzero |x| in [2^-256, 2^256], and a dynamic spread
-// (max nonzero |x| / min nonzero |x|) of at most 2^64 inside one array.
+// ---- Declared numerical domain D (lead rules 13 and 15) ---------------------
+// Finite values and every nonzero |x| in [2^-256, 2^256]; where a statistic
+// depends on differences of the values, also a spread (max nonzero |x| /
+// min nonzero |x|) of at most 2^N4M_DOMAIN_MAX_SPREAD_LOG2 inside one array.
 // Outside D the kernels refuse with N4M_ERR_UNSUPPORTED before computing.
 constexpr int domain_exponent = 256;
-constexpr int domain_spread_exponent = 64;
+constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
 constexpr const char* domain_message =
     "input outside the supported numerical domain (finite, nonzero |x| in "
-    "[2^-256, 2^256], spread <= 2^64)";
+    "[2^-256, 2^256], spread <= 2^32 where differences matter)";
 
 struct DomainScan {
     bool finite = true;
@@ -1963,14 +1964,17 @@ struct DomainScan {
         max_abs = std::max(max_abs, a);
         min_nonzero = std::min(min_nonzero, a);
     }
-    // True when every value lies in D.
-    bool inside() const noexcept {
+    // Magnitude bounds of D.
+    bool in_magnitude() const noexcept {
         if (!finite) return false;
         if (max_abs == 0.0) return true;
-        const double hi = std::ldexp(1.0, domain_exponent);
-        const double lo = std::ldexp(1.0, -domain_exponent);
-        return max_abs <= hi && min_nonzero >= lo &&
-               max_abs <= std::ldexp(min_nonzero, domain_spread_exponent);
+        return max_abs <= std::ldexp(1.0, domain_exponent) &&
+               min_nonzero >= std::ldexp(1.0, -domain_exponent);
+    }
+    // Magnitude bounds and spread limit of D.
+    bool inside() const noexcept {
+        return in_magnitude() &&
+               (max_abs == 0.0 || max_abs <= std::ldexp(min_nonzero, N4M_DOMAIN_MAX_SPREAD_LOG2));
     }
 };
 
@@ -2028,9 +2032,12 @@ N4M_API n4m_status_t n4m_stats_group_means(
             for (int64_t j = 0; j < k; ++j) scan.add(at(*X, i, j));
         if (!scan.finite)
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite group-means input");
-        if (!scan.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
-        // Inside D no partial sum can overflow (n * 2^256) and the
-        // double-double sum keeps every value; one division gives the mean.
+        // A mean is a summary: only the magnitude bounds apply (rule 15).
+        if (!scan.in_magnitude()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        // Inside D no partial sum can overflow (n * 2^256); the double-double
+        // sum and one division give a mean whose relative error is small
+        // (order n eps) for same-sign data and whose absolute error is order
+        // n eps max|x| otherwise.
         std::vector<DoubleDouble> sum(g * kk);
         for (int64_t i = 0; i < n; ++i) {
             const auto c = static_cast<size_t>(group_codes[i]);
@@ -2079,10 +2086,9 @@ N4M_API n4m_status_t n4m_stats_regression_scores(
         DoubleDouble mean_err;
         for (int64_t i = 0; i < n; ++i) mean_err.add(y_true[i] - mean_hi);
         const double mean_lo = mean_err.divided(nd);
-        // Each deviation is computed with a relative error of about 2^-53
-        // of itself (the mean carries ~2^-106 of max|y|), and distinct doubles
-        // never deviate by less than half an ulp of max|y|, so SST keeps its
-        // relative precision inside D.
+        // With spread <= 2^32 the deviations keep their difference (no
+        // cancellation by offset); RMSE, MAE, SSE and SST have relative errors
+        // of order n eps, R^2 an absolute error of order n eps (1 + SSE/SST).
         DoubleDouble sst;
         for (int64_t i = 0; i < n; ++i) {
             const double d = (y_true[i] - mean_hi) - mean_lo;

@@ -353,9 +353,9 @@ const offset = statsGroupMeans({data: new Float64Array([2 ** 52 + 1, 2 ** 52 + 2
     rows: 3, cols: 1}, [0, 0, 0], 1);
 assert.equal(offset.means.data[0], 2 ** 52 + 2);
 // Declared domain: inside at its boundary, refused outside with ERR_UNSUPPORTED.
-assert.equal(statsGroupMeans({data: new Float64Array([1, 2 ** 64]), rows: 2, cols: 1}, [0, 0], 1).counts[0], 2);
+assert.equal(statsGroupMeans({data: new Float64Array([1, 2 ** 100]), rows: 2, cols: 1}, [0, 0], 1).counts[0], 2);
 const domainError = (fn) => assert.throws(fn, (e) => e instanceof N4mError && e.status === Status.ERR_UNSUPPORTED);
-domainError(() => statsGroupMeans({data: new Float64Array([1, 2 ** 65]), rows: 2, cols: 1}, [0, 0], 1));
+domainError(() => statsGroupMeans({data: new Float64Array([2 ** 300]), rows: 1, cols: 1}, [0], 1));
 domainError(() => statsGroupMeans({data: new Float64Array([Number.MAX_VALUE]), rows: 1, cols: 1}, [0], 1));
 assert.throws(() => statsGroupMeans({data: new Float64Array([1, 2]), rows: 2, cols: 1}, [0, 2], 3));
 assert.throws(() => statsGroupMeans({data: new Float64Array([1, 2]), rows: 2, cols: 1}, [0, 0], 2), N4mError);
@@ -373,3 +373,6 @@ const shiftedScores = statsRegressionScores(new Float64Array([1, 2, 3, 4].map((v
 assert.equal(shiftedScores.r2, 0);
 assert.ok(Number.isNaN(statsRegressionScores(new Float64Array([2, 2]), new Float64Array([1, 3])).r2));
 domainError(() => statsRegressionScores(new Float64Array([1, 2 ** 300]), new Float64Array([1, 1])));
+// Spread limit 2^32 (rule 15), both sides.
+assert.equal(statsRegressionScores(new Float64Array([1, 2 ** 32]), new Float64Array([1, 1])).mae, (2 ** 32 - 1) / 2);
+domainError(() => statsRegressionScores(new Float64Array([1, 2 ** 33]), new Float64Array([1, 1])));

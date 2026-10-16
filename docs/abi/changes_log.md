@@ -12,9 +12,12 @@ These two kernels are added to the same unreleased 2.20.0 surface in
   It uses explicit residuals, deviations around a double-double mean, and
   double-double sums. R² is NaN when the target is constant.
 
-Domain of validity (lead rule 13), the same for both kernels: finite values,
-every nonzero |x| in [2^-256, 2^256], and max nonzero |x| / min nonzero |x|
-<= 2^64 inside each input array. Outside this domain they return
+Domain of validity (lead rules 13 and 15): finite values and every nonzero
+|x| in [2^-256, 2^256]. Regression scores, which depend on differences, also
+require max nonzero |x| / min nonzero |x| <= 2^32 per input array (shared
+constant `N4M_DOMAIN_MAX_SPREAD_LOG2`); group means are a summary and are
+exempt. Precision is of order n eps (relative for same-sign means, RMSE and
+MAE; absolute, times 1 + SSE/SST, for R²). Outside this domain they return
 `N4M_ERR_UNSUPPORTED` with the message "input outside the supported
 numerical domain (...)". Nonfinite values return `N4M_ERR_INVALID_ARGUMENT`,
 as do invalid group codes and empty groups.
