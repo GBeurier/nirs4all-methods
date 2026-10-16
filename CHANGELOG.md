@@ -37,6 +37,12 @@ surface). No model-state serialization format changes.
 - Internal SVD / symmetric-eigen helpers no longer fail or return wrong
   factors on degenerate inputs (see Fixed); on non-degenerate inputs the
   results are bit-identical to 1.3.6.
+- PLS regression (all eight solvers) and PCR without autoscaling are
+  scale-equivariant: data at 2^-30 that returned `N4M_ERR_NUMERICAL_FAILURE`
+  now fit. Previously successful fits are bit-identical except NIPALS
+  (coefficients within a few 1e-12 relative, latent arrays up to ~4e-7
+  relative when Y was much larger than X) and the PCR Y scores it zeroed
+  (see Fixed).
 
 ### Added
 
@@ -424,9 +430,6 @@ surface). No model-state serialization format changes.
   (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
   `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
   inside D.
-
-### Fixed
-
 - PLS regression (`models.pls.pls_regression`, every solver: NIPALS, SIMPLS,
   orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD) and PCR
   (`models.pls.pcr`) without autoscaling are now scale-equivariant. Their
