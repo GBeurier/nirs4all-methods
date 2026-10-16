@@ -56,7 +56,8 @@ NIRS4ALL_DONOR_CATEGORIES = {
 # 2.20 are not registry-wired: their NumPy/SciPy, statsmodels, scikit-learn,
 # scikit-bio and R p.adjust reference values are pinned in the native contract
 # tests (cpp/tests/test_preflight.cpp, cpp/tests/test_hdbscan.cpp,
-# cpp/tests/test_permanova.cpp, cpp/tests/test_domain_shift.cpp) and
+# cpp/tests/test_permanova.cpp, cpp/tests/test_domain_shift.cpp,
+# cpp/tests/test_group_means.cpp) and
 # parity/fixtures/{hdbscan,permanova,domain_shift}_v1.json.
 # The variance components pin dense-REML, statsmodels and SciPy references
 # in cpp/tests/test_variance_components.cpp.
@@ -67,11 +68,13 @@ NIRS4ALL_DONOR_METHODS = {
     "diagnostics.factor_association_exact",
     "diagnostics.hdbscan",
     "diagnostics.holm_adjust",
+    "diagnostics.group_means",
     "diagnostics.permanova",
     "diagnostics.permdisp",
     "diagnostics.energy_distance",
     "diagnostics.pca_monitor",
     "diagnostics.preflight_qualification",
+    "diagnostics.regression_scores",
     "diagnostics.regression_metrics",
     "diagnostics.variance_components",
     "models.ensembles.moment_stack",

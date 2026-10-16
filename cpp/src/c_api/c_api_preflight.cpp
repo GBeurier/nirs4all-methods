@@ -2632,5 +2632,166 @@ N4M_API n4m_status_t n4m_stats_pca_monitor(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PCA monitor allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PCA monitor internal error"); }
+
+// ---- Declared numerical domain D (lead rules 13 and 15) ---------------------
+// Finite values and every nonzero |x| in [2^-256, 2^256]; where a statistic
+// depends on differences of the values, also a spread (max nonzero |x| /
+// min nonzero |x|) of at most 2^N4M_DOMAIN_MAX_SPREAD_LOG2 inside one array.
+// Outside D the kernels refuse with N4M_ERR_UNSUPPORTED before computing.
+constexpr int domain_exponent = 256;
+constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
+constexpr const char* domain_message =
+    "input outside the supported numerical domain (finite, nonzero |x| in "
+    "[2^-256, 2^256], spread <= 2^32 where differences matter)";
+
+struct DomainScan {
+    bool finite = true;
+    double max_abs = 0.0;
+    double min_nonzero = std::numeric_limits<double>::infinity();
+    void add(double x) noexcept {
+        if (!std::isfinite(x)) { finite = false; return; }
+        const double a = std::abs(x);
+        if (a == 0.0) return;
+        max_abs = std::max(max_abs, a);
+        min_nonzero = std::min(min_nonzero, a);
+    }
+    // Magnitude bounds of D.
+    bool in_magnitude() const noexcept {
+        if (!finite) return false;
+        if (max_abs == 0.0) return true;
+        return max_abs <= std::ldexp(1.0, domain_exponent) &&
+               min_nonzero >= std::ldexp(1.0, -domain_exponent);
+    }
+    // Magnitude bounds and spread limit of D.
+    bool inside() const noexcept {
+        return in_magnitude() &&
+               (max_abs == 0.0 || max_abs <= std::ldexp(min_nonzero, N4M_DOMAIN_MAX_SPREAD_LOG2));
+    }
+};
+
+// Error-free transformation a + b = s + e (Knuth TwoSum).
+inline void two_sum(double a, double b, double& s, double& e) noexcept {
+    s = a + b;
+    const double bb = s - a;
+    e = (a - (s - bb)) + (b - bb);
+}
+
+// Double-double accumulator: hi + lo carries the exact running sum to about
+// 2^-106 relative to the largest partial sum.
+struct DoubleDouble {
+    double hi = 0.0, lo = 0.0;
+    void add(double x) noexcept {
+        double s, e;
+        two_sum(hi, x, s, e);
+        e += lo;
+        two_sum(s, e, hi, lo);
+    }
+    // (hi + lo) / n rounded to double.
+    double divided(double n) const noexcept {
+        const double q = hi / n;
+        const double r = std::fma(-q, n, hi) + lo;
+        return q + r / n;
+    }
+};
+
+N4M_API n4m_status_t n4m_stats_group_means(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int64_t n_groups, double* out_means, int64_t* out_counts) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!group_codes || !out_means || !out_counts)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null group-means buffer");
+    const int64_t n = X->rows, k = X->cols;
+    if (n < 1 || k < 1 || n_groups < 1 || n_groups > n)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid group-means dimensions");
+    if (static_cast<uint64_t>(n_groups) > std::numeric_limits<size_t>::max() / sizeof(DoubleDouble) /
+                                                static_cast<uint64_t>(k))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "group-means output exceeds the address space");
+    try {
+        const auto g = static_cast<size_t>(n_groups), kk = static_cast<size_t>(k);
+        std::vector<int64_t> count(g, 0);
+        for (int64_t i = 0; i < n; ++i) {
+            if (group_codes[i] < 0 || group_codes[i] >= n_groups)
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "group code outside [0, n_groups)");
+            ++count[static_cast<size_t>(group_codes[i])];
+        }
+        if (std::find(count.begin(), count.end(), 0) != count.end())
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "every group needs at least one row");
+        DomainScan scan;
+        for (int64_t i = 0; i < n; ++i)
+            for (int64_t j = 0; j < k; ++j) scan.add(at(*X, i, j));
+        if (!scan.finite)
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite group-means input");
+        // A mean is a summary: only the magnitude bounds apply (rule 15).
+        if (!scan.in_magnitude()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        // Inside D no partial sum can overflow (n * 2^256); the double-double
+        // sum and one division give a mean whose relative error is small
+        // (order n eps) for same-sign data and whose absolute error is order
+        // n eps max|x| otherwise.
+        std::vector<DoubleDouble> sum(g * kk);
+        for (int64_t i = 0; i < n; ++i) {
+            const auto c = static_cast<size_t>(group_codes[i]);
+            for (size_t j = 0; j < kk; ++j)
+                sum[c * kk + j].add(at(*X, i, static_cast<int64_t>(j)));
+        }
+        for (size_t c = 0; c < g; ++c) {
+            out_counts[c] = count[c];
+            for (size_t j = 0; j < kk; ++j)
+                out_means[c * kk + j] = sum[c * kk + j].divided(static_cast<double>(count[c]));
+        }
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "group-means allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "group-means internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_regression_scores(
+    n4m_context_t* ctx, const double* y_true, const double* y_pred, int64_t n,
+    double* out_three) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    if (!y_true || !y_pred || !out_three)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null regression-scores buffer");
+    if (n < 1) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "regression scores need n >= 1");
+    try {
+        DomainScan truth, pred;
+        for (int64_t i = 0; i < n; ++i) {
+            truth.add(y_true[i]);
+            pred.add(y_pred[i]);
+        }
+        if (!truth.finite || !pred.finite)
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite regression-scores input");
+        if (!truth.inside() || !pred.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        // Residual e_i = y_i - yhat_i: |e| <= 2^257, e^2 <= 2^514, so the
+        // double-double sums of e^2 and |e| never overflow inside D.
+        DoubleDouble sse, sae, sum_y;
+        for (int64_t i = 0; i < n; ++i) {
+            const double e = y_true[i] - y_pred[i];
+            sse.add(e * e);
+            sae.add(std::abs(e));
+            sum_y.add(y_true[i]);
+        }
+        const double nd = static_cast<double>(n);
+        // Mean of y as an unevaluated sum hi + lo; deviations are explicit.
+        const double mean_hi = sum_y.divided(nd);
+        DoubleDouble mean_err;
+        for (int64_t i = 0; i < n; ++i) mean_err.add(y_true[i] - mean_hi);
+        const double mean_lo = mean_err.divided(nd);
+        // With spread <= 2^32 the deviations keep their difference (no
+        // cancellation by offset); RMSE, MAE, SSE and SST have relative errors
+        // of order n eps, R^2 an absolute error of order n eps (1 + SSE/SST).
+        DoubleDouble sst;
+        for (int64_t i = 0; i < n; ++i) {
+            const double d = (y_true[i] - mean_hi) - mean_lo;
+            sst.add(d * d);
+        }
+        const double sse_v = sse.hi + sse.lo, sst_v = sst.hi + sst.lo;
+        out_three[0] = std::sqrt(sse.divided(nd));
+        out_three[1] = sae.divided(nd);
+        // R^2 = 1 - SSE/SST; NaN (documented "undefined") when y is constant.
+        out_three[2] = sst_v > 0.0 ? 1.0 - sse_v / sst_v
+                                   : std::numeric_limits<double>::quiet_NaN();
+        return N4M_OK;
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "regression-scores internal error"); }
 }
 }  // extern "C"

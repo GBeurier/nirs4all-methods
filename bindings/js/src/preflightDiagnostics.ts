@@ -1166,3 +1166,71 @@ export function statsVarianceComponentsIntervals(X: Matrix,
         scope.close();
     }
 }
+
+export interface GroupMeansResult {
+    /** One row per group code, in code order. */
+    means: Matrix;
+    counts: number[];
+}
+
+/** Equal-weight per-group column means (double-double sums): codes in
+ * [0, nGroups), every group nonempty, values in the declared numerical domain
+ * (nonzero |x| in [2^-256, 2^256]; a summary, so no spread limit), else N4mError. */
+export function statsGroupMeans(X: Matrix, groupCodes: readonly number[],
+    nGroups: number): GroupMeansResult {
+    validateMatrix(X);
+    if (groupCodes.length !== X.rows || !Number.isSafeInteger(nGroups) || nGroups < 1 ||
+        nGroups > X.rows || groupCodes.some((c) => !Number.isSafeInteger(c))) {
+        throw new RangeError("invalid group-means dimensions");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const ctx = scope.ctx;
+        const x = scope.matrix(X.data, X.rows, X.cols);
+        const codes = scope.i64(groupCodes);
+        const means = scope.alloc(nGroups * X.cols * 8), counts = scope.alloc(nGroups * 8);
+        const st = m.ccall("n4m_stats_group_means", "number",
+            ["number", "number", "number", "i64", "number", "number"],
+            [ctx.handle, x.viewPtr, codes, BigInt(nGroups), means, counts]) as number;
+        checkStatus(st, ctx.handle);
+        const dv = new DataView(m.HEAPU8.buffer);
+        return {
+            means: { data: copyF64(means, nGroups * X.cols), rows: nGroups, cols: X.cols },
+            counts: Array.from({ length: nGroups }, (_, i) => Number(dv.getBigInt64(counts + i * 8, true))),
+        };
+    } finally {
+        scope.close();
+    }
+}
+
+export interface RegressionScoresResult {
+    rmse: number;
+    mae: number;
+    /** 1 - SSE/SST; NaN (undefined) when y is constant. */
+    r2: number;
+}
+
+/** RMSE, MAE and R² through n4m_stats_regression_scores (explicit residuals,
+ * double-double sums). Inputs outside the declared numerical domain
+ * (nonzero |x| in [2^-256, 2^256], spread <= 2^32) throw N4mError
+ * ERR_UNSUPPORTED. */
+export function statsRegressionScores(yTrue: Float64Array, yPred: Float64Array): RegressionScoresResult {
+    if (yTrue.length < 1 || yTrue.length !== yPred.length) {
+        throw new RangeError("regression scores need paired nonempty vectors");
+    }
+    const m = getModule(), scope = new NativeScope();
+    try {
+        const t = scope.alloc(yTrue.length * 8), p = scope.alloc(yPred.length * 8);
+        m.HEAPF64.set(yTrue, t / 8);
+        m.HEAPF64.set(yPred, p / 8);
+        const out = scope.alloc(3 * 8);
+        const st = m.ccall("n4m_stats_regression_scores", "number",
+            ["number", "number", "number", "i64", "number"],
+            [scope.ctx.handle, t, p, BigInt(yTrue.length), out]) as number;
+        checkStatus(st, scope.ctx.handle);
+        const r = copyF64(out, 3);
+        return { rmse: r[0]!, mae: r[1]!, r2: r[2]! };
+    } finally {
+        scope.close();
+    }
+}
