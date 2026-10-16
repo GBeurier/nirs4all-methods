@@ -263,7 +263,7 @@ int main() {
                                                      nullptr,nullptr,qflag,rflag,pcounts)
                 ==N4M_ERR_UNSUPPORTED);
         // Regression (review b1 #3, b1fix #2, b14fix #2/#8) inside the domain
-        // (nonzero |x| in [2^-256, 2^256], per-row spread <= 2^64). Distances use
+        // (nonzero |x| in [2^-256, 2^256], per-row spread <= 2^32). Distances use
         // a relative tolerance on the expected value (so 0 never passes) and
         // decisions are checked on both sides of each threshold.
         {
@@ -297,8 +297,8 @@ int main() {
             REQUIRE(status(lo,0,hi,0,1.0)==N4M_OK);
             REQUIRE(status(std::nextafter(lo,0.0),0,0,0,1.0)==N4M_ERR_UNSUPPORTED);
             REQUIRE(status(std::nextafter(hi,INFINITY),0,0,0,1.0)==N4M_ERR_UNSUPPORTED);
-            REQUIRE(status(1.0,std::ldexp(1.0,64),0,0,1.0)==N4M_OK);
-            REQUIRE(status(1.0,std::nextafter(std::ldexp(1.0,64),INFINITY),0,0,1.0)
+            REQUIRE(status(1.0,std::ldexp(1.0,32),0,0,1.0)==N4M_OK);
+            REQUIRE(status(1.0,std::nextafter(std::ldexp(1.0,32),INFINITY),0,0,1.0)
                     ==N4M_ERR_UNSUPPORTED);
             REQUIRE(status(0,0,std::ldexp(1.0,-100),std::ldexp(1.0,-30),1.0)
                     ==N4M_ERR_UNSUPPORTED);
@@ -375,16 +375,16 @@ int main() {
             int64_t onegid[2]={0,0};
             REQUIRE(n4m_preflight_snv_compute(ctx,&TX,onegid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);
             // Domain boundaries: 2^256 next to 1 (spread 2^256), 2^-257, and a
-            // spread just above 2^64 are refused; a spread of exactly 2^64 is not.
+            // spread just above 2^32 are refused; a spread of exactly 2^32 is not.
             for (const auto& row : {std::vector<double>{1.0, std::ldexp(1.0,256)},
                                     std::vector<double>{std::ldexp(1.0,-257), 0.0},
-                                    std::vector<double>{1.0, std::nextafter(std::ldexp(1.0,64),INFINITY)}}) {
+                                    std::vector<double>{1.0, std::nextafter(std::ldexp(1.0,32),INFINITY)}}) {
                 std::vector<double> rx(row), ro(2); double rb[1];
                 auto RX=view(rx.data(),1,2), RO=view(ro.data(),1,2);
                 REQUIRE(n4m_preflight_snv_compute(ctx,&RX,nullptr,1,&RO,rb)==N4M_ERR_UNSUPPORTED);
             }
             {
-                double rx[2]={1.0,std::ldexp(1.0,64)}, ro[2]; double rb[1];
+                double rx[2]={1.0,std::ldexp(1.0,32)}, ro[2]; double rb[1];
                 auto RX=view(rx,1,2), RO=view(ro,1,2);
                 REQUIRE(n4m_preflight_snv_compute(ctx,&RX,nullptr,1,&RO,rb)==N4M_OK);
                 REQUIRE(rel(ro[0],-1.0,1e-15) && rel(ro[1],1.0,1e-15));

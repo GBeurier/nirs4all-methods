@@ -34,7 +34,10 @@ SD and quartiles are correct for any spread inside it. Their computations change
 Tests use independent rational and 400-digit oracles for all three.
 
 The three Preflight kernels follow one supported numerical domain D: every
-nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64.
+nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^32
+(public macros `N4M_DOMAIN_MAX_MAGNITUDE_LOG2` = 256 and
+`N4M_DOMAIN_MAX_SPREAD_LOG2` = 32, lead rule 15; the summary keeps only the
+magnitude bound).
 Inputs outside D are refused before computing with `N4M_ERR_UNSUPPORTED`
 ("input outside the supported numerical domain"). Inside D, results are
 correct to the documented precision.
@@ -51,10 +54,13 @@ publishes min(RMS, tolerance).
 `n4m_preflight_noise_proxy_compute` computes each window's residual from that
 window alone. The second differences are kept exactly, as three doubles each,
 and multiplied by double-double Savitzky-Golay weights (Gram polynomials,
-cross-checked against the SG engine); the double-double sum is rounded once.
+cross-checked against the SG engine). The double-double sum is rounded once
+to binary64. The documented precision is the honest bound
+`|r_hat - r| <= 2 W eps sum|c_k| max|w_k|`, which includes the coefficient
+errors and that rounding.
 Values outside every evaluable window, masked or not, cannot change the
 results: the masked `[H, 0, 0, 0, 0, 1, ...]` gives `sqrt(2/3)` and
-`1/sqrt(7)` for any H. The spread-2^60 window `[-2^60, 2^60, 1, 0, 0]`
+`1/sqrt(7)` for any H. The spread-2^32 window `[-2^32, 2^32, 1, 0, 0]`
 (window 5, order 1) gives its analytic `sqrt(4/5)`. `[-2^100, 2^100, 1, 0, 0]`
 and `[-DBL_MAX, 2^-1074, DBL_MAX]` lie outside D and are refused.
 

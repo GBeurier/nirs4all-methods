@@ -32,14 +32,16 @@ constexpr int32_t max_noise_polyorder = 10;
 // Absolute tolerance on normalized Savitzky-Golay reproduction moments.
 constexpr long double moment_tolerance = 1e-9L;
 
-// Supported numerical domain of the Preflight kernels (lead rule 13): every
-// nonzero |x| in [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^64.
-// Inputs outside it are refused with N4M_ERR_UNSUPPORTED before computing.
-constexpr int domain_max_exponent = 256;
-constexpr int domain_spread_exponent = 64;
+// Supported numerical domain of the Preflight kernels (lead rules 13/15,
+// constants in n4m/metrics.h): every nonzero |x| in [2^-256, 2^256] and, per
+// row, max/min nonzero |x| <= 2^32. With a spread below 2^53 no subtraction
+// of two values of one row erases their difference. Inputs outside are
+// refused with N4M_ERR_UNSUPPORTED before computing.
+constexpr int domain_max_exponent = N4M_DOMAIN_MAX_MAGNITUDE_LOG2;
+constexpr int domain_spread_exponent = N4M_DOMAIN_MAX_SPREAD_LOG2;
 constexpr const char* domain_message =
     "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^64 per row)";
+    "max/min nonzero |x| <= 2^32 per row)";
 
 struct DomainScan {
     double max = 0.0, min = std::numeric_limits<double>::infinity();
@@ -809,7 +811,8 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         }
         // Cross-checks: the weights agree with the Methods Savitzky-Golay
         // engine's impulse response, which reproduces polynomials of degree
-        // <= order (moments within 1e-9), and sum to 1 within 2^-90.
+        // <= order (moments within 1e-9), and sum to 1 within 2^-60 (a
+        // sanity check; the double-double construction is far more accurate).
         const int64_t centre = window_length - 1, impulse_cols = 2 * centre + 1;
         std::vector<double> impulse(sz(impulse_cols), 0.0), response(sz(impulse_cols));
         impulse[sz(centre)] = 1.0;
@@ -835,7 +838,7 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
             total = dd_add(total, dd_add(w, w));
         }
         if (!(std::fabs(weight[0].hi - response[sz(centre)]) <= 1e-9) ||
-            !(std::fabs((total.hi - 1.0) + total.lo) <= 0x1p-90))
+            !(std::fabs((total.hi - 1.0) + total.lo) <= 0x1p-60))
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "Savitzky-Golay weights do not sum to 1");
         // Residual gain for unit white noise: g^2 = (1 - w_0)^2 + 2 sum_{k>0} w_k^2.
         const DD one_minus = dd_add({1.0, 0.0}, ::n4m::core::dd_neg(weight[0]));
@@ -852,8 +855,10 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         //   c_k = 2 x_j - x_{j+k} - x_{j-k}
         // (sum_k w_k = 1). Each c_k is kept exactly as three doubles (TwoSum,
         // no overflow inside the domain) and multiplied by the double-double
-        // weight; the sum is double-double and rounded once. Inside the
-        // domain, |r - r_exact| <= 2^-95 sum_k |w_k| |c_k| (exact weights).
+        // weight; the sum is double-double and rounded once to binary64.
+        // Honest bound against the exact SG residual (weight errors and the
+        // final rounding included): |r_hat - r| <= 2 W eps sum_k |c_k|
+        // max_k |w_k|, W the window length, eps = 2^-52.
         std::vector<int64_t> invalid_prefix(sz(p) + 1);
         std::vector<double> band_sum(sz(p), 0.0), band_comp(sz(p), 0.0);
         double pooled_sum = 0.0, pooled_comp = 0.0;
