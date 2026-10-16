@@ -46,16 +46,18 @@ extern "C" {
  * broken by smallest index). Vt[i, :] is flipped along with U[:, i] to
  * preserve A = U @ diag(S) @ Vt.
  *
- * Accuracy: one-sided Jacobi runs to convergence (no early stop on norm
- * reduction) and keeps relative accuracy for graded or block-decoupled
- * inputs; small but genuine directions are resolved. Resolution floor: a
- * column whose norm falls below 2^-500 of the scaled input (max|a| in
- * [0.5, 1)) is reported as an exactly zero singular value with a zero U
- * column (zero Vt row for m < n). Because inputs with a larger dynamic
- * range are refused (below), only cancellation reaches the floor: exact
- * rank deficiency in floating point, e.g. +-1 designs where one row is the
- * opposite of another, or sigma < 2^-500 * max|A| (condition number above
- * ~2^500) from in-range entries.
+ * Accuracy contract: every singular value is accurate to the ABSOLUTE
+ * bound O(max(m,n) * eps * s_max) (preflight publishes it with constant 16);
+ * smaller singular values are unresolved, and callers must not read them as
+ * measured values or as exact zeros. One-sided Jacobi runs to convergence
+ * (no early stop on norm reduction) and in practice also resolves small
+ * directions of graded or block-decoupled inputs relatively, a bonus outside
+ * the contract. A column whose norm falls below 2^-500 of the scaled input
+ * (max|a| in [0.5, 1)) takes no further rotation and is published as 0
+ * with a zero U column (zero Vt row for m < n). That value is far inside the
+ * unresolved range, so it is not a rank statement: exact rank deficiency
+ * (e.g. +-1 designs where one row is the opposite of another) and a genuine
+ * direction below 2^-500 * s_max look the same.
  *
  * Magnitude domain (all helpers in this header): entries must be finite and
  * their dynamic range max|a| / min nonzero |a| at most 2^480; otherwise
