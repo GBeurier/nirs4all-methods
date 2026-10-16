@@ -14,7 +14,8 @@ extern "C" {
  * differences between input values, per row max/min nonzero |x| <=
  * 2^N4M_DOMAIN_MAX_SPREAD_LOG2. Inputs outside are refused before computing
  * with N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain").
- * Exempt: summaries (magnitude bound only) and integer labels/codes. */
+ * Exempt (magnitude bound only): summaries and nearest neighbours; integer
+ * labels/codes are not bounded. */
 #define N4M_DOMAIN_MAX_MAGNITUDE_LOG2 256
 #define N4M_DOMAIN_MAX_SPREAD_LOG2 32
 
@@ -64,10 +65,9 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
  * with the same group ID are excluded. Outputs are row-major n_query x k,
  * using index=-1 and distance=NaN when too few eligible neighbors remain.
  * All input values must be finite. k>0; callers own every buffer.
- * Supported domain D: every nonzero |x| in [2^-256, 2^256] and per row,
- * max/min nonzero |x| <= 2^32; otherwise N4M_ERR_UNSUPPORTED ("input outside
- * the supported numerical domain") before computing. Inside D
- * distances use a compensated sum (relative error < 4u); two candidates
+ * Supported domain: every nonzero |x| in [2^-256, 2^256], with no spread
+ * bound; otherwise N4M_ERR_UNSUPPORTED ("input outside the supported
+ * numerical domain") before computing. Inside it distances use a compensated sum (relative error < 4u); two candidates
  * within 2^-45 (relative) of each other are ordered exactly from
  * ||q - a||^2 - ||q - b||^2 in an exact accumulator, ties by index. */
 N4M_API n4m_status_t n4m_preflight_nearest_neighbors(

@@ -325,6 +325,8 @@ for (const [q, refs, order, dist] of knnGoldens) {
 }
 unsupported(() => preflightNearestNeighbors(row([2 ** -257, 0]), row([0, 0]), 1));
 unsupported(() => preflightNearestNeighbors(row([1, 0]), row([2 ** 257, 0]), 1));
+// Neighbours have no spread bound: rounding-level components next to large ones.
+rel(preflightNearestNeighbors(row([10.9, 1.75, 1.4e-16, 1.6e-17]), row([8.9, 0.06, 2.2e-16, 7e-17]), 1).distances[0], Math.hypot(10.9 - 8.9, 1.75 - 0.06), 1e-15);
 for (const [y, nb, contrast] of contrastGoldens) {
     const out = preflightLocalContrast(new Float64Array(y), nb, 1, false);
     assert.ok(Math.abs(out.contrast - contrast) <= 1e-15 * Math.max(1, Math.abs(contrast)), `${y}`);

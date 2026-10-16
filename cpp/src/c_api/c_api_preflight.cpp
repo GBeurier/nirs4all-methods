@@ -453,7 +453,13 @@ N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
                         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite neighbor input");
                     scan.add(at(*v, i, j));
                 }
-                if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+                // Magnitude bound only (lead decision): compensated distances
+                // and the exact ordering near ties are correct for any spread,
+                // e.g. rounding-level PCA score components next to large ones.
+                if (!scan.in_magnitude())
+                    return fail(ctx, N4M_ERR_UNSUPPORTED,
+                                "input outside the supported numerical domain (nonzero |x| in "
+                                "[2^-256, 2^256]; neighbours have no spread bound)");
             }
         // Euclidean distance: compensated sum of squared differences (inside
         // the domain no difference or square overflows or underflows),

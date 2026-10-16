@@ -413,6 +413,16 @@ void neighbor_checks(n4m_context_t* ctx) {
         REQUIRE(n4m_preflight_nearest_neighbors(ctx, &Q, &R, nullptr, nullptr, 2, idx, dist) == N4M_OK);
         REQUIRE(idx[0] == 0 && dist[0] == std::ldexp(1.0, k) && dist[1] == std::ldexp(std::sqrt(18.0), k));
     }
+    // No spread bound (lead decision): rounding-level score components next
+    // to large ones, e.g. [10.9, 1.75, 1.4e-16, 1.6e-17], are accepted and the
+    // distance matches its exact value.
+    {
+        double q[4] = {10.9, 1.75, 1.4e-16, 1.6e-17}, refs[4] = {8.9, 0.06, 2.2e-16, 7e-17};
+        auto Q = view(q, 1, 4), R = view(refs, 1, 4);
+        int64_t idx[1]; double dist[1];
+        REQUIRE(n4m_preflight_nearest_neighbors(ctx, &Q, &R, nullptr, nullptr, 1, idx, dist) == N4M_OK);
+        REQUIRE(idx[0] == 0 && rel(dist[0], std::hypot(10.9 - 8.9, 1.75 - 0.06), 1e-15));
+    }
     for (double bad : {p2(-257), std::nextafter(p2(256), INFINITY)}) {
         double q[2] = {bad, 0}, refs[2] = {0, 0};
         auto Q = view(q, 1, 2), R = view(refs, 1, 2);
