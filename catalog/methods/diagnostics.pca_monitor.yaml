@@ -1,0 +1,43 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.pca_monitor"
+family: "diagnostics.multivariate_tests"
+category: "diagnostics"
+subcategory: "multivariate_tests"
+since_abi: "2.20.0"
+abi_symbols:
+  - "n4m_stats_pca_monitor"
+tu:
+  - "cpp/src/c_api/c_api_preflight.cpp"
+headers:
+  - "cpp/include/n4m/metrics.h"
+carry_along_tu:
+  - "cpp/src/core/common/pca_helper.c"
+  - "cpp/src/core/common/svd.c"
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures:
+    - "parity/fixtures/domain_shift_v1.json"
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.pca_monitor"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications: []
+notes: "PCA monitoring of rows against a reference PCA: effective k = components above the eigenvalue resolution 16 m eps lambda_1 in every out-of-fold and full fit, Hotelling T2 and Q (explicit residual) of monitored rows, out-of-fold reference T2/Q whose empirical (1-alpha) type-7 quantiles are the limits, counts beyond the limits by more than a conservative tolerance tau = 16 m eps cond and counts within it (numerically undetermined, never decided), centroid shift (full, subspace, residual), centroid T2 and variance traces (each set about its own double-double centre). Supported domain: finite values, nonzero |x| in [2^-256, 2^256], spread <= 2^32. Reference gate: parity/generators/domain_shift_v1.py -> parity/fixtures/domain_shift_v1.json (rational inverse covariance and axis-aligned exact cases, numpy.linalg.svd), cpp/tests/test_domain_shift.cpp."
+c_surface:
+  - "n4m_stats_pca_monitor"
+fq_name: "n4m.stats.pca_monitor"
+leaf: "pca_monitor"
+legacy_ids:
+  - "diagnostics.pca_monitor"
+namespace: "stats"

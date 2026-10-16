@@ -1590,6 +1590,75 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "cpp/tests/test_preflight.cpp",
     ),
+    "diagnostics_energy_distance": _entry(
+        "Energy distance between groups and K-sample energy test",
+        "Székely & Rizzo (2004), *Testing for equal distributions in high dimension*, InterStat "
+        "5; Rizzo & Székely (2016), *Energy distance*, WIREs Computational Statistics 8(1), "
+        "27–38, https://doi.org/10.1002/wics.1375; Székely & Rizzo (2013), *Energy statistics: "
+        "A class of statistics based on distances*, Journal of Statistical Planning and "
+        "Inference 143(8), 1249–1272, https://doi.org/10.1016/j.jspi.2013.03.018.",
+        "With $M_{ab}$ the mean Euclidean distance over all ordered row pairs of groups $a$ and "
+        "$b$ (a V-statistic, so within a group the zero self-pairs count), the energy distance "
+        "between the empirical distributions is $E_{ab}=2M_{ab}-M_{aa}-M_{bb}\\ge 0$. The "
+        "K-sample statistic is $T=\\sum_{a<b}\\frac{n_an_b}{n_a+n_b}E_{ab}$, as R "
+        "`energy::eqdist.etest`. The Monte Carlo test permutes the group labels and reports "
+        "$(1+b)/(1+B)$ with $b$ the draws where $T_{perm}\\ge T-\\sqrt{\\epsilon}|T|$; draws "
+        "within the rounding estimate of that threshold are counted as undecidable, and a "
+        "conservative p-value counts them as ties.",
+        "Comparing the distributions of spectra (or of other coordinates) across instruments, "
+        "campaigns or partitions without a bandwidth or kernel to choose.",
+        "Rows must be exchangeable under the null. Euclidean distances weight every column "
+        "equally and are scale dependent. Supported domain: finite values, nonzero $|x|$ in "
+        "$[2^{-256}, 2^{256}]$ and a spread of at most $2^{32}$; other inputs return "
+        "`N4M_ERR_UNSUPPORTED`. Distances come from local pairwise differences; sums and the "
+        "combination are double-double and each $E$ carries a conservative rounding estimate "
+        "(not a certified bound). Budgets (20 million pairs, 50 million cells, 10 million group "
+        "pairs, 2.5 billion operations) are checked before allocation.",
+        "The ABI-2 symbol `n4m_stats_energy_distance` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsEnergyDistance`. "
+        "`parity/generators/domain_shift_v1.py` writes `parity/fixtures/domain_shift_v1.json` "
+        "(SciPy `cdist`, exact rational energies and permutation statistics), checked by "
+        "`cpp/tests/test_domain_shift.cpp`.",
+        "https://doi.org/10.1002/wics.1375; https://doi.org/10.1016/j.jspi.2013.03.018; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "parity/fixtures/domain_shift_v1.json",
+    ),
+    "diagnostics_pca_monitor": _entry(
+        "PCA monitoring with out-of-fold empirical control limits",
+        "Jackson (1991), *A User's Guide to Principal Components*, Wiley, "
+        "https://doi.org/10.1002/0471725331; Nomikos & MacGregor (1995), *Multivariate SPC "
+        "charts for monitoring batch processes*, Technometrics 37(1), 41–59, "
+        "https://doi.org/10.1080/00401706.1995.10485888.",
+        "A PCA is fitted on the reference rows (each fit centred on its own mean), keeping the "
+        "components above the eigenvalue resolution $16\\,m\\,\\epsilon\\,\\lambda_1$ in every "
+        "fold and full fit. For a row, $T^2=\\sum_a t_a^2/\\lambda_a$ and $Q$ is the squared norm "
+        "of the explicit residual. Reference rows are evaluated out of fold and the limits are "
+        "type-7 $(1-\\alpha)$ quantiles. A monitored row is counted beyond a limit when it "
+        "exceeds it by more than the tolerance $\\tau=16\\,m\\,\\epsilon\\,\\lambda_1/\\lambda_k$ "
+        "(relative for $T^2$, times the largest squared row norm for $Q$), and as within "
+        "tolerance otherwise near the limit.",
+        "Measuring how much of a new domain (another instrument, campaign or a set of new "
+        "samples) lies beyond the score and residual ranges of a reference domain, with limits "
+        "that do not assume normal scores and are not computed on the rows used for the fit.",
+        "The tolerance is a conservative estimate, not a proven bound; rows within it are "
+        "numerically undetermined and never reported as decisions. Limits are empirical and "
+        "coarse with few reference rows; a fraction beyond a limit is descriptive, not a "
+        "probability of failure. Supported domain: finite values, nonzero $|x|$ in "
+        "$[2^{-256}, 2^{256}]$, spread at most $2^{32}$ (`N4M_ERR_UNSUPPORTED` otherwise); "
+        "workloads above 10 billion operations or 50 million cells are refused.",
+        "The ABI-2 symbol `n4m_stats_pca_monitor` in `n4m/metrics.h` is implemented in "
+        "`cpp/src/c_api/c_api_preflight.cpp` with the shared PCA helper and wrapped in JS/WASM "
+        "by `statsPcaMonitor`. `parity/fixtures/domain_shift_v1.json` (exact rational inverse "
+        "covariance and axis-aligned cases, NumPy `linalg.svd`) is checked by "
+        "`cpp/tests/test_domain_shift.cpp`.",
+        "https://doi.org/10.1002/0471725331; https://doi.org/10.1080/00401706.1995.10485888; "
+        + _REPO
+        + "cpp/src/c_api/c_api_preflight.cpp; "
+        + _REPO
+        + "parity/fixtures/domain_shift_v1.json",
+    ),
     "diagnostics_adjusted_rand_index": _entry(
         "Adjusted Rand index between two partitions",
         "Hubert & Arabie (1985), *Comparing partitions*, Journal of Classification 2, 193–218, "

@@ -116,6 +116,22 @@ ABI 2.20.0. No model-state serialization format changes.
   with `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical domain
   (...)") by a pre-pass; native and JS/WASM tests cover both sides of every
   boundary, and the magnitude sweeps run inside D.
+- Public ABI 2.20.0 domain-shift statistics: `n4m_stats_energy_distance`
+  (energy distances between groups of rows, symmetric, with conservative
+  rounding estimates, the K-sample statistic of R `energy::eqdist.etest` and
+  a seeded Monte Carlo label permutation test with `numpy.random.default_rng`
+  parity; declared tie rule `T_perm >= T - sqrt(eps)|T|`, numerically
+  undecidable draws counted separately with a conservative p-value) and
+  `n4m_stats_pca_monitor` (reference PCA with an effective k of components
+  above the eigenvalue resolution, T² and Q of monitored rows, out-of-fold
+  empirical limits, counts beyond the limits by more than a conservative
+  tolerance and counts within it, centroid shift, variance traces). JS/WASM
+  `statsEnergyDistance` and `statsPcaMonitor` check the budgets before any
+  WASM allocation. Supported domain (lead rule 15, shared constant
+  `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`): finite values, nonzero |x| in
+  [2^-256, 2^256], spread <= 2^32; other inputs return `N4M_ERR_UNSUPPORTED`.
+  Reference gate `parity/fixtures/domain_shift_v1.json` (NumPy 2.2.6,
+  SciPy 1.15.3, exact rational oracles).
 
 ## [1.3.6] - 2026-10-13
 

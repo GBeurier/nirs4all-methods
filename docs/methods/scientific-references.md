@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **232**
+- Curated records: **234**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `74bac3e69827acceb0ea8fd58d57fb80045a4f1db155f2fd7f9e57b4bb7ea703`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `05ac4d287875698d74d94d03c5ebdc2ea37ddcd15a76084bee3dd5b277668dac`
 
 ## References by documentation page
 
@@ -442,6 +442,12 @@ Pearson (1895), *Note on regression and inheritance in the case of two parents*,
 
 **Provenance:** https://doi.org/10.1098/rspl.1895.0041; https://doi.org/10.2307/1412159; https://doi.org/10.2202/1544-6115.1585; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
 
+### [`diagnostics_energy_distance`](diagnostics_energy_distance.md) — Energy distance between groups and K-sample energy test
+
+Székely & Rizzo (2004), *Testing for equal distributions in high dimension*, InterStat 5; Rizzo & Székely (2016), *Energy distance*, WIREs Computational Statistics 8(1), 27–38, https://doi.org/10.1002/wics.1375; Székely & Rizzo (2013), *Energy statistics: A class of statistics based on distances*, Journal of Statistical Planning and Inference 143(8), 1249–1272, https://doi.org/10.1016/j.jspi.2013.03.018.
+
+**Provenance:** https://doi.org/10.1002/wics.1375; https://doi.org/10.1016/j.jspi.2013.03.018; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/domain_shift_v1.json
+
 ### [`diagnostics_factor_association_exact`](diagnostics_factor_association_exact.md) — Exact permutation distribution of a factor-target association
 
 No single canonical paper; exhaustive permutation tests follow Fisher (1935), *The Design of Experiments*, Oliver & Boyd, and Good (2005), *Permutation, Parametric, and Bootstrap Tests of Hypotheses*, Springer, https://doi.org/10.1007/b138696.
@@ -459,6 +465,12 @@ Campello, Moulavi & Sander (2013), *Density-Based Clustering Based on Hierarchic
 Holm (1979), *A Simple Sequentially Rejective Multiple Test Procedure*, Scandinavian Journal of Statistics 6(2), 65–70, https://www.jstor.org/stable/4615733.
 
 **Provenance:** https://www.jstor.org/stable/4615733; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_preflight.cpp
+
+### [`diagnostics_pca_monitor`](diagnostics_pca_monitor.md) — PCA monitoring with out-of-fold empirical control limits
+
+Jackson (1991), *A User's Guide to Principal Components*, Wiley, https://doi.org/10.1002/0471725331; Nomikos & MacGregor (1995), *Multivariate SPC charts for monitoring batch processes*, Technometrics 37(1), 41–59, https://doi.org/10.1080/00401706.1995.10485888.
+
+**Provenance:** https://doi.org/10.1002/0471725331; https://doi.org/10.1080/00401706.1995.10485888; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/domain_shift_v1.json
 
 ### [`diagnostics_permanova`](diagnostics_permanova.md) — PERMANOVA of one categorical term on Euclidean distances
 
