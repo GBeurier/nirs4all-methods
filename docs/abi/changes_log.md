@@ -1,5 +1,34 @@
 # ABI — Changes Log
 
+## 2026-10-16 — ABI 2.20.0 (continued): energy distance and PCA monitoring (unreleased)
+
+Add two generic caller-buffer operations in `n4m/metrics.h` to the same
+unreleased 2.20.0 surface; no serialized format changes.
+
+`n4m_stats_energy_distance(ctx, X, group_codes, n_groups, n_permutations,
+seed, energy, energy_bounds, mean_distances, out_five, out_three)` writes the
+symmetric n_groups x n_groups energies `2M_ab - M_aa - M_bb`, conservative
+rounding estimates and mean distances `M` (V-statistic), then {T, its rounding
+estimate, log10 distinct label assignments, p-value, conservative p-value} and
+{b, B, undecidable draws}. The p-value follows the declared tie rule
+`T_perm - T >= -sqrt(eps)|T|`; draws within twice the rounding estimate of
+that threshold are undecidable, and the conservative p-value counts them as
+ties. `n4m_stats_pca_monitor(ctx, reference, monitored, max_components,
+n_folds, alpha, eigenvalues, reference_t2, reference_q, monitored_t2,
+monitored_q, effective_components, out_counts, out_thirteen)` keeps the
+components above the eigenvalue resolution `16 m eps lambda_1` in every fold
+and full fit, returns T² and Q, out-of-fold empirical limits, counts beyond
+the limits by more than the conservative tolerance `tau = 16 m eps cond` and
+counts within it (`out_counts`, 6), and the tolerance, condition, Q tolerance
+scale and eigenvalue resolution (`out_thirteen[9..12]`).
+
+Supported numerical domain (lead rule 15, `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`):
+finite values, every nonzero |x| in [2^-256, 2^256], spread <= 2^32;
+otherwise `N4M_ERR_UNSUPPORTED` ("input outside the supported numerical
+domain") before any computation. Budgets are checked before allocation:
+energy 20 million pairs, 50 million cells, 10 million group pairs, 2.5 billion
+operations; monitor 50 million cells and 10 billion operations.
+
 ## 2026-10-13 — ABI 2.20.0: generic correlation test and Benjamini-Hochberg (unreleased)
 
 Add four generic caller-buffer statistics operations in `n4m/metrics.h`. 2.19

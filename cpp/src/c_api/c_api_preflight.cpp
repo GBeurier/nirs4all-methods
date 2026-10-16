@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <memory>
 #include <new>
 #include <numeric>
 #include <unordered_map>
@@ -35,6 +36,15 @@ constexpr size_t max_table_cells = 10000000;
 constexpr double domain_low = 0x1p-256;
 constexpr double domain_high = 0x1p256;
 constexpr double domain_spread = 0x1p64;
+// Lead rule 15: kernels whose statistics depend on differences between input
+// values use the tighter spread 2^N4M_DOMAIN_MAX_SPREAD_LOG2 (= 2^32 < 2^53,
+// so subtracting two values of one input never erases their difference).
+constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
+constexpr double difference_domain_spread =
+    static_cast<double>(uint64_t{1} << N4M_DOMAIN_MAX_SPREAD_LOG2);
+constexpr const char* difference_domain_message =
+    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
+    "max/min nonzero |x| <= 2^32)";
 constexpr const char* domain_message =
     "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
     "max/min nonzero |x| <= 2^64)";
@@ -48,9 +58,9 @@ struct DomainRange {
         low = std::min(low, a);
         high = std::max(high, a);
     }
-    bool inside() const noexcept {
+    bool inside(double spread = domain_spread) const noexcept {
         if (high == 0.0) return true;
-        return low >= domain_low && high <= domain_high && high <= low * domain_spread;
+        return low >= domain_low && high <= domain_high && high <= low * spread;
     }
 };
 
@@ -662,6 +672,248 @@ std::pair<long double, long double> project(const std::vector<std::vector<double
     long double residual = 0.0L;
     for (double v : work) residual += ld(v) * ld(v);
     return {tail, residual};
+}
+
+constexpr long double max_energy_work = 2500000000.0L;
+constexpr long double max_energy_pairs = 20000000.0L;
+constexpr long double max_monitor_work = 10000000000.0L;
+// Largest X (rows x cols) copied by the domain-shift kernels: 400 MB.
+constexpr long double max_shift_cells = 50000000.0L;
+// Largest n_groups^2 table of the energy kernel.
+constexpr long double max_energy_table = 10000000.0L;
+constexpr double unit_roundoff = std::numeric_limits<double>::epsilon() / 2.0;
+
+// Difference domain of the domain-shift kernels (rule 15) over every input
+// array together; nonfinite values are outside it.
+bool in_difference_domain(std::initializer_list<const n4m_matrix_view_t*> views) noexcept {
+    DomainRange range;
+    for (const auto* v : views)
+        for (int64_t i = 0; i < v->rows; ++i)
+            for (int64_t j = 0; j < v->cols; ++j) {
+                const double x = at(*v, i, j);
+                if (!std::isfinite(x)) return false;
+                range.add(x);
+            }
+    return range.inside(difference_domain_spread);
+}
+
+// Double-double arithmetic (Dekker / Knuth error-free transformations).
+struct DD {
+    double hi = 0.0, lo = 0.0;
+};
+DD two_sum(double a, double b) noexcept {
+    const double s = a + b, bb = s - a;
+    return {s, (a - (s - bb)) + (b - bb)};
+}
+DD quick_two_sum(double a, double b) noexcept {
+    const double s = a + b;
+    return {s, b - (s - a)};
+}
+DD dd_add(DD x, double y) noexcept {
+    DD s = two_sum(x.hi, y);
+    s.lo += x.lo;
+    return quick_two_sum(s.hi, s.lo);
+}
+DD dd_add(DD x, DD y) noexcept {
+    DD s = two_sum(x.hi, y.hi);
+    const DD t = two_sum(x.lo, y.lo);
+    s.lo += t.hi;
+    s = quick_two_sum(s.hi, s.lo);
+    s.lo += t.lo;
+    return quick_two_sum(s.hi, s.lo);
+}
+DD dd_neg(DD x) noexcept { return {-x.hi, -x.lo}; }
+DD dd_mul(DD x, double y) noexcept {
+    const double p = x.hi * y;
+    const double e = std::fma(x.hi, y, -p);
+    return quick_two_sum(p, e + x.lo * y);
+}
+DD dd_div(DD x, double y) noexcept {
+    const double q1 = x.hi / y;
+    const DD r = dd_add(x, dd_neg(dd_mul(DD{q1, 0.0}, y)));
+    return quick_two_sum(q1, r.hi / y);
+}
+
+// Euclidean norm of a - b: differences of domain values, squares summed in
+// double-double (relative error of the norm <= 3u + O(u^2)).
+double difference_norm(const double* a, const double* b, size_t k) noexcept {
+    DD s;
+    for (size_t j = 0; j < k; ++j) {
+        const double d = a[j] - b[j];
+        s = dd_add(s, d * d);
+    }
+    return std::sqrt(s.hi + s.lo);
+}
+
+// Relative error bound of difference_norm: difference, square, sum, sqrt.
+constexpr double distance_gamma = 8.0 * unit_roundoff;
+
+// Energy statistics of a labelling over a condensed distance matrix (pairs
+// i < j, row-major) with double-double per-group-pair sums, so the
+// combination E = 2M_ab - M_aa - M_bb keeps every bit of the sums.
+struct EnergyKernel {
+    const std::vector<double>& dist;
+    const std::vector<int64_t>& group_n;
+    int64_t n;
+    std::vector<DD> sums;
+
+    void accumulate(const int64_t* labels) {
+        const auto g = group_n.size();
+        std::fill(sums.begin(), sums.end(), DD{});
+        size_t idx = 0;
+        for (int64_t i = 0; i < n; ++i) {
+            DD* row = sums.data() + static_cast<size_t>(labels[i]) * g;
+            for (int64_t j = i + 1; j < n; ++j, ++idx) {
+                DD& cell = row[static_cast<size_t>(labels[j])];
+                cell = dd_add(cell, dist[idx]);
+            }
+        }
+    }
+    // Mean distance over all ordered pairs of groups a and b (V-statistic:
+    // the zero self-pairs of a group are included).
+    DD mean_distance(size_t a, size_t b) const {
+        const auto g = group_n.size();
+        const auto na = static_cast<double>(group_n[a]);
+        const auto nb = static_cast<double>(group_n[b]);
+        if (a == b) return dd_div(dd_mul(sums[a * g + a], 2.0), na * na);
+        return dd_div(dd_add(sums[a * g + b], sums[b * g + a]), na * nb);
+    }
+    // E(a, b) in double-double, symmetric by construction (a < b order).
+    DD energy(size_t a, size_t b) const {
+        if (a > b) std::swap(a, b);
+        return dd_add(dd_mul(mean_distance(a, b), 2.0),
+                      dd_neg(dd_add(mean_distance(a, a), mean_distance(b, b))));
+    }
+    // Absolute error bound of E(a, b) from the distance rounding (relative
+    // distance_gamma) and the double-double sums (2^-80 relative, n <= 2e7).
+    double energy_bound(size_t a, size_t b) const {
+        if (a > b) std::swap(a, b);
+        const double scale = 2.0 * mean_distance(a, b).hi + mean_distance(a, a).hi +
+                             mean_distance(b, b).hi;
+        return (distance_gamma + 0x1p-80) * scale * (1.0 + 4.0 * unit_roundoff);
+    }
+    // Sum over group pairs of n_a n_b / (n_a + n_b) * E(a, b) and its bound.
+    std::pair<DD, double> statistic() const {
+        const auto g = group_n.size();
+        DD total;
+        double bound = 0.0;
+        for (size_t a = 0; a < g; ++a) for (size_t b = a + 1; b < g; ++b) {
+            const auto na = static_cast<double>(group_n[a]);
+            const auto nb = static_cast<double>(group_n[b]);
+            const double w = na * nb / (na + nb);
+            total = dd_add(total, dd_mul(energy(a, b), w));
+            bound += w * energy_bound(a, b);
+        }
+        return {total, bound * (1.0 + 4.0 * unit_roundoff)};
+    }
+};
+
+// Column means in double-double of rows [0, n) of a row-major n x p buffer
+// restricted to `rows` (all when empty).
+std::vector<DD> dd_means(const std::vector<double>& x, size_t p, const std::vector<size_t>& rows) {
+    std::vector<DD> mean(p);
+    for (size_t i : rows)
+        for (size_t j = 0; j < p; ++j) mean[j] = dd_add(mean[j], x[i * p + j]);
+    for (DD& m : mean) m = dd_div(m, static_cast<double>(rows.size()));
+    return mean;
+}
+
+// x - mean, with the double-double mean subtracted in two steps.
+void centre(const double* x, const std::vector<DD>& mean, double* out) noexcept {
+    for (size_t j = 0; j < mean.size(); ++j) out[j] = (x[j] - mean[j].hi) - mean[j].lo;
+}
+
+// Squared norm in double-double, rounded once.
+double squared_norm(const double* v, size_t p) noexcept {
+    DD s;
+    for (size_t j = 0; j < p; ++j) s = dd_add(s, v[j] * v[j]);
+    return s.hi + s.lo;
+}
+
+// Compensated dot product.
+double dot(const double* a, const double* b, size_t p) noexcept {
+    DD s;
+    for (size_t j = 0; j < p; ++j) {
+        const double prod = a[j] * b[j];
+        s = dd_add(s, prod);
+        s = dd_add(s, std::fma(a[j], b[j], -prod));
+    }
+    return s.hi + s.lo;
+}
+
+// T^2 and Q of one centred row in a reference PCA and the row's squared
+// centred norm (the scale of its Q rounding).
+struct RowStatistics {
+    double t2 = 0.0, q = 0.0, norm2 = 0.0;
+};
+
+// PCA of centred reference rows (n4m_pca_fit) evaluated on its first k
+// components.
+struct ReferencePca {
+    n4m_pca_fit_t fit{};
+    int64_t rows = 0;
+    std::vector<DD> mean;
+    ~ReferencePca() { n4m_pca_fit_free(&fit); }
+    ReferencePca() = default;
+    ReferencePca(const ReferencePca&) = delete;
+    ReferencePca& operator=(const ReferencePca&) = delete;
+
+    // Rows `train` of the raw reference buffer x (row-major n x p).
+    n4m_status_t compute(const std::vector<double>& x, size_t p, const std::vector<size_t>& train,
+                         int64_t k) {
+        rows = static_cast<int64_t>(train.size());
+        mean = dd_means(x, p, train);
+        std::vector<double> centred(train.size() * p);
+        for (size_t r = 0; r < train.size(); ++r)
+            centre(x.data() + train[r] * p, mean, centred.data() + r * p);
+        const auto st = n4m_pca_fit(centred.data(), rows, static_cast<int64_t>(p), k, 1, &fit);
+        if (st != N4M_OK) return st;
+        if (fit.k != k) return N4M_ERR_NUMERICAL_FAILURE;
+        for (int64_t a = 0; a < k; ++a)
+            if (!std::isfinite(fit.explained_var[a])) return N4M_ERR_NUMERICAL_FAILURE;
+        return N4M_OK;
+    }
+    // Eigenvalue resolution (rule 14): absolute error c m eps lambda_1 with
+    // c = 16 and m = max(rows, cols); only components above it are resolved.
+    double resolution() const {
+        return 16.0 * static_cast<double>(std::max(rows, fit.cols)) *
+               std::numeric_limits<double>::epsilon() * std::max(fit.explained_var[0], 0.0);
+    }
+    int64_t resolved_components() const {
+        const double r = resolution();
+        int64_t k = 0;
+        while (k < fit.k && fit.explained_var[k] > r) ++k;
+        return k;
+    }
+    RowStatistics evaluate(const double* xc, int64_t k, double* scores,
+                           std::vector<double>& residual) const {
+        const auto p = static_cast<size_t>(fit.cols);
+        const auto kk = static_cast<size_t>(k);
+        RowStatistics s;
+        s.norm2 = squared_norm(xc, p);
+        for (size_t a = 0; a < kk; ++a) {
+            const double t = dot(xc, fit.components + a * p, p);
+            scores[a] = t;
+            s.t2 += t * t / fit.explained_var[a];
+        }
+        residual.assign(xc, xc + p);
+        for (size_t a = 0; a < kk; ++a)
+            for (size_t j = 0; j < p; ++j)
+                residual[j] = std::fma(-scores[a], fit.components[a * p + j], residual[j]);
+        s.q = squared_norm(residual.data(), p);
+        if (k == 0) s.t2 = nan_value;
+        return s;
+    }
+};
+
+// Three-way comparison of value > limit with a tolerance: +1 above the limit
+// by more than the tolerance, 0 at or below limit - tolerance (with a zero
+// tolerance, equality is "not above"), -1 strictly within the tolerance
+// band (numerically undetermined; never reported as a decision).
+int compare_with_tolerance(double value, double limit, double tolerance) noexcept {
+    if (value - limit > tolerance) return 1;
+    if (limit - value >= tolerance) return 0;
+    return -1;
 }
 }  // namespace
 
@@ -2056,5 +2308,305 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PERMDISP allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PERMDISP internal error"); }
+}
+N4M_API n4m_status_t n4m_stats_energy_distance(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int32_t n_groups, int32_t n_permutations, uint64_t seed, double* energy,
+    double* energy_bounds, double* mean_distances, double* out_five, int64_t* out_three) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    const auto st = check_view(ctx, X);
+    if (st != N4M_OK) return st;
+    if (!group_codes || !energy || !energy_bounds || !mean_distances || !out_five || !out_three)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null energy distance buffer");
+    const int64_t n = X->rows, p = X->cols;
+    if (n < 2 || p < 1 || n_groups < 2 || n_groups > n || n_permutations < 0 ||
+        n_permutations > 1000000)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid energy distance dimensions");
+    // Every size is checked before any allocation.
+    const long double pairs = static_cast<long double>(n) * static_cast<long double>(n - 1) / 2.0L;
+    if (pairs > max_energy_pairs ||
+        static_cast<long double>(n) * static_cast<long double>(p) > max_shift_cells ||
+        static_cast<long double>(n_groups) * static_cast<long double>(n_groups) >
+            max_energy_table ||
+        pairs * (static_cast<long double>(p) + static_cast<long double>(n_permutations) + 1.0L) >
+            max_energy_work)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "energy distance exceeds 20 million pairs, 50 million cells, 10 million "
+                    "group pairs or 2.5 billion operations");
+    if (!in_difference_domain({X}))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, difference_domain_message);
+    try {
+        const auto g = static_cast<size_t>(n_groups), k = static_cast<size_t>(p);
+        std::vector<int64_t> group_n(g, 0);
+        for (int64_t i = 0; i < n; ++i) {
+            if (group_codes[i] < 0 || group_codes[i] >= n_groups)
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "group code outside [0, n_groups)");
+            ++group_n[static_cast<size_t>(group_codes[i])];
+        }
+        if (std::find(group_n.begin(), group_n.end(), int64_t{0}) != group_n.end())
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "every group needs at least one row");
+        // Distances come from local pairwise differences of the input values:
+        // no common centre is subtracted, so no difference is lost to another
+        // row's magnitude.
+        std::vector<double> x(static_cast<size_t>(n) * k);
+        for (int64_t i = 0; i < n; ++i)
+            for (int64_t j = 0; j < p; ++j)
+                x[static_cast<size_t>(i) * k + static_cast<size_t>(j)] = at(*X, i, j);
+        std::vector<double> dist(static_cast<size_t>(pairs));
+        size_t idx = 0;
+        for (int64_t i = 0; i < n; ++i)
+            for (int64_t h = i + 1; h < n; ++h, ++idx)
+                dist[idx] = difference_norm(x.data() + static_cast<size_t>(i) * k,
+                                            x.data() + static_cast<size_t>(h) * k, k);
+        EnergyKernel kernel{dist, group_n, n, std::vector<DD>(g * g)};
+        kernel.accumulate(group_codes);
+        for (size_t a = 0; a < g; ++a) for (size_t b = 0; b < g; ++b) {
+            const DD m = kernel.mean_distance(a, b);
+            mean_distances[a * g + b] = m.hi + m.lo;
+            if (a == b) {
+                energy[a * g + b] = 0.0;
+                energy_bounds[a * g + b] = 0.0;
+                continue;
+            }
+            // E >= 0 exactly; a computed value below -bound would mean the
+            // bound does not hold, which is reported, never clipped.
+            const DD e = kernel.energy(a, b);
+            const double value = e.hi + e.lo, bound = kernel.energy_bound(a, b);
+            if (value < -bound)
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                            "energy distance below minus its rounding bound");
+            energy[a * g + b] = std::max(value, 0.0);
+            energy_bounds[a * g + b] = bound;
+        }
+        const auto [observed, statistic_bound] = kernel.statistic();
+        const double t_obs = observed.hi + observed.lo;
+        if (t_obs < -statistic_bound)
+            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE,
+                        "energy statistic below minus its rounding bound");
+        out_five[0] = std::max(t_obs, 0.0);
+        out_five[1] = statistic_bound;
+        out_five[2] = log10_factorial_ratio(n, group_n);
+        out_five[3] = nan_value;
+        out_five[4] = nan_value;
+        out_three[0] = 0;
+        out_three[1] = 0;
+        out_three[2] = 0;
+        for (size_t i = 0; i < g * g; ++i)
+            if (!std::isfinite(energy[i]) || !std::isfinite(mean_distances[i]) ||
+                !std::isfinite(energy_bounds[i]))
+                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "energy distance not finite");
+        if (n_permutations == 0) return N4M_OK;
+        n4m_rng_pcg64 rng{};
+        n4m_pcg64_engine_seed(&rng, seed);
+        std::vector<int64_t> perm(static_cast<size_t>(n)), labels(static_cast<size_t>(n));
+        // Declared tie rule: a draw counts when T_perm >= T - sqrt(eps)|T|.
+        // A draw whose difference to that threshold is within 2 bound(T)
+        // (the rounding of both statistics) is also counted as undecidable;
+        // the conservative p-value counts every undecidable draw as a tie.
+        const double threshold = -std::sqrt(std::numeric_limits<double>::epsilon()) * std::abs(t_obs);
+        const double band = 2.0 * statistic_bound;
+        int64_t at_least = 0, undecidable = 0, conservative = 0;
+        for (int32_t b = 0; b < n_permutations; ++b) {
+            n4m_pcg64_engine_permutation(&rng, perm.data(), n);
+            for (int64_t i = 0; i < n; ++i)
+                labels[static_cast<size_t>(i)] = group_codes[perm[static_cast<size_t>(i)]];
+            kernel.accumulate(labels.data());
+            const DD diff = dd_add(kernel.statistic().first, dd_neg(observed));
+            const double d = diff.hi + diff.lo;
+            if (d >= threshold) ++at_least;
+            if (std::abs(d - threshold) <= band) ++undecidable;
+            if (d >= threshold - band) ++conservative;
+        }
+        out_three[0] = at_least;
+        out_three[1] = n_permutations;
+        out_three[2] = undecidable;
+        const auto draws = static_cast<double>(1 + n_permutations);
+        out_five[3] = static_cast<double>(1 + at_least) / draws;
+        out_five[4] = static_cast<double>(1 + conservative) / draws;
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "energy distance allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "energy distance internal error"); }
+}
+
+N4M_API n4m_status_t n4m_stats_pca_monitor(
+    n4m_context_t* ctx, const n4m_matrix_view_t* reference, const n4m_matrix_view_t* monitored,
+    int32_t max_components, int32_t n_folds, double alpha, double* eigenvalues,
+    double* reference_t2, double* reference_q, double* monitored_t2, double* monitored_q,
+    int32_t* effective_components, int64_t* out_counts, double* out_thirteen) {
+    if (!ctx) return N4M_ERR_NULL_POINTER;
+    for (const auto* v : {reference, monitored}) {
+        const auto st = check_view(ctx, v);
+        if (st != N4M_OK) return st;
+    }
+    if (!eigenvalues || !reference_t2 || !reference_q || !monitored_t2 || !monitored_q ||
+        !effective_components || !out_counts || !out_thirteen)
+        return fail(ctx, N4M_ERR_NULL_POINTER, "null PCA monitor buffer");
+    const int64_t nr = reference->rows, nm = monitored->rows, p = reference->cols;
+    if (nr < 3 || nm < 1 || p < 1 || monitored->cols != p || n_folds < 2 || n_folds > nr ||
+        !(alpha > 0.0 && alpha < 1.0))
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PCA monitor dimensions");
+    const int64_t largest_fold = (nr + n_folds - 1) / n_folds;
+    const int64_t smallest_train = nr - largest_fold;
+    if (max_components < 1 || max_components > p || max_components > smallest_train - 1)
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "max_components must not exceed the columns or the smallest training "
+                    "fold minus one");
+    const long double m = static_cast<long double>(std::min(nr, p));
+    const long double work =
+        (static_cast<long double>(n_folds) + 1.0L) * m * m *
+            static_cast<long double>(std::max(nr, p)) +
+        static_cast<long double>(nr + nm) * static_cast<long double>(max_components) *
+            static_cast<long double>(p) * 4.0L;
+    if (work > max_monitor_work ||
+        static_cast<long double>(nr + nm) * static_cast<long double>(p) > max_shift_cells)
+        return fail(ctx, N4M_ERR_UNSUPPORTED,
+                    "PCA monitor exceeds 10 billion operations or 50 million cells");
+    if (!in_difference_domain({reference, monitored}))
+        return fail(ctx, N4M_ERR_UNSUPPORTED, difference_domain_message);
+    try {
+        const auto P = static_cast<size_t>(p), NR = static_cast<size_t>(nr),
+                   NM = static_cast<size_t>(nm);
+        std::vector<double> ref(NR * P), mon(NM * P);
+        for (size_t i = 0; i < NR; ++i)
+            for (size_t j = 0; j < P; ++j)
+                ref[i * P + j] = at(*reference, static_cast<int64_t>(i), static_cast<int64_t>(j));
+        for (size_t i = 0; i < NM; ++i)
+            for (size_t j = 0; j < P; ++j)
+                mon[i * P + j] = at(*monitored, static_cast<int64_t>(i), static_cast<int64_t>(j));
+        const int64_t kmax = max_components;
+        // Fits on each training fold (row i in fold i mod n_folds) and on all
+        // reference rows, each centred on its own double-double mean; the
+        // effective k is the smallest number of resolved components.
+        std::vector<std::unique_ptr<ReferencePca>> folds;
+        int64_t k = kmax;
+        for (int32_t f = 0; f < n_folds; ++f) {
+            std::vector<size_t> train;
+            for (size_t i = 0; i < NR; ++i)
+                if (static_cast<int64_t>(i) % n_folds != f) train.push_back(i);
+            folds.push_back(std::make_unique<ReferencePca>());
+            const auto st = folds.back()->compute(ref, P, train, kmax);
+            if (st != N4M_OK) return fail(ctx, st, "PCA monitor fold fit failed");
+            k = std::min(k, folds.back()->resolved_components());
+        }
+        std::vector<size_t> all(NR);
+        std::iota(all.begin(), all.end(), size_t{0});
+        ReferencePca full;
+        auto st = full.compute(ref, P, all, kmax);
+        if (st != N4M_OK) return fail(ctx, st, "PCA monitor reference fit failed");
+        k = std::min(k, full.resolved_components());
+        *effective_components = static_cast<int32_t>(k);
+        // Conservative relative tolerance of T^2 and Q (not a proven bound):
+        // tau = 16 m eps cond, m = max(n_r, p), cond = lambda_1 / lambda_k
+        // of the full fit (1 when k == 0).
+        const double m_dim = static_cast<double>(std::max(nr, p));
+        const double cond = k > 0 ? full.fit.explained_var[0] / full.fit.explained_var[k - 1] : 1.0;
+        const double tau = 16.0 * m_dim * std::numeric_limits<double>::epsilon() * cond;
+        std::vector<double> scores(static_cast<size_t>(kmax)), residual, xc(P);
+        std::vector<RowStatistics> rs(NR);
+        double scale = 0.0;
+        for (int32_t f = 0; f < n_folds; ++f)
+            for (size_t i = static_cast<size_t>(f); i < NR; i += static_cast<size_t>(n_folds)) {
+                const auto& fold = *folds[static_cast<size_t>(f)];
+                centre(ref.data() + i * P, fold.mean, xc.data());
+                rs[i] = fold.evaluate(xc.data(), k, scores.data(), residual);
+                scale = std::max(scale, rs[i].norm2);
+            }
+        auto quantile_of = [alpha, &rs](double RowStatistics::*field) {
+            std::vector<double> values;
+            for (const auto& r : rs) values.push_back(r.*field);
+            std::sort(values.begin(), values.end());
+            return quantile(values, 1.0 - alpha);
+        };
+        const double t2_limit = k > 0 ? quantile_of(&RowStatistics::t2) : nan_value;
+        const double q_limit = quantile_of(&RowStatistics::q);
+        int64_t counts[6] = {0, 0, 0, 0, 0, 0};
+        double q_scale = scale;
+        for (size_t i = 0; i < NM; ++i) {
+            centre(mon.data() + i * P, full.mean, xc.data());
+            const auto s = full.evaluate(xc.data(), k, scores.data(), residual);
+            monitored_t2[i] = s.t2;
+            monitored_q[i] = s.q;
+            // Q is compared on the scale of the larger of this row's and the
+            // reference rows' squared centred norms.
+            const double row_scale = std::max(scale, s.norm2);
+            q_scale = std::max(q_scale, s.norm2);
+            const int over_t2 = k > 0 ? compare_with_tolerance(
+                                            s.t2, t2_limit, tau * std::max(s.t2, t2_limit))
+                                      : 0;
+            const int over_q = compare_with_tolerance(s.q, q_limit, tau * row_scale);
+            const int either = (over_t2 == 1 || over_q == 1) ? 1
+                               : (over_t2 == 0 && over_q == 0) ? 0 : -1;
+            counts[0] += over_t2 == 1;
+            counts[1] += over_q == 1;
+            counts[2] += either == 1;
+            counts[3] += over_t2 == -1;
+            counts[4] += over_q == -1;
+            counts[5] += either == -1;
+        }
+        for (int i = 0; i < 6; ++i) out_counts[i] = counts[i];
+        for (size_t i = 0; i < NR; ++i) {
+            reference_t2[i] = rs[i].t2;
+            reference_q[i] = rs[i].q;
+        }
+        // Dispersions from the raw data, each set about its own centre.
+        auto trace = [P](const std::vector<double>& x, size_t n) {
+            std::vector<size_t> rows(n);
+            std::iota(rows.begin(), rows.end(), size_t{0});
+            const auto mean = dd_means(x, P, rows);
+            std::vector<double> c(P);
+            DD sum;
+            for (size_t i = 0; i < n; ++i) {
+                centre(x.data() + i * P, mean, c.data());
+                sum = dd_add(sum, squared_norm(c.data(), P));
+            }
+            return (sum.hi + sum.lo) / static_cast<double>(n - 1);
+        };
+        const double trace_ref = trace(ref, NR);
+        const double trace_mon = nm >= 2 ? trace(mon, NM) : nan_value;
+        // Centroid shift: difference of the double-double means.
+        std::vector<size_t> mon_rows(NM);
+        std::iota(mon_rows.begin(), mon_rows.end(), size_t{0});
+        const auto mon_mean = dd_means(mon, P, mon_rows);
+        std::vector<double> diff(P);
+        for (size_t j = 0; j < P; ++j) {
+            const DD d = dd_add(mon_mean[j], dd_neg(full.mean[j]));
+            diff[j] = d.hi + d.lo;
+        }
+        const auto c = full.evaluate(diff.data(), k, scores.data(), residual);
+        double subspace2 = 0.0, retained = 0.0;
+        for (int64_t a = 0; a < k; ++a) {
+            subspace2 += scores[static_cast<size_t>(a)] * scores[static_cast<size_t>(a)];
+            retained += full.fit.explained_var[a];
+            eigenvalues[a] = full.fit.explained_var[a];
+        }
+        for (int64_t a = k; a < kmax; ++a) eigenvalues[a] = nan_value;
+        out_thirteen[0] = t2_limit;
+        out_thirteen[1] = q_limit;
+        out_thirteen[2] = trace_ref;
+        out_thirteen[3] = trace_mon;
+        out_thirteen[4] = std::sqrt(squared_norm(diff.data(), P));
+        out_thirteen[5] = std::sqrt(subspace2);
+        out_thirteen[6] = std::sqrt(c.q);
+        out_thirteen[7] = c.t2;
+        out_thirteen[8] = trace_ref > 0.0 ? retained / trace_ref : nan_value;
+        out_thirteen[9] = tau;
+        out_thirteen[10] = cond;
+        out_thirteen[11] = q_scale;
+        out_thirteen[12] = full.resolution();
+        bool finite = true;
+        for (int i : {1, 2, 4, 5, 6, 9, 10, 11, 12}) finite = finite && std::isfinite(out_thirteen[i]);
+        for (size_t i = 0; i < NR; ++i) finite = finite && std::isfinite(reference_q[i]);
+        for (size_t i = 0; i < NM; ++i) finite = finite && std::isfinite(monitored_q[i]);
+        if (k > 0) {
+            for (int i : {0, 7}) finite = finite && std::isfinite(out_thirteen[i]);
+            for (size_t i = 0; i < NR; ++i) finite = finite && std::isfinite(reference_t2[i]);
+            for (size_t i = 0; i < NM; ++i) finite = finite && std::isfinite(monitored_t2[i]);
+        }
+        if (!finite) return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "PCA monitor result not finite");
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PCA monitor allocation failed");
+    } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PCA monitor internal error"); }
 }
 }  // extern "C"

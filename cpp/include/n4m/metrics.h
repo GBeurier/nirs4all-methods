@@ -405,6 +405,91 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     double* group_mean_distances, double* out_six, int64_t* out_two,
     int32_t* distance_exponent);
 
+/* Supported numerical domain of n4m_stats_energy_distance and
+ * n4m_stats_pca_monitor (lead rule 15): finite values, every nonzero |x| in
+ * [2^-256, 2^256] and max/min nonzero |x| <= 2^32 over the input arrays
+ * (N4M_DOMAIN_MAX_SPREAD_LOG2 = 32), so subtracting two input values never
+ * erases their difference. Outside it the call returns N4M_ERR_UNSUPPORTED
+ * with the message "input outside the supported numerical domain (...)"
+ * before any computation. Precision statements below are conservative
+ * estimates, not certified bounds. */
+
+/* Energy distance (Szekely-Rizzo) between the groups of the rows of X
+ * (n x p, Euclidean), with an optional K-sample permutation test.
+ * group_codes has n elements in [0, n_groups); every group is nonempty;
+ * 2 <= n_groups <= n. Distances are norms of local pairwise differences of
+ * the input rows (no common centre is subtracted), squares summed in
+ * double-double. M[a][b] is the mean distance over all ordered pairs i in a,
+ * j in b (V-statistic: zero self-pairs included), accumulated in
+ * double-double. Outputs (row-major n_groups x n_groups, caller-owned,
+ * symmetric by construction): mean_distances = M; energy[a][b] = E =
+ * 2M[a][b] - M[a][a] - M[b][b] (unit of X; sqrt(E) equals
+ * scipy.stats.energy_distance for one column), combined in double-double;
+ * energy_bounds[a][b] = (8u + 2^-80)(2M_ab + M_aa + M_bb), u = DBL_EPSILON/2,
+ * a conservative estimate of the rounding of E carried over from the
+ * distances (each distance has relative error below about 3u). Since E >= 0,
+ * a computed value in [-bound, 0) is published as 0; below -bound the call
+ * returns N4M_ERR_NUMERICAL_FAILURE. out_five: [0] statistic T = sum_{a<b}
+ * n_a n_b / (n_a + n_b) E_ab (R energy::eqdist.etest), [1] its rounding
+ * estimate bound(T), [2] log10(n!/prod n_a!), [3] Monte Carlo p-value
+ * (1+b)/(1+B) under the declared tie rule, [4] conservative p-value
+ * (1+b')/(1+B); NaN when B == 0. Draws use PCG64 seeded like
+ * numpy.random.default_rng(seed): the b-th draw is rng.permutation(n) and
+ * row i receives group_codes[perm[i]]. Declared tie rule: b counts draws with
+ * T_perm - T >= -sqrt(DBL_EPSILON) |T| (difference in double-double). A draw
+ * whose difference lies within 2 bound(T) of that threshold is numerically
+ * undecidable: out_three = {b, B, undecidable}, and b' counts draws with
+ * T_perm - T >= -sqrt(DBL_EPSILON) |T| - 2 bound(T) (every undecidable draw
+ * taken as a tie). Requires finite X in the domain, 0 <= n_permutations <=
+ * 1000000, n(n-1)/2 <= 20 million pairs, n p <= 50 million cells,
+ * n_groups^2 <= 10 million and n(n-1)/2 (p + B + 1) <= 2.5 billion
+ * operations, checked before allocation (N4M_ERR_UNSUPPORTED). */
+N4M_API n4m_status_t n4m_stats_energy_distance(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
+    int32_t n_groups, int32_t n_permutations, uint64_t seed, double* energy,
+    double* energy_bounds, double* mean_distances, double* out_five, int64_t* out_three);
+
+/* PCA monitoring of rows against a reference PCA. Each fit centres its rows
+ * on their own double-double column means and is decomposed with the Methods
+ * PCA helper (as n4m_preflight_pca_compute) with max_components components,
+ * on every training fold (reference row i belongs to fold i mod n_folds) and
+ * on all reference rows. Eigenvalues carry an absolute resolution
+ * r = 16 m eps lambda_1 (m = max(rows, p), eps = DBL_EPSILON, rule 14); the
+ * effective k (*effective_components) is the smallest number of components
+ * above the resolution among these fits, capped at max_components. For a
+ * centred row: scores t (compensated dot products), T^2 = sum_a t_a^2 /
+ * lambda_a (NaN when k == 0) and Q = ||x_c - sum_a t_a v_a||^2 from the
+ * explicit residual. reference_t2/q (n_r) are out-of-fold; monitored_t2/q
+ * (n_m) use the fit on all reference rows. Limits are type-7 (1 - alpha)
+ * quantiles of the out-of-fold values. Tolerance (a conservative estimate,
+ * not a proven bound): tau = 16 m eps cond, cond = lambda_1 / lambda_k of the
+ * full fit (1 when k == 0); T^2 is compared with tolerance tau max(T^2,
+ * limit), Q with tau S, S the larger of the row's and the reference rows'
+ * squared centred norms. out_counts (6): monitored rows above the T^2 limit,
+ * the Q limit, either limit by more than the tolerance, then rows strictly
+ * within the tolerance band below that (a row at or below limit - tolerance
+ * is not above it), for T^2, Q, either (numerically undetermined,
+ * never a decision; T^2 ignored when k == 0). eigenvalues (max_components,
+ * ddof 1): the first k, then NaN. out_thirteen: [0] T^2 limit [1] Q limit
+ * [2] reference total variance trace(cov), ddof 1 [3] monitored total
+ * variance about the monitored rows' own centre, ddof 1, NaN for one row
+ * [4] ||c_m - c_r|| between double-double centroids [5] its norm inside the
+ * reference subspace [6] its residual norm [7] T^2 of the monitored centroid
+ * [8] retained fraction sum(eigenvalues) / [2] (NaN for zero variance)
+ * [9] tau [10] cond [11] Q tolerance scale (largest S) [12] eigenvalue
+ * resolution r of the full fit. Requires inputs in the domain, n_r >= 3,
+ * n_m >= 1, equal columns, 2 <= n_folds <= n_r, 1 <= max_components <= p,
+ * max_components <= n_r - ceil(n_r / n_folds) - 1, 0 < alpha < 1,
+ * (n_r + n_m) p <= 50 million cells and (n_folds + 1) min(n_r,p)^2
+ * max(n_r,p) + 4 (n_r + n_m) max_components p <= 10 billion operations,
+ * checked before allocation (N4M_ERR_UNSUPPORTED). */
+N4M_API n4m_status_t n4m_stats_pca_monitor(
+    n4m_context_t* ctx, const n4m_matrix_view_t* reference,
+    const n4m_matrix_view_t* monitored, int32_t max_components, int32_t n_folds,
+    double alpha, double* eigenvalues, double* reference_t2, double* reference_q,
+    double* monitored_t2, double* monitored_q, int32_t* effective_components,
+    int64_t* out_counts, double* out_thirteen);
+
 /* ---------- 20.2 NIRS regression metrics ------------------------------ */
 N4M_API n4m_status_t n4m_metrics_regression_metrics_rmse (const double* y_true,
                                        const double* y_pred,
