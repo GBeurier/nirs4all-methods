@@ -7,9 +7,14 @@ import { N4mError, Status, type Matrix } from "./types.js";
 export interface PreflightPcaResult {
     scores: Matrix;
     loadings: Matrix;
+    /** Variances; 0 for an unresolved component. */
     eigenvalues: Float64Array;
     /** [trace(C), trace(C*C)] over the full centered covariance spectrum. */
     fullMoments: readonly [number, number];
+    /** Absolute accuracy bound of every eigenvalue (16 max(n,p) eps lambda_max). */
+    resolution: number;
+    /** 1 when the component's variance is not above `resolution` (not rank). */
+    unresolved: Uint8Array;
 }
 
 export interface PreflightRepeatabilityResult {
@@ -156,15 +161,20 @@ export function preflightPca(X: Matrix, k: number): PreflightPcaResult {
         const scores = scope.matrix(new Float64Array(X.rows * k), X.rows, k);
         const loadings = scope.matrix(new Float64Array(k * X.cols), k, X.cols);
         const eigen = scope.alloc(k * 8), moments = scope.alloc(16);
-        const st = m.ccall("n4m_preflight_pca_compute", "number",
-            ["number", "number", "number", "number", "number", "number", "number"],
-            [ctx.handle, x.viewPtr, k, scores.viewPtr, loadings.viewPtr, eigen, moments]) as number;
+        const resolution = scope.alloc(8), unresolved = scope.alloc(k);
+        const st = m.ccall("n4m_preflight_pca_compute_resolved", "number",
+            ["number", "number", "number", "number", "number", "number", "number", "number",
+             "number"],
+            [ctx.handle, x.viewPtr, k, scores.viewPtr, loadings.viewPtr, eigen, moments,
+             resolution, unresolved]) as number;
         checkStatus(st, ctx.handle);
         return {
             scores: {data: copyF64(scores.dataPtr, X.rows * k), rows: X.rows, cols: k},
             loadings: {data: copyF64(loadings.dataPtr, k * X.cols), rows: k, cols: X.cols},
             eigenvalues: copyF64(eigen, k),
             fullMoments: [m.HEAPF64[moments / 8]!, m.HEAPF64[moments / 8 + 1]!],
+            resolution: m.HEAPF64[resolution / 8]!,
+            unresolved: m.HEAPU8.slice(unresolved, unresolved + k),
         };
     } finally {
         scope.close();

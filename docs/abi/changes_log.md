@@ -1,22 +1,38 @@
 # ABI — Changes Log
 
-## Unreleased — ABI 2.19.0 unchanged: `n4m_preflight_pca_compute` numerical domain
+## Unreleased — ABI 2.20.0: `n4m_preflight_pca_compute_resolved`
 
-No symbol, signature or layout change. `n4m_preflight_pca_compute` declares
-its supported numerical domain D: every nonzero |x| in [2^-128, 2^128] (tighter
-than the generic 2^256 because trace(C^2) is quartic in X) and max/min nonzero
-|x| <= 2^64, with exact zeros allowed. Outside D it returns
-`N4M_ERR_UNSUPPORTED` with the context message "input outside the supported
-numerical domain (...)" before computing; Preflight maps it to the
-`NUMERICAL_DOMAIN_EXCEEDED` reason.
+Add one caller-buffer operation in `n4m/metrics.h`. 2.19 symbols keep their
+signatures, and no serialized format changes.
 
-Inside D every output is a normal double. Each column is centred in an exactly
-rescaled space, using compensated sums for a two-term mean, and the
-decomposition runs at one power-of-two scale chosen from the centred
-variation. Constant columns therefore have no influence, and translations
-change nothing beyond the input's rounding. Scaling X by 2^s scales the
-eigenvalues and `full_moments[0]` by 4^s, `full_moments[1]` by 16^s and the
-scores by 2^s; the loadings are invariant.
+`n4m_preflight_pca_compute_resolved` is `n4m_preflight_pca_compute` with its
+accuracy contract made explicit. Two outputs are added:
+
+- `resolution`, one element: the ABSOLUTE accuracy bound of every
+  eigenvalue, `16 * max(n,p) * DBL_EPSILON * lambda_max`.
+- `unresolved`, k bytes: 1 for a component whose variance is not above that
+  bound. Such a component is published with a zero variance and zero scores,
+  and must not be counted as numerical rank or read as a measured variance.
+
+Resolved eigenvalues, the resolution and both moments are normal doubles.
+Relative accuracy of smaller variances is not guaranteed. A new symbol is the
+minimal compatible change: adding parameters to the 2.19 signature would break
+callers compiled against 2.19. The 2.19 entry point shares the
+implementation and publishes unresolved components as 0, without the flag.
+
+Both entry points declare the same supported numerical domain D. Every nonzero
+|x| must lie in [2^-128, 2^128] (tighter than the generic 2^256 because
+trace(C^2) is quartic in X), and max/min nonzero |x| must be <= 2^64; exact
+zeros are allowed. Outside D they return `N4M_ERR_UNSUPPORTED` with
+"input outside the supported numerical domain (...)" before computing.
+
+Inside D each column is centred in an exactly rescaled space, using
+compensated sums for a two-term mean, and the decomposition runs at one
+power-of-two scale chosen from the centred variation. Constant columns
+therefore have no influence, and translations change nothing beyond the
+input's rounding. Scaling X by 2^s scales the eigenvalues, `full_moments[0]`
+and the resolution by 4^s, `full_moments[1]` by 16^s and the scores by 2^s;
+the loadings are invariant.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

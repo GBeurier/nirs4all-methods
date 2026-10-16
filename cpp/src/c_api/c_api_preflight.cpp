@@ -54,6 +54,8 @@ n4m_status_t check_view(n4m_context_t* ctx, const n4m_matrix_view_t* v) noexcept
 // value (eigenvalues, both moments, scores) is a normal double.
 constexpr int pca_domain_exp = 128;
 constexpr int domain_spread_exp = 64;
+// Absolute accuracy of the PCA variances, in units of max(n,p)*eps*lambda_max.
+constexpr double pca_resolution_factor = 16.0;
 
 double at(const n4m_matrix_view_t& v, int64_t i, int64_t j) noexcept {
     return static_cast<const double*>(v.data)[i * v.row_stride + j * v.col_stride];
@@ -144,13 +146,15 @@ struct AssociationKernel {
 };
 }  // namespace
 
-extern "C" {
-N4M_API n4m_status_t n4m_preflight_pca_compute(
-    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
-    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
-    double* eigenvalues, double* full_moments) {
+namespace {
+// Shared body of n4m_preflight_pca_compute (2.19) and
+// n4m_preflight_pca_compute_resolved (2.20). unresolved has k entries.
+n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+                         const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+                         double* eigenvalues, double* full_moments, double* resolution,
+                         uint8_t* unresolved) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
-    if (!eigenvalues || !full_moments)
+    if (!eigenvalues || !full_moments || !resolution || !unresolved)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null PCA output");
     for (const auto* v : {X, scores, loadings}) {
         const auto st = check_view(ctx, v);
@@ -269,19 +273,50 @@ N4M_API n4m_status_t n4m_preflight_pca_compute(
         n4m_pca_fit_t fit{};
         const auto st = n4m_pca_fit(data.data(), n, p, k, 0, &fit);
         if (st != N4M_OK) return fail(ctx, st, "PCA fit failed");
+        // Accuracy contract (rule 14): every variance is accurate to the
+        // absolute bound pca_resolution_factor * max(n,p) * eps * lambda_max.
+        // A component not above it is unresolved: flagged, and published
+        // with a zero variance and zero scores (its loading row stays a unit
+        // vector of the orthonormal basis). Decided in the rescaled space,
+        // where every resolved value maps to a normal double.
+        const double res_scaled = pca_resolution_factor * static_cast<double>(std::max(n, p)) *
+                                  std::numeric_limits<double>::epsilon() * fit.explained_var[0];
         for (int64_t a = 0; a < k; ++a) {
-            eigenvalues[a] = std::ldexp(fit.explained_var[a], 2 * g);
+            const bool lost = !(fit.explained_var[a] > res_scaled);
+            unresolved[a] = lost ? 1 : 0;
+            eigenvalues[a] = lost ? 0.0 : std::ldexp(fit.explained_var[a], 2 * g);
             for (int64_t j = 0; j < p; ++j) put(*loadings, a, j, fit.components[a * p + j]);
+            for (int64_t i = 0; i < n; ++i)
+                put(*scores, i, a, lost ? 0.0 : std::ldexp(fit.scores[i * k + a], g));
         }
-        for (int64_t i = 0; i < n; ++i) for (int64_t a = 0; a < k; ++a)
-            put(*scores, i, a, std::ldexp(fit.scores[i * k + a], g));
         n4m_pca_fit_free(&fit);
+        resolution[0] = std::ldexp(res_scaled, 2 * g);
         full_moments[0] = varying ? m1 : 0.0;
         full_moments[1] = varying ? m2 : 0.0;
         return N4M_OK;
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PCA allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PCA internal error"); }
+}
+}  // namespace
+
+extern "C" {
+N4M_API n4m_status_t n4m_preflight_pca_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+    double* eigenvalues, double* full_moments) {
+    double resolution = 0.0;
+    std::vector<uint8_t> unresolved(k > 0 ? static_cast<size_t>(k) : 0);
+    return pca_compute(ctx, X, k, scores, loadings, eigenvalues, full_moments, &resolution,
+                       unresolved.data());
+}
+
+N4M_API n4m_status_t n4m_preflight_pca_compute_resolved(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+    double* eigenvalues, double* full_moments, double* resolution, uint8_t* unresolved) {
+    return pca_compute(ctx, X, k, scores, loadings, eigenvalues, full_moments, resolution,
+                       unresolved);
 }
 
 N4M_API n4m_status_t n4m_preflight_repeatability_compute(

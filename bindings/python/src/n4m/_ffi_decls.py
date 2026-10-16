@@ -589,6 +589,7 @@ SYMBOLS = (
     ("n4m_preflight_noise_proxy_compute", (c_void_p, POINTER(MatrixView), POINTER(c_uint8), c_int32, c_int32, POINTER(c_double), POINTER(c_int64), POINTER(c_double)), c_int),
     ("n4m_preflight_pairs_within_tolerance", (c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_int64), POINTER(c_int64), c_double, c_int64, POINTER(c_int64), POINTER(c_double), POINTER(c_uint8), POINTER(c_uint8), POINTER(c_int64)), c_int),
     ("n4m_preflight_pca_compute", (c_void_p, POINTER(MatrixView), c_int32, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_double), POINTER(c_double)), c_int),
+    ("n4m_preflight_pca_compute_resolved", (c_void_p, POINTER(MatrixView), c_int32, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_double), POINTER(c_double), POINTER(c_double), POINTER(c_uint8)), c_int),
     ("n4m_preflight_repeatability_compute", (c_void_p, POINTER(MatrixView), POINTER(c_int64), POINTER(c_uint8), POINTER(c_double), POINTER(c_double), POINTER(c_int64), POINTER(c_int32)), c_int),
     ("n4m_preflight_summary_compute", (c_void_p, POINTER(c_double), POINTER(c_uint8), c_int64, POINTER(c_double)), c_int),
     ("n4m_procedure_run", (c_void_p, c_int32, c_void_p, c_void_p, POINTER(c_void_p)), c_int),
