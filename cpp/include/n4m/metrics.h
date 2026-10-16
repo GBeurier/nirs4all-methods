@@ -54,7 +54,13 @@ N4M_API n4m_status_t n4m_preflight_repeatability_compute(
 /* Eight finite-value summary outputs: count, min, max, mean, sample SD,
  * q25, median, q75. Quantiles use linear type-7 interpolation. The optional
  * mask has n bytes; zero excludes a value. Unmasked nonfinite values fail.
- * For no values, all fields except count=0 are NaN; SD is NaN for n<2. */
+ * For no values, all fields except count=0 are NaN; SD is NaN for n<2.
+ * Supported domain: every nonzero unmasked |x| in [2^-256, 2^256], with no
+ * spread bound; otherwise N4M_ERR_UNSUPPORTED ("input outside the supported
+ * numerical domain") before computing. Inside it the mean
+ * is a double-double from an unevaluated Neumaier pair (error <= (n u)^2
+ * mean|x| + u |m|), the SD a compensated sum of squared deviations from it,
+ * and each quartile a + w (b - a) with b - a kept exactly (within 2 ulp). */
 N4M_API n4m_status_t n4m_preflight_summary_compute(
     n4m_context_t* ctx, const double* values, const uint8_t* valid_mask,
     int64_t n, double* out_eight);
@@ -63,7 +69,12 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
  * distance then reference index. When BOTH group arrays are non-NULL, rows
  * with the same group ID are excluded. Outputs are row-major n_query x k,
  * using index=-1 and distance=NaN when too few eligible neighbors remain.
- * All input values must be finite. k>0; callers own every buffer. */
+ * All input values must be finite. k>0; callers own every buffer.
+ * Supported domain: every nonzero |x| in [2^-256, 2^256], with no spread
+ * bound; otherwise N4M_ERR_UNSUPPORTED ("input outside the supported
+ * numerical domain") before computing. Inside it distances use a compensated sum (relative error < 4u); two candidates
+ * within 2^-45 (relative) of each other are ordered exactly from
+ * ||q - a||^2 - ||q - b||^2 in an exact accumulator, ties by index. */
 N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,
@@ -86,7 +97,12 @@ N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
  * out_four[2:4] are the observed and expected SAME-class fractions, each
  * averaged equally over eligible focal rows. Continuous sets these to NaN.
  * A zero denominator or no eligible rows yields NaN contrast, with N4M_OK
- * and coverage still reported. */
+ * and coverage still reported. Continuous targets must lie in the supported
+ * domain D (every nonzero |y| in [2^-256, 2^256], max/min nonzero |y| <=
+ * 2^32), else N4M_ERR_UNSUPPORTED; category codes are labels and are not
+ * bounded by D. Inside D the variance uses a double-double mean and
+ * compensated sums; out_four[0] = 1 - ratio carries an absolute error of a
+ * few u times the ratio. */
 N4M_API n4m_status_t n4m_preflight_local_contrast(
     n4m_context_t* ctx, const double* targets, const int64_t* neighbor_indices,
     const int64_t* group_ids, int64_t n, int32_t k, int32_t categorical,
@@ -139,7 +155,11 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
 
 /* Smoothing-residual noise proxy along the feature axis. Features are assumed
  * equally spaced. Each row is smoothed by the Methods Savitzky-Golay filter
- * (deriv 0, odd window_length >= 3, 0 <= polyorder <= window_length-2).
+ * (deriv 0, odd 3 <= window_length <= 1001, 0 <= polyorder <=
+ * min(10, window_length-2): the domain where the weights were verified to
+ * reproduce polynomials; other values give N4M_ERR_INVALID_ARGUMENT). The
+ * weights must satisfy sum_k w_k (k/h)^m = [m == 0] within 1e-9 for every
+ * m <= polyorder, else N4M_ERR_NUMERICAL_FAILURE.
  * A residual r_ij = x_ij - smooth_ij exists only for interior features
  * (h <= j < cols-h, h = window_length/2) whose whole window is valid in row
  * i: edges are never padded. g = sqrt(sum_k (delta_k - w_k)^2) is the
@@ -149,11 +169,45 @@ N4M_API n4m_status_t n4m_preflight_adjusted_rand_index(
  * pooled over every evaluable residual cell (NaN if none) divided by g;
  * out_two[1] = g. valid_mask is optional row-major rows x cols bytes, nonzero
  * = valid; unmasked X must be finite and cols >= window_length. The value is
- * a noise proxy under a locally polynomial signal, never an SNR. */
+ * a noise proxy under a locally polynomial signal, never an SNR.
+ * Supported numerical domain D: every nonzero valid |x| in [2^-256, 2^256]
+ * and, per row, max/min nonzero valid |x| <= 2^32; otherwise
+ * N4M_ERR_UNSUPPORTED ("input outside the supported numerical domain")
+ * before computing. Inside D the residual of each evaluable window is
+ * computed from that window alone as sum_{k>0} w_k (2 x_j - x_{j+k} -
+ * x_{j-k}) with double-double Savitzky-Golay weights (Gram polynomials,
+ * cross-checked against the SG engine) and exact second differences, rounded
+ * once. Values outside every evaluable window never change the results, and
+ * exact offsets cancel exactly. Precision (honest, conservative): each
+ * residual has absolute error <= 2 W eps sum_k |c_k| max_k |w_k| against the
+ * exact SG residual (W window length, eps = 2^-52, coefficient errors and the
+ * final rounding included); squares, sums, the square root and the gain add
+ * a relative error of a few eps. These are rounding-level discrepancies. */
 N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const uint8_t* valid_mask,
     int32_t window_length, int32_t polyorder, double* band_noise,
     int64_t* band_counts, double* out_two);
+
+/* SNV (centre and scale by the population SD, ddof 0) of each row of X, with
+ * the scheme of n4m_transform_snv_* (constant rows map to exact zeros;
+ * power-of-two rescaling, compensated sums and a double-double mean, so no
+ * finite row overflows or underflows and large offsets do not leak), then
+ * optionally aggregated. group_ids == NULL: n_groups == X->rows and out
+ * receives the SNV rows. Otherwise group_ids[i] in [0, n_groups) and every
+ * group is non-empty: out row g is the equal-weight mean of the SNV rows of
+ * group g (compensated per band). out is n_groups x cols, caller-owned.
+ * error_bounds[g] (n_groups doubles) bounds the absolute rounding error of
+ * every entry of out row g: for one SNV row,
+ * B = (3uA + n^2 u^2 mean|y| + 2u^2 |m|) / sd_y + 8 u max|z| with u = 2^-53, y the row
+ * rescaled by 2^-ilogb(max|x|), m, sd_y and A = mean|y - m| its mean, SD and
+ * mean absolute deviation, n = cols, z the SNV row (0 for a constant row);
+ * for a group of r > 1 rows, max member B + (4u + 2 r u^2) max member |z|.
+ * X must be finite with cols >= 2. Supported domain D: every nonzero |x| in
+ * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^32;
+ * otherwise N4M_ERR_UNSUPPORTED before computing. Added in ABI 2.20. */
+N4M_API n4m_status_t n4m_preflight_snv_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_ids,
+    int64_t n_groups, const n4m_matrix_view_t* out, double* error_bounds);
 
 /* Row pairs whose root-mean-square feature difference
  * sqrt(sum_j (q_ij - r_hj)^2 / cols) is <= tolerance (finite, > 0).
@@ -167,7 +221,14 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
  * query_flags (query rows) and, for two matrices, reference_flags (reference
  * rows) are set to 1 for rows in at least one pair, else 0. out_counts
  * receives [total pairs within tolerance, candidate pairs compared]. All
- * values must be finite. */
+ * values must be finite. Supported domain D: every nonzero |x| in
+ * [2^-256, 2^256] and, per row, max/min nonzero |x| <= 2^32; otherwise
+ * N4M_ERR_UNSUPPORTED before computing. Inside D the decisions are exact. A fast estimate on power-of-two rescaled differences
+ * (exact halves when some q - r overflows) decides when it is farther than
+ * 2^-45 (relative) from the tolerance; otherwise the sign of
+ * sum_j (q_j - r_j)^2 - cols tol^2 is computed exactly in a fixed-point
+ * accumulator of exact products. An accepted pair publishes
+ * min(estimated RMS, tolerance). */
 N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     n4m_context_t* ctx, const n4m_matrix_view_t* query,
     const n4m_matrix_view_t* reference, const int64_t* query_groups,

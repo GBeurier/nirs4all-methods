@@ -10,6 +10,10 @@
 
 #define REQUIRE(x) do { if (!(x)) throw std::runtime_error(#x); } while (false)
 static bool near(double x, double y) { return std::abs(x-y) < 1e-9; }
+// Relative error <= r against a nonzero expectation (0 and sign flips fail).
+static bool rel(double x, double y, double r) {
+    return std::isfinite(x) && (y == 0 ? x == 0 : std::abs(x - y) <= r * std::abs(y));
+}
 static bool relative_near(double x, double y) {
     return std::abs(x-y) <= 1e-12 * std::max(1.0, std::abs(y));
 }
@@ -69,14 +73,15 @@ int main() {
         REQUIRE(n4m_preflight_summary_compute(ctx,repeats,nullptr,4,summary)==N4M_OK);
         REQUIRE(near(summary[0],4) && near(summary[3],3));
         REQUIRE(near(summary[5],1.5) && near(summary[6],3) && near(summary[7],4.5));
-        double extreme[3]={-1e308,0,1e308};
+        // Domain edge 2^256: SD of [-a, 0, a] is a, quartiles -a/2 and a/2.
+        const double edge=std::ldexp(1.0,256);
+        double extreme[3]={-edge,0,edge};
         REQUIRE(n4m_preflight_summary_compute(ctx,extreme,nullptr,3,summary)==N4M_OK);
-        REQUIRE(near(summary[3],0) && relative_near(summary[4],1e308));
-        REQUIRE(relative_near(summary[5],-5e307) && near(summary[6],0));
-        REQUIRE(relative_near(summary[7],5e307));
+        REQUIRE(summary[3]==0 && summary[4]==edge);
+        REQUIRE(summary[5]==-edge/2 && summary[6]==0 && summary[7]==edge/2);
         double unrepresentable[2]={1.7976931348623157e308,-1.7976931348623157e308};
         REQUIRE(n4m_preflight_summary_compute(ctx,unrepresentable,nullptr,2,summary)
-                ==N4M_ERR_NUMERICAL_FAILURE);
+                ==N4M_ERR_UNSUPPORTED);
         double extreme_repeat[4]={1e308,-1e308,1e308,-1e308};
         R=view(extreme_repeat,4,1);
         REQUIRE(n4m_preflight_repeatability_compute(ctx,&R,ids,nullptr,sd,icc,ng,state)==N4M_OK);
@@ -86,16 +91,16 @@ int main() {
         int64_t qi[1]={9}, ri[2]={9,10}, out_idx[2]; double out_dist[2];
         REQUIRE(n4m_preflight_nearest_neighbors(ctx,&Q,&F,qi,ri,2,out_idx,out_dist)==N4M_OK);
         REQUIRE(out_idx[0]==1 && near(out_dist[0],1) && out_idx[1]==-1 && std::isnan(out_dist[1]));
-        double extreme_query[2]={1e308,1e308}, origin[2]={0,0};
+        double extreme_query[2]={edge,edge}, origin[2]={0,0};
         Q=view(extreme_query,1,2); F=view(origin,1,2);
         REQUIRE(n4m_preflight_nearest_neighbors(ctx,&Q,&F,nullptr,nullptr,1,out_idx,out_dist)
                 ==N4M_OK);
-        REQUIRE(relative_near(out_dist[0],std::sqrt(2.0)*1e308));
+        REQUIRE(rel(out_dist[0],std::sqrt(2.0)*edge,4e-16));
         double max_query[1]={1.7976931348623157e308};
         double min_ref[1]={-1.7976931348623157e308};
         Q=view(max_query,1,1); F=view(min_ref,1,1);
         REQUIRE(n4m_preflight_nearest_neighbors(ctx,&Q,&F,nullptr,nullptr,1,out_idx,out_dist)
-                ==N4M_ERR_NUMERICAL_FAILURE);
+                ==N4M_ERR_UNSUPPORTED);
         double continuous[3]={0,1,2}; int64_t local_idx[3]={1,2,1};
         double contrast[4]={};
         REQUIRE(n4m_preflight_local_contrast(ctx,continuous,local_idx,nullptr,3,1,0,contrast)==N4M_OK);
@@ -579,11 +584,162 @@ int main() {
         REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&O,&T,nullptr,nullptr,0.1,0,
                                                      nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
         REQUIRE(pcounts[0]==1 && pcounts[1]==2 && qflag[0]==1 && rflag[0]==1 && rflag[1]==0);
-        // An overflowing difference is far, not an error.
+        // Values outside the supported domain are refused, never misread.
         Q=view(max_query,1,1); F=view(min_ref,1,1);
         REQUIRE(n4m_preflight_pairs_within_tolerance(ctx,&Q,&F,nullptr,nullptr,1.0,0,
-                                                     nullptr,nullptr,qflag,rflag,pcounts)==N4M_OK);
-        REQUIRE(pcounts[0]==0 && pcounts[1]==1 && qflag[0]==0);
+                                                     nullptr,nullptr,qflag,rflag,pcounts)
+                ==N4M_ERR_UNSUPPORTED);
+        // Regression (review b1 #3, b1fix #2, b14fix #2/#8) inside the domain
+        // (nonzero |x| in [2^-256, 2^256], per-row spread <= 2^32). Distances use
+        // a relative tolerance on the expected value (so 0 never passes) and
+        // decisions are checked on both sides of each threshold.
+        {
+            const double A=std::ldexp(1.0,200), a=std::ldexp(1.0,-200);
+            const double lo=std::ldexp(1.0,-256), hi=std::ldexp(1.0,256);
+            double hd[1]={}; int64_t hi_idx[2]={};
+            const auto status = [&](double q0, double q1, double r0, double r1, double tol) {
+                double q[2]={q0,q1}, r[2]={r0,r1};
+                auto Q2=view(q,1,2), R2=view(r,1,2);
+                hd[0]=-1.0;
+                return n4m_preflight_pairs_within_tolerance(ctx,&Q2,&R2,nullptr,nullptr,tol,1,
+                                                            hi_idx,hd,qflag,rflag,pcounts);
+            };
+            const auto pair = [&](double q0, double r0, double tol) {
+                REQUIRE(status(q0,0,r0,0,tol)==N4M_OK);
+                return pcounts[0]==1;
+            };
+            // q - r = 2A on one of two features: RMS sqrt(2) A.
+            REQUIRE(pair(A,-A,1.5*A) && rel(hd[0],std::sqrt(2.0)*A,4e-16));
+            REQUIRE(!pair(A,-A,1.414*A));
+            // RMS a/sqrt(2) at every tolerance (tolerance-free distance).
+            for (double tol : {0.70711*a, 1e-30, 1.0, A, hi}) {
+                REQUIRE(pair(a,0,tol));
+                REQUIRE(rel(hd[0],a/std::sqrt(2.0),4e-16));
+            }
+            REQUIRE(!pair(a,0,0.70710*a));
+            // At the lower edge: [2 lo, 0] vs 0 has RMS sqrt(2) lo > lo.
+            REQUIRE(!pair(2*lo,0,lo));
+            REQUIRE(pair(2*lo,0,2*lo) && rel(hd[0],std::sqrt(2.0)*lo,4e-16));
+            // Domain boundaries on both sides: magnitudes and per-row spread.
+            REQUIRE(status(lo,0,hi,0,1.0)==N4M_OK);
+            REQUIRE(status(std::nextafter(lo,0.0),0,0,0,1.0)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(status(std::nextafter(hi,INFINITY),0,0,0,1.0)==N4M_ERR_UNSUPPORTED);
+            REQUIRE(status(1.0,std::ldexp(1.0,32),0,0,1.0)==N4M_OK);
+            REQUIRE(status(1.0,std::nextafter(std::ldexp(1.0,32),INFINITY),0,0,1.0)
+                    ==N4M_ERR_UNSUPPORTED);
+            REQUIRE(status(0,0,std::ldexp(1.0,-100),std::ldexp(1.0,-30),1.0)
+                    ==N4M_ERR_UNSUPPORTED);
+        }
+        // SNV with per-row rounding bounds (ABI 2.20). Rows: constant (exact
+        // zeros, bound 0), [a,0,-a,0] at the domain edges 2^-256 and 2^256
+        // (mean 0, SD a/sqrt(2): [sqrt(2),0,-sqrt(2),0]), [1,2,3,4]
+        // (z = (j-2.5)/sqrt(1.25)), and an offset row at 2^60.
+        {
+            const double lo=std::ldexp(1.0,-256), hi=std::ldexp(1.0,256), off=std::ldexp(1.0,60);
+            // Row 4 is [c, c, c, c + 256] with c = 2^60 (ulp 256).
+            double sx[20]={0.1,0.1,0.1,0.1, lo,0,-lo,0, hi,0,-hi,0, 1,2,3,4,
+                           off,off,off,off+256};
+            double so[20]={}, sb[5]={};
+            auto SX=view(sx,5,4), SO=view(so,5,4);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&SX,nullptr,5,&SO,sb)==N4M_OK);
+            for (int j=0;j<4;++j) REQUIRE(so[j]==0.0);
+            REQUIRE(sb[0]==0.0);
+            for (int i : {1,2}) {
+                REQUIRE(rel(so[4*i],std::sqrt(2.0),1e-15) && so[4*i+1]==0.0 &&
+                        rel(so[4*i+2],-std::sqrt(2.0),1e-15) && so[4*i+3]==0.0);
+                REQUIRE(sb[i]>0.0 && sb[i]<1e-14);
+            }
+            for (int j=0;j<4;++j) REQUIRE(rel(so[12+j],(j+1-2.5)/std::sqrt(1.25),1e-15));
+            // [c,c,c,c+256]: z = [-1,-1,-1,3]/sqrt(3) whatever c (2^60 offset).
+            for (int j=0;j<3;++j) REQUIRE(rel(so[16+j],-1/std::sqrt(3.0),1e-15));
+            REQUIRE(rel(so[19],3/std::sqrt(3.0),1e-15) && sb[4]<1e-14);
+            // The bound covers the actual error of an offset row of 100,000
+            // bands (99,999 values then one larger), whose exact SNV is
+            // -1/sqrt(99999) and sqrt(99999) (review b1fix #3).
+            const int64_t wide=100000;
+            std::vector<double> wx(static_cast<size_t>(2*wide)), wo(wx.size()); double wb[2];
+            for (int64_t j=0;j<wide;++j) {
+                const double v = j+1<wide ? 1.0 : 2.0;
+                wx[static_cast<size_t>(j)] = 1.0*v + 0.0;
+                wx[static_cast<size_t>(wide+j)] = 1.1*v + 100.0;
+            }
+            auto WX=view(wx.data(),2,wide), WO=view(wo.data(),2,wide);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&WX,nullptr,2,&WO,wb)==N4M_OK);
+            const double z_lo=-1.0/std::sqrt(99999.0), hi_z=std::sqrt(99999.0);
+            for (int i=0;i<2;++i) {
+                double err=0;
+                for (int64_t j=0;j<wide;++j)
+                    err=std::max(err,std::abs(wo[static_cast<size_t>(i*wide+j)]-(j+1<wide?z_lo:hi_z)));
+                REQUIRE(err<=wb[i] && wb[i]<1e-12);
+            }
+            // Aggregation (b14fix #3): a [1,2,4] with a = 1, 2, 4, 8 and
+            // 1, 10000, 1, 1 identical acquisitions. Every analytic SNV row is
+            // [1,2,4] standardized; group means must stay within their bounds.
+            const int64_t reps[4]={1,10000,1,1};
+            std::vector<double> gx; std::vector<int64_t> gid;
+            for (int64_t g=0; g<4; ++g)
+                for (int64_t r=0; r<reps[g]; ++r) {
+                    for (double v : {1.0,2.0,4.0}) gx.push_back(std::ldexp(v,static_cast<int>(g)));
+                    gid.push_back(g);
+                }
+            const int64_t gn=static_cast<int64_t>(gid.size());
+            double go[12], gb[4];
+            auto GX=view(gx.data(),gn,3), GO=view(go,4,3);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&GX,gid.data(),4,&GO,gb)==N4M_OK);
+            const double mu=7.0/3.0, sd=std::sqrt(((1-mu)*(1-mu)+(2-mu)*(2-mu)+(4-mu)*(4-mu))/3.0);
+            for (int g=0;g<4;++g) {
+                REQUIRE(gb[g]>0.0 && gb[g]<1e-14);
+                int j=0;
+                for (double v : {1.0,2.0,4.0}) {
+                    REQUIRE(std::abs(go[g*3+j]-(v-mu)/sd)<=gb[g]+4e-16*std::abs((v-mu)/sd));
+                    ++j;
+                }
+            }
+            int64_t badgid[2]={0,2};
+            double two[4]={1,2,3,5}, tout[4]={};
+            auto TX=view(two,2,2), TO=view(tout,2,2);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&TX,badgid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);
+            int64_t onegid[2]={0,0};
+            REQUIRE(n4m_preflight_snv_compute(ctx,&TX,onegid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);
+            // Domain boundaries: 2^256 next to 1 (spread 2^256), 2^-257, and a
+            // spread just above 2^32 are refused; a spread of exactly 2^32 is not.
+            for (const auto& row : {std::vector<double>{1.0, std::ldexp(1.0,256)},
+                                    std::vector<double>{std::ldexp(1.0,-257), 0.0},
+                                    std::vector<double>{1.0, std::nextafter(std::ldexp(1.0,32),INFINITY)}}) {
+                std::vector<double> rx(row), ro(2); double rb[1];
+                auto RX=view(rx.data(),1,2), RO=view(ro.data(),1,2);
+                REQUIRE(n4m_preflight_snv_compute(ctx,&RX,nullptr,1,&RO,rb)==N4M_ERR_UNSUPPORTED);
+            }
+            {
+                double rx[2]={1.0,std::ldexp(1.0,32)}, ro[2]; double rb[1];
+                auto RX=view(rx,1,2), RO=view(ro,1,2);
+                REQUIRE(n4m_preflight_snv_compute(ctx,&RX,nullptr,1,&RO,rb)==N4M_OK);
+                REQUIRE(rel(ro[0],-1.0,1e-15) && rel(ro[1],1.0,1e-15));
+            }
+            double bad[2]={1,std::nan("")};
+            auto BX=view(bad,1,2), BO=view(so,1,2);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&BX,nullptr,1,&BO,sb)==N4M_ERR_INVALID_ARGUMENT);
+            auto narrow1=view(sx,4,1), nout=view(so,4,1);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&narrow1,nullptr,4,&nout,sb)==N4M_ERR_INVALID_ARGUMENT);
+        }
+        // Regression (review b1 #2): orders outside the validated domain are
+        // refused (window 41 / order 38 gave a constant-row residual of 0.83),
+        // and a constant row has zero residual at the domain edge (order 10).
+        {
+            std::vector<double> ones(41, 1.0); double cb[41], cp[2]; int64_t cc[41];
+            auto Cst=view(ones.data(),1,41);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Cst,nullptr,41,38,cb,cc,cp)
+                    ==N4M_ERR_INVALID_ARGUMENT);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Cst,nullptr,41,11,cb,cc,cp)
+                    ==N4M_ERR_INVALID_ARGUMENT);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Cst,nullptr,41,10,cb,cc,cp)==N4M_OK);
+            REQUIRE(std::abs(cp[0])<1e-12 && std::abs(cb[20])<1e-12 && cc[20]==1);
+            std::vector<double> wide(1003, 1.0); double wb[1003]; int64_t wc[1003];
+            auto Wd=view(wide.data(),1,1003);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Wd,nullptr,1003,2,wb,wc,cp)
+                    ==N4M_ERR_INVALID_ARGUMENT);
+            REQUIRE(n4m_preflight_noise_proxy_compute(ctx,&Wd,nullptr,1001,2,wb,wc,cp)==N4M_OK);
+        }
         n4m_context_destroy(ctx);
         std::puts("preflight diagnostics: ok");
         return 0;

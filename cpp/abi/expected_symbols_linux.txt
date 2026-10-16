@@ -572,6 +572,7 @@ n4m_preflight_noise_proxy_compute
 n4m_preflight_pairs_within_tolerance
 n4m_preflight_pca_compute
 n4m_preflight_repeatability_compute
+n4m_preflight_snv_compute
 n4m_preflight_summary_compute
 n4m_procedure_run
 n4m_rng_pcg64_advance
