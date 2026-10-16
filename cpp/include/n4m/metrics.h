@@ -327,8 +327,10 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * DBL_EPSILON times the raw sum of squares. A pseudo-F is NaN (undefined, no
  * test) only when its residual SS is exactly zero. Otherwise it is published
  * with a resolution ratio, the error estimate of the residual SS divided by
- * it: estimate = gamma^2 n sum_j max_i |x_ij|^2, gamma = 4 (rank + k + 2) n
- * DBL_EPSILON (rank = design rank, groups for PERMDISP), a conservative
+ * it: estimate = gamma^2 n sum_j (max_i y_ij - min_i y_ij)^2, the range of
+ * each centred column y in the common scaled unit (same unit as the residual
+ * SS, so the ratio is unit-free), gamma = 4 (rank + k + 2) n DBL_EPSILON
+ * (rank = design rank, groups for PERMDISP), a conservative
  * first-order estimate, not a proof. A ratio >= 1 sets the "numerically
  * unresolved" flag: F and its test are still computed but the residual SS,
  * hence F, is not resolved above rounding; below 1 the relative error of the
