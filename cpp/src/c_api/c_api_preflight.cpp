@@ -181,6 +181,17 @@ n4m_status_t check_view(n4m_context_t* ctx, const n4m_matrix_view_t* v) noexcept
     return N4M_OK;
 }
 
+// Supported numerical domain (rules 13 and 15) of the PCA kernel: every
+// nonzero |x| in [2^-pca_domain_exp, 2^pca_domain_exp] and max/min nonzero
+// |x| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2. The PCA declares a magnitude bound
+// tighter than 2^256 because trace(C^2) is quartic in X: with |x| <= 2^128
+// every published value (resolved eigenvalues, resolution, both moments,
+// scores) is a normal double.
+constexpr int pca_domain_exp = 128;
+constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
+// Absolute accuracy of the PCA variances, in units of max(n,p)*eps*lambda_max.
+constexpr double pca_resolution_factor = 16.0;
+
 double at(const n4m_matrix_view_t& v, int64_t i, int64_t j) noexcept {
     return static_cast<const double*>(v.data)[i * v.row_stride + j * v.col_stride];
 }
@@ -1053,13 +1064,15 @@ int compare_with_tolerance(double value, double limit, double tolerance) noexcep
 }
 }  // namespace
 
-extern "C" {
-N4M_API n4m_status_t n4m_preflight_pca_compute(
-    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
-    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
-    double* eigenvalues, double* full_moments) {
+namespace {
+// Shared body of n4m_preflight_pca_compute (2.19) and
+// n4m_preflight_pca_compute_resolved (2.20). unresolved has k entries.
+n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+                         const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+                         double* eigenvalues, double* full_moments, double* resolution,
+                         uint8_t* unresolved) {
     if (!ctx) return N4M_ERR_NULL_POINTER;
-    if (!eigenvalues || !full_moments)
+    if (!eigenvalues || !full_moments || !resolution || !unresolved)
         return fail(ctx, N4M_ERR_NULL_POINTER, "null PCA output");
     for (const auto* v : {X, scores, loadings}) {
         const auto st = check_view(ctx, v);
@@ -1077,72 +1090,153 @@ N4M_API n4m_status_t n4m_preflight_pca_compute(
     try {
         if (static_cast<long double>(n) * p > static_cast<long double>(SIZE_MAX / sizeof(double)))
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "PCA matrix size overflow");
-        std::vector<double> data(static_cast<size_t>(n) * static_cast<size_t>(p));
-        std::vector<double> means(static_cast<size_t>(p), 0.0);
+        const auto un = static_cast<size_t>(n), up = static_cast<size_t>(p);
+        std::vector<double> data(un * up);
         for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
             const double x = at(*X, i, j);
             if (!std::isfinite(x))
                 return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PCA input");
-            data[static_cast<size_t>(i) * static_cast<size_t>(p) + static_cast<size_t>(j)] = x;
-            means[static_cast<size_t>(j)] += x / static_cast<double>(n);
+            data[static_cast<size_t>(i) * up + static_cast<size_t>(j)] = x;
         }
-        n4m_pca_fit_t fit{};
-        const auto st = n4m_pca_fit(data.data(), n, p, k, 1, &fit);
-        if (st != N4M_OK) return fail(ctx, st, "PCA fit failed");
-        for (int64_t a = 0; a < k; ++a) {
-            if (!std::isfinite(fit.explained_var[a])) {
-                n4m_pca_fit_free(&fit);
-                return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "nonfinite PCA eigenvalue");
+        {
+            double maxabs = 0.0, minabs = std::numeric_limits<double>::infinity();
+            for (double x : data) {
+                const double a = std::fabs(x);
+                if (a > 0.0) {
+                    maxabs = std::max(maxabs, a);
+                    minabs = std::min(minabs, a);
+                }
+            }
+            if (maxabs > 0.0 &&
+                (maxabs > std::ldexp(1.0, pca_domain_exp) ||
+                 minabs < std::ldexp(1.0, -pca_domain_exp) ||
+                 maxabs > std::ldexp(minabs, N4M_DOMAIN_MAX_SPREAD_LOG2)))
+                return fail(ctx, N4M_ERR_UNSUPPORTED,
+                            "input outside the supported numerical domain (finite, nonzero |x| "
+                            "in [2^-128, 2^128], max/min nonzero |x| <= 2^32)");
+        }
+        // Centre every column in its own exactly rescaled space (max|x| in
+        // [0.5, 1)), then bring all centred columns to one power-of-two scale
+        // 2^g set by the largest centred variation. Constant columns centre
+        // to exact zeros and do not influence g.
+        int g = 0;
+        bool varying = false;
+        std::vector<int> col_exp(up, 0);
+        for (size_t j = 0; j < up; ++j) {
+            double maxabs = 0.0;
+            for (size_t i = 0; i < un; ++i) maxabs = std::max(maxabs, std::fabs(data[i * up + j]));
+            int e = 0;
+            if (maxabs > 0.0) (void)std::frexp(maxabs, &e);
+            // Two-term mean mean_hi + mean_lo from compensated (Neumaier)
+            // sums: a plain sum loses small values next to large ones of
+            // opposite sign, and a single rounded mean would shift every
+            // centred value by up to ulp(offset).
+            for (size_t i = 0; i < un; ++i) data[i * up + j] = std::ldexp(data[i * up + j], -e);
+            const auto compensated_mean = [&](double shift) {
+                double sum = 0.0, comp = 0.0;
+                for (size_t i = 0; i < un; ++i) {
+                    const double x = data[i * up + j] - shift;
+                    const double t = sum + x;
+                    comp += (std::fabs(sum) >= std::fabs(x)) ? (sum - t) + x : (x - t) + sum;
+                    sum = t;
+                }
+                return (sum + comp) / static_cast<double>(n);
+            };
+            const double mean_hi = compensated_mean(0.0);
+            const double mean_lo = compensated_mean(mean_hi);
+            double cmax = 0.0;
+            for (size_t i = 0; i < un; ++i) {
+                data[i * up + j] = (data[i * up + j] - mean_hi) - mean_lo;
+                cmax = std::max(cmax, std::fabs(data[i * up + j]));
+            }
+            col_exp[j] = e;
+            if (cmax > 0.0) {
+                int ce = 0;
+                (void)std::frexp(cmax, &ce);
+                g = varying ? std::max(g, e + ce) : e + ce;
+                varying = true;
             }
         }
-        for (int64_t i = 0; i < n; ++i) for (int64_t a = 0; a < k; ++a)
-            put(*scores, i, a, fit.scores[i * k + a]);
-        for (int64_t a = 0; a < k; ++a) {
-            eigenvalues[a] = fit.explained_var[a];
-            for (int64_t j = 0; j < p; ++j) put(*loadings, a, j, fit.components[a * p + j]);
-        }
-        n4m_pca_fit_free(&fit);
-        for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j)
-            data[static_cast<size_t>(i) * static_cast<size_t>(p) +
-                 static_cast<size_t>(j)] -= means[static_cast<size_t>(j)];
+        for (size_t j = 0; j < up; ++j)
+            for (size_t i = 0; i < un; ++i)
+                data[i * up + j] = std::ldexp(data[i * up + j], col_exp[j] - g);
+
+        // Exact full-spectrum moments of the rescaled covariance:
+        // trace(C) = ||Xc||_F^2 / (n-1), trace(C^2) = ||Gram||_F^2 / (n-1)^2,
+        // the Gram taken on the smaller side.
         long double sum1 = 0.0L, sum2 = 0.0L;
-        for (double x : data)
-            sum1 += static_cast<long double>(x) * static_cast<long double>(x);
-        // trace(C^2) equals the squared Frobenius norm of either Gram matrix.
+        for (double x : data) sum1 += static_cast<long double>(x) * static_cast<long double>(x);
         if (n <= p) {
-            for (int64_t i = 0; i < n; ++i) for (int64_t h = 0; h <= i; ++h) {
+            for (size_t i = 0; i < un; ++i) for (size_t h = 0; h <= i; ++h) {
                 long double dot = 0.0L;
-                for (int64_t j = 0; j < p; ++j)
-                    dot += static_cast<long double>(data[static_cast<size_t>(i) *
-                                                           static_cast<size_t>(p) +
-                                                       static_cast<size_t>(j)]) *
-                           static_cast<long double>(
-                               data[static_cast<size_t>(h) * static_cast<size_t>(p) +
-                                    static_cast<size_t>(j)]);
+                for (size_t j = 0; j < up; ++j)
+                    dot += static_cast<long double>(data[i * up + j]) *
+                           static_cast<long double>(data[h * up + j]);
                 sum2 += (i == h ? 1.0L : 2.0L) * dot * dot;
             }
         } else {
-            for (int64_t j = 0; j < p; ++j) for (int64_t h = 0; h <= j; ++h) {
+            for (size_t j = 0; j < up; ++j) for (size_t h = 0; h <= j; ++h) {
                 long double dot = 0.0L;
-                for (int64_t i = 0; i < n; ++i)
-                    dot += static_cast<long double>(data[static_cast<size_t>(i) *
-                                                           static_cast<size_t>(p) +
-                                                       static_cast<size_t>(j)]) *
-                           static_cast<long double>(
-                               data[static_cast<size_t>(i) * static_cast<size_t>(p) +
-                                    static_cast<size_t>(h)]);
+                for (size_t i = 0; i < un; ++i)
+                    dot += static_cast<long double>(data[i * up + j]) *
+                           static_cast<long double>(data[i * up + h]);
                 sum2 += (j == h ? 1.0L : 2.0L) * dot * dot;
             }
         }
         const long double d = static_cast<long double>(n - 1);
-        full_moments[0] = static_cast<double>(sum1 / d);
-        full_moments[1] = static_cast<double>(sum2 / (d * d));
-        if (!std::isfinite(full_moments[0]) || !std::isfinite(full_moments[1]))
-            return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "PCA moments overflow");
+        // Inside the domain every rescaled output below is a normal double.
+        const double m1 = std::ldexp(static_cast<double>(sum1 / d), 2 * g);
+        const double m2 = std::ldexp(static_cast<double>(sum2 / (d * d)), 4 * g);
+
+        n4m_pca_fit_t fit{};
+        const auto st = n4m_pca_fit(data.data(), n, p, k, 0, &fit);
+        if (st != N4M_OK) return fail(ctx, st, "PCA fit failed");
+        // Accuracy contract (rule 14): variances carry an absolute error of
+        // order max(n,p) * eps * lambda_max (backward-stable SVD). The
+        // conservative threshold pca_resolution_factor * max(n,p) * eps *
+        // lambda_max separates resolved components; a component not above it
+        // is unresolved: flagged, and published
+        // with a zero variance and zero scores (its loading row stays a unit
+        // vector of the orthonormal basis). Decided in the rescaled space,
+        // where every resolved value maps to a normal double.
+        const double res_scaled = pca_resolution_factor * static_cast<double>(std::max(n, p)) *
+                                  std::numeric_limits<double>::epsilon() * fit.explained_var[0];
+        for (int64_t a = 0; a < k; ++a) {
+            const bool lost = !(fit.explained_var[a] > res_scaled);
+            unresolved[a] = lost ? 1 : 0;
+            eigenvalues[a] = lost ? 0.0 : std::ldexp(fit.explained_var[a], 2 * g);
+            for (int64_t j = 0; j < p; ++j) put(*loadings, a, j, fit.components[a * p + j]);
+            for (int64_t i = 0; i < n; ++i)
+                put(*scores, i, a, lost ? 0.0 : std::ldexp(fit.scores[i * k + a], g));
+        }
+        n4m_pca_fit_free(&fit);
+        resolution[0] = std::ldexp(res_scaled, 2 * g);
+        full_moments[0] = varying ? m1 : 0.0;
+        full_moments[1] = varying ? m2 : 0.0;
         return N4M_OK;
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PCA allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PCA internal error"); }
+}
+}  // namespace
+
+extern "C" {
+N4M_API n4m_status_t n4m_preflight_pca_compute(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+    double* eigenvalues, double* full_moments) {
+    double resolution = 0.0;
+    std::vector<uint8_t> unresolved(k > 0 ? static_cast<size_t>(k) : 0);
+    return pca_compute(ctx, X, k, scores, loadings, eigenvalues, full_moments, &resolution,
+                       unresolved.data());
+}
+
+N4M_API n4m_status_t n4m_preflight_pca_compute_resolved(
+    n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
+    const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
+    double* eigenvalues, double* full_moments, double* resolution, uint8_t* unresolved) {
+    return pca_compute(ctx, X, k, scores, loadings, eigenvalues, full_moments, resolution,
+                       unresolved);
 }
 
 N4M_API n4m_status_t n4m_preflight_repeatability_compute(

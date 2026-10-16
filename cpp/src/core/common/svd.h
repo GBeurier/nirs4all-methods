@@ -4,7 +4,9 @@
  * (FlexiblePCA, FlexibleSVD) and potentially by Phase 8 / Phase 19 agents
  * (T^2 / Q residuals, OSC) that need a portable in-process SVD.
  *
- * Algorithm: one-sided Jacobi rotation SVD on a row-major (m x n) matrix.
+ * Algorithms: one-sided Jacobi rotation SVD on a row-major (m x n) matrix
+ * (n4m_svd_compact), Gram + tridiagonal QL (truncated Gram paths,
+ * n4m_symmetric_eigh) and a randomized sketch.
  * The decomposition produced is the compact form:
  *
  *     A = U @ diag(S) @ Vt
@@ -44,6 +46,29 @@ extern "C" {
  * broken by smallest index). Vt[i, :] is flipped along with U[:, i] to
  * preserve A = U @ diag(S) @ Vt.
  *
+ * Accuracy contract: every singular value is accurate to the ABSOLUTE
+ * bound O(max(m,n) * eps * s_max) (preflight publishes it with constant 16);
+ * smaller singular values are unresolved, and callers must not read them as
+ * measured values or as exact zeros. One-sided Jacobi runs to convergence
+ * (no early stop on norm reduction) and in practice also resolves small
+ * directions of graded or block-decoupled inputs relatively, a bonus outside
+ * the contract. A column whose norm falls below 2^-500 of the scaled input
+ * (max|a| in [0.5, 1)) takes no further rotation and is published as 0
+ * with a zero U column (zero Vt row for m < n). That value is far inside the
+ * unresolved range, so it is not a rank statement: exact rank deficiency
+ * (e.g. +-1 designs where one row is the opposite of another) and a genuine
+ * direction below 2^-500 * s_max look the same.
+ *
+ * Magnitude domain (all helpers in this header): entries must be finite and
+ * their dynamic range max|a| / min nonzero |a| at most 2^480; otherwise
+ * N4M_ERR_NUMERICAL_FAILURE before computing (small entries would otherwise
+ * be lost to underflow). Inside it results are scale-equivariant over the
+ * whole double range (exact power-of-two rescaling; bit-identical to the
+ * unscaled algorithms whenever those do not under/overflow). A published
+ * value that is significant (> max(m,n) * eps * the largest one) but
+ * overflows, or falls below 2^-1042 (fewer than 32 significant bits), is
+ * also N4M_ERR_NUMERICAL_FAILURE; output buffers are then unspecified.
+ *
  * The input A is consumed (modified in place) — pass a copy if the
  * caller needs to keep the original.
  *
@@ -55,6 +80,8 @@ extern "C" {
  *   - N4M_ERR_OUT_OF_MEMORY when an internal scratch allocation fails.
  *   - N4M_ERR_CONVERGENCE_FAILED if the Jacobi sweep limit is reached
  *     without the off-diagonal mass dropping below tolerance.
+ *   - N4M_ERR_NUMERICAL_FAILURE for non-finite input or an output that is
+ *     not representable (see the magnitude domain above).
  */
 n4m_status_t n4m_svd_compact(double* A, int64_t m, int64_t n,
                               double* U, double* S, double* Vt);
@@ -62,6 +89,9 @@ n4m_status_t n4m_svd_compact(double* A, int64_t m, int64_t n,
 /* Exact leading-k SVD for wide matrices (m <= n) through the sample Gram
  * matrix A @ A.T. This avoids the expensive column-pair Jacobi sweep on the
  * original feature width while preserving full-SVD parity for small m.
+ * Squared singular values are accurate to O(eps * s_max^2) for coupled
+ * inputs (relative accuracy kept on decoupled blocks). Same magnitude domain
+ * and statuses as n4m_svd_compact.
  */
 n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m, int64_t n,
                                          int64_t k, double* U, double* S,
@@ -69,14 +99,19 @@ n4m_status_t n4m_svd_truncated_dual_wide(const double* A, int64_t m, int64_t n,
 
 /* Exact leading-k SVD for tall matrices (m >= n) through the feature Gram
  * matrix A.T @ A. This avoids the full one-sided Jacobi sweep when callers
- * only need a small leading component count.
+ * only need a small leading component count. Accuracy, domain and statuses
+ * as n4m_svd_truncated_dual_wide.
  */
 n4m_status_t n4m_svd_truncated_tall_gram(const double* A, int64_t m,
                                          int64_t n, int64_t k, double* U,
                                          double* S, double* Vt);
 
 /* Deterministic randomized leading-k SVD for large matrices where an exact
- * full decomposition is too expensive. The input is read-only.
+ * full decomposition is too expensive. The input is read-only. Singular
+ * values are resolved only to O(eps * s_max) absolutely: directions below
+ * that level are not captured by the sketch and come back as 0 (sketch
+ * columns that are linearly dependent at rounding level are dropped).
+ * Same magnitude domain and statuses as n4m_svd_compact.
  */
 n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
                                           int64_t n, int64_t k,
@@ -91,6 +126,12 @@ n4m_status_t n4m_svd_truncated_randomized(const double* A, int64_t m,
  *
  * The input A is read-only. Eigenpairs are not sorted; callers that use the
  * full basis, such as Ridge path scans, do not need a particular order.
+ * Tridiagonal QL in the LAPACK dsteqr organisation: split into unreduced
+ * blocks by the local test |e| <= eps (|d_m| + |d_m+1|), each block scaled
+ * exactly when extreme (subnormal spectra are resolved, not flushed), 30n
+ * total QL sweeps (else N4M_ERR_CONVERGENCE_FAILED). Same magnitude domain
+ * and N4M_ERR_NUMERICAL_FAILURE rule as n4m_svd_compact (n * eps rank
+ * threshold).
  */
 n4m_status_t n4m_symmetric_eigh(const double* A, int64_t n, double* eigvals,
                                 double* V);

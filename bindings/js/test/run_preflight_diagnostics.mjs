@@ -21,6 +21,8 @@ const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
 const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
+const relativeNearTol = (actual, expected) => assert.ok(
+    Math.abs(actual - expected) <= 1e-12 * Math.abs(expected), `${actual} != ${expected}`);
 await loadModule();
 assert.deepEqual(abiVersion(), [2, 20, 0]);
 const pca = preflightPca({
@@ -29,6 +31,141 @@ const pca = preflightPca({
 near(pca.eigenvalues[0], 16 / 3);
 near(pca.fullMoments[0], 20 / 3);
 near(pca.fullMoments[1], 272 / 9);
+// +-1 spectra, row 2 = -row 0 (rank-deficient): used to fail to converge.
+// Eigenvalues are NumPy 2.2.6 eigvalsh goldens (same case as test_preflight.cpp).
+const pm1 = preflightPca({
+    data: new Float64Array([1, -1, -1, 1, -1, -1, -1, -1, 1, 1, -1, -1,
+                            -1, 1, 1, -1, 1, 1, 1, 1, -1, -1, -1, 1]),
+    rows: 4, cols: 6,
+}, 3);
+near(pm1.eigenvalues[0], 4.451454311908496);
+near(pm1.eigenvalues[1], 2.943891106099754);
+near(pm1.eigenvalues[2], 0.2713212486584137);
+near(pm1.fullMoments[0], 23 / 3);
+// PCA numerical domain D (same cases as test_preflight.cpp): nonzero |x| in
+// [2^-128, 2^128], max/min nonzero |x| <= 2^32. Inside: exact power-of-two
+// equivariance and analytic values; outside: exactly N4M_ERR_UNSUPPORTED.
+const UNSUPPORTED = 10;
+const pcaBase = [3, -1, 4, 1, -5, 9, 2, -6, 5, 3, -5, 8, 9, -7, 9, 3, 2, -3, 8, 4,
+                 -6, 2, 6, 4, -3, 3, 3, -8, 3, 2];
+const pcaOf = (values, rows = 6, cols = 5, k = 3) =>
+    preflightPca({data: new Float64Array(values), rows, cols}, k);
+const statusOf = (values, rows = 6, cols = 5, k = 3) => {
+    try { pcaOf(values, rows, cols, k); return 0; } catch (e) { return e.status; }
+};
+const pow2 = (s) => 2 ** (s / 2 | 0) * 2 ** (s - (s / 2 | 0));
+const base = pcaOf(pcaBase);
+for (const s of [-128, -100, 0, 100, 124]) {
+    const f = pow2(s);
+    const r = pcaOf(pcaBase.map((v) => v * f));
+    for (let a = 0; a < 3; ++a) assert.equal(r.eigenvalues[a], base.eigenvalues[a] * f * f);
+    assert.equal(r.fullMoments[0], base.fullMoments[0] * f * f);
+    assert.equal(r.fullMoments[1], base.fullMoments[1] * f * f * f * f);
+    r.scores.data.forEach((v, i) => assert.equal(v, base.scores.data[i] * f));
+    assert.deepEqual(Array.from(r.loadings.data), Array.from(base.loadings.data));
+}
+for (const s of [-1014, -1022, -500, -129, 125, 500, 1000]) {
+    assert.equal(statusOf(pcaBase.map((v) => v * pow2(s))), UNSUPPORTED, `scale 2^${s}`);
+}
+const hiD = [2 ** 128, 2 ** 96, -(2 ** 128), 2 ** 97, 2 ** 127, -(2 ** 96),
+             0, 3 * 2 ** 96, 2 ** 126, 2 ** 98, -(2 ** 127), 0];
+const loD = hiD.map((v) => v * 2 ** -112 * 2 ** -112);
+assert.equal(statusOf(hiD, 6, 2, 2), 0);
+assert.equal(statusOf(loD, 6, 2, 2), 0);
+assert.equal(statusOf([2 ** 128 * (1 + 2 ** -52), ...hiD.slice(1)], 6, 2, 2), UNSUPPORTED);
+assert.equal(statusOf(loD.map((v) => v / 2), 6, 2, 2), UNSUPPORTED);
+assert.equal(statusOf([hiD[0], 2 ** 95, ...hiD.slice(2)], 6, 2, 2), UNSUPPORTED);
+const shifted = pcaOf(pcaBase.map((v) => 16 * v + 1e16));
+for (let a = 0; a < 3; ++a) relativeNearTol(shifted.eigenvalues[a], 256 * base.eigenvalues[a]);
+assert.equal(statusOf(pcaBase.map((v) => v * pow2(950) + 1e300)), UNSUPPORTED);
+const withConstants = (c0, c1) => {
+    const out = [];
+    for (let i = 0; i < 6; ++i) out.push(c0, ...pcaBase.slice(5 * i, 5 * i + 5), c1, 0.5, 0);
+    return out;
+};
+const c = pcaOf(withConstants(2 ** 30, -3 * 2 ** 28), 6, 9);
+for (let a = 0; a < 3; ++a) relativeNearTol(c.eigenvalues[a], base.eigenvalues[a]);
+relativeNearTol(c.fullMoments[1], base.fullMoments[1]);
+for (let a = 0; a < 3; ++a) {
+    for (const j of [0, 6, 7, 8]) assert.ok(c.loadings.data[9 * a + j] === 0);
+}
+assert.equal(statusOf(withConstants(1e300, 0.5), 6, 9), UNSUPPORTED);
+assert.equal(statusOf(withConstants(2 ** 34, 0.5), 6, 9), UNSUPPORTED);
+// Review cases: [A; -A], A = [[-1,1,-1],[-1,-1,-1],[1,-1,1],[-t,t,t]].
+const s17 = Math.sqrt(17);
+for (const t of [2 ** -30, 2 ** -40, 2 ** -60, 1e-40]) {
+    const a4 = [-1, 1, -1, -1, -1, -1, 1, -1, 1, -t, t, t];
+    const x = [...a4, ...a4.map((v) => -v)];
+    // Spreads 2^40, 2^60 and 1e40 exceed 2^32 (rule 15).
+    if (t !== 2 ** -30) { assert.equal(statusOf(x, 8, 3, 3), UNSUPPORTED); continue; }
+    const r = pcaOf(x, 8, 3, 3);
+    relativeNearTol(r.eigenvalues[0], 2 * (s17 + 1) ** 2 / 28);
+    relativeNearTol(r.eigenvalues[1], 2 * (s17 - 1) ** 2 / 28);
+    // 4t^2/7 ~ 2^-61 lambda_1: below the resolution, flagged unresolved.
+    assert.equal(r.eigenvalues[2], 0);
+    assert.deepEqual(Array.from(r.unresolved), [0, 0, 1]);
+}
+assert.equal(statusOf([2 ** 200, 0, -(2 ** 200), 0, 0, 2 ** -450, 0, -(2 ** -450)], 4, 2, 2),
+             UNSUPPORTED);
+// Rule 14 through the 2.20 entry point, against the mpmath variances of
+// cpp/tests/svd_degenerate_goldens.inc (generated by
+// parity/scripts/svd_degenerate_reference.py; mpmath 1.3.0, 600 digits).
+// Families inside D are computed; the review families with spread > 2^32
+// (rule 15) are refused.
+const bidiag = (n, t) => Array.from({length: n}, (_, i) =>
+    Array.from({length: n}, (_, j) => (i === j ? t : j === i + 1 ? 1 : 0)));
+const stacked = (rows, s) => [...rows.map((r) => r.map((v) => s * v)),
+                              ...rows.map((r) => r.map((v) => -s * v))];
+const kronB6 = (t) => {
+    const b = bidiag(6, t), kk = [[1, 0.75], [0.5, 1]];
+    const a = Array.from({length: 12}, (_, i) =>
+        Array.from({length: 12}, (_, j) => b[i >> 1][j >> 1] * kk[i & 1][j & 1]));
+    return stacked(a, 1).map((r) => [...r].reverse());
+};
+const weakRow = (t) => stacked([[-1, 1, -1], [-1, -1, -1], [1, -1, 1], [-t, t, t]], 1);
+for (const rows of [stacked(bidiag(8, 2 ** -63), 2 ** 63), stacked(bidiag(8, 2 ** -60), 2 ** -67),
+                    kronB6(2 ** -50)]) {
+    assert.equal(statusOf(rows.flat(), rows.length, rows[0].length, rows[0].length), UNSUPPORTED);
+}
+const mpCases = [
+    [stacked(bidiag(8, 2 ** -30), 1), [0.1333333335627813, 0.1333333335089452, 0.13333333342837378, 0.13333333333333333, 0.13333333323829288, 0.13333333315772147, 0.13333333310388537, 4.271110603057282e-146], 1],
+    [stacked(bidiag(8, 2 ** -30), 2 ** -97), [5.3103063795798e-60, 5.310306377435653e-60, 5.310306374226712e-60, 5.310306370441508e-60, 5.310306366656303e-60, 5.310306363447362e-60, 5.310306361303215e-60, 1.7010679383206515e-204], 1],
+    [kronB6(2 ** -30), [0.23182415456279407, 0.23182415440474205, 0.23182415418883898, 0.23182415397293593, 0.23182415381488392, 0.012741063223017941, 0.012741063214331399, 0.012741063202465357, 0.012741063190599318, 0.012741063181912773, 9.870979384799337e-110, 5.425093543510313e-111], 2],
+    [weakRow(2 ** -20), [1.8747293750882725, 0.6966991963405587, 5.197112581557818e-13], 0],
+];
+for (const [rows, ref, nUnresolved] of mpCases) {
+    const n = rows.length, p = rows[0].length;
+    for (const perm of [0, 1, 2, 3]) {
+        const x = new Float64Array(n * p);
+        rows.forEach((r, i) => r.forEach((v, j) => {
+            x[((perm & 1) ? n - 1 - i : i) * p + ((perm & 2) ? p - 1 - j : j)] = v;
+        }));
+        const r = preflightPca({data: x, rows: n, cols: p}, p);
+        assert.equal(r.resolution, 16 * Math.max(n, p) * Number.EPSILON * r.eigenvalues[0]);
+        let unresolved = 0;
+        for (let a = 0; a < p; ++a) {
+            if (ref[a] > 2 * r.resolution) assert.equal(r.unresolved[a], 0);
+            if (ref[a] < 0.5 * r.resolution) assert.equal(r.unresolved[a], 1);
+            if (r.unresolved[a] === 0) {
+                assert.ok(Math.abs(r.eigenvalues[a] - ref[a]) <= r.resolution, `component ${a}`);
+                assert.ok(r.eigenvalues[a] >= 2.2250738585072014e-308);
+            } else {
+                ++unresolved;
+                assert.equal(r.eigenvalues[a], 0);
+                for (let i = 0; i < n; ++i) assert.equal(r.scores.data[i * p + a], 0);
+            }
+        }
+        assert.equal(unresolved, nUnresolved);
+    }
+}
+// Weak decoupled variance: 1.689e-19 (NumPy 2.2.6) = 2.6e-18 lambda_1 is
+// below the resolution (rule 14): flagged unresolved and published as 0.
+const weak = new Float64Array(96);
+[1, 0, 0, 0, 1e-9, 0, 0, 1e-9, 1e-9].forEach((v, i) => { weak[i] = v; weak[9 + i] = -v; });
+const wk = preflightPca({data: weak, rows: 32, cols: 3}, 2);
+relativeNearTol(wk.eigenvalues[0], 0.06451612903225808);
+assert.equal(wk.eigenvalues[1], 0);
+assert.deepEqual(Array.from(wk.unresolved), [0, 1]);
 assert.equal(pca.scores.rows, 4);
 assert.equal(pca.loadings.cols, 2);
 const repeat = preflightRepeatability({

@@ -352,6 +352,56 @@ ABI 2.20.0 (project version unchanged until release).
   boundaries on both sides, `2^k` sweeps, exact translations, constant
   columns, mixed-exponent assignments against an exact enumeration with an
   independent oracle, memory refusals.
+### Fixed
+
+- Internal SVD / symmetric-eigen helpers (`cpp/src/core/common/svd.c`) no
+  longer return `N4M_ERR_CONVERGENCE_FAILED`, or silently wrong factors, on
+  degenerate or extreme inputs. This affects PCA (`n4m_pca_fit`,
+  `n4m_preflight_pca_compute`), PCR, Ridge, MB-PLS, Hotelling T2 / Q
+  residuals, FlexiblePCA/SVD and wavelet PCA/SVD.
+  - One-sided Jacobi runs on the input scaled exactly into [0.5, 1) and
+    sweeps to convergence, with no early stop on norm reduction. Singular
+    values are accurate to an absolute O(max(m,n) eps s_max) bound; smaller
+    ones are unresolved (weak directions of graded or decoupled inputs are
+    usually also resolved relatively, as a bonus). A column cancelled below
+    2^-500 of the scaled input stops rotating and is published as 0, inside
+    the unresolved range: this makes exactly rank-deficient inputs terminate
+    (e.g. +-1 spectra where one row is the opposite of another). Inputs whose
+    dynamic range exceeds 2^480 are refused.
+  - Tridiagonal QL follows the LAPACK dsteqr organisation: unreduced blocks
+    split by the local test, exact per-block scaling of extreme blocks
+    (subnormal spectra are resolved) and a 30n total iteration budget.
+  - Randomized SVD: the sketch basis is re-orthogonalised and dependent
+    sketch columns are dropped.
+  - Every helper refuses non-finite input and dynamic ranges above 2^480,
+    and reports a significant value it cannot represent (overflow, or below
+    2^-1042), with `N4M_ERR_NUMERICAL_FAILURE` instead of a silent zero.
+  - On non-degenerate inputs the Jacobi and QL results are bit-identical to
+    1.3.6, and all 145 registry parity predictions are bit-identical.
+  - Covered by NumPy 2.2.6 / LAPACK goldens
+    (`parity/scripts/svd_degenerate_reference.py`) and analytic oracles: the
+    review counter-examples, permutations, mixed exponents and both sides of
+    the resolution domain.
+- `n4m_preflight_pca_compute` declares the supported numerical domain D
+  (nonzero |x| in [2^-128, 2^128], spread <= 2^32) and refuses inputs outside
+  it with `N4M_ERR_UNSUPPORTED`. Inside D it centres with compensated sums,
+  ignores constant columns, and is exact under power-of-two scaling.
+  Variances carry an absolute error of order `max(n,p) * eps * lambda_max`
+  (no relative accuracy is claimed); components not above the conservative
+  threshold `16 * max(n,p) * eps * lambda_max` are unresolved and published
+  as 0.
+- The Jacobi convergence threshold no longer underflows for weak column pairs
+  (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
+  `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
+  inside D.
+
+### Added
+
+- ABI 2.20.0: `n4m_preflight_pca_compute_resolved` publishes the PCA
+  resolution bound and a per-component `unresolved` flag (rule-14 accuracy
+  contract). The JS `preflightPca` wrapper returns `resolution` and
+  `unresolved`. Tested against mpmath references (`B_n(t)` cancellation
+  families, a Kronecker product, permutations) on CPU and WASM.
 
 ## [1.3.6] - 2026-10-13
 
