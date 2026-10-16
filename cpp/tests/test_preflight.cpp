@@ -224,6 +224,88 @@ static void pca_resolution_tests(n4m_context_t* ctx) {
     REQUIRE(unresolved_seen==4*(1+1+2+0));
 }
 
+// Every former automatic solver class of the PCA (truncated k on tall
+// matrices with <= 64 columns, wide matrices with <= 256 rows, large tall
+// and wide matrices that used a randomized sketch, full k) on analytic
+// spectra: X = [D 0; -D 0] (2q x p, D = diag(d), zero padding to p
+// columns) has centred covariance eigenvalues 2 d_i^2 / (2q - 1) and zeros.
+// Review b8fix3: q = 128, d_i = 1 + i/128, k = 10 returned a first variance
+// 7 % low with N4M_OK through the randomized sketch.
+struct SolverCase { int64_t q, p; int32_t k; int64_t zero_tail; };
+static void pca_solver_class_tests(n4m_context_t* ctx) {
+    const SolverCase cases[]={
+        {128,128,10,0},  // 256 x 128: former randomized (tall)
+        {32,32,10,0},    // 64 x 32: former tall Gram
+        {100,300,10,0},  // 200 x 300: former dual wide
+        {150,400,10,0},  // 300 x 400: former randomized (wide)
+        {24,24,24,4},    // 48 x 24, full k, 4 zero columns: 4 unresolved
+        {10,40,20,0},    // 20 x 40, k = 20 > rank 10: wide completion
+    };
+    for (const SolverCase& c : cases) {
+        const int64_t n=2*c.q, p=c.p; const int32_t k=c.k;
+        std::vector<double> d(static_cast<size_t>(c.q));
+        for (int64_t i=0;i<c.q;++i)
+            d[static_cast<size_t>(i)]=i<c.q-c.zero_tail ? 1.0+static_cast<double>(i)/static_cast<double>(c.q) : 0.0;
+        std::vector<double> x(static_cast<size_t>(n*p),0.0);
+        for (int64_t i=0;i<c.q;++i) {
+            x[static_cast<size_t>(i*p+i)]=d[static_cast<size_t>(i)];
+            x[static_cast<size_t>((c.q+i)*p+i)]=-d[static_cast<size_t>(i)];
+        }
+        std::vector<double> ref(static_cast<size_t>(std::min(n,p)),0.0);
+        for (int64_t i=0;i<c.q;++i)
+            ref[static_cast<size_t>(i)]=2.0*d[static_cast<size_t>(i)]*d[static_cast<size_t>(i)]/
+                                        static_cast<double>(n-1);
+        std::sort(ref.begin(),ref.end(),std::greater<double>());
+        std::vector<double> sc(static_cast<size_t>(n*k)), ld(static_cast<size_t>(k*p)),
+            ev(static_cast<size_t>(k)), mom(2);
+        std::vector<uint8_t> flag(static_cast<size_t>(k),9);
+        double res=-1.0;
+        auto X=view(x.data(),n,p), S=view(sc.data(),n,k), L=view(ld.data(),k,p);
+        REQUIRE(n4m_preflight_pca_compute_resolved(ctx,&X,k,&S,&L,ev.data(),mom.data(),&res,
+                                                   flag.data())==N4M_OK);
+        REQUIRE(res==16.0*static_cast<double>(std::max(n,p))*
+                     std::numeric_limits<double>::epsilon()*ev[0]);
+        for (int32_t a=0;a<k;++a) {
+            const double r=ref[static_cast<size_t>(a)];
+            const size_t ua=static_cast<size_t>(a);
+            if (r>0.0) {
+                REQUIRE(flag[ua]==0 && std::abs(ev[ua]-r)<=res);
+                // Scores are the centred data on the loadings (X is centred).
+                for (int64_t i=0;i<n;++i) {
+                    double s=0.0;
+                    for (int64_t j=0;j<p;++j)
+                        s+=x[static_cast<size_t>(i*p+j)]*ld[static_cast<size_t>(a*p+j)];
+                    REQUIRE(std::abs(sc[static_cast<size_t>(i*k+a)]-s)<=1e-12);
+                }
+            } else {
+                REQUIRE(flag[ua]==1 && ev[ua]==0.0);
+                for (int64_t i=0;i<n;++i) REQUIRE(sc[static_cast<size_t>(i*k+a)]==0.0);
+            }
+        }
+        // Loadings stay orthonormal, unresolved rows included.
+        for (int32_t a=0;a<k;++a) for (int32_t b=0;b<=a;++b) {
+            double dot=0.0;
+            for (int64_t j=0;j<p;++j)
+                dot+=ld[static_cast<size_t>(a*p+j)]*ld[static_cast<size_t>(b*p+j)];
+            REQUIRE(std::abs(dot-(a==b?1.0:0.0))<=1e-12);
+        }
+    }
+}
+
+// Review b8fix3 P0-2: k is validated before any allocation (k = INT_MAX on
+// a 2 x 1 matrix used to request ~2 GiB, outside the exception barrier).
+static void pca_component_count_tests(n4m_context_t* ctx) {
+    double x[2]={1.0,2.0}, sc[2]={0,0}, ld[1]={0}, ev[1]={0}, mom[2]={0,0}, res=0.0;
+    uint8_t flag[1]={0};
+    auto X=view(x,2,1), S=view(sc,2,1), L=view(ld,1,1);
+    const int32_t big=std::numeric_limits<int32_t>::max();
+    REQUIRE(n4m_preflight_pca_compute(ctx,&X,big,&S,&L,ev,mom)==N4M_ERR_INVALID_ARGUMENT);
+    REQUIRE(n4m_preflight_pca_compute_resolved(ctx,&X,big,&S,&L,ev,mom,&res,flag)==
+            N4M_ERR_INVALID_ARGUMENT);
+    REQUIRE(n4m_preflight_pca_compute(ctx,&X,0,&S,&L,ev,mom)==N4M_ERR_INVALID_ARGUMENT);
+    REQUIRE(n4m_preflight_pca_compute(ctx,&X,1,&S,&L,ev,mom)==N4M_OK);
+}
+
 int main() {
     try {
         n4m_context_t* ctx=nullptr;
@@ -267,6 +349,8 @@ int main() {
         REQUIRE(near(moments[1],257.0/9.0));
         pca_invariance_tests(ctx);
         pca_resolution_tests(ctx);
+        pca_solver_class_tests(ctx);
+        pca_component_count_tests(ctx);
         // Weak decoupled variance: [A; -A; 26 zero rows], A = [[1,0,0],
         // [0,1e-9,0],[0,1e-9,1e-9]]. The second variance (NumPy 2.2.6:
         // 1.689e-19, i.e. 2.6e-18 lambda_1) is below the resolution (rule 14):

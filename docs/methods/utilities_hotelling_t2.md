@@ -4,7 +4,7 @@ _Namespace_: **`n4m.outlier_detection`** · _Fully-qualified_: `n4m.outlier_dete
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_outlier_detection_hotelling_t2`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L119). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_outlier_detection_hotelling_t2`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L127) · [`n4m_outlier_detection_hotelling_t2_resolved`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L135). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.outlier_detection import hotelling_t2`
 

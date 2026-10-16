@@ -56,7 +56,7 @@ typedef struct n4m_pca_fit_t {
  *                    a plain sum: centred values are accurate to
  *                    O(n * eps * max|x|), so variances far below that level
  *                    are only absolutely accurate (callers needing more
- *                    centre themselves, as n4m_preflight_pca_compute does).
+ *                    centre themselves).
  *
  * On success the caller-allocated ``out`` struct receives newly
  * allocated buffers (mean, components, explained_var) which must be

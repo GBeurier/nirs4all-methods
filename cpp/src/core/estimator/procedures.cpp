@@ -748,7 +748,23 @@ n4m_status_t outlier_statistic(n4m_context_t* ctx, const Params& params, const F
 
 n4m_status_t run_hotelling_t2(n4m_context_t* ctx, const Params& params, const FitInputs& in,
                               n4m_method_result_t** out) {
-    return outlier_statistic(ctx, params, in, out, n4m_outlier_detection_hotelling_t2, "t2");
+    std::vector<double> rows;
+    n4m_matrix_view_t X{};
+    n4m_status_t st = row_major_f64(ctx, *in.X, "X", rows, X);
+    if (st != N4M_OK) return st;
+    std::vector<double> values(static_cast<std::size_t>(X.rows));
+    double ucl = 0.0;
+    int32_t rank_used = 0;
+    st = n4m_outlier_detection_hotelling_t2_resolved(
+        X, to_i32(params.get_int("n_components")), params.get_double("alpha"), values.data(),
+        X.rows, &ucl, &rank_used);
+    if (st != N4M_OK) return failed(ctx, params, st);
+    auto result = std::make_unique<n4m_method_result_s>();
+    result->set_double_matrix("t2", std::move(values), 1, X.rows);
+    result->set_scalar("ucl", ucl);
+    // Resolved directions actually used (< n_components when X is rank deficient).
+    result->set_scalar("n_components_used", static_cast<double>(rank_used));
+    return finish(std::move(result), out);
 }
 
 n4m_status_t run_q_residuals(n4m_context_t* ctx, const Params& params, const FitInputs& in,
