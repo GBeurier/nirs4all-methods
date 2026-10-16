@@ -29,6 +29,26 @@ constexpr std::uint64_t kSplitMixGolden = 0x9E3779B97F4A7C15ull;
     return static_cast<unsigned long long>(value);
 }
 
+// Exact power-of-two rescaling of a centred working matrix so that its
+// largest |value| lies in [1, 2). The absolute epsilon thresholds of the
+// scikit-learn-compatible NIPALS/PCR code then act at a fixed relative scale,
+// and fits of X 2^k, Y 2^m are exactly equivariant (power-of-two scaling is
+// exact). Returns the exponent e applied (data multiplied by 2^-e).
+int rescale_to_unit_exponent(std::vector<double>& values) noexcept {
+    double largest = 0.0;
+    for (double v : values) largest = std::max(largest, std::fabs(v));
+    if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
+    const int e = std::ilogb(largest);
+    if (e != 0)
+        for (double& v : values) v = std::ldexp(v, -e);
+    return e;
+}
+
+void scale_by_power_of_two(std::vector<double>& values, int e) noexcept {
+    if (e != 0)
+        for (double& v : values) v = std::ldexp(v, e);
+}
+
 [[nodiscard]] double dot(const std::vector<double>& a,
                          const std::vector<double>& b) noexcept {
     double out = 0.0;
@@ -1577,6 +1597,10 @@ n4m_status_t fit_pls_regression_nipals(
                           model->x_mean, model->x_scale, xk);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
+    // Work at unit scale: weights and X loadings are invariant, Y loadings
+    // scale by 2^(ey - ex), X and Y scores by 2^ex (restored below).
+    const int ex = rescale_to_unit_exponent(xk);
+    const int ey = rescale_to_unit_exponent(yk);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -1801,6 +1825,9 @@ n4m_status_t fit_pls_regression_nipals(
             y_scores_u[idx(row, a, comp)] = y_scores[row];
         }
     }
+    scale_by_power_of_two(model->y_loadings_q, ey - ex);
+    scale_by_power_of_two(scores_t, ex);
+    scale_by_power_of_two(y_scores_u, ex);
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
@@ -3446,6 +3473,10 @@ n4m_status_t fit_pcr_svd(
                           model->x_mean, model->x_scale, xs);
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, ys);
+    // Work at unit scale (see rescale_to_unit_exponent): directions are
+    // invariant, Y loadings scale by 2^(ey - ex), X and Y scores by 2^ex.
+    const int ex = rescale_to_unit_exponent(xs);
+    const int ey = rescale_to_unit_exponent(ys);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3598,6 +3629,10 @@ n4m_status_t fit_pcr_svd(
             0.0,
             y_scores_u.data(), a);
     }
+
+    scale_by_power_of_two(model->y_loadings_q, ey - ex);
+    scale_by_power_of_two(scores_t, ex);
+    scale_by_power_of_two(y_scores_u, ex);
 
     status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
     if (status != N4M_OK) {
