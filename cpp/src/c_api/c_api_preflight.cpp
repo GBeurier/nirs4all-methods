@@ -19,6 +19,7 @@
 #include "core/common/double_double.hpp"
 #include "core/common/exact_sum.hpp"
 #include "core/common/matrix_view.hpp"
+#include "core/common/numerical_domain.hpp"
 #include "core/clustering/_vendored/hdbscan.hpp"
 #include "core/optimization/_vendored/rectangular_lsap.hpp"
 #include "core/common/pca_helper.h"
@@ -30,24 +31,32 @@ namespace {
 using ::n4m::core::bounding_exponent;
 using ::n4m::core::center_in_place;
 using ::n4m::core::Context;
+using ::n4m::core::DD;
+using ::n4m::core::dd_add;
+using ::n4m::core::dd_div;
+using ::n4m::core::dd_mul;
+using ::n4m::core::dd_neg;
+using ::n4m::core::dd_two_sum;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
 constexpr long double max_hdbscan_products = 2500000000.0L;
 // Contingency-table budget of the categorical association kernels (cells).
 constexpr size_t max_table_cells = 10000000;
+constexpr int32_t max_noise_window = 1001;
+constexpr int32_t max_noise_polyorder = 10;
+// Absolute tolerance on normalized Savitzky-Golay reproduction moments.
+constexpr long double moment_tolerance = 1e-9L;
+// Cumulative working memory of one clustering-kernel call, checked before any
+// allocation: the WASM32 build has at most 2 GiB and aborts on a failed
+// allocation (C++ exceptions are not caught there), so each call stays below
+// 256 MiB.
+constexpr long double max_working_bytes = 268435456.0L;
 
-// Supported numerical domain D (preflight robustness rules 13 and 15): finite values,
-// every nonzero |x| in [2^-256, 2^256] and, inside one input array,
-// max nonzero |x| / min nonzero |x| <= 2^N4M_DOMAIN_MAX_SPREAD_LOG2 (metrics.h).
-// Exact zeros are always allowed.
-// Inputs outside D are refused before any computation.
-constexpr double domain_low = 0x1p-256;
-constexpr double domain_high = 0x1p256;
-constexpr double domain_spread = static_cast<double>(1ULL << N4M_DOMAIN_MAX_SPREAD_LOG2);
-constexpr const char* domain_message =
-    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^32)";
-static_assert(N4M_DOMAIN_MAX_SPREAD_LOG2 == 32, "update domain_message with the spread");
+// Supported numerical domain D (core/common/numerical_domain.hpp).
+using ::n4m::core::domain_message;
+using ::n4m::core::DomainRange;
+using ::n4m::core::in_numerical_domain;
+using ::n4m::core::magnitude_domain_message;
 
 // Holm and BH only multiply p-values by small integers or ratios and take
 // running min/max: no subtraction, so no spread limit. Their domain is
@@ -60,104 +69,6 @@ bool p_values_in_domain(const double* p, size_t n) noexcept {
         if (p[i] != 0.0 && p[i] < DBL_MIN) return false;
     return true;
 }
-
-// Smallest and largest nonzero |x| of finite values, tested against D.
-struct DomainRange {
-    double low = domain_high, high = 0.0;
-    void add(double x) noexcept {
-        const double a = std::abs(x);
-        if (a == 0.0) return;
-        low = std::min(low, a);
-        high = std::max(high, a);
-    }
-    bool magnitudes_inside() const noexcept {
-        return high == 0.0 || (low >= domain_low && high <= domain_high);
-    }
-    bool inside() const noexcept {
-        return magnitudes_inside() && (high == 0.0 || high <= low * domain_spread);
-    }
-};
-
-// One O(n) pre-pass; inputs are already known to be finite.
-bool in_numerical_domain(const double* values, size_t n) noexcept {
-    DomainRange range;
-    for (size_t i = 0; i < n; ++i) range.add(values[i]);
-    return range.inside();
-}
-constexpr int32_t max_noise_window = 1001;
-constexpr int32_t max_noise_polyorder = 10;
-// Absolute tolerance on normalized Savitzky-Golay reproduction moments.
-constexpr long double moment_tolerance = 1e-9L;
-
-// Supported numerical domain of the Preflight kernels (lead rules 13/15,
-// constants in n4m/metrics.h): every nonzero |x| in [2^-256, 2^256] and, per
-// row, max/min nonzero |x| <= 2^32. With a spread below 2^53 no subtraction
-// of two values of one row erases their difference. Inputs outside are
-// refused with N4M_ERR_UNSUPPORTED before computing.
-constexpr int domain_max_exponent = N4M_DOMAIN_MAX_MAGNITUDE_LOG2;
-constexpr int domain_spread_exponent = N4M_DOMAIN_MAX_SPREAD_LOG2;
-constexpr const char* domain_message =
-    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^32 per row)";
-
-struct DomainScan {
-    double max = 0.0, min = std::numeric_limits<double>::infinity();
-    bool ok = true;
-    void add(double x) {
-        if (!std::isfinite(x)) { ok = false; return; }
-        const double a = std::fabs(x);
-        if (a == 0.0) return;
-        if (a < std::ldexp(1.0, -domain_max_exponent) || a > std::ldexp(1.0, domain_max_exponent))
-            ok = false;
-        max = std::max(max, a);
-        min = std::min(min, a);
-    }
-    // Magnitude bound only (summaries need no spread bound).
-    bool in_magnitude() const { return ok; }
-    bool in_domain() const {
-        return ok && (max == 0.0 || max <= std::ldexp(min, domain_spread_exponent));
-    }
-};
-
-// Cumulative working memory of one clustering-kernel call, checked before any
-// allocation: the WASM32 build has at most 2 GiB and aborts on a failed
-// allocation (C++ exceptions are not caught there), so each call stays below
-// 256 MiB.
-constexpr long double max_working_bytes = 268435456.0L;
-
-// Numerical domain shared by the clustering kernels (lead rules 13/15,
-// constants in n4m/metrics.h): finite values, every nonzero |x| in
-// [2^-256, 2^256] and max/min nonzero |x| <= 2^32 within one input array.
-// Inside it the kernels are exact or within their documented precision;
-// outside it they refuse before computing.
-constexpr int domain_exponent = N4M_DOMAIN_MAX_MAGNITUDE_LOG2;
-constexpr int domain_spread_exponent = N4M_DOMAIN_MAX_SPREAD_LOG2;
-constexpr const char* domain_message =
-    "input outside the supported numerical domain (nonzero |x| in [2^-256, 2^256], "
-    "max/min nonzero |x| <= 2^32 per input array)";
-
-struct DomainScan {
-    double low = std::numeric_limits<double>::infinity();
-    double high = 0.0;
-    bool finite = true;
-    void add(double v) noexcept {
-        if (!std::isfinite(v)) {
-            finite = false;
-            return;
-        }
-        const double magnitude = std::fabs(v);
-        if (magnitude == 0.0) return;
-        low = std::min(low, magnitude);
-        high = std::max(high, magnitude);
-    }
-    bool inside() const noexcept {
-        if (!finite) return false;
-        if (high == 0.0) return true;
-        return low >= std::ldexp(1.0, -domain_exponent) &&
-               high <= std::ldexp(1.0, domain_exponent) &&
-               high <= std::ldexp(low, domain_spread_exponent);
-    }
-};
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
     if (ctx) static_cast<Context*>(ctx)->set_error(message);
@@ -188,7 +99,6 @@ n4m_status_t check_view(n4m_context_t* ctx, const n4m_matrix_view_t* v) noexcept
 // every published value (resolved eigenvalues, resolution, both moments,
 // scores) is a normal double.
 constexpr int pca_domain_exp = 128;
-constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
 // Absolute accuracy of the PCA variances, in units of max(n,p)*eps*lambda_max.
 constexpr double pca_resolution_factor = 16.0;
 
@@ -231,34 +141,30 @@ double quantile(const std::vector<double>& sorted, double q) noexcept {
     const double w = h - static_cast<double>(lo);
     const double a = sorted[lo], b = sorted[hi];
     if (w == 0.0 || a == b) return a;
-    const ::n4m::core::DD diff = ::n4m::core::dd_two_sum(b, -a);
+    const DD diff = dd_two_sum(b, -a);
     return std::fma(w, diff.hi, a) + w * diff.lo;
 }
 
-// Mean of finite values as a double-double m_hi + m_lo: the unevaluated
-// Neumaier pair (s, c) carries the exact sum within (n u)^2 sum|x|, and the
-// division remainder s - m_hi n is exact (fma). No refinement pass: one
-// would add u mean|x - m|, which dominates under cancellation. Returns the
-// rounded mean and the compensated sum of squared deviations from m_hi + m_lo.
-// Mean error <= (n u)^2 mean|x| + u |m| (final rounding).
+// Mean of finite values as a double-double m_hi + m_lo: the double-double
+// sum (hi, lo) carries the exact sum to an absolute error of order
+// n u^2 sum|x|, and the division remainder hi - m_hi n is exact (fma). No
+// refinement pass: one would add u mean|x - m|, which dominates under
+// cancellation. Returns the rounded mean and the double-double sum of squared
+// deviations from m_hi + m_lo. Mean error of order n u^2 mean|x| + u |m|
+// (final rounding).
 struct MeanSquares { double mean = 0.0, ss = 0.0; };
 MeanSquares mean_and_squares(const std::vector<double>& v) {
     const auto n = static_cast<double>(v.size());
-    double s0 = 0.0, c0 = 0.0;
-    const auto add = [](double& sum, double& comp, double x) {
-        const double next = sum + x;
-        comp += std::fabs(sum) >= std::fabs(x) ? (sum - next) + x : (x - next) + sum;
-        sum = next;
-    };
-    for (double x : v) add(s0, c0, x);
-    const double m_hi = s0 / n;
-    const double m_lo = (std::fma(-m_hi, n, s0) + c0) / n;
-    double ss = 0.0, cs = 0.0;
+    DD sum;
+    for (double x : v) sum = dd_add(sum, x);
+    const double m_hi = sum.hi / n;
+    const double m_lo = (std::fma(-m_hi, n, sum.hi) + sum.lo) / n;
+    DD ss;
     for (double x : v) {
         const double d = (x - m_hi) - m_lo;
-        add(ss, cs, d * d);
+        ss = dd_add(ss, d * d);
     }
-    return {m_hi + m_lo, ss + cs};
+    return {m_hi + m_lo, ss.hi + ss.lo};
 }
 
 struct GroupCategoryHash {
@@ -583,18 +489,14 @@ void write_resolution(long double estimate, long double residual, double* ratio,
     *flag = r >= 1.0L ? 1.0 : 0.0;
 }
 
-// D for a coordinate matrix: one input array, so the spread is over all its
-// entries. One O(n k) pre-pass without a copy; nonfinite values are left to
-// the caller's own validation.
-bool in_numerical_domain(const n4m_matrix_view_t& v) noexcept {
+// Domain range over every entry of the given matrices together (one O(n k)
+// pre-pass, no copy). range.finite is false when an entry is not finite.
+DomainRange domain_of(std::initializer_list<const n4m_matrix_view_t*> views) noexcept {
     DomainRange range;
-    for (int64_t j = 0; j < v.cols; ++j)
-        for (int64_t i = 0; i < v.rows; ++i) {
-            const double x = at(v, i, j);
-            if (!std::isfinite(x)) return true;
-            range.add(x);
-        }
-    return range.inside();
+    for (const auto* v : views)
+        for (int64_t i = 0; i < v->rows; ++i)
+            for (int64_t j = 0; j < v->cols; ++j) range.add(at(*v, i, j));
+    return range;
 }
 
 // Centred copy of X (row-major n x k) in a common power-of-two unit chosen
@@ -830,56 +732,6 @@ constexpr long double max_shift_cells = 50000000.0L;
 constexpr long double max_energy_table = 10000000.0L;
 constexpr double unit_roundoff = std::numeric_limits<double>::epsilon() / 2.0;
 
-// Difference domain of the domain-shift kernels (rule 15) over every input
-// array together; nonfinite values are outside it.
-bool in_difference_domain(std::initializer_list<const n4m_matrix_view_t*> views) noexcept {
-    DomainRange range;
-    for (const auto* v : views)
-        for (int64_t i = 0; i < v->rows; ++i)
-            for (int64_t j = 0; j < v->cols; ++j) {
-                const double x = at(*v, i, j);
-                if (!std::isfinite(x)) return false;
-                range.add(x);
-            }
-    return range.inside();
-}
-
-// Double-double arithmetic (Dekker / Knuth error-free transformations).
-struct DD {
-    double hi = 0.0, lo = 0.0;
-};
-DD two_sum(double a, double b) noexcept {
-    const double s = a + b, bb = s - a;
-    return {s, (a - (s - bb)) + (b - bb)};
-}
-DD quick_two_sum(double a, double b) noexcept {
-    const double s = a + b;
-    return {s, b - (s - a)};
-}
-DD dd_add(DD x, double y) noexcept {
-    DD s = two_sum(x.hi, y);
-    s.lo += x.lo;
-    return quick_two_sum(s.hi, s.lo);
-}
-DD dd_add(DD x, DD y) noexcept {
-    DD s = two_sum(x.hi, y.hi);
-    const DD t = two_sum(x.lo, y.lo);
-    s.lo += t.hi;
-    s = quick_two_sum(s.hi, s.lo);
-    s.lo += t.lo;
-    return quick_two_sum(s.hi, s.lo);
-}
-DD dd_neg(DD x) noexcept { return {-x.hi, -x.lo}; }
-DD dd_mul(DD x, double y) noexcept {
-    const double p = x.hi * y;
-    const double e = std::fma(x.hi, y, -p);
-    return quick_two_sum(p, e + x.lo * y);
-}
-DD dd_div(DD x, double y) noexcept {
-    const double q1 = x.hi / y;
-    const DD r = dd_add(x, dd_neg(dd_mul(DD{q1, 0.0}, y)));
-    return quick_two_sum(q1, r.hi / y);
-}
 
 // Euclidean norm of a - b: differences of domain values, squares summed in
 // double-double (relative error of the norm <= 3u + O(u^2)).
@@ -1099,21 +951,14 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
             data[static_cast<size_t>(i) * up + static_cast<size_t>(j)] = x;
         }
         {
-            double maxabs = 0.0, minabs = std::numeric_limits<double>::infinity();
-            for (double x : data) {
-                const double a = std::fabs(x);
-                if (a > 0.0) {
-                    maxabs = std::max(maxabs, a);
-                    minabs = std::min(minabs, a);
-                }
-            }
-            if (maxabs > 0.0 &&
-                (maxabs > std::ldexp(1.0, pca_domain_exp) ||
-                 minabs < std::ldexp(1.0, -pca_domain_exp) ||
-                 maxabs > std::ldexp(minabs, N4M_DOMAIN_MAX_SPREAD_LOG2)))
+            DomainRange range;
+            for (double x : data) range.add(x);
+            if (!range.inside() ||
+                (range.high > 0.0 && (range.high > std::ldexp(1.0, pca_domain_exp) ||
+                                      range.low < std::ldexp(1.0, -pca_domain_exp))))
                 return fail(ctx, N4M_ERR_UNSUPPORTED,
-                            "input outside the supported numerical domain (finite, nonzero |x| "
-                            "in [2^-128, 2^128], max/min nonzero |x| <= 2^32)");
+                            "input outside the supported numerical domain (nonzero |x| in "
+                            "[2^-128, 2^128], max/min nonzero |x| <= 2^32)");
         }
         // Centre every column in its own exactly rescaled space (max|x| in
         // [0.5, 1)), then bring all centred columns to one power-of-two scale
@@ -1331,7 +1176,7 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
     if (n < 0) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "negative summary length");
     try {
         std::vector<double> v;
-        DomainScan scan;
+        DomainRange scan;
         for (int64_t i = 0; i < n; ++i) {
             if (valid_mask && !valid_mask[i]) continue;
             if (!std::isfinite(values[i]))
@@ -1341,10 +1186,8 @@ N4M_API n4m_status_t n4m_preflight_summary_compute(
         }
         // Summary: magnitude bound only. Mean, SD and quartiles are correct
         // for any spread inside it (lead arbitration of rule 13).
-        if (!scan.in_magnitude())
-            return fail(ctx, N4M_ERR_UNSUPPORTED,
-                        "input outside the supported numerical domain (nonzero |x| in "
-                        "[2^-256, 2^256]; summaries have no spread bound)");
+        if (!scan.magnitudes_inside())
+            return fail(ctx, N4M_ERR_UNSUPPORTED, magnitude_domain_message);
         std::fill(out_eight, out_eight + 8, nan_value);
         out_eight[0] = static_cast<double>(v.size());
         if (v.empty()) return N4M_OK;
@@ -1391,7 +1234,7 @@ N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
     try {
         for (const auto* v : {query, reference})
             for (int64_t i = 0; i < v->rows; ++i) {
-                DomainScan scan;
+                DomainRange scan;
                 for (int64_t j = 0; j < v->cols; ++j) {
                     if (!std::isfinite(at(*v, i, j)))
                         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite neighbor input");
@@ -1400,10 +1243,8 @@ N4M_API n4m_status_t n4m_preflight_nearest_neighbors(
                 // Magnitude bound only (lead decision): compensated distances
                 // and the exact ordering near ties are correct for any spread,
                 // e.g. rounding-level PCA score components next to large ones.
-                if (!scan.in_magnitude())
-                    return fail(ctx, N4M_ERR_UNSUPPORTED,
-                                "input outside the supported numerical domain (nonzero |x| in "
-                                "[2^-256, 2^256]; neighbours have no spread bound)");
+                if (!scan.magnitudes_inside())
+                    return fail(ctx, N4M_ERR_UNSUPPORTED, magnitude_domain_message);
             }
         // Euclidean distance: compensated sum of squared differences (inside
         // the domain no difference or square overflows or underflows),
@@ -1475,7 +1316,7 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
         std::vector<int64_t> categories;
         if (categorical) categories.resize(static_cast<size_t>(n));
         constexpr double max_exact_category = 9007199254740991.0;
-        DomainScan scan;
+        DomainRange scan;
         for (int64_t i = 0; i < n; ++i) {
             const double y = targets[i];
             if (!std::isfinite(y))
@@ -1491,7 +1332,7 @@ N4M_API n4m_status_t n4m_preflight_local_contrast(
         }
         // Continuous targets follow the numerical domain; category codes are
         // labels compared for equality only.
-        if (!categorical && !scan.in_domain())
+        if (!categorical && !scan.inside())
             return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         // Sum of squared deviations from a double-double mean (compensated).
         const double m2 = categorical ? 0.0
@@ -1611,7 +1452,7 @@ N4M_API n4m_status_t n4m_cluster_hdbscan(
             max_working_bytes)
         return fail(ctx, N4M_ERR_UNSUPPORTED,
                     "HDBSCAN exceeds its 2.5e9 distance-product or 256 MiB memory budget");
-    DomainScan domain;
+    DomainRange domain;
     for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j) {
         const double x = at(*X, i, j);
         if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite HDBSCAN input");
@@ -1771,7 +1612,7 @@ N4M_API n4m_status_t n4m_linear_sum_assignment(
                     "assignment exceeds its 1e8 exact-operation or 256 MiB memory budget");
     // NaN and -inf (after negation when maximizing) are invalid as in SciPy;
     // +inf marks a forbidden pair and is not a numerical value.
-    DomainScan domain;
+    DomainRange domain;
     for (int64_t i = 0; i < rows; ++i) for (int64_t j = 0; j < cols; ++j) {
         const double v = at(*cost, i, j);
         if (std::isnan(v) || (std::isinf(v) && (v > 0) == (maximize != 0)))
@@ -1839,7 +1680,7 @@ N4M_API n4m_status_t n4m_random_multivariate_normal(
                     "multivariate normal exceeds its 256 MiB memory or 2.5e9 operation budget");
     // Mean and covariance (lower triangle) are each checked against the
     // rule-13 domain before any computation.
-    DomainScan mean_domain, cov_domain;
+    DomainRange mean_domain, cov_domain;
     for (int64_t j = 0; j < d; ++j) {
         if (!std::isfinite(mean[j])) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite mean");
         mean_domain.add(mean[j]);
@@ -1928,22 +1769,19 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
     try {
         const int64_t h = window_length / 2;
         const auto sz = [](int64_t v) { return static_cast<size_t>(v); };
-        using ::n4m::core::DD;
-        using ::n4m::core::dd_add;
-        using ::n4m::core::dd_mul;
         const auto valid = [&](int64_t i, int64_t j) {
             return !valid_mask || valid_mask[sz(i) * sz(p) + sz(j)];
         };
         // Domain pre-pass (rule 13) over the valid cells of each row.
         for (int64_t i = 0; i < n; ++i) {
-            DomainScan scan;
+            DomainRange scan;
             for (int64_t j = 0; j < p; ++j) {
                 if (!valid(i, j)) continue;
                 if (!std::isfinite(at(*X, i, j)))
                     return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite unmasked noise proxy input");
                 scan.add(at(*X, i, j));
             }
-            if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+            if (!scan.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         }
         // Smoothing weights w_k = sum_{m<=order} t_m(0) t_m(k) / ||t_m||^2 from
         // the Gram (discrete Chebyshev) polynomials on k = -h..h, N = 2h+1:
@@ -1951,7 +1789,7 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         // b_m = m^2 (N^2 - m^2) / (4 (4 m^2 - 1)), ||t_m||^2 = b_m ||t_{m-1}||^2,
         // in double-double. Odd t_m vanish at 0, so w_{-k} = w_k exactly.
         const double nw = static_cast<double>(window_length);
-        std::vector<DD> weight(sz(h + 1), ::n4m::core::dd_div({1.0, 0.0}, {nw, 0.0}));
+        std::vector<DD> weight(sz(h + 1), dd_div({1.0, 0.0}, {nw, 0.0}));
         std::vector<DD> t_prev(sz(h + 1)), t_cur(sz(h + 1));
         for (int64_t k = 0; k <= h; ++k) {
             t_prev[sz(k)] = {1.0, 0.0};
@@ -1960,11 +1798,11 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         DD norm = {nw, 0.0};
         for (int32_t m = 1; m <= polyorder; ++m) {
             const double md = static_cast<double>(m);
-            const DD beta = ::n4m::core::dd_div({md * md * (nw * nw - md * md), 0.0},
+            const DD beta = dd_div({md * md * (nw * nw - md * md), 0.0},
                                                  {4.0 * (4.0 * md * md - 1.0), 0.0});
             norm = dd_mul(norm, beta);  // ||t_m||^2
             if (m % 2 == 0) {
-                const DD scale = ::n4m::core::dd_div(t_cur[0], norm);
+                const DD scale = dd_div(t_cur[0], norm);
                 for (int64_t k = 0; k <= h; ++k)
                     weight[sz(k)] = dd_add(weight[sz(k)], dd_mul(scale, t_cur[sz(k)]));
             }
@@ -1972,7 +1810,7 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
             // t_{m+1} = k t_m - beta_m t_{m-1}
             for (int64_t k = 0; k <= h; ++k) {
                 const DD next = dd_add(dd_mul({static_cast<double>(k), 0.0}, t_cur[sz(k)]),
-                                       ::n4m::core::dd_neg(dd_mul(beta, t_prev[sz(k)])));
+                                       dd_neg(dd_mul(beta, t_prev[sz(k)])));
                 t_prev[sz(k)] = t_cur[sz(k)];
                 t_cur[sz(k)] = next;
             }
@@ -2009,7 +1847,7 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
             !(std::fabs((total.hi - 1.0) + total.lo) <= 0x1p-60))
             return fail(ctx, N4M_ERR_NUMERICAL_FAILURE, "Savitzky-Golay weights do not sum to 1");
         // Residual gain for unit white noise: g^2 = (1 - w_0)^2 + 2 sum_{k>0} w_k^2.
-        const DD one_minus = dd_add({1.0, 0.0}, ::n4m::core::dd_neg(weight[0]));
+        const DD one_minus = dd_add({1.0, 0.0}, dd_neg(weight[0]));
         DD gain2 = dd_mul(one_minus, one_minus);
         for (int64_t k = 1; k <= h; ++k) {
             const DD w2 = dd_mul(weight[sz(k)], weight[sz(k)]);
@@ -2028,14 +1866,9 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
         // final rounding included): |r_hat - r| <= 2 W eps sum_k |c_k|
         // max_k |w_k|, W the window length, eps = 2^-52.
         std::vector<int64_t> invalid_prefix(sz(p) + 1);
-        std::vector<double> band_sum(sz(p), 0.0), band_comp(sz(p), 0.0);
-        double pooled_sum = 0.0, pooled_comp = 0.0;
+        std::vector<DD> band_sum(sz(p));
+        DD pooled_sum;
         int64_t pooled_count = 0;
-        const auto neumaier = [](double& sum, double& comp, double v) {
-            const double next = sum + v;
-            comp += sum >= v ? (sum - next) + v : (v - next) + sum;
-            sum = next;
-        };
         std::fill(band_counts, band_counts + p, int64_t{0});
         for (int64_t i = 0; i < n; ++i) {
             invalid_prefix[0] = 0;
@@ -2046,8 +1879,8 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
                 const double xj = at(*X, i, j);
                 DD r{};
                 for (int64_t q = 1; q <= h; ++q) {
-                    const DD s1 = ::n4m::core::dd_two_sum(2.0 * xj, -at(*X, i, j + q));
-                    const DD s2 = ::n4m::core::dd_two_sum(s1.hi, -at(*X, i, j - q));
+                    const DD s1 = dd_two_sum(2.0 * xj, -at(*X, i, j + q));
+                    const DD s2 = dd_two_sum(s1.hi, -at(*X, i, j - q));
                     const DD& w = weight[sz(q)];
                     r = dd_add(r, dd_mul(w, {s2.hi, 0.0}));
                     r = dd_add(r, dd_mul(w, {s2.lo, 0.0}));
@@ -2056,16 +1889,16 @@ N4M_API n4m_status_t n4m_preflight_noise_proxy_compute(
                 const double res = r.hi + r.lo;
                 ++band_counts[j];
                 ++pooled_count;
-                neumaier(band_sum[sz(j)], band_comp[sz(j)], res * res);
-                neumaier(pooled_sum, pooled_comp, res * res);
+                band_sum[sz(j)] = dd_add(band_sum[sz(j)], res * res);
+                pooled_sum = dd_add(pooled_sum, res * res);
             }
         }
         for (int64_t j = 0; j < p; ++j)
             band_noise[j] = band_counts[j]
-                ? std::sqrt((band_sum[sz(j)] + band_comp[sz(j)]) / static_cast<double>(band_counts[j])) / gain
+                ? std::sqrt((band_sum[sz(j)].hi + band_sum[sz(j)].lo) / static_cast<double>(band_counts[j])) / gain
                 : nan_value;
         out_two[0] = pooled_count
-            ? std::sqrt((pooled_sum + pooled_comp) / static_cast<double>(pooled_count)) / gain
+            ? std::sqrt((pooled_sum.hi + pooled_sum.lo) / static_cast<double>(pooled_count)) / gain
             : nan_value;
         out_two[1] = gain;
         return N4M_OK;
@@ -2108,14 +1941,14 @@ N4M_API n4m_status_t n4m_preflight_snv_compute(
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "empty SNV group");
         std::vector<double> data(sz(n) * sz(p)), z(sz(n) * sz(p)), row_bound(sz(n));
         for (int64_t i = 0; i < n; ++i) {
-            DomainScan scan;
+            DomainRange scan;
             for (int64_t j = 0; j < p; ++j) {
                 const double x = at(*X, i, j);
                 if (!std::isfinite(x)) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite SNV input");
                 scan.add(x);
                 data[sz(i) * sz(p) + sz(j)] = x;
             }
-            if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+            if (!scan.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         }
         const auto st = n4m_pp_snv_apply_bounded(state, data.data(), n, p, z.data(),
                                                  row_bound.data());
@@ -2179,13 +2012,13 @@ N4M_API n4m_status_t n4m_preflight_pairs_within_tolerance(
     const int64_t* rgroups = self ? query_groups : reference_groups;
     for (const auto* v : {query, &R})
         for (int64_t i = 0; i < v->rows; ++i) {
-            DomainScan scan;
+            DomainRange scan;
             for (int64_t j = 0; j < v->cols; ++j) {
                 if (!std::isfinite(at(*v, i, j)))
                     return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite pair input");
                 scan.add(at(*v, i, j));
             }
-            if (!scan.in_domain()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+            if (!scan.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         }
     std::fill(query_flags, query_flags + query->rows, uint8_t{0});
     if (!self) std::fill(reference_flags, reference_flags + R.rows, uint8_t{0});
@@ -2546,7 +2379,9 @@ N4M_API n4m_status_t n4m_stats_permanova(
     const int64_t n = X->rows, k = X->cols;
     if (n < 2 || k < 1 || n_permutations < 0 || n_permutations > 1000000)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PERMANOVA dimensions");
-    if (!in_numerical_domain(*X)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+    const DomainRange x_range = domain_of({X});
+    if (x_range.finite && !x_range.inside())
+        return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         const auto nn = static_cast<size_t>(n), kk = static_cast<size_t>(k);
         std::vector<int64_t> level_n, stratum_n;
@@ -2760,7 +2595,9 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
     if (n < 2 || k < 1 || n_conditions < 0 || n_conditions > 64 || n_permutations < 0 ||
         n_permutations > 1000000)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid Freedman-Lane PERMANOVA dimensions");
-    if (!in_numerical_domain(*X)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+    const DomainRange x_range = domain_of({X});
+    if (x_range.finite && !x_range.inside())
+        return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         const auto nn = static_cast<size_t>(n), kk = static_cast<size_t>(k);
         const auto nc = static_cast<size_t>(n_conditions);
@@ -2891,7 +2728,9 @@ N4M_API n4m_status_t n4m_stats_permdisp(
     const int64_t n = X->rows, k = X->cols;
     if (n < 2 || k < 1 || n_permutations < 0 || n_permutations > 1000000)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PERMDISP dimensions");
-    if (!in_numerical_domain(*X)) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+    const DomainRange x_range = domain_of({X});
+    if (x_range.finite && !x_range.inside())
+        return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     const long double work =
         static_cast<long double>(n) * (2.0L * static_cast<long double>(k) +
                                        3.0L * (static_cast<long double>(n_permutations) + 1.0L));
@@ -3032,7 +2871,7 @@ N4M_API n4m_status_t n4m_stats_energy_distance(
         return fail(ctx, N4M_ERR_UNSUPPORTED,
                     "energy distance exceeds 20 million pairs, 50 million cells, 10 million "
                     "group pairs or 2.5 billion operations");
-    if (!in_difference_domain({X}))
+    if (!domain_of({X}).inside())
         return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         const auto g = static_cast<size_t>(n_groups), k = static_cast<size_t>(p);
@@ -3161,7 +3000,7 @@ N4M_API n4m_status_t n4m_stats_pca_monitor(
         static_cast<long double>(nr + nm) * static_cast<long double>(p) > max_shift_cells)
         return fail(ctx, N4M_ERR_UNSUPPORTED,
                     "PCA monitor exceeds 10 billion operations or 50 million cells");
-    if (!in_difference_domain({reference, monitored}))
+    if (!domain_of({reference, monitored}).inside())
         return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
     try {
         const auto P = static_cast<size_t>(p), NR = static_cast<size_t>(nr),
@@ -3307,67 +3146,7 @@ N4M_API n4m_status_t n4m_stats_pca_monitor(
     } catch (const std::bad_alloc&) {
         return fail(ctx, N4M_ERR_OUT_OF_MEMORY, "PCA monitor allocation failed");
     } catch (...) { return fail(ctx, N4M_ERR_INTERNAL, "PCA monitor internal error"); }
-
-// ---- Declared numerical domain D (lead rules 13 and 15) ---------------------
-// Finite values and every nonzero |x| in [2^-256, 2^256]; where a statistic
-// depends on differences of the values, also a spread (max nonzero |x| /
-// min nonzero |x|) of at most 2^N4M_DOMAIN_MAX_SPREAD_LOG2 inside one array.
-// Outside D the kernels refuse with N4M_ERR_UNSUPPORTED before computing.
-constexpr int domain_exponent = 256;
-constexpr int N4M_DOMAIN_MAX_SPREAD_LOG2 = 32;
-constexpr const char* domain_message =
-    "input outside the supported numerical domain (finite, nonzero |x| in "
-    "[2^-256, 2^256], spread <= 2^32 where differences matter)";
-
-struct DomainScan {
-    bool finite = true;
-    double max_abs = 0.0;
-    double min_nonzero = std::numeric_limits<double>::infinity();
-    void add(double x) noexcept {
-        if (!std::isfinite(x)) { finite = false; return; }
-        const double a = std::abs(x);
-        if (a == 0.0) return;
-        max_abs = std::max(max_abs, a);
-        min_nonzero = std::min(min_nonzero, a);
-    }
-    // Magnitude bounds of D.
-    bool in_magnitude() const noexcept {
-        if (!finite) return false;
-        if (max_abs == 0.0) return true;
-        return max_abs <= std::ldexp(1.0, domain_exponent) &&
-               min_nonzero >= std::ldexp(1.0, -domain_exponent);
-    }
-    // Magnitude bounds and spread limit of D.
-    bool inside() const noexcept {
-        return in_magnitude() &&
-               (max_abs == 0.0 || max_abs <= std::ldexp(min_nonzero, N4M_DOMAIN_MAX_SPREAD_LOG2));
-    }
-};
-
-// Error-free transformation a + b = s + e (Knuth TwoSum).
-inline void two_sum(double a, double b, double& s, double& e) noexcept {
-    s = a + b;
-    const double bb = s - a;
-    e = (a - (s - bb)) + (b - bb);
 }
-
-// Double-double accumulator: hi + lo carries the exact running sum to about
-// 2^-106 relative to the largest partial sum.
-struct DoubleDouble {
-    double hi = 0.0, lo = 0.0;
-    void add(double x) noexcept {
-        double s, e;
-        two_sum(hi, x, s, e);
-        e += lo;
-        two_sum(s, e, hi, lo);
-    }
-    // (hi + lo) / n rounded to double.
-    double divided(double n) const noexcept {
-        const double q = hi / n;
-        const double r = std::fma(-q, n, hi) + lo;
-        return q + r / n;
-    }
-};
 
 N4M_API n4m_status_t n4m_stats_group_means(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, const int64_t* group_codes,
@@ -3380,7 +3159,7 @@ N4M_API n4m_status_t n4m_stats_group_means(
     const int64_t n = X->rows, k = X->cols;
     if (n < 1 || k < 1 || n_groups < 1 || n_groups > n)
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid group-means dimensions");
-    if (static_cast<uint64_t>(n_groups) > std::numeric_limits<size_t>::max() / sizeof(DoubleDouble) /
+    if (static_cast<uint64_t>(n_groups) > std::numeric_limits<size_t>::max() / sizeof(DD) /
                                                 static_cast<uint64_t>(k))
         return fail(ctx, N4M_ERR_UNSUPPORTED, "group-means output exceeds the address space");
     try {
@@ -3393,27 +3172,28 @@ N4M_API n4m_status_t n4m_stats_group_means(
         }
         if (std::find(count.begin(), count.end(), 0) != count.end())
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "every group needs at least one row");
-        DomainScan scan;
+        DomainRange scan;
         for (int64_t i = 0; i < n; ++i)
             for (int64_t j = 0; j < k; ++j) scan.add(at(*X, i, j));
         if (!scan.finite)
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite group-means input");
         // A mean is a summary: only the magnitude bounds apply (rule 15).
-        if (!scan.in_magnitude()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
+        if (!scan.magnitudes_inside())
+            return fail(ctx, N4M_ERR_UNSUPPORTED, magnitude_domain_message);
         // Inside D no partial sum can overflow (n * 2^256); the double-double
         // sum and one division give a mean whose relative error is small
         // (order n eps) for same-sign data and whose absolute error is order
         // n eps max|x| otherwise.
-        std::vector<DoubleDouble> sum(g * kk);
+        std::vector<DD> sum(g * kk);
         for (int64_t i = 0; i < n; ++i) {
             const auto c = static_cast<size_t>(group_codes[i]);
             for (size_t j = 0; j < kk; ++j)
-                sum[c * kk + j].add(at(*X, i, static_cast<int64_t>(j)));
+                sum[c * kk + j] = dd_add(sum[c * kk + j], at(*X, i, static_cast<int64_t>(j)));
         }
         for (size_t c = 0; c < g; ++c) {
             out_counts[c] = count[c];
             for (size_t j = 0; j < kk; ++j)
-                out_means[c * kk + j] = sum[c * kk + j].divided(static_cast<double>(count[c]));
+                out_means[c * kk + j] = dd_div(sum[c * kk + j], static_cast<double>(count[c])).hi;
         }
         return N4M_OK;
     } catch (const std::bad_alloc&) {
@@ -3429,7 +3209,7 @@ N4M_API n4m_status_t n4m_stats_regression_scores(
         return fail(ctx, N4M_ERR_NULL_POINTER, "null regression-scores buffer");
     if (n < 1) return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "regression scores need n >= 1");
     try {
-        DomainScan truth, pred;
+        DomainRange truth, pred;
         for (int64_t i = 0; i < n; ++i) {
             truth.add(y_true[i]);
             pred.add(y_pred[i]);
@@ -3439,30 +3219,30 @@ N4M_API n4m_status_t n4m_stats_regression_scores(
         if (!truth.inside() || !pred.inside()) return fail(ctx, N4M_ERR_UNSUPPORTED, domain_message);
         // Residual e_i = y_i - yhat_i: |e| <= 2^257, e^2 <= 2^514, so the
         // double-double sums of e^2 and |e| never overflow inside D.
-        DoubleDouble sse, sae, sum_y;
+        DD sse, sae, sum_y;
         for (int64_t i = 0; i < n; ++i) {
             const double e = y_true[i] - y_pred[i];
-            sse.add(e * e);
-            sae.add(std::abs(e));
-            sum_y.add(y_true[i]);
+            sse = dd_add(sse, e * e);
+            sae = dd_add(sae, std::abs(e));
+            sum_y = dd_add(sum_y, y_true[i]);
         }
         const double nd = static_cast<double>(n);
         // Mean of y as an unevaluated sum hi + lo; deviations are explicit.
-        const double mean_hi = sum_y.divided(nd);
-        DoubleDouble mean_err;
-        for (int64_t i = 0; i < n; ++i) mean_err.add(y_true[i] - mean_hi);
-        const double mean_lo = mean_err.divided(nd);
+        const double mean_hi = dd_div(sum_y, nd).hi;
+        DD mean_err;
+        for (int64_t i = 0; i < n; ++i) mean_err = dd_add(mean_err, y_true[i] - mean_hi);
+        const double mean_lo = dd_div(mean_err, nd).hi;
         // With spread <= 2^32 the deviations keep their difference (no
         // cancellation by offset); RMSE, MAE, SSE and SST have relative errors
         // of order n eps, R^2 an absolute error of order n eps (1 + SSE/SST).
-        DoubleDouble sst;
+        DD sst;
         for (int64_t i = 0; i < n; ++i) {
             const double d = (y_true[i] - mean_hi) - mean_lo;
-            sst.add(d * d);
+            sst = dd_add(sst, d * d);
         }
         const double sse_v = sse.hi + sse.lo, sst_v = sst.hi + sst.lo;
-        out_three[0] = std::sqrt(sse.divided(nd));
-        out_three[1] = sae.divided(nd);
+        out_three[0] = std::sqrt(dd_div(sse, nd).hi);
+        out_three[1] = dd_div(sae, nd).hi;
         // R^2 = 1 - SSE/SST; NaN (documented "undefined") when y is constant.
         out_three[2] = sst_v > 0.0 ? 1.0 - sse_v / sst_v
                                    : std::numeric_limits<double>::quiet_NaN();

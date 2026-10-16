@@ -34,7 +34,17 @@ inline DD dd_add(DD a, DD b) {
     s.lo += t.lo;
     return dd_quick_two_sum(s.hi, s.lo);
 }
+inline DD dd_add(DD a, double b) {
+    DD s = dd_two_sum(a.hi, b);
+    s.lo += a.lo;
+    return dd_quick_two_sum(s.hi, s.lo);
+}
 inline DD dd_neg(DD a) { return {-a.hi, -a.lo}; }
+inline DD dd_mul(DD a, double b) {
+    const double p = a.hi * b;
+    const double e = std::fma(a.hi, b, -p);
+    return dd_quick_two_sum(p, e + a.lo * b);
+}
 inline DD dd_mul(DD a, DD b) {
     const double p = a.hi * b.hi;
     double e = std::fma(a.hi, b.hi, -p);
@@ -48,6 +58,11 @@ inline DD dd_div(DD a, DD b) {
     r = dd_add(r, dd_neg(dd_mul(b, {q2, 0.0})));
     const double q3 = r.hi / b.hi;
     return dd_add(dd_quick_two_sum(q1, q2), {q3, 0.0});
+}
+inline DD dd_div(DD a, double b) {
+    const double q1 = a.hi / b;
+    const DD r = dd_add(a, dd_neg(dd_mul(DD{q1, 0.0}, b)));
+    return dd_quick_two_sum(q1, r.hi / b);
 }
 
 }  // namespace n4m::core
