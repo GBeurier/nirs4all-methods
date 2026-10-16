@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.permanova` · _Cat
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_permanova`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L345) · [`n4m_stats_permanova_freedman_lane`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L308). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_permanova`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L360) · [`n4m_stats_permanova_freedman_lane`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L309). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -26,7 +26,7 @@ Exploratory variance partition of a multivariate structure (for example PCA scor
 
 ### Limits and validation
 
-The test assumes exchangeable rows inside each stratum: it tests the term together with any interaction with the strata, and a stratum where the term is constant contributes nothing. A significant result can reflect dispersion as well as location differences (see PERMDISP). The Freedman–Lane test is approximate (exchangeable reduced-model residuals) and tests the main effect given the other main effects only. Only the Euclidean metric on the supplied coordinates is offered. Inputs outside the supported numerical domain (nonzero $|x|$ in $[2^{-256},2^{256}]$, max/min nonzero $|x|$ at most $2^{64}$) return `N4M_ERR_UNSUPPORTED` before any computation; a pseudo-F whose residual SS is not resolved above rounding is reported undefined. Terms above 2048 levels and workloads above 250 million operations return `N4M_ERR_UNSUPPORTED`.
+The test assumes exchangeable rows inside each stratum: it tests the term together with any interaction with the strata, and a stratum where the term is constant contributes nothing. A significant result can reflect dispersion as well as location differences (see PERMDISP). The Freedman–Lane test is approximate (exchangeable reduced-model residuals) and tests the main effect given the other main effects only. Only the Euclidean metric on the supplied coordinates is offered. Inputs outside the supported numerical domain (nonzero $|x|$ in $[2^{-256},2^{256}]$, max/min nonzero $|x|$ at most $2^{32}$) return `N4M_ERR_UNSUPPORTED` before any computation. A pseudo-F is undefined only when its residual SS is exactly zero; otherwise it is published with a resolution ratio (a conservative first-order error estimate of the residual SS divided by it) and flagged numerically unresolved when that ratio is at least 1. Terms above 2048 levels and workloads above 250 million operations return `N4M_ERR_UNSUPPORTED`.
 
 ### Implementation
 

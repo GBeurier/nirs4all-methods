@@ -49,15 +49,23 @@ power-of-two scaling and per-column centring. `n4m_stats_permanova_freedman_lane
 given the additive main effects of condition factors (row-major
 `n x n_conditions` codes), by Freedman-Lane permutation of the reduced-model
 residuals, with numerical design ranks, `df_term = 0` for an aliased term and
-no test when either design is saturated. Numerical domain of the three kernels: the shared supported domain D
-(finite X, nonzero |x| in [2^-256, 2^256], max/min nonzero |x| <= 2^64 over
-the whole matrix, zeros allowed) is checked before computing; outside D they return `N4M_ERR_UNSUPPORTED` with
-"input outside the supported numerical domain (...)". Inside D: centring
-before scaling, a common power-of-two unit from the centred variation
-(constant columns and offsets are invisible; the rescaling is exact),
-explicit residual sums of squares for the observation and every draw, a
-pseudo-F reported undefined when its residual SS is at or below its rounding
-resolution, an `int32_t*` exponent output on each function (true value = out
+no test when either design is saturated; its reduced-model residuals are
+projected off the reduced design twice and the partial R^2 is SS_term /
+(SS_term + SS_residual) of one projection. Numerical domain of the three
+kernels: the shared supported domain D (finite X, nonzero |x| in
+[2^-256, 2^256], max/min nonzero |x| <= 2^32 over the whole matrix,
+`N4M_DOMAIN_MAX_SPREAD_LOG2 = 32`, zeros allowed) is checked before
+computing; outside D they return `N4M_ERR_UNSUPPORTED` with "input outside
+the supported numerical domain (...)". Inside D: centring before scaling
+(rounding about n DBL_EPSILON times each column's range), a common
+power-of-two unit from the centred variation (constant columns and offsets
+are invisible; the rescaling is exact), explicit residual sums of squares for
+the observation and every draw, a pseudo-F that is NaN only for an exactly
+zero residual SS and is otherwise published with a resolution ratio (error
+estimate of the residual SS over it, a conservative first-order estimate)
+and a "numerically unresolved" flag when that ratio is >= 1 (out_fifteen
+[13..14], out_fourteen [12..13], out_eight [6..7]), an `int32_t*` exponent
+output on each function (true value = out
 x 2^exponent; 0 when every positive value is a normal double) instead of
 rounding a positive quantity to 0, and size/budget checks before
 level-dependent allocations (the Freedman-Lane basis is limited to 32 Mi
@@ -81,20 +89,21 @@ n4m_status_t n4m_stats_correlation_exact(n4m_context_t* ctx, const double* x,
     double* out_four);
 n4m_status_t n4m_stats_permanova(n4m_context_t* ctx, const n4m_matrix_view_t* X,
     const int64_t* term_codes, const int64_t* strata_codes,
-    int32_t n_permutations, uint64_t seed, double* out_thirteen,
+    int32_t n_permutations, uint64_t seed, double* out_fifteen,
     int64_t* out_two, int32_t* ss_exponent);
 n4m_status_t n4m_stats_permanova_freedman_lane(n4m_context_t* ctx,
     const n4m_matrix_view_t* X, const int64_t* term_codes,
     const int64_t* condition_codes, int32_t n_conditions,
-    int32_t n_permutations, uint64_t seed, double* out_twelve,
+    int32_t n_permutations, uint64_t seed, double* out_fourteen,
     int64_t* out_two, int32_t* ss_exponent);
 n4m_status_t n4m_stats_permdisp(n4m_context_t* ctx, const n4m_matrix_view_t* X,
     const int64_t* group_codes, int32_t n_permutations, uint64_t seed,
-    double* distances, double* group_mean_distances, double* out_six,
+    double* distances, double* group_mean_distances, double* out_eight,
     int64_t* out_two, int32_t* distance_exponent);
 ```
 
-Earlier drafts of this unreleased version had no exponent outputs; they were
+Earlier drafts of this unreleased version had no exponent outputs and
+shorter output arrays (no resolution ratio or unresolved flag); they were
 never published, so only the signatures above exist.
 
 Domain of validity (ABI 2.20 association kernels): any finite doubles. The
@@ -119,15 +128,16 @@ cell. eta^2, V and r have absolute error of order n * DBL_EPSILON; F is
 relatively accurate when SSB is not small and absolutely accurate near 0
 (see metrics.h). Categorical targets are limited to n <= 3e9.
 
-Supported numerical domain (preflight rule 13): continuous targets of the
-factor-association kernels (Monte Carlo and exact), both correlation vectors
-and Holm/BH p-values must be finite with every nonzero |x| in
-[2^-256, 2^256] and max/min nonzero |x| <= 2^64 per input array (exact zeros
-allowed; categorical codes are labels and are not checked). A cheap O(n)
-pre-pass refuses other inputs with `N4M_ERR_UNSUPPORTED` and the message
-"input outside the supported numerical domain (nonzero |x| in [2^-256,
-2^256], max/min nonzero |x| <= 2^64)" before any computation. Inside D an F
-cannot overflow; the overflow refusal remains as a guard.
+Supported numerical domain (preflight rules 13 and 15): continuous targets of
+the factor-association kernels (Monte Carlo and exact) and both correlation
+vectors must be finite with every nonzero |x| in [2^-256, 2^256] and
+max/min nonzero |x| <= 2^32 per input array (`N4M_DOMAIN_MAX_SPREAD_LOG2 =
+32`; exact zeros allowed; categorical codes are labels and are not checked);
+Holm/BH p-values need only the magnitude bounds. A cheap O(n) pre-pass
+refuses other inputs with `N4M_ERR_UNSUPPORTED` and the message "input
+outside the supported numerical domain (nonzero |x| in [2^-256, 2^256],
+max/min nonzero |x| <= 2^32)" before any computation. Inside D an F cannot
+overflow; the overflow refusal remains as a guard.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
