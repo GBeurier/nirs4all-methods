@@ -8,12 +8,16 @@ cross-covariance resolution of the components, in centred/scaled X times Y
 units — (n + a) eps ||X||_F ||Y||_F for the PLS regression solvers and PLS-DA,
 (n + p) eps sigma_max(X) ||Y||_F for PCR) and
 `N4M_MODEL_UNRESOLVED_COMPONENTS = 13` ((1, n_components): 1.0 where a
-component's cross-covariance is not above it). Unresolved means not resolved
-numerically, not mathematically undefined: the exact value may be zero or
-merely below the bound. PLS solvers refuse an unresolved component
-(`N4M_ERR_NUMERICAL_FAILURE`), so their flags are 0; PCR keeps it, publishes
-its Y loading and a zero Y-score column, and flags it. Other models return
-`N4M_ERR_UNSUPPORTED` for both tags.
+component's cross-covariance is not above it). One flag covers a component
+that is mathematically undefined (exact value zero) and one merely not
+resolved numerically (below the bound); neither is refused. Every PLS
+regression solver and PLS-DA publishes an unresolved component, and every
+later one, as a null component (zero W, P, Q, R, T, U columns, no
+contribution to the coefficients, which are those of the truncated model);
+these fits returned `N4M_ERR_NUMERICAL_FAILURE` before. PCR keeps a
+component whose X direction is resolved (Y loading kept, zero Y-score
+column, flagged) and publishes one whose X singular value is unresolved as
+a null component. Other models return `N4M_ERR_UNSUPPORTED` for both tags.
 
 `N4M_SERIALIZATION_FORMAT_VERSION_V3 = 3` (now
 `N4M_SERIALIZATION_FORMAT_VERSION`) is written for every model recording a
