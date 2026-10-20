@@ -84,6 +84,16 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   readable (without a recorded resolution). Readers before ABI 2.20 reject
   format 3 with `N4M_ERR_VERSION_INCOMPATIBLE`. The Rust binding accepts it.
 
+- PCR with exactly equal (or, within rounding, indistinguishable) singular
+  values now documents its convention (`n4m.h`, `n4m_model_array_t`): only
+  the singular subspace is defined, and PCR returns the deterministic basis
+  of its one-sided Jacobi SVD (fixed rotation order, stable descending sort,
+  largest-magnitude entry positive). With a = (-3,-1,1,3), b = (1,-3,3,-1),
+  X = [a, b] (X'X = 20 I), Y = [a + d b, d a + b], d = 2^-12, one component
+  has W = (1, 0) and coefficients [[1, d], [0, 0]] (column order decides;
+  [[d, 1], [0, 0]] for X = [b, a]); two components do not depend on the
+  convention. Behaviour unchanged; C++ and JS/WASM tests pin it.
+
 ### Compatibility
 
 - N4MM version 3: consumers that validate the N4MM byte version of a stored
