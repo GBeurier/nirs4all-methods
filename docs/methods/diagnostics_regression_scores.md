@@ -26,7 +26,7 @@ Scoring out-of-fold predictions and reference predictors (for example a fold-tra
 
 ### Limits and validation
 
-Declared numerical domain: finite values, every nonzero $|x|$ in $[2^{-256}, 2^{256}]$ and a spread $\max|x|/\min_{x\ne0}|x|\le 2^{32}$ per vector; outside it the kernel returns `N4M_ERR_UNSUPPORTED`. RMSE and MAE have relative errors of order $n\varepsilon$, $R^2$ an absolute error of order $n\varepsilon(1+SSE/SST)$; $R^2$ is NaN (undefined) when $y$ is constant.
+Declared numerical domain: finite values, every nonzero $|x|$ in $[2^{-256}, 2^{256}]$ and a spread $\max|x|/\min_{x\ne0}|x|\le 2^{32}$ per vector; outside it the kernel returns `N4M_ERR_UNSUPPORTED`. RMSE and MAE have relative errors of order $n\varepsilon$, $R^2$ an absolute error of order $n\varepsilon(1+SSE/SST)$. $R^2$ is published as a significand times a power of two, so a ratio $SSE/SST\ge 2^{999}$ (possible inside the domain) is reported scaled rather than as $-\infty$; it is NaN (undefined) when $y$ is constant.
 
 ### Implementation
 

@@ -83,7 +83,9 @@ These two kernels are added to the same unreleased 2.20.0 surface in
   Each mean is a double-double sum divided once by the group size.
 - `n4m_stats_regression_scores` returns RMSE, MAE and R² of paired vectors.
   It uses explicit residuals, deviations around a double-double mean, and
-  double-double sums. R² is NaN when the target is constant.
+  double-double sums. R² comes as a significand and an exponent
+  (`out_four`), so an R² below the double range (SSE/SST ≥ 2^999) is
+  published scaled, never as -Inf. R² is NaN when the target is constant.
 
 Domain of validity (lead rules 13 and 15): finite values and every nonzero
 |x| in [2^-256, 2^256]. Regression scores, which depend on differences, also

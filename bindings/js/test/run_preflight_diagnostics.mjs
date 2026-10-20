@@ -1325,6 +1325,13 @@ const shiftedScores = statsRegressionScores(new Float64Array([1, 2, 3, 4].map((v
     new Float64Array([1, 3, 3, 2].map((v) => v + 2 ** 52)));
 assert.equal(shiftedScores.r2, 0);
 assert.ok(Number.isNaN(statsRegressionScores(new Float64Array([2, 2]), new Float64Array([1, 3])).r2));
+// R^2 beyond the double range inside the domain (same oracle as the C++ test):
+// SSE/SST = 2^1024 exactly, published as -0.5 * 2^1025, never -Infinity.
+const huge2 = statsRegressionScores(new Float64Array([2 ** -255, 2 ** -254]),
+    new Float64Array([2 ** 256, 2 ** 256]));
+assert.equal(huge2.rmse, 2 ** 256);
+assert.equal(huge2.r2, -0.5);
+assert.equal(huge2.r2Exponent, 1025);
 domainError(() => statsRegressionScores(new Float64Array([1, 2 ** 300]), new Float64Array([1, 1])));
 // Spread limit 2^32 (rule 15), both sides.
 assert.equal(statsRegressionScores(new Float64Array([1, 2 ** 32]), new Float64Array([1, 1])).mae, (2 ** 32 - 1) / 2);
