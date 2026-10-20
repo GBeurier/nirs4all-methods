@@ -191,12 +191,12 @@ void column_squared_norms(const std::vector<double>& m, std::size_t p, std::size
     return flags;
 }
 
-// Column squared norms of X'Y for row-major working matrices X (n x p), Y (n x q).
-void cross_covariance_column_squared_norms(const std::vector<double>& x,
-                                           const std::vector<double>& y,
-                                           std::size_t n, std::size_t p, std::size_t q,
-                                           std::vector<double>& out) {
-    std::vector<double> covariance;
+// Cross-covariance X'Y (p x q, row-major) of row-major working matrices
+// X (n x p), Y (n x q).
+void cross_covariance(const std::vector<double>& x,
+                      const std::vector<double>& y,
+                      std::size_t n, std::size_t p, std::size_t q,
+                      std::vector<double>& covariance) {
     resize_fill(covariance, p * q, 0.0);
     n4m::linalg::gemm(
         n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
@@ -206,6 +206,15 @@ void cross_covariance_column_squared_norms(const std::vector<double>& x,
         y.data(), q,
         0.0,
         covariance.data(), q);
+}
+
+// Column squared norms of X'Y for row-major working matrices X (n x p), Y (n x q).
+void cross_covariance_column_squared_norms(const std::vector<double>& x,
+                                           const std::vector<double>& y,
+                                           std::size_t n, std::size_t p, std::size_t q,
+                                           std::vector<double>& out) {
+    std::vector<double> covariance;
+    cross_covariance(x, y, n, p, q, covariance);
     column_squared_norms(covariance, p, q, out);
 }
 
@@ -754,6 +763,58 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     return N4M_OK;
 }
 
+// Power-type iterations (NIPALS, canonical NIPALS, orthogonal scores, kernel,
+// power, randomized SVD, SIMPLS with several targets) contract the error of
+// their iterate by about (sigma_2 / sigma_1)^2 per step, where sigma_1 >=
+// sigma_2 are the two leading singular values of the cross-covariance. When
+// these are close the iteration stalls: it fails to converge (X = [a, b],
+// Y = [a + 2^-12 b, 2^-12 a + b], sigma = 20 (1 +- 2^-12)), or its step-size
+// test passes while the iterate is still far from the dominant direction (the
+// error is about step / (1 - (sigma_2 / sigma_1)^2)). The dominant singular
+// pair is then taken from the deterministic Jacobi eigen-solver of the SVD
+// solver (dominant_svd_pair), which has no such gap dependence. An iterate is
+// kept when it is within kIterateAcceptanceFactor times its nominal step
+// tolerance of that pair, so converged fits with well-separated singular
+// values are unchanged.
+constexpr double kIterateAcceptanceFactor = 16.0;
+
+// Dominant singular pair (unit left and right singular vectors) of a nonzero
+// cross-covariance by dominant_svd_pair, on a copy rescaled by an exact power
+// of two to a largest |value| in [1, 2) (singular vectors unchanged).
+[[nodiscard]] n4m_status_t jacobi_dominant_pair(::n4m::core::Context& ctx,
+                                                std::vector<double> covariance,
+                                                std::size_t features,
+                                                std::size_t targets,
+                                                std::int32_t max_iter,
+                                                double tol,
+                                                std::size_t component,
+                                                std::vector<double>& left,
+                                                std::vector<double>& right) {
+    static_cast<void>(scale_to_unit_magnitude(covariance));
+    return dominant_svd_pair(ctx, covariance, features, targets, max_iter, tol, component, left,
+                             right);
+}
+
+// Sign-insensitive distance min(|u - v|, |u + v|) between the directions of
+// two vectors, each normalised first; +inf when either vanishes.
+[[nodiscard]] double direction_distance(const std::vector<double>& u,
+                                        const std::vector<double>& v) noexcept {
+    const double u_norm = std::sqrt(squared_norm(u));
+    const double v_norm = std::sqrt(squared_norm(v));
+    if (!(u_norm > 0.0) || !(v_norm > 0.0) || u.size() != v.size()) {
+        return std::numeric_limits<double>::infinity();
+    }
+    double same = 0.0;
+    double opposite = 0.0;
+    for (std::size_t i = 0; i < u.size(); ++i) {
+        const double a = u[i] / u_norm;
+        const double b = v[i] / v_norm;
+        same += (a - b) * (a - b);
+        opposite += (a + b) * (a + b);
+    }
+    return std::sqrt(std::min(same, opposite));
+}
+
 [[nodiscard]] n4m_status_t dominant_svd_pair_power(
     ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
@@ -858,44 +919,56 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
     }
 
-    if (!converged) {
-        ctx.set_errorf("power singular-vector iteration failed to converge at component %llu",
-                       ull(component));
-        return N4M_ERR_CONVERGENCE_FAILED;
-    }
-
-    for (std::size_t feature = 0; feature < features; ++feature) {
-        double sum = 0.0;
-        for (std::size_t target = 0; target < targets; ++target) {
-            sum += covariance[idx(feature, targets, target)] * right[target];
-        }
-        left[feature] = sum;
-    }
-    const double left_norm = std::sqrt(squared_norm(left));
-    if (left_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("power final left singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-    for (double& value : left) {
-        value /= left_norm;
-    }
-
-    for (std::size_t target = 0; target < targets; ++target) {
-        double sum = 0.0;
+    // A converged iterate is refined once more; it is kept only when it agrees
+    // with the Jacobi pair within its nominal accuracy (see
+    // kIterateAcceptanceFactor), else, and when the iteration did not
+    // converge, the Jacobi pair is used.
+    if (converged) {
         for (std::size_t feature = 0; feature < features; ++feature) {
-            sum += covariance[idx(feature, targets, target)] * left[feature];
+            double sum = 0.0;
+            for (std::size_t target = 0; target < targets; ++target) {
+                sum += covariance[idx(feature, targets, target)] * right[target];
+            }
+            left[feature] = sum;
         }
-        right[target] = sum;
+        const double left_norm = std::sqrt(squared_norm(left));
+        if (left_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("power final left singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : left) {
+            value /= left_norm;
+        }
+
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += covariance[idx(feature, targets, target)] * left[feature];
+            }
+            right[target] = sum;
+        }
+        const double right_norm = std::sqrt(squared_norm(right));
+        if (right_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("power final right singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : right) {
+            value /= right_norm;
+        }
     }
-    const double right_norm = std::sqrt(squared_norm(right));
-    if (right_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("power final right singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
+    std::vector<double> jacobi_left;
+    std::vector<double> jacobi_right;
+    const n4m_status_t jacobi_status = jacobi_dominant_pair(
+        ctx, covariance, features, targets, max_iter, tol, component, jacobi_left, jacobi_right);
+    if (jacobi_status != N4M_OK) {
+        return jacobi_status;
     }
-    for (double& value : right) {
-        value /= right_norm;
+    if (!converged ||
+        direction_distance(right, jacobi_right) > kIterateAcceptanceFactor * std::sqrt(tol)) {
+        left = std::move(jacobi_left);
+        right = std::move(jacobi_right);
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
@@ -1003,44 +1076,56 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
     }
 
-    if (!converged) {
-        ctx.set_errorf("randomized SVD iteration failed to converge at component %llu",
-                       ull(component));
-        return N4M_ERR_CONVERGENCE_FAILED;
-    }
-
-    for (std::size_t feature = 0; feature < features; ++feature) {
-        double sum = 0.0;
-        for (std::size_t target = 0; target < targets; ++target) {
-            sum += covariance[idx(feature, targets, target)] * right[target];
-        }
-        left[feature] = sum;
-    }
-    const double left_norm = std::sqrt(squared_norm(left));
-    if (left_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("randomized SVD final left singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-    for (double& value : left) {
-        value /= left_norm;
-    }
-
-    for (std::size_t target = 0; target < targets; ++target) {
-        double sum = 0.0;
+    // A converged iterate is refined once more; it is kept only when it agrees
+    // with the Jacobi pair within its nominal accuracy (see
+    // kIterateAcceptanceFactor), else, and when the iteration did not
+    // converge, the Jacobi pair is used.
+    if (converged) {
         for (std::size_t feature = 0; feature < features; ++feature) {
-            sum += covariance[idx(feature, targets, target)] * left[feature];
+            double sum = 0.0;
+            for (std::size_t target = 0; target < targets; ++target) {
+                sum += covariance[idx(feature, targets, target)] * right[target];
+            }
+            left[feature] = sum;
         }
-        right[target] = sum;
+        const double left_norm = std::sqrt(squared_norm(left));
+        if (left_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("randomized SVD final left singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : left) {
+            value /= left_norm;
+        }
+
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += covariance[idx(feature, targets, target)] * left[feature];
+            }
+            right[target] = sum;
+        }
+        right_norm = std::sqrt(squared_norm(right));
+        if (right_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("randomized SVD final right singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : right) {
+            value /= right_norm;
+        }
     }
-    right_norm = std::sqrt(squared_norm(right));
-    if (right_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("randomized SVD final right singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
+    std::vector<double> jacobi_left;
+    std::vector<double> jacobi_right;
+    const n4m_status_t jacobi_status = jacobi_dominant_pair(
+        ctx, covariance, features, targets, max_iter, tol, component, jacobi_left, jacobi_right);
+    if (jacobi_status != N4M_OK) {
+        return jacobi_status;
     }
-    for (double& value : right) {
-        value /= right_norm;
+    if (!converged ||
+        direction_distance(right, jacobi_right) > kIterateAcceptanceFactor * std::sqrt(tol)) {
+        left = std::move(jacobi_left);
+        right = std::move(jacobi_right);
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
@@ -1147,11 +1232,14 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             break;
         }
     }
-    if (!converged) {
-        ctx.set_errorf(
-            "SIMPLS singular-vector iteration failed to converge at component %llu",
-            ull(component));
-        return N4M_ERR_CONVERGENCE_FAILED;
+    std::vector<double> jacobi_right;
+    const n4m_status_t jacobi_status = jacobi_dominant_pair(
+        ctx, covariance, features, targets, max_iter, tol, component, next_left, jacobi_right);
+    if (jacobi_status != N4M_OK) {
+        return jacobi_status;
+    }
+    if (!converged || direction_distance(out, next_left) > kIterateAcceptanceFactor * stop_tol) {
+        out = std::move(next_left);
     }
     canonicalize_direction_sign(out);
     return N4M_OK;
@@ -1489,6 +1577,28 @@ enum class CanonicalWeightSolver {
         x_weights_old = x_weights;
     }
 
+    if (targets > 1U) {
+        // The X weights are checked against the Jacobi dominant pair of
+        // X_k'Y_k (kIterateAcceptanceFactor) and replaced by it (left and
+        // right singular vectors) when the iteration did not converge or
+        // stopped away from it.
+        std::vector<double> covariance;
+        std::vector<double> jacobi_left;
+        std::vector<double> jacobi_right;
+        cross_covariance(xk, yk, rows, features, targets, covariance);
+        const n4m_status_t status =
+            jacobi_dominant_pair(ctx, covariance, features, targets, cfg.max_iter, cfg.tol,
+                                 component, jacobi_left, jacobi_right);
+        if (status != N4M_OK) {
+            return status;
+        }
+        if (!converged || direction_distance(x_weights, jacobi_left) >
+                              kIterateAcceptanceFactor * std::sqrt(cfg.tol)) {
+            x_weights = std::move(jacobi_left);
+            y_weights = std::move(jacobi_right);
+            converged = true;
+        }
+    }
     if (!converged) {
         ctx.set_errorf("canonical NIPALS iteration failed to converge at component %llu",
                        ull(component));
@@ -1904,6 +2014,39 @@ n4m_status_t fit_pls_regression_nipals(
             x_weights_old = x_weights;
         }
 
+        if (q > 1U) {
+            // One target converges in one step; with several, the X weights
+            // are checked against the Jacobi dominant pair of X_k'Y_k
+            // (kIterateAcceptanceFactor) and replaced by it when the
+            // iteration did not converge or stopped away from it.
+            std::vector<double> covariance;
+            std::vector<double> jacobi_left;
+            std::vector<double> jacobi_right;
+            cross_covariance(xk, yk, n, p, q, covariance);
+            status = jacobi_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol, comp,
+                                          jacobi_left, jacobi_right);
+            if (status != N4M_OK) {
+                return status;
+            }
+            if (!converged || direction_distance(x_weights, jacobi_left) >
+                                  kIterateAcceptanceFactor * std::sqrt(cfg.tol)) {
+                x_weights = std::move(jacobi_left);
+                matrix_vector_product(xk, n, p, x_weights, x_score);
+                const double x_score_ss = squared_norm(x_score);
+                if (!(x_score_ss > 0.0)) {
+                    ctx.set_errorf("X score vanished at component %llu", ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t target = 0; target < q; ++target) {
+                    double sum = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        sum += yk[idx(row, q, target)] * x_score[row];
+                    }
+                    y_weights[target] = sum / x_score_ss;
+                }
+                converged = true;
+            }
+        }
         if (!converged) {
             ctx.set_errorf("NIPALS power iteration failed to converge at component %llu",
                            ull(comp));
@@ -2736,6 +2879,55 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
             x_score_old = x_score;
         }
 
+        if (q > 1U) {
+            // The X scores are checked against those of the Jacobi dominant
+            // pair of X_k'Y_k (kIterateAcceptanceFactor, nominal step tol on
+            // the relative score changes) and replaced when the iteration did
+            // not converge or stopped away from it.
+            std::vector<double> covariance;
+            std::vector<double> jacobi_left;
+            std::vector<double> jacobi_right;
+            std::vector<double> jacobi_score;
+            cross_covariance(xk, yk, n, p, q, covariance);
+            status = jacobi_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol, comp,
+                                          jacobi_left, jacobi_right);
+            if (status != N4M_OK) {
+                return status;
+            }
+            matrix_vector_product(xk, n, p, jacobi_left, jacobi_score);
+            if (!converged || direction_distance(x_score, jacobi_score) >
+                                  kIterateAcceptanceFactor * cfg.tol) {
+                x_weights = std::move(jacobi_left);
+                x_score = std::move(jacobi_score);
+                const double x_score_ss = squared_norm(x_score);
+                if (!(x_score_ss > 0.0)) {
+                    ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t target = 0; target < q; ++target) {
+                    double sum = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        sum += yk[idx(row, q, target)] * (x_score[row] / x_score_ss);
+                    }
+                    y_loadings[target] = sum;
+                }
+                const double y_loading_ss = squared_norm(y_loadings);
+                if (!(y_loading_ss > 0.0)) {
+                    ctx.set_errorf("orthogonal-scores Y loadings vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t row = 0; row < n; ++row) {
+                    double sum = 0.0;
+                    for (std::size_t target = 0; target < q; ++target) {
+                        sum += yk[idx(row, q, target)] * y_loadings[target];
+                    }
+                    y_score[row] = sum / y_loading_ss;
+                }
+                converged = true;
+            }
+        }
         if (!converged) {
             ctx.set_errorf("orthogonal-scores iteration failed to converge at component %llu",
                            ull(comp));
@@ -3008,6 +3200,52 @@ n4m_status_t fit_pls_regression_kernel(
             x_score_old = x_score;
         }
 
+        if (q > 1U) {
+            // The unit X scores are checked against those of the Jacobi
+            // dominant pair of X_k'Y_k (kIterateAcceptanceFactor) and
+            // replaced when the iteration did not converge or stopped away
+            // from it.
+            std::vector<double> covariance;
+            std::vector<double> jacobi_left;
+            std::vector<double> jacobi_right;
+            std::vector<double> jacobi_score;
+            cross_covariance(xk, yk, n, p, q, covariance);
+            status = jacobi_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol, comp,
+                                          jacobi_left, jacobi_right);
+            if (status != N4M_OK) {
+                return status;
+            }
+            matrix_vector_product(xk, n, p, jacobi_left, jacobi_score);
+            if (!converged || direction_distance(x_score, jacobi_score) >
+                                  kIterateAcceptanceFactor * std::sqrt(cfg.tol)) {
+                const double score_norm = std::sqrt(squared_norm(jacobi_score));
+                if (!(score_norm > 0.0)) {
+                    ctx.set_errorf("kernel PLS X score vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t row = 0; row < n; ++row) {
+                    x_score[row] = jacobi_score[row] / score_norm;
+                }
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    x_weights[feature] = jacobi_left[feature] / score_norm;
+                }
+                const double x_score_ss = squared_norm(x_score);
+                for (std::size_t target = 0; target < q; ++target) {
+                    double sum = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        sum += yk[idx(row, q, target)] * x_score[row];
+                    }
+                    y_loadings[target] = sum / x_score_ss;
+                }
+                if (!(squared_norm(y_loadings) > 0.0)) {
+                    ctx.set_errorf("kernel PLS Y loadings vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                converged = true;
+            }
+        }
         if (!converged) {
             ctx.set_errorf("kernel PLS iteration failed to converge at component %llu",
                            ull(comp));
