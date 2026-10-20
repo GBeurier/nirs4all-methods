@@ -112,7 +112,8 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   limits, masks and CV RMSE equal those of the model truncated to its
   resolved components (here T2 = (1.35, 0.15, 0.15, 1.35), limit
   2.25 (1 - alpha)^2); with m = 0 every T2 and limit is 0. The result gains
-  the scalar `n_latent_directions`. Its singularity test was an absolute
+  the scalar `n_latent_directions` (JS/WASM tests cover the diagnostics,
+  PLS-LDA and T2-selection cases above). Its singularity test was an absolute
   1e-14 on the pivots of the weight covariance, whose scale follows the
   solver (W ~ 1 / ||X|| for SIMPLS): SIMPLS on unscaled X of magnitude
   ~2^18 or more was refused; the test is now relative to the largest
