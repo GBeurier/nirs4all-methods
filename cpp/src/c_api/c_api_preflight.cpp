@@ -23,6 +23,7 @@ namespace {
 using ::n4m::core::Context;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
+constexpr long double max_pca_buffer_doubles = 134217728.0L;  // 1 GiB of doubles
 constexpr long double max_hdbscan_products = 2500000000.0L;
 
 n4m_status_t fail(n4m_context_t* ctx, n4m_status_t code, const char* message) noexcept {
@@ -166,10 +167,35 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "invalid PCA dimensions or component count");
     if (scores->rows != n || scores->cols != k || loadings->rows != k || loadings->cols != p)
         return fail(ctx, N4M_ERR_SHAPE_MISMATCH, "PCA output shape mismatch");
-    const long double m = static_cast<long double>(std::min(n, p));
-    const long double products = m * m * static_cast<long double>(std::max(n, p));
-    if (products > max_moment_products)
-        return fail(ctx, N4M_ERR_UNSUPPORTED, "full PCA moments exceed 250 million product budget");
+    // Whole-computation budget, checked before any allocation, in long-double
+    // products (they dominate: software binary128 in WebAssembly, measured
+    // at least 16 times slower than a double operation there). With s =
+    // min(n,p) and l = max(n,p): Gram s(s+1)/2 * l and scores or loadings
+    // k s l, both accumulated in long double; double-precision work counted
+    // at 1/16 each: eigendecomposition 6 s^3 (tridiagonal reduction with
+    // accumulation and QL rotations at about two sweeps per eigenvalue; the
+    // solver caps the worst case at 30 sweeps per eigenvalue) and, for a wide
+    // input, re-orthonormalisation and Householder completion of the loading
+    // rows 3 k^2 l.
+    // Buffers: X copy n p, Gram, eigenvectors and solver workspace 3 s^2,
+    // loadings and completion 2 k p, scores n k, vectors 4 s + k.
+    {
+        const long double small_side = static_cast<long double>(std::min(n, p));
+        const long double large_side = static_cast<long double>(std::max(n, p));
+        const long double kk = static_cast<long double>(k);
+        const long double work = small_side * (small_side + 1.0L) / 2.0L * large_side +
+                                 kk * small_side * large_side +
+                                 (6.0L * small_side * small_side * small_side +
+                                  (n <= p ? 3.0L * kk * kk * large_side : 0.0L)) / 16.0L;
+        if (work > max_moment_products)
+            return fail(ctx, N4M_ERR_UNSUPPORTED, "PCA exceeds 250 million product budget");
+        const long double doubles = static_cast<long double>(n) * static_cast<long double>(p) +
+                                    3.0L * small_side * small_side +
+                                    2.0L * kk * static_cast<long double>(p) +
+                                    static_cast<long double>(n) * kk + 4.0L * small_side + kk;
+        if (doubles > max_pca_buffer_doubles)
+            return fail(ctx, N4M_ERR_UNSUPPORTED, "PCA working buffers exceed 1 GiB budget");
+    }
     try {
         if (static_cast<long double>(n) * p > static_cast<long double>(SIZE_MAX / sizeof(double)))
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "PCA matrix size overflow");
@@ -288,9 +314,10 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
             return std::max(lam[order[static_cast<size_t>(a)]], 0.0) / nm1;
         };
         // Accuracy contract (rule 14): variances carry an absolute error of
-        // order max(n,p) * eps * lambda_max. The conservative threshold
-        // pca_resolution_factor * max(n,p) * eps * lambda_max separates
-        // resolved components; a component not above it is unresolved:
+        // order max(n,p) * eps * lambda_max, plus the worst-case Gram
+        // accumulation term documented in metrics.h. The operational
+        // threshold pca_resolution_factor * max(n,p) * eps * lambda_max
+        // separates resolved components; a component not above it is unresolved:
         // flagged, and published with a zero variance and zero scores (its
         // loading row stays a unit vector of the orthonormal basis). Decided
         // in the rescaled space, where every resolved value maps to a normal
@@ -319,7 +346,9 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                     }
                 continue;
             }
-            // Wide: scores = u sigma, loadings = Xc^T u / sigma.
+            // Wide: scores = u sigma, loadings = Xc^T u / sigma (for an
+            // unresolved component rounding noise, left 0); the rows are
+            // orthonormalised and completed below.
             if (!lost) {
                 const double sigma = std::sqrt(lam[c]);
                 for (size_t i = 0; i < un; ++i) sc[i * uk + a] = vec[i * m + c] * sigma;
@@ -330,15 +359,23 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                              static_cast<long double>(vec[i * m + c]);
                     row[j] = static_cast<double>(s / sigma);
                 }
-                continue;
             }
-            // Unresolved wide component: Xc^T u / sigma is rounding noise, so
-            // complete the orthonormal basis deterministically with the first
-            // canonical vector that stays independent of the previous rows
-            // (modified Gram-Schmidt, applied twice).
-            for (size_t e = 0; e < up; ++e) {
-                std::fill(row, row + up, 0.0);
-                row[e] = 1.0;
+        }
+        // Wide input: the rows Xc^T u / sigma lose orthonormality as sigma
+        // nears the resolution (error of order eps lambda_max / lambda), and
+        // unresolved rows (a suffix, the variances being sorted) have none.
+        // Resolved rows are re-orthonormalised by modified Gram-Schmidt
+        // applied twice (stable for these nearly orthonormal rows; it only
+        // combines resolved rows, so exact zeros such as constant columns
+        // stay exact). Unresolved rows are Q e_r..Q e_{k-1}, with A =
+        // [resolved rows]^T = Q R the Householder QR (p x r): unit and
+        // orthogonal to the others to working precision, with no threshold and
+        // no retries. Cost 2 r^2 p + p r^2 + 2 p r (k - r) <= 3 k^2 p.
+        if (wide) {
+            size_t r = 0;
+            while (r < uk && !unresolved[r]) ++r;
+            for (size_t a = 0; a < r; ++a) {
+                double* row = load.data() + a * up;
                 for (int pass = 0; pass < 2; ++pass)
                     for (size_t b = 0; b < a; ++b) {
                         const double* prev = load.data() + b * up;
@@ -346,12 +383,45 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                         for (size_t j = 0; j < up; ++j) dot += prev[j] * row[j];
                         for (size_t j = 0; j < up; ++j) row[j] -= dot * prev[j];
                     }
-                double norm = 0.0;
-                for (size_t j = 0; j < up; ++j) norm += row[j] * row[j];
-                norm = std::sqrt(norm);
-                if (norm > 0.5) {
-                    for (size_t j = 0; j < up; ++j) row[j] /= norm;
-                    break;
+                double norm2 = 0.0;
+                for (size_t j = 0; j < up; ++j) norm2 += row[j] * row[j];
+                const double norm = std::sqrt(norm2);
+                for (size_t j = 0; j < up; ++j) row[j] /= norm;
+            }
+            std::vector<double> house(load.data(), load.data() + r * up);
+            std::vector<double> beta(r, 0.0);
+            if (r < uk)
+                for (size_t j = 0; j < r; ++j) {
+                    // Reflector j, stored in house[j*up + j ..], maps column j
+                    // of A (below its first j entries) onto a multiple of e_j.
+                    double* v = house.data() + j * up;
+                    double norm2 = 0.0;
+                    for (size_t i = j; i < up; ++i) norm2 += v[i] * v[i];
+                    if (norm2 == 0.0) continue;
+                    const double alpha = v[j] >= 0.0 ? -std::sqrt(norm2) : std::sqrt(norm2);
+                    v[j] -= alpha;
+                    double vv = 0.0;
+                    for (size_t i = j; i < up; ++i) vv += v[i] * v[i];
+                    beta[j] = 2.0 / vv;
+                    for (size_t t = j + 1; t < r; ++t) {
+                        double* w = house.data() + t * up;
+                        double dot = 0.0;
+                        for (size_t i = j; i < up; ++i) dot += v[i] * w[i];
+                        dot *= beta[j];
+                        for (size_t i = j; i < up; ++i) w[i] -= dot * v[i];
+                    }
+                }
+            for (size_t a = r; a < uk; ++a) {
+                double* row = load.data() + a * up;
+                std::fill(row, row + up, 0.0);
+                row[a] = 1.0;
+                for (size_t j = r; j-- > 0;) {
+                    if (beta[j] == 0.0) continue;
+                    const double* v = house.data() + j * up;
+                    double dot = 0.0;
+                    for (size_t i = j; i < up; ++i) dot += v[i] * row[i];
+                    dot *= beta[j];
+                    for (size_t i = j; i < up; ++i) row[i] -= dot * v[i];
                 }
             }
         }

@@ -9,6 +9,7 @@
 //         `q_residuals_v1.json`, replay each case, and assert tolerances
 //         from the brief.
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -153,6 +154,60 @@ void test_hotelling_t2_rank_deficient() {
                                                                   &rank) == N4M_OK);
     N4M_TEST_REQUIRE(rank == 0 && ucl == 0.0);
     for (int i = 0; i < 4; ++i) N4M_TEST_REQUIRE(t2[i] == 0.0);
+}
+
+// Review b8fix4 P0-2: a plain rounded mean left the same residual on every
+// observation of a non-dyadic constant column (ten values 0.1, k = 1: rank 1,
+// T² = 0.9, UCL 5.63). The corrected two-pass mean centres it to exact zeros,
+// at every scale. Next to constant columns, a varying column i * s keeps
+// rank 1 and the analytic T²_i = 12 z_i^2 / (n (n + 1)), z_i = i - (n-1)/2.
+void test_hotelling_t2_constant_columns() {
+    const double constants[] = {0.1, 1.0 / 3.0, -2.7e-7, 12345.678, 314159.26535};
+    const double scales[] = {1.0, 3.0, 1e-7, 1e7, 0x1p60};
+    for (const int64_t n : {int64_t{3}, int64_t{10}, int64_t{101}, int64_t{1000}}) {
+        std::vector<double> x(static_cast<size_t>(n)), t2(static_cast<size_t>(n));
+        for (const double c : constants) for (const double s : scales) {
+            std::fill(x.begin(), x.end(), c * s);
+            double ucl = -1.0;
+            int32_t rank = -1;
+            const n4m_matrix_view_t Xv = make_rowmajor_view(x.data(), n, 1);
+            N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(
+                                 Xv, 1, 0.05, t2.data(), n, &ucl, &rank) == N4M_OK);
+            N4M_TEST_REQUIRE(rank == 0 && ucl == 0.0);
+            for (double v : t2) N4M_TEST_REQUIRE(v == 0.0);
+        }
+    }
+    for (const int64_t n : {int64_t{10}, int64_t{101}}) {
+        for (const double s : scales) {
+            std::vector<double> x(static_cast<size_t>(3 * n)), t2(static_cast<size_t>(n));
+            for (int64_t i = 0; i < n; ++i) {
+                x[static_cast<size_t>(3 * i)] = 0.1 * s;
+                x[static_cast<size_t>(3 * i + 1)] = static_cast<double>(i) * s;
+                x[static_cast<size_t>(3 * i + 2)] = -s / 3.0;
+            }
+            double ucl = -1.0;
+            int32_t rank = -1;
+            const n4m_matrix_view_t Xv = make_rowmajor_view(x.data(), n, 3);
+            N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(
+                                 Xv, 2, 0.05, t2.data(), n, &ucl, &rank) == N4M_OK);
+            N4M_TEST_REQUIRE(rank == 1);
+            const double dn = static_cast<double>(n);
+            for (int64_t i = 0; i < n; ++i) {
+                const double z = static_cast<double>(i) - (dn - 1.0) / 2.0;
+                const double ref = 12.0 * z * z / (dn * (dn + 1.0));
+                N4M_TEST_REQUIRE(std::abs(t2[static_cast<size_t>(i)] - ref) <=
+                                 1e-12 * std::max(1.0, ref));
+            }
+            // Same UCL as the varying column alone (r = 1).
+            std::vector<double> col(static_cast<size_t>(n)), t2_col(static_cast<size_t>(n));
+            for (int64_t i = 0; i < n; ++i) col[static_cast<size_t>(i)] = static_cast<double>(i) * s;
+            double ucl_col = -1.0;
+            const n4m_matrix_view_t Cv = make_rowmajor_view(col.data(), n, 1);
+            N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(Cv, 1, 0.05, t2_col.data(), n,
+                                                                 &ucl_col) == N4M_OK);
+            N4M_TEST_REQUIRE(ucl == ucl_col && ucl > 0.0);
+        }
+    }
 }
 
 void test_q_residuals_smoke() {
@@ -402,6 +457,7 @@ void register_metrics_tests(n4m_testing::Runner& r) {
     r.run("metric_smoke_invalid_n",        test_metric_smoke_invalid_n);
     r.run("hotelling_t2_smoke",            test_hotelling_t2_smoke);
     r.run("hotelling_t2_rank_deficient",   test_hotelling_t2_rank_deficient);
+    r.run("hotelling_t2_constant_columns", test_hotelling_t2_constant_columns);
     r.run("q_residuals_smoke",             test_q_residuals_smoke);
     r.run("metrics_parity",                verify_metrics_parity);
     r.run("hotelling_t2_parity",           verify_hotelling_t2_parity);

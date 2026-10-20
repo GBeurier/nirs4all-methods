@@ -116,7 +116,8 @@ N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
     uint8_t* mask_out, n4m_filter_stats_t* stats_out);
 
 /* ---------- 20.3 Multivariate outlier statistics ---------------------- */
-/* Hotelling T² on the leading PCA directions of the column-centred X.
+/* Hotelling T² on the leading PCA directions of the column-centred X
+ * (corrected two-pass mean: a constant column centres to exact zeros).
  * Only resolved directions are used: sigma_j > 16 * max(n,p) * DBL_EPSILON
  * * sigma_1 (the SVD's absolute accuracy). With r <= n_components such
  * directions, T² sums over the leading r and the UCL uses r degrees of

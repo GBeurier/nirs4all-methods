@@ -9,10 +9,15 @@ serialized format changes.
 `n4m_preflight_pca_compute_resolved` is `n4m_preflight_pca_compute` with its
 accuracy contract made explicit. Two outputs are added:
 
-- `resolution`, one element: the conservative absolute accuracy threshold
-  `16 * max(n,p) * DBL_EPSILON * lambda_max`. Eigenvalues carry an absolute
-  error of order `max(n,p) * eps * lambda_max`, as for any backward-stable
-  SVD; no relative accuracy is claimed.
+- `resolution`, one element: the operational absolute threshold
+  `16 * max(n,p) * DBL_EPSILON * lambda_max`, a margin of 16 over the
+  eigensolver's backward error (of order `max(n,p) * eps * lambda_max`); no
+  relative accuracy is claimed. It is not the total error bound: the
+  accumulation of the Gram entries adds at most `L * u * trace(C)` (L = p for
+  the row-side Gram used when n <= p, n otherwise; u the unit roundoff of
+  long double, `DBL_EPSILON / 2` where long double is double), a worst-case
+  term that can exceed the threshold for high-rank spectra. A variance
+  within that term of the threshold has no guaranteed classification.
 - `unresolved`, k bytes: 1 for a component whose variance is not above that
   bound. Such a component is published with a zero variance and zero scores,
   and must not be counted as numerical rank or read as a measured variance.
@@ -47,6 +52,19 @@ published resolution (`[diag(d); -diag(d)]`, d_i = 1 + i/128, 256 x 128,
 k = 10: first variance 7 % low with `N4M_OK`). The 2.19 entry point now
 validates `k` before any allocation and keeps every allocation inside its
 exception barrier (`k = INT_MAX` used to abort with `std::bad_alloc`).
+For n <= p the resolved loading rows `Xc^T u / sigma` are re-orthonormalised
+(modified Gram-Schmidt applied twice) and the unresolved rows complete them by
+Householder QR, so every loading row is a unit vector orthogonal to the
+others (the former Gram-Schmidt on canonical vectors could publish an
+unnormalised row, norm 0.354 for `X = I_8`, k = 8, and cost Θ(n^4); resolved
+rows near the resolution drifted up to 5e-5 from orthonormality). The
+budget checked before allocating counts the Gram and the projections in
+long-double products, plus the eigendecomposition and the loading
+re-orthonormalisation and completion at 1/16
+per double operation (250 million in total), and the working buffers
+(1 GiB); both return `N4M_ERR_UNSUPPORTED` when exceeded. Every shape a
+Preflight request can produce (at most 10^7 cells, k <= 10) that the former
+Gram-only count accepted is still accepted.
 
 `n4m_outlier_detection_hotelling_t2_resolved` is
 `n4m_outlier_detection_hotelling_t2` plus `rank_used` (one `int32_t`). Both
@@ -55,7 +73,11 @@ sigma_1`) and compute the UCL with r = `rank_used` degrees of freedom. A
 rank-deficient X therefore no longer amplifies a rounding-level direction:
 for `[[1,2,3],[4,5,9],[6,3,9],[2,8,10]]` with k = 3, r = 2 and T² equals
 the exact 2-column values (e.g. 4113/2428 instead of 2.998). With r = 0
-(constant X), T² = 0 and UCL = 0. Full-rank inputs are bit-identical. The
+(constant X), T² = 0 and UCL = 0. Columns are centred with a corrected
+two-pass mean, so a constant column centres to exact zeros: the plain rounded
+mean left a common offset that the rank selection kept as a direction (ten
+observations of 0.1, k = 1: rank 1, T² = 0.9). Full-rank results change only
+at the rounding level of the centring. The
 registry procedure `utilities.hotelling_t2` publishes `n_components_used`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)

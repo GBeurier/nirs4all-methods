@@ -1456,8 +1456,9 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "These are descriptive diagnostics, not model-validation scores. The noise proxy assumes "
         "equally spaced features and a locally polynomial signal; it is not an SNR. ICC is "
         "computed only for balanced complete groups and is NaN otherwise. The association test "
-        "assumes exchangeable units and permutes targets as one unrestricted block. PCA moments "
-        "and permutation tests above 250 million operations return `N4M_ERR_UNSUPPORTED`; "
+        "assumes exchangeable units and permutes targets as one unrestricted block. A PCA above "
+        "250 million long-double product equivalents or 1 GiB of working buffers, and "
+        "permutation tests above 250 million operations, return `N4M_ERR_UNSUPPORTED`; "
         "neighbor and pair searches are exhaustive and quadratic in rows.",
         "The ABI-2 symbols `n4m_preflight_{pca_compute,repeatability_compute,summary_compute,"
         "nearest_neighbors,local_contrast,noise_proxy_compute,pairs_within_tolerance,"
