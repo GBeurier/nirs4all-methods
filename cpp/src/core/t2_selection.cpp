@@ -161,13 +161,20 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     std::fill(values.begin(), values.end(), fill);
 }
 
+// Gauss-Jordan inverse of the symmetric weight covariance. A pivot not above
+// 1e-14 times the largest diagonal entry is refused as singular: the
+// weights' scale follows the solver (unit W for NIPALS, W ~ 1 / ||X|| for
+// SIMPLS or kernel), so the test is relative.
 [[nodiscard]] bool invert_square(std::vector<double> a,
                                  std::size_t n,
                                  std::vector<double>& inverse) {
     resize_fill(inverse, n * n, 0.0);
+    double largest_diagonal = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
         inverse[idx(i, n, i)] = 1.0;
+        largest_diagonal = std::max(largest_diagonal, std::fabs(a[idx(i, n, i)]));
     }
+    const double pivot_floor = 1e-14 * largest_diagonal;
     for (std::size_t col = 0; col < n; ++col) {
         std::size_t pivot = col;
         double pivot_abs = std::fabs(a[idx(col, n, col)]);
@@ -178,7 +185,7 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
                 pivot = row;
             }
         }
-        if (!(pivot_abs > 1e-14)) {
+        if (!(pivot_abs > pivot_floor)) {
             return false;
         }
         if (pivot != col) {
@@ -209,83 +216,112 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return true;
 }
 
+// ---- Beta quantile ---------------------------------------------------------
+// The UCL needs the upper (1 - alpha) quantile of Beta(a, b), a, b >= 1/2.
+// Both tails are evaluated in logarithms from the odds s = x / (1 - x), so no
+// beta argument goes through a complement close to 1, and the small tail is
+// the one inverted (upper for alpha <= 1/2, lower otherwise), by bisection on
+// the normal doubles. Same scheme as the Hotelling T2 outlier UCL
+// (core/utilities/hotelling_t2.c).
+
+// Lanczos approximation (g = 7, nine terms; relative error about 1e-15 on
+// Gamma for x >= 0.5): Gamma(x) = sqrt(2 pi) t^(x - 0.5) e^-t S(x), t = x + 6.5.
+[[nodiscard]] double lanczos_sum(double x) noexcept {
+    static const double c[9] = {
+        0.99999999999980993,  676.5203681218851,     -1259.1392167224028,
+        771.32342877765313,   -176.61502916214059,   12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7};
+    double sum = c[0];
+    for (int i = 1; i < 9; ++i) sum += c[i] / (x - 1.0 + static_cast<double>(i));
+    return sum;
+}
+
+[[nodiscard]] double log_gamma(double x) noexcept {
+    const double t = x + 6.5;
+    return 0.91893853320467274178 + (x - 0.5) * std::log(t) - t + std::log(lanczos_sum(x));
+}
+
+// ln B(a, b) for a, b >= 0.5 without the difference of two terms of order
+// b ln b (b >= a): -(b - 0.5) log1p(a / (b + 6.5)) - a ln(a + b + 6.5) + a +
+// ln(S(b) / S(a + b)) for ln Gamma(b) - ln Gamma(a + b).
+[[nodiscard]] double log_beta(double a, double b) noexcept {
+    if (a > b) std::swap(a, b);
+    const double tb = b + 6.5;
+    return log_gamma(a) - (b - 0.5) * std::log1p(a / tb) - a * std::log(a + tb) + a +
+           std::log(lanczos_sum(b) / lanczos_sum(a + b));
+}
+
+// Continued fraction of I_x(a, b) (Numerical Recipes 6.4, modified Lentz);
+// NaN when it has not converged within the cap.
 [[nodiscard]] double beta_continued_fraction(double a, double b, double x) noexcept {
-    constexpr int kMaxIter = 200;
-    constexpr double kEps = 3e-14;
+    constexpr int kMaxIter = 20000;
+    constexpr double kEps = 3e-16;
     constexpr double kFpMin = 1e-300;
     const double qab = a + b;
     const double qap = a + 1.0;
     const double qam = a - 1.0;
     double c = 1.0;
     double d = 1.0 - qab * x / qap;
-    if (std::fabs(d) < kFpMin) {
-        d = kFpMin;
-    }
+    if (std::fabs(d) < kFpMin) d = kFpMin;
     d = 1.0 / d;
     double h = d;
     for (int m = 1; m <= kMaxIter; ++m) {
-        const int m2 = 2 * m;
-        double aa = static_cast<double>(m) * (b - static_cast<double>(m)) * x /
-                    ((qam + static_cast<double>(m2)) * (a + static_cast<double>(m2)));
+        const double dm = static_cast<double>(m);
+        const double m2 = 2.0 * dm;
+        double aa = dm * (b - dm) * x / ((qam + m2) * (a + m2));
         d = 1.0 + aa * d;
-        if (std::fabs(d) < kFpMin) {
-            d = kFpMin;
-        }
+        if (std::fabs(d) < kFpMin) d = kFpMin;
         c = 1.0 + aa / c;
-        if (std::fabs(c) < kFpMin) {
-            c = kFpMin;
-        }
+        if (std::fabs(c) < kFpMin) c = kFpMin;
         d = 1.0 / d;
         h *= d * c;
-        aa = -(a + static_cast<double>(m)) * (qab + static_cast<double>(m)) * x /
-             ((a + static_cast<double>(m2)) * (qap + static_cast<double>(m2)));
+        aa = -(a + dm) * (qab + dm) * x / ((a + m2) * (qap + m2));
         d = 1.0 + aa * d;
-        if (std::fabs(d) < kFpMin) {
-            d = kFpMin;
-        }
+        if (std::fabs(d) < kFpMin) d = kFpMin;
         c = 1.0 + aa / c;
-        if (std::fabs(c) < kFpMin) {
-            c = kFpMin;
-        }
+        if (std::fabs(c) < kFpMin) c = kFpMin;
         d = 1.0 / d;
         const double del = d * c;
         h *= del;
-        if (std::fabs(del - 1.0) <= kEps) {
-            break;
-        }
+        if (std::fabs(del - 1.0) < kEps) return h;
     }
-    return h;
+    return std::numeric_limits<double>::quiet_NaN();
 }
 
-[[nodiscard]] double regularized_beta(double x, double a, double b) noexcept {
-    if (x <= 0.0) {
-        return 0.0;
-    }
-    if (x >= 1.0) {
-        return 1.0;
-    }
-    const double log_bt = std::lgamma(a + b) - std::lgamma(a) - std::lgamma(b) +
-                          a * std::log(x) + b * std::log1p(-x);
-    const double bt = std::exp(log_bt);
+// Logarithms of both tails of Beta(a, b) at x = s / (1 + s), s > 0: ln x =
+// ln s - log1p(s) and ln(1 - x) = -log1p(s) without forming x or 1 - x; the
+// tail on the side of x is computed directly, the other as log1p(-exp(.)) of
+// it (at least about 0.3). NaN when the continued fraction did not converge.
+void beta_log_tails(double a, double b, double odds, double& log_lower,
+                    double& log_upper) noexcept {
+    const double log_complement = -std::log1p(odds);
+    const double log_x = std::log(odds) + log_complement;
+    const double log_front = a * log_x + b * log_complement - log_beta(a, b);
+    const double x = odds / (1.0 + odds);
     if (x < (a + 1.0) / (a + b + 2.0)) {
-        return bt * beta_continued_fraction(a, b, x) / a;
+        log_lower = log_front + std::log(beta_continued_fraction(a, b, x) / a);
+        log_upper = std::log1p(-std::min(std::exp(log_lower), 1.0));
+    } else {
+        log_upper = log_front + std::log(beta_continued_fraction(b, a, 1.0 / (1.0 + odds)) / b);
+        log_lower = std::log1p(-std::min(std::exp(log_upper), 1.0));
     }
-    return 1.0 - bt * beta_continued_fraction(b, a, 1.0 - x) / b;
+    if (std::isnan(log_upper) || std::isnan(log_lower)) log_lower = log_upper =
+        std::numeric_limits<double>::quiet_NaN();
 }
 
-[[nodiscard]] double beta_quantile(double probability, double a, double b) noexcept {
-    double lo = 0.0;
-    double hi = 1.0;
-    for (int iter = 0; iter < 160; ++iter) {
-        const double mid = 0.5 * (lo + hi);
-        const double cdf = regularized_beta(mid, a, b);
-        if (cdf < probability) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    return 0.5 * (lo + hi);
+struct BetaTarget {
+    double a, b, log_target;
+    bool upper;
+};
+
+// +1 when the odds s are below the quantile, 0 at or above it, -1 when a
+// tail could not be evaluated.
+[[nodiscard]] int below_quantile(const BetaTarget& t, double odds) noexcept {
+    double log_lower = 0.0;
+    double log_upper = 0.0;
+    beta_log_tails(t.a, t.b, odds, log_lower, log_upper);
+    if (std::isnan(log_lower)) return -1;
+    return t.upper ? (log_upper > t.log_target ? 1 : 0) : (log_lower < t.log_target ? 1 : 0);
 }
 
 [[nodiscard]] n4m_status_t copy_columns(::n4m::core::Context& ctx,
@@ -350,6 +386,46 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
 
 namespace n4m::core {
 
+bool t2_beta_upper_quantile(double alpha, double a, double b, double& out) noexcept {
+    BetaTarget t{a, b, 0.0, alpha <= 0.5};
+    t.log_target = t.upper ? std::log(alpha) : std::log1p(-alpha);
+    constexpr double kMax = std::numeric_limits<double>::max();
+    constexpr double kMin = std::numeric_limits<double>::min();
+    double lo = 1.0;
+    double hi = 1.0;
+    int side = below_quantile(t, 1.0);
+    if (side < 0) return false;
+    if (side == 1) {
+        while (side == 1 && hi < kMax) {
+            lo = hi;
+            hi = hi > kMax / 2.0 ? kMax : 2.0 * hi;
+            side = below_quantile(t, hi);
+            if (side < 0) return false;
+        }
+    } else {
+        while (side == 0 && lo > kMin) {
+            hi = lo;
+            lo = lo / 2.0 < kMin ? kMin : lo / 2.0;
+            side = below_quantile(t, lo);
+            if (side < 0) return false;
+        }
+    }
+    for (int it = 0; it < 200 && hi - lo > 2.0 * std::numeric_limits<double>::epsilon() * hi;
+         ++it) {
+        const double mid = lo + (hi - lo) / 2.0;
+        side = below_quantile(t, mid);
+        if (side < 0) return false;
+        if (side == 1) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    const double odds = lo + (hi - lo) / 2.0;
+    out = odds / (1.0 + odds);
+    return true;
+}
+
 n4m_status_t select_by_t2(Context& ctx,
                           const Config& cfg,
                           const n4m_matrix_view_t& X,
@@ -377,23 +453,38 @@ n4m_status_t select_by_t2(Context& ctx,
             return N4M_ERR_INTERNAL;
         }
 
-        std::vector<double> mean(a, 0.0);
+        // The weight T2 uses the components with a nonzero weight column: a
+        // null PLS component (flagged in N4M_MODEL_UNRESOLVED_COMPONENTS) has
+        // zero W and would make the weight covariance singular. With m kept
+        // directions T2 and its limit are those of the truncated model.
+        std::vector<std::size_t> kept;
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                if (model->weights_w[idx(feature, a, comp)] != 0.0) {
+                    kept.push_back(comp);
+                    break;
+                }
+            }
+        }
+        const std::size_t m = kept.size();
+
+        std::vector<double> mean(m, 0.0);
         for (std::size_t feature = 0; feature < p; ++feature) {
-            for (std::size_t comp = 0; comp < a; ++comp) {
-                mean[comp] += model->weights_w[idx(feature, a, comp)];
+            for (std::size_t k = 0; k < m; ++k) {
+                mean[k] += model->weights_w[idx(feature, a, kept[k])];
             }
         }
         for (double& value : mean) {
             value /= static_cast<double>(p);
         }
 
-        std::vector<double> covariance(a * a, 0.0);
+        std::vector<double> covariance(m * m, 0.0);
         for (std::size_t feature = 0; feature < p; ++feature) {
-            for (std::size_t lhs = 0; lhs < a; ++lhs) {
-                const double left = model->weights_w[idx(feature, a, lhs)] - mean[lhs];
-                for (std::size_t rhs = 0; rhs < a; ++rhs) {
-                    const double right = model->weights_w[idx(feature, a, rhs)] - mean[rhs];
-                    covariance[idx(lhs, a, rhs)] += left * right;
+            for (std::size_t lhs = 0; lhs < m; ++lhs) {
+                const double left = model->weights_w[idx(feature, a, kept[lhs])] - mean[lhs];
+                for (std::size_t rhs = 0; rhs < m; ++rhs) {
+                    const double right = model->weights_w[idx(feature, a, kept[rhs])] - mean[rhs];
+                    covariance[idx(lhs, m, rhs)] += left * right;
                 }
             }
         }
@@ -402,7 +493,7 @@ n4m_status_t select_by_t2(Context& ctx,
         }
 
         std::vector<double> inverse;
-        if (!invert_square(covariance, a, inverse)) {
+        if (!invert_square(covariance, m, inverse)) {
             ctx.set_error("T2-PLS loading-weight covariance is singular");
             return N4M_ERR_INVALID_ARGUMENT;
         }
@@ -410,11 +501,11 @@ n4m_status_t select_by_t2(Context& ctx,
         out.t2_scores.assign(p, 0.0);
         for (std::size_t feature = 0; feature < p; ++feature) {
             double t2 = 0.0;
-            for (std::size_t lhs = 0; lhs < a; ++lhs) {
-                const double left = model->weights_w[idx(feature, a, lhs)] - mean[lhs];
-                for (std::size_t rhs = 0; rhs < a; ++rhs) {
-                    const double right = model->weights_w[idx(feature, a, rhs)] - mean[rhs];
-                    t2 += left * inverse[idx(lhs, a, rhs)] * right;
+            for (std::size_t lhs = 0; lhs < m; ++lhs) {
+                const double left = model->weights_w[idx(feature, a, kept[lhs])] - mean[lhs];
+                for (std::size_t rhs = 0; rhs < m; ++rhs) {
+                    const double right = model->weights_w[idx(feature, a, kept[rhs])] - mean[rhs];
+                    t2 += left * inverse[idx(lhs, m, rhs)] * right;
                 }
             }
             out.t2_scores[feature] = round2(t2);
@@ -428,8 +519,10 @@ n4m_status_t select_by_t2(Context& ctx,
         std::vector<std::vector<std::int64_t>> selected_by_alpha;
         selected_by_alpha.reserve(n_alpha);
 
-        const double beta_a = static_cast<double>(a) / 2.0;
-        const double beta_b = static_cast<double>(p - a - 1U) / 2.0;
+        // T2 of p weight rows over m directions: (p - 1)^2 / p
+        // Beta(m / 2, (p - m - 1) / 2).
+        const double beta_a = static_cast<double>(m) / 2.0;
+        const double beta_b = static_cast<double>(p - m - 1U) / 2.0;
         const double ucl_factor = static_cast<double>((p - 1U) * (p - 1U)) /
                                   static_cast<double>(p);
         double best_rmse = std::numeric_limits<double>::infinity();
@@ -439,8 +532,16 @@ n4m_status_t select_by_t2(Context& ctx,
         std::int32_t min_set_index = -1;
 
         for (std::size_t alpha_idx = 0; alpha_idx < n_alpha; ++alpha_idx) {
-            const double ucl =
-                round2(ucl_factor * beta_quantile(1.0 - alpha[alpha_idx], beta_a, beta_b));
+            // No latent direction: every weight T2 is 0 and so is its limit
+            // (no variable exceeds it; the min_selected fallback below keeps
+            // the lowest indices).
+            double quantile = 0.0;
+            if (m > 0U && !t2_beta_upper_quantile(alpha[alpha_idx], beta_a, beta_b, quantile)) {
+                ctx.set_error("T2-PLS beta quantile did not converge");
+                out = T2SelectionResult{};
+                return N4M_ERR_NUMERICAL_FAILURE;
+            }
+            const double ucl = round2(ucl_factor * quantile);
             out.ucl_by_alpha.push_back(ucl);
 
             std::vector<std::int64_t> selected;
@@ -497,6 +598,7 @@ n4m_status_t select_by_t2(Context& ctx,
         out.n_features = static_cast<std::int32_t>(X.cols);
         out.n_targets = static_cast<std::int32_t>(Y.cols);
         out.n_components = cfg.n_components;
+        out.n_latent_directions = static_cast<std::int32_t>(m);
         out.n_alphas = static_cast<std::int32_t>(n_alpha);
         out.min_selected = min_selected;
         out.best_error_index = best_error_index;
