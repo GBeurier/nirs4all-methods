@@ -68,6 +68,26 @@ export enum Solver {
     RANDOMIZED_SVD = 7,
 }
 
+/** Mirror of n4m_model_array_t (n4m_model_get_array tags). */
+export enum ModelArray {
+    COEFFICIENTS = 0,
+    INTERCEPT = 1,
+    X_MEAN = 2,
+    X_SCALE = 3,
+    Y_MEAN = 4,
+    Y_SCALE = 5,
+    WEIGHTS_W = 6,
+    LOADINGS_P = 7,
+    Y_LOADINGS_Q = 8,
+    ROTATIONS_R = 9,
+    SCORES_T = 10,
+    Y_SCORES_U = 11,
+    /** ABI 2.20: (1, 1) X-Y cross-covariance resolution of the components. */
+    COMPONENT_RESOLUTION = 12,
+    /** ABI 2.20: (1, n_components), 1 for a numerically unresolved component. */
+    UNRESOLVED_COMPONENTS = 13,
+}
+
 /** Mirror of n4m_deflation_t. */
 export enum Deflation {
     REGRESSION = 0,
