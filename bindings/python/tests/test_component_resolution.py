@@ -5,6 +5,9 @@ Y = b + 2^-50 a, the exact PCR Y loading is 2^-50 and U = 2^50 Y, but the
 cross-covariance 20 * 2^-50 does not exceed the PCR resolution
 5 eps sqrt(20) ||Y||: the component is flagged unresolved, its U column is
 zero, and the flags and resolution survive N4MM export/import and pickling.
+The PLS cross-covariance is unresolved as well: every PLS solver publishes a
+null component (zero latent arrays, coefficient 0, predictions = Y mean),
+flagged unresolved; with X = [a, a] the second component is null.
 """
 
 from __future__ import annotations
@@ -68,11 +71,49 @@ def test_pcr_unresolved_component_flagged_and_round_tripped() -> None:
     assert clone.unresolved_components_.tolist() == [True]
 
 
-def test_pls_unresolved_component_refused_and_resolved_flags() -> None:
+@pytest.mark.parametrize(
+    "solver", ["nipals", "simpls", "orthogonal_scores", "kernel", "svd"]
+)
+def test_pls_unresolved_component_is_flagged_null_component(solver: str) -> None:
+    X = A[:, None]
+    Y = B + 2.0**-50 * A + 5.0
+    estimator = PLSRegression(n_components=1, solver=solver, scale_x=False).fit(X, Y)
+    assert estimator.unresolved_components_.tolist() == [True]
+    np.testing.assert_array_equal(estimator.coef_, np.zeros_like(estimator.coef_))
+    np.testing.assert_array_equal(estimator.predict(X), np.full(4, Y.mean()))
+    clone = pickle.loads(pickle.dumps(estimator))
+    assert clone.unresolved_components_.tolist() == [True]
+    np.testing.assert_array_equal(clone.predict(X), estimator.predict(X))
+
+    # Rank-one X: the second component is a null component.
+    X2 = np.column_stack([A, A])
+    estimator = PLSRegression(n_components=2, solver=solver, scale_x=False).fit(
+        X2, A + B
+    )
+    assert estimator.unresolved_components_.tolist() == [False, True]
+    np.testing.assert_allclose(estimator.coef_.ravel(), [0.5, 0.5], rtol=1e-12)
+
+
+def test_pls_null_component_arrays_round_trip() -> None:
     X = A[:, None]
     Y = (B + 2.0**-50 * A)[:, None]
-    with pytest.raises(Exception, match="below its numerical resolution"):
-        _fit(Algorithm.PLS_REGRESSION, Solver.NIPALS, X, Y, 1)
+    ctx, model = _fit(Algorithm.PLS_REGRESSION, Solver.NIPALS, X, Y, 1)
+    for kind in (
+        ModelArrayKind.COEFFICIENTS,
+        ModelArrayKind.WEIGHTS_W,
+        ModelArrayKind.LOADINGS_P,
+        ModelArrayKind.Y_LOADINGS_Q,
+        ModelArrayKind.ROTATIONS_R,
+        ModelArrayKind.SCORES_T,
+        ModelArrayKind.Y_SCORES_U,
+    ):
+        assert not model.get_array(ctx, kind).any()
+    restored = Model.from_bytes(ctx, model.to_bytes())
+    assert restored.component_resolution(ctx)[1].tolist() == [True]
+    np.testing.assert_array_equal(restored.predict(ctx, X), np.zeros((4, 1)))
+
+
+def test_pls_resolved_flags_with_many_small_targets() -> None:
 
     # 64 targets whose residuals fall below the 10 eps mask but whose
     # cross-covariance is resolved together.

@@ -132,7 +132,11 @@ class PLSRegression(_PlsRegressorBase):
     component_resolution_ : float
         Absolute resolution of the components' X-Y cross-covariance.
     unresolved_components_ : ndarray of bool, shape (n_components,)
-        Always ``False``: an unresolved PLS component is refused at fit.
+        ``True`` for a component whose X-Y cross-covariance is not resolved
+        numerically (or is mathematically zero). Such a component and every
+        later one are null components: zero weights, loadings and scores, no
+        contribution to ``coef_`` (the model truncated to the resolved
+        components).
     """
 
     _algorithm = Algorithm.PLS_REGRESSION
@@ -215,7 +219,9 @@ class PCR(_PlsRegressorBase):
         Absolute resolution of the components' Y'X-score cross-covariance.
     unresolved_components_ : ndarray of bool, shape (n_components,)
         ``True`` for a component whose Y loading is not resolved
-        numerically (its Y scores are not computed).
+        numerically (its X direction is kept and its Y scores are not
+        computed), or whose X singular value is not resolved (a null
+        component, like every later one).
     """
 
     _algorithm = Algorithm.PCR
