@@ -1103,7 +1103,7 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                     for (size_t i = 0; i < un; ++i)
                         s += static_cast<long double>(data[i * up + j]) *
                              static_cast<long double>(vec[i * m + c]);
-                    row[j] = static_cast<double>(s / sigma);
+                    row[j] = static_cast<double>(s / static_cast<long double>(sigma));
                 }
             }
         }
