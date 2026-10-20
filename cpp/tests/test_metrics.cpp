@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "n4m/n4m.h"
@@ -358,6 +359,100 @@ void test_q_residuals_constant_columns() {
     }
 }
 
+// Sylvester Hadamard matrix H_n (n a power of two), row-major: columns
+// 1..n-1 are orthogonal, centred and of squared norm n.
+std::vector<double> sylvester_hadamard(int n) {
+    std::vector<double> h(static_cast<size_t>(n) * static_cast<size_t>(n), 1.0);
+    for (int m = 1; m < n; m *= 2) {
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < m; ++j) {
+                const double v = h[static_cast<size_t>(i) * static_cast<size_t>(n) +
+                                   static_cast<size_t>(j)];
+                h[static_cast<size_t>(i) * static_cast<size_t>(n) + static_cast<size_t>(j + m)] = v;
+                h[static_cast<size_t>(i + m) * static_cast<size_t>(n) + static_cast<size_t>(j)] = v;
+                h[static_cast<size_t>(i + m) * static_cast<size_t>(n) +
+                  static_cast<size_t>(j + m)] = -v;
+            }
+        }
+    }
+    return h;
+}
+
+// Columns 1..scales.size() of H_n multiplied by scales: with k = 1 the
+// residual eigenvalues are n c_j^2 / (n - 1) for the scales after the first
+// (largest) one, so the Jackson-Mudholkar limit is known exactly.
+std::vector<double> scaled_hadamard(int n, const std::vector<double>& scales) {
+    const std::vector<double> h = sylvester_hadamard(n);
+    const size_t p = scales.size();
+    std::vector<double> x(static_cast<size_t>(n) * p);
+    for (size_t i = 0; i < static_cast<size_t>(n); ++i)
+        for (size_t j = 0; j < p; ++j) x[i * p + j] = h[i * static_cast<size_t>(n) + j + 1] * scales[j];
+    return x;
+}
+
+// Review b8fix6 P0-1: for h0 < 0 the transformation Y = (Q / theta_1)^h0
+// decreases, so the upper quantile of Q maps to the LOWER quantile of Y. The
+// former |h0| A kept the upper one: columns 1..14 of H_16 times
+// [2, 1, 1/4 x 12], k = 1 (h0 = -0.06764684) gave UCL 0.365166 and flagged all
+// 16 observations (Q_i = 1.75). References: the Jackson-Mudholkar formula with
+// the signed h0 on the exact residual eigenvalues, mpmath at 40 digits; the
+// tolerance covers the 1.15e-9 normal-quantile approximation. The second scale
+// c / 4 moves h0 through 0 (root near c = 4.5314): the limit is continuous on
+// both sides. With residual eigenvalues 3.25^2 and 22 times 1 (H_32, h0 =
+// -0.46), the base 1 + g is -0.0144 at alpha = 1e-6: no Jackson-Mudholkar
+// quantile, explicit failure; it is positive at 0.05 and 0.1.
+void test_q_residuals_negative_h0() {
+    const auto ucl_of = [](int n, const std::vector<double>& scales, double alpha,
+                           n4m_status_t* status) {
+        std::vector<double> x = scaled_hadamard(n, scales);
+        std::vector<double> q(static_cast<size_t>(n));
+        double ucl = -1.0;
+        *status = n4m_outlier_detection_q_residuals(
+            make_rowmajor_view(x.data(), n, static_cast<std::int64_t>(scales.size())), 1, alpha,
+            q.data(), n, &ucl);
+        return std::make_pair(ucl, q);
+    };
+    std::vector<double> astra = {2.0, 1.0};
+    astra.resize(14, 0.25);
+    const struct { double alpha, ref; } astra_cases[] = {
+        {0.05, 5.2294583820033547}, {0.01, 9.6906288186272182}, {0.9, 0.47906393402987125}};
+    for (const auto& c : astra_cases) {
+        n4m_status_t st = N4M_ERR_INTERNAL;
+        const auto r = ucl_of(16, astra, c.alpha, &st);
+        N4M_TEST_REQUIRE(st == N4M_OK);
+        N4M_TEST_REQUIRE(rel_close(r.first, c.ref, 5e-9));
+        for (double v : r.second) N4M_TEST_REQUIRE(rel_close(v, 1.75, 1e-14));
+        if (c.alpha <= 0.05) for (double v : r.second) N4M_TEST_REQUIRE(v < r.first);
+    }
+    // h0 = -3.66e-3, -2.12e-5, +8.82e-4, +4.94e-2 (alpha = 0.05).
+    const struct { double c, ref; } crossing[] = {
+        {4.5, 6.3099963890565998}, {4.53125, 6.3814368019494924},
+        {4.5390625, 6.3993694611641446}, {5.0, 7.5091436613414903}};
+    double previous = 0.0;
+    for (const auto& c : crossing) {
+        std::vector<double> scales = {2.0, c.c / 4.0};
+        scales.resize(14, 0.25);
+        n4m_status_t st = N4M_ERR_INTERNAL;
+        const double ucl = ucl_of(16, scales, 0.05, &st).first;
+        N4M_TEST_REQUIRE(st == N4M_OK);
+        N4M_TEST_REQUIRE(rel_close(ucl, c.ref, 5e-9));
+        N4M_TEST_REQUIRE(ucl > previous);
+        previous = ucl;
+    }
+    std::vector<double> wide = {8.0, 3.25};
+    wide.resize(24, 1.0);
+    n4m_status_t st = N4M_OK;
+    (void)ucl_of(32, wide, 1e-6, &st);
+    N4M_TEST_REQUIRE(st == N4M_ERR_NUMERICAL_FAILURE);
+    const struct { double alpha, ref; } wide_cases[] = {
+        {0.05, 71.914193025598727}, {0.1, 56.312036502701673}};
+    for (const auto& c : wide_cases) {
+        const double ucl = ucl_of(32, wide, c.alpha, &st).first;
+        N4M_TEST_REQUIRE(st == N4M_OK);
+        N4M_TEST_REQUIRE(rel_close(ucl, c.ref, 5e-9));
+    }
+}
+
 // Review b8fix5 (Hotelling checked for the same pattern): T² no longer goes
 // through sigma^2 (NaN with status OK beyond |x| ~ 2^512) and is exactly
 // scale-invariant; the F quantile has no fixed bracket (the former
@@ -386,10 +481,67 @@ void test_hotelling_t2_extremes() {
         N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(make_rowmajor_view(X, 3, 1), 1, alpha,
                                                             t2, 3, &ucl) == N4M_OK);
         const double fq = 2.0 * (1.0 - alpha) * (1.0 - alpha) / (alpha * (2.0 - alpha));
-        N4M_TEST_REQUIRE(rel_close(ucl, 4.0 / 3.0 * fq, 1e-8));
+        N4M_TEST_REQUIRE(rel_close(ucl, 4.0 / 3.0 * fq, 1e-12));
         // T² = (n - 1) z_i^2 / sum z^2 for one varying column.
         N4M_TEST_REQUIRE(rel_close(t2[0], 1.0, 1e-15) && rel_close(t2[2], 1.0, 1e-15));
         N4M_TEST_REQUIRE(t2[1] == 0.0);
+    }
+}
+
+// Review b8fix6 P0-2 / P1. Closed forms: P(F_{1,2} > f) = 1 - sqrt(f / (f + 2)),
+// f = 2 beta^2 / (1 - beta^2) with beta = 1 - alpha, and P(F_{2,nu} > f) =
+// (1 + 2 f / nu)^(-nu / 2), f = nu/2 expm1(-(2/nu) ln alpha). Near alpha = 1
+// the former upper-tail inversion went through d2 / (d2 + d1 F) rounding to 1
+// and stopped on that plateau: X = [-1, 2^-28, 1], alpha = 1 - 2^-30 gave
+// UCL 2.96e-16 instead of 2.312964635e-18, and the central T² 6.17e-18 was
+// not flagged. For alpha = 1e-308 the bracket doubling overflowed before
+// reaching F = 1e308: N4M_ERR_NUMERICAL_FAILURE instead of UCL 1.333e308. A
+// UCL above DBL_MAX (alpha = 7e-309: 1.9e308) is still refused.
+void test_hotelling_t2_quantile_tails() {
+    const double tiny_alphas[] = {0.05, 0.3, 1e-6, 1e-100, 1e-300, 1e-308};
+    const double one_minus[] = {0.5, 0.1, 0x1p-30, 0x1p-40, 0x1p-53};  // beta = 1 - alpha
+    // F_{1,2}: n = 3, r = 1, UCL = 4/3 F.
+    for (const double alpha : tiny_alphas) {
+        double X[3] = {1, 2, 3}, t2[3] = {0}, ucl = -1.0;
+        N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(make_rowmajor_view(X, 3, 1), 1, alpha,
+                                                            t2, 3, &ucl) == N4M_OK);
+        const double b = 1.0 - alpha;
+        N4M_TEST_REQUIRE(rel_close(ucl, 4.0 / 3.0 * (2.0 * b * b / (alpha * (1.0 + b))), 1e-12));
+    }
+    for (const double beta : one_minus) {
+        double X[3] = {-1, 0x1p-28, 1}, t2[3] = {0}, ucl = -1.0;
+        N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(make_rowmajor_view(X, 3, 1), 1,
+                                                            1.0 - beta, t2, 3, &ucl) == N4M_OK);
+        N4M_TEST_REQUIRE(rel_close(ucl, 4.0 / 3.0 * (2.0 * beta * beta / ((1.0 - beta) *
+                                                                         (1.0 + beta))), 1e-12));
+        if (beta == 0x1p-30) {
+            N4M_TEST_REQUIRE(rel_close(ucl, 2.312964634635743e-18, 1e-12));
+            N4M_TEST_REQUIRE(rel_close(t2[1], 6.167905692361981e-18, 1e-9) && t2[1] > ucl);
+        }
+    }
+    for (const double alpha : {7e-309, 5e-324}) {
+        double X[3] = {1, 2, 3}, t2[3] = {0}, ucl = -1.0;
+        N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2(make_rowmajor_view(X, 3, 1), 1, alpha,
+                                                            t2, 3, &ucl) ==
+                         N4M_ERR_NUMERICAL_FAILURE);
+    }
+    // F_{2,4}: two orthogonal centred columns, n = 6, r = 2, UCL = 35/12 F.
+    const double x24[12] = {1, 1, 1, -1, 1, 0, -1, 1, -1, -1, -1, 0};
+    const auto f24 = [](double log_alpha) { return 2.0 * std::expm1(-0.5 * log_alpha); };
+    const auto ucl24 = [&](double alpha) {
+        double X[12], t2[6] = {0}, ucl = -1.0;
+        std::copy(x24, x24 + 12, X);
+        std::int32_t rank = 0;
+        N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(
+                             make_rowmajor_view(X, 6, 2), 2, alpha, t2, 6, &ucl, &rank) == N4M_OK);
+        N4M_TEST_REQUIRE(rank == 2);
+        return ucl;
+    };
+    for (const double alpha : tiny_alphas) {
+        N4M_TEST_REQUIRE(rel_close(ucl24(alpha), 35.0 / 12.0 * f24(std::log(alpha)), 1e-12));
+    }
+    for (const double beta : one_minus) {
+        N4M_TEST_REQUIRE(rel_close(ucl24(1.0 - beta), 35.0 / 12.0 * f24(std::log1p(-beta)), 1e-12));
     }
 }
 
@@ -619,9 +771,11 @@ void register_metrics_tests(n4m_testing::Runner& r) {
     r.run("hotelling_t2_rank_deficient",   test_hotelling_t2_rank_deficient);
     r.run("hotelling_t2_constant_columns", test_hotelling_t2_constant_columns);
     r.run("hotelling_t2_extremes",         test_hotelling_t2_extremes);
+    r.run("hotelling_t2_quantile_tails",   test_hotelling_t2_quantile_tails);
     r.run("q_residuals_smoke",             test_q_residuals_smoke);
     r.run("q_residuals_scaling",           test_q_residuals_scaling);
     r.run("q_residuals_constant_columns",  test_q_residuals_constant_columns);
+    r.run("q_residuals_negative_h0",       test_q_residuals_negative_h0);
     r.run("metrics_parity",                verify_metrics_parity);
     r.run("hotelling_t2_parity",           verify_hotelling_t2_parity);
     r.run("q_residuals_parity",            verify_q_residuals_parity);

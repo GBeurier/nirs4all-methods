@@ -528,4 +528,71 @@ for (const n of [3, 10, 101]) {
         relClose(h.t2.data[2], 1, 1e-15);
     }
 }
+// Review b8fix6 P0-1 (mirrors test_q_residuals_negative_h0): for h0 < 0 the
+// upper quantile of Q maps to the lower quantile of (Q / theta_1)^h0. Columns
+// 1..14 of the Sylvester H_16 times [2, 1, 1/4 x 12], k = 1 (h0 = -0.0676)
+// gave UCL 0.365 and flagged every Q_i = 1.75. mpmath references of the
+// signed-h0 Jackson-Mudholkar limit on the exact residual eigenvalues.
+{
+    const hadamard = (n) => {
+        let h = [[1]];
+        while (h.length < n) h = [...h.map((r) => [...r, ...r]), ...h.map((r) => [...r, ...r.map((v) => -v)])];
+        return h;
+    };
+    const scaledH = (n, scales) => {
+        const h = hadamard(n), x = [];
+        for (let i = 0; i < n; ++i) scales.forEach((c, j) => x.push(h[i][j + 1] * c));
+        return x;
+    };
+    const astra = [2, 1, ...new Array(12).fill(0.25)];
+    for (const [alpha, ref] of [[0.05, 5.2294583820033547], [0.01, 9.6906288186272182],
+                                [0.9, 0.47906393402987125]]) {
+        const r = qOf(scaledH(16, astra), 16, 14, 1, alpha);
+        relClose(r.ucl, ref, 5e-9);
+        r.q.data.forEach((v) => relClose(v, 1.75, 1e-14));
+    }
+    let previous = 0;
+    for (const [c, ref] of [[4.5, 6.3099963890565998], [4.53125, 6.3814368019494924],
+                            [4.5390625, 6.3993694611641446], [5, 7.5091436613414903]]) {
+        const ucl = qOf(scaledH(16, [2, c / 4, ...new Array(12).fill(0.25)]), 16, 14, 1).ucl;
+        relClose(ucl, ref, 5e-9);
+        assert.ok(ucl > previous);
+        previous = ucl;
+    }
+    const wide = scaledH(32, [8, 3.25, ...new Array(22).fill(1)]);
+    assert.equal(qStatus(wide, 32, 24, 1, 1e-6), NUMERICAL_FAILURE);
+    relClose(qOf(wide, 32, 24, 1, 0.05).ucl, 71.914193025598727, 5e-9);
+    relClose(qOf(wide, 32, 24, 1, 0.1).ucl, 56.312036502701673, 5e-9);
+}
+// Review b8fix6 P0-2 / P1 (mirrors test_hotelling_t2_quantile_tails): the
+// small tail is inverted, so alpha = 1 - 2^-30 gives the closed-form F_{1,2}
+// UCL 2.312964635e-18 (2.96e-16 before) and flags the central T²; alpha =
+// 1e-308 gives 1.333e308 (refused before); a UCL above DBL_MAX is refused.
+{
+    const hOf = (data, rows, cols, k, alpha) =>
+        new HotellingT2({n_components: k, alpha}).run({data: new Float64Array(data), rows, cols});
+    const hStatus = (data, rows, cols, k, alpha) => {
+        try { hOf(data, rows, cols, k, alpha); return 0; } catch (e) { return e.status; }
+    };
+    const tiny = [0.05, 0.3, 1e-6, 1e-100, 1e-300, 1e-308];
+    const oneMinus = [0.5, 0.1, 2 ** -30, 2 ** -40, 2 ** -53];
+    for (const alpha of tiny) {
+        const b = 1 - alpha;
+        relClose(hOf([1, 2, 3], 3, 1, 1, alpha).ucl, 4 / 3 * (2 * b * b / (alpha * (1 + b))), 1e-12);
+    }
+    for (const beta of oneMinus) {
+        const h = hOf([-1, 2 ** -28, 1], 3, 1, 1, 1 - beta);
+        relClose(h.ucl, 4 / 3 * (2 * beta * beta / ((1 - beta) * (1 + beta))), 1e-12);
+        if (beta === 2 ** -30) {
+            relClose(h.ucl, 2.312964634635743e-18, 1e-12);
+            relClose(h.t2.data[1], 6.167905692361981e-18, 1e-9);
+            assert.ok(h.t2.data[1] > h.ucl);
+        }
+    }
+    for (const alpha of [7e-309, 5e-324]) assert.equal(hStatus([1, 2, 3], 3, 1, 1, alpha), NUMERICAL_FAILURE);
+    const x24 = [1, 1, 1, -1, 1, 0, -1, 1, -1, -1, -1, 0];
+    const f24 = (logAlpha) => 2 * Math.expm1(-0.5 * logAlpha);
+    for (const alpha of tiny) relClose(hOf(x24, 6, 2, 2, alpha).ucl, 35 / 12 * f24(Math.log(alpha)), 1e-12);
+    for (const beta of oneMinus) relClose(hOf(x24, 6, 2, 2, 1 - beta).ucl, 35 / 12 * f24(Math.log1p(-beta)), 1e-12);
+}
 console.log("JS/WASM Preflight diagnostics passed");

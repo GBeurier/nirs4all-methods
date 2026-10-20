@@ -17,9 +17,15 @@
  * the standard F-distribution bound with r degrees of freedom:
  *     UCL = r * (n - 1) * (n + 1) / (n * (n - r)) * F^{-1}(1 - alpha; r, n - r)
  * r = 0 (constant X) gives T² = 0 and UCL = 0.
- * The F quantile is the bisection root of the upper tail (regularised
- * incomplete beta) on a bracket grown by factors of two, with no fixed cap;
- * a UCL that is not a finite normal double is N4M_ERR_NUMERICAL_FAILURE.
+ * The UCL is solved directly: Y = UCL / (kappa + UCL) ~ Beta(r/2, (n-r)/2)
+ * with kappa = (n^2 - 1) / n. Its small tail (upper for alpha <= 0.5, lower
+ * otherwise, 1 - alpha being exact there) is evaluated in logarithms from
+ * UCL / kappa (no beta argument through a complement close to 1, no
+ * overflowing product) and inverted by bisection on the normal doubles, the
+ * bracket saturating at DBL_MIN and DBL_MAX. Measured relative error below
+ * 1e-12 against mpmath references (n from 3 to 10^6, alpha from 1e-300 to
+ * 1 - 2^-53); not a proven bound. A UCL that is not a
+ * finite normal double (extreme alpha only) is N4M_ERR_NUMERICAL_FAILURE.
  */
 #ifndef N4M_CORE_UTILITIES_HOTELLING_T2_H
 #define N4M_CORE_UTILITIES_HOTELLING_T2_H
