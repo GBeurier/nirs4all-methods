@@ -103,6 +103,35 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- PLS-QDA (`n4m_estimators_pls_qda_fit` and the `pls_qda` classifier role)
+  now takes its latent space from the qualified PLS-DA SIMPLS solver
+  (centred, unscaled X, unit-norm scores) and fits the class Gaussians on
+  the resolved components only. Its private SIMPLS used absolute 1e-12
+  thresholds: with x = (-4,-3,-2,-1,1,2,3,5), X = [x, x], classes
+  (0,0,1,0,1,1,0,1), two components were refused ("a PLS-QDA class
+  covariance is not positive definite": the second component of the rank-one
+  X was rounding noise), and after multiplying X by 2^-50 one component was
+  refused too (no component computed). The second component is now a
+  flagged null component of the solver: zero rotation column, zero
+  class-mean and covariance rows / columns, left out of the discriminant
+  (log class priors only when no component is resolved). The decision,
+  -0.5 ((x_i - m_c)^2 / v_c + log(v_c / S)) + log(1/2) (m = (-1.25, 1.5),
+  v = (28.75, 25) / 3, S = 68.875), is now the same for one and two
+  components and for X 2^e, e in {0, -50, 50, -200, 250} (C++ and JS/WASM
+  tests, with the class means, covariances and rotations). Sweep against
+  the previous kernel (60 random fits): one refusal now fits, decisions
+  move by <= 1.6e-9 relative (3.6e-13 on the role fixture, within its
+  replay tolerance). The shared SIMPLS helper of the other extra PLS
+  estimators (sparse PLS-DA legacy, group sparse, CPPLS, weighted, ridge,
+  continuum, DS, MIR-PLS, missing-aware NIPALS, approximate PRESS,
+  bagging, boosting, random subspace) no longer uses scale-dependent
+  absolute thresholds either: a component is computed while the deflated
+  covariance is above (n + a) eps ||X||_F ||Y||_F, the other guards test
+  exact zeros (the Gauss-Jordan pivots of P'W, which is dimensionless, keep
+  their 1e-12). Same sweep: random subspace on X 2^-31 used to stop early
+  (predictions 4 % off those of the unscaled fit, now equal); bagging,
+  boosting, MIR-PLS and missing-aware NIPALS move by <= 1.3e-7 relative on
+  5 or fewer of 60 fits, the others are bit-identical.
 - PLS diagnostics (`n4m_metrics_pls_diagnostics_compute`) no longer
   invent a reference scale for DModX. When the reference residual vanished
   (sum Q_ref = 0) sigma_ref was replaced by 1: with a = (-3,-1,1,3),

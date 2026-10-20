@@ -13,6 +13,11 @@
 //    row reconstructed): NaN with dmodx_reference_degenerate = 1 instead of
 //    the unit-dependent 2^e (1, 3, 3, 1); Q = 2^2e b^2, T2 = 3 a^2 / 20 kept.
 //    X_ref = 2^e [a, 2^-20 b]: DModX = |b| 2^20 / sqrt 10, flag 0.
+//  - PLS-QDA, X = 2^e [x, x], x = (-4,-3,-2,-1,1,2,3,5), classes
+//    (0,0,1,0,1,1,0,1), one and two components (the second is null): decision
+//    -0.5 ((x_i - m_c)^2 / v_c + log(v_c / S)) + log(1/2) with m = (-1.25, 1.5),
+//    v = (28.75, 25) / 3, S = 68.875, for every e (two components, and one
+//    after X 2^-50, were refused).
 
 import assert from "node:assert/strict";
 import * as n4m from "../dist/index.js";
@@ -177,6 +182,44 @@ for (const solver of SOLVERS) {
                 xv.free();
                 rv.free();
                 release(fit);
+            }
+        }
+    }
+}
+// PLS-QDA on a rank-one X, at several scales.
+{
+    const xs = [-4, -3, -2, -1, 1, 2, 3, 5], labels = [0, 0, 1, 0, 1, 1, 0, 1];
+    const S = 68.875, mean = [-1.25, 1.5], v = [28.75 / 3, 25 / 3];
+    const decision = xs.flatMap((x) => [0, 1].map((c) =>
+        -0.5 * ((x - mean[c]) ** 2 / v[c] + Math.log(v[c] / S)) + Math.log(0.5)));
+    for (const e of [0, -50, 50, -200, 250]) {
+        for (const components of [1, 2]) {
+            const ctx = withPtr((o) => ok(cc("n4m_context_create", [o]), "context_create"));
+            const cfg = config([["n_components", components]]);
+            const xv = n4m.makeMatrixView(Float64Array.from(xs.flatMap((x) => [x * p2(e), x * p2(e)])), 8, 2);
+            const lab = M._malloc(32);
+            M.HEAP32.set(labels, lab / 4);
+            try {
+                const where = `PLS-QDA X = 2^${e} [x, x], ${components} component(s)`;
+                const res = withPtr((o) => ok(cc("n4m_estimators_pls_qda_fit",
+                    [ctx, cfg, xv.viewPtr, lab, 8n, o],
+                    ["number", "number", "number", "number", "i64", "number"]), where));
+                const r = new MethodResult(res);
+                try {
+                    close(`${where} decision`, Array.from(r.matrix("predictions").data), decision);
+                    const cov = Array.from(r.matrix("class_covariances").data);
+                    const a = components;
+                    close(`${where} class covariances`, cov,
+                          Array.from({ length: 2 * a * a }, (_, k) => (k % (a * a) === 0 ? v[Math.floor(k / (a * a))] / S : 0)));
+                    ++checks;
+                } finally {
+                    r.destroy();
+                }
+            } finally {
+                M._free(lab);
+                xv.free();
+                M.ccall("n4m_config_destroy", null, ["number"], [cfg]);
+                M.ccall("n4m_context_destroy", null, ["number"], [ctx]);
             }
         }
     }
