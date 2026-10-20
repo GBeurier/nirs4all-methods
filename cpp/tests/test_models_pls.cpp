@@ -1267,6 +1267,82 @@ void test_pls_close_singular_values() {
     }
 }
 
+// (10) Close leading singular values with many targets, so that the reference
+// dominant pair (Householder-QL on a nontrivial Gram matrix) is exercised:
+// c3 = (1, -1, -1, 1) is orthogonal to a3 and b3 (||c3||^2 = 4), X = [a3, b3, c3],
+// Y = [a3 + d b3, d a3 + b3, s_1 c3, ..., s_62 c3] with s_j = (64 + j) 2^-10.
+// X'Y = [[20, 20 d, 0], [20 d, 20, 0], [0, 0, 4 s']] has the singular values
+// 20 (1 +- d) and 4 ||s|| (~2.9): the dominant left singular vector is
+// (1, 1, 0) / sqrt 2. One component: t = (a3 + b3) / sqrt 2, t't = 20 and
+// t'Y_j = 0 for j >= 3, so the coefficients are h = (1 + d) / 2 in the
+// leading 2 x 2 block and 0 elsewhere, the predictions h (a3 + b3) in the
+// first two columns and 0 in the others (Y is centred).
+void test_pls_close_singular_values_many_targets() {
+    constexpr double kVecC3[4] = {1.0, -1.0, -1.0, 1.0};
+    constexpr std::size_t q = 64;
+    const std::vector<double> ab = combine3(1.0, 1.0);
+    for (const int e : {12, 30}) {
+        const double d = std::ldexp(1.0, -e);
+        const double h = (1.0 + d) / 2.0;
+        std::vector<double> x(12), y(4 * q), coefficients(3 * q, 0.0), predictions(4 * q, 0.0);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 3] = kVecA3[i];
+            x[i * 3 + 1] = kVecB3[i];
+            x[i * 3 + 2] = kVecC3[i];
+            y[i * q] = kVecA3[i] + d * kVecB3[i];
+            y[i * q + 1] = d * kVecA3[i] + kVecB3[i];
+            for (std::size_t j = 2; j < q; ++j) {
+                y[i * q + j] = std::ldexp(static_cast<double>(64 + j - 1), -10) * kVecC3[i];
+            }
+            predictions[i * q] = predictions[i * q + 1] = h * ab[i];
+        }
+        coefficients[0] = coefficients[1] = coefficients[q] = coefficients[q + 1] = h;
+        for (const AnalyticSolver& solver : kAnalyticSolvers) {
+            if (solver.algorithm == N4M_ALGO_PCR) continue;  // X'X = diag(20, 20, 4): undetermined
+            for (const double tol : {0.0, 1e-12}) {
+                const std::string where = std::string(solver.tag) + (tol > 0.0 ? " tol 1e-12" : "") +
+                                          " 64 targets, d = 2^-" + std::to_string(e);
+                n4m_context_t* ctx = nullptr;
+                n4m_config_t* cfg = nullptr;
+                N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, 1) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, solver.algorithm) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, solver.solver) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+                if (tol > 0.0) N4M_TEST_REQUIRE(n4m_config_set_tol(cfg, tol) == N4M_OK);
+                n4m_matrix_view_t Xv{}, Yv{};
+                N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, x.data(), 4, 3, N4M_DTYPE_F64) ==
+                                 N4M_OK);
+                N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(
+                                     &Yv, y.data(), 4, static_cast<std::int64_t>(q),
+                                     N4M_DTYPE_F64) == N4M_OK);
+                n4m_model_t* model = nullptr;
+                const n4m_status_t st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+                if (st != N4M_OK)
+                    throw std::runtime_error(where + ": fit refused with status " +
+                                             std::to_string(st));
+                n4m_array_t* arr = nullptr;
+                N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_COEFFICIENTS, &arr) ==
+                                 N4M_OK);
+                expect_analytic(where, "coefficients", array_values(arr), coefficients);
+                n4m_array_free(arr);
+                std::vector<double> predicted(4 * q, 0.0);
+                n4m_matrix_view_t Pv{};
+                N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(
+                                     &Pv, predicted.data(), 4, static_cast<std::int64_t>(q),
+                                     N4M_DTYPE_F64) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_model_predict(ctx, model, &Xv, &Pv) == N4M_OK);
+                expect_analytic(where, "predictions", predicted, predictions);
+                n4m_model_destroy(model);
+                n4m_config_destroy(cfg);
+                n4m_context_destroy(ctx);
+            }
+        }
+    }
+}
+
 }  // namespace
 
 void register_models_pls_tests(n4m_testing::Runner& r) {
@@ -1280,6 +1356,8 @@ void register_models_pls_tests(n4m_testing::Runner& r) {
     r.run("models_pls/small_covariance_analytic", test_pls_small_covariance_analytic);
     r.run("models_pls/unresolved_components", test_pls_unresolved_components);
     r.run("models_pls/close_singular_values", test_pls_close_singular_values);
+    r.run("models_pls/close_singular_values_many_targets",
+          test_pls_close_singular_values_many_targets);
     r.run("models_pls/kernel",             test_kernel);
     r.run("models_pls/wide_kernel",        test_wide_kernel);
     r.run("models_pls/orthogonal_scores",  test_orthogonal_scores);
