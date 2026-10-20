@@ -57,8 +57,13 @@ surface). No model-state serialization format changes.
   (n <= p) are orthonormal rows; the request is checked against guaranteed
   work (2.4e9) and memory (1 GiB) bounds before allocating, so some inputs
   1.3.6 accepted beyond the Preflight profile (e.g. n = 3, p = 26e6, k = 1)
-  are now refused with `N4M_ERR_UNSUPPORTED`. Every
-  Preflight-sized request (at most 10^7 cells, k <= 10) is still accepted.
+  are now refused with `N4M_ERR_UNSUPPORTED`. The conservation covers only
+  shapes that were already admissible: every shape of the Preflight profile
+  (at most 10^7 cells, k <= 10) that Methods 1.3.6 (Gram-only budget
+  s^2 l <= 2.5e8) or the intermediate estimate accepted is still accepted
+  (enumerated in `cpp/tests/test_preflight.cpp`). The profile alone is not
+  sufficient: every request must also satisfy the work and memory bounds, so
+  for example a 1000 x 1000 input with k = 10 is refused by the work bound.
 - PLS regression (all eight solvers) and PCR without autoscaling are
   scale-equivariant: data at 2^-30 that returned `N4M_ERR_NUMERICAL_FAILURE`
   now fit. Previously successful fits are bit-identical except NIPALS
@@ -566,9 +571,12 @@ surface). No model-state serialization format changes.
   s x s input typically costs about 1.1 s^3 against a bound of 8 s^3). The
   former estimate omitted the sum of squares and the column exponents and
   took two QL sweeps per eigenvalue: n = 3, p = 26e6, k = 1 was accepted
-  although it needs 1.144 GB, and is now refused. Every Preflight-sized
-  request (at most 10^7 cells, k <= 10) that Methods 1.3.6 accepted is still
-  accepted (enumerated in the tests); 700 x 700 with k = 700 is refused.
+  although it needs 1.144 GB, and is now refused. Every shape of the
+  Preflight profile (at most 10^7 cells, k <= 10) that Methods 1.3.6 or the
+  former estimate accepted is still accepted (enumerated in the tests); the
+  profile alone is not sufficient, since every request must also satisfy the
+  work and memory bounds (1000 x 1000 with k = 10, or 700 x 700 with
+  k = 700, is refused).
   The limit is a working bound on the computation, not a browser performance
   qualification: review measurements of the WebAssembly kernel alone (`-O3`,
   Node 22 / V8, Intel i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s
