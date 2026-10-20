@@ -7,7 +7,7 @@ import {
     preflightFactorAssociation, preflightHolmAdjust,
     preflightNoiseProxy, preflightPairsWithinTolerance,
     preflightSummary, preflightNearestNeighbors, preflightLocalContrast,
-    clusterHdbscan, preflightAdjustedRandIndex, HotellingT2,
+    clusterHdbscan, preflightAdjustedRandIndex, HotellingT2, QResiduals,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -391,10 +391,11 @@ for (const d of [3, 5, 6, 7]) {
         assert.ok(Math.abs(dot - (a === b ? 1 : 0)) <= 1e-12, `graded ${d}: rows ${a},${b}`);
     }
 }
-// The budget counts Gram, projections, decomposition and completion: 600 x 600
-// with k = 600 (4.3e8 long-double product equivalents; the former Gram-only
-// count accepted it) is refused before allocating.
-assert.equal(statusOf(new Array(600 * 600).fill(1), 600, 600, 600), UNSUPPORTED);
+// The budget is a guaranteed bound over every pass and live buffer, with the
+// QL iteration at its ceiling (mirrors pca_budget_tests): 700 x 700 with
+// k = 700 (3.2e9 long-double product equivalents) is refused before
+// allocating.
+assert.equal(statusOf(new Array(700 * 700).fill(1), 700, 700, 700), UNSUPPORTED);
 // Non-dyadic constant columns centre to exact zeros at every scale; a
 // varying column i * s next to them keeps its variance s^2 n (n+1) / 12.
 for (const s of [1, 3, 1e-7, 1e7, 0.1]) {
@@ -440,6 +441,91 @@ for (const n of [10, 101]) {
             const ref = 12 * z * z / (n * (n + 1));
             assert.ok(Math.abs(out.t2.data[i] - ref) <= 1e-12 * Math.max(1, ref), `${n} ${s} ${i}`);
         }
+    }
+}
+// Review b8fix5 (mirrors test_q_residuals_scaling and
+// test_q_residuals_constant_columns in cpp/tests/test_metrics.cpp). The
+// orthogonal centred columns of [[2,1],[2,-1],[-2,1],[-2,-1]] with k = 1 leave
+// the second one as residual: Q_i = 4^s, one residual eigenvalue
+// 4^(s+1) / 3, Jackson-Mudholkar UCL lambda (7/9 + ca sqrt(2) / 3)^3 (ca from
+// SciPy norm.isf). The moments used to overflow at 2^200 and underflow at
+// 2^-200, publishing UCL 0 with status OK.
+const NUMERICAL_FAILURE = 7;
+const qOf = (data, rows, cols, k, alpha = 0.05) =>
+    new QResiduals({n_components: k, alpha}).run({data: new Float64Array(data), rows, cols});
+const qStatus = (data, rows, cols, k, alpha = 0.05) => {
+    try { qOf(data, rows, cols, k, alpha); return 0; } catch (e) { return e.status; }
+};
+const jmSingle = (lambda, ca) => lambda * (7 / 9 + ca * Math.SQRT2 / 3) ** 3;
+const relClose = (got, want, tol) => assert.ok(Math.abs(got - want) <= tol * Math.abs(want),
+    `${got} != ${want}`);
+const qBase = [2, 1, 2, -1, -2, 1, -2, -1];
+const q0 = qOf(qBase, 4, 2, 1);
+assert.deepEqual(Array.from(q0.q.data), [1, 1, 1, 1]);
+relClose(q0.ucl, jmSingle(4 / 3, 1.6448536269514729), 1e-8);
+for (const s of [-511, -400, -256, -200, -100, 1, 100, 200, 256, 400, 510]) {
+    const f = pow2(s);
+    const r = qOf(qBase.map((v) => v * f), 4, 2, 1);
+    r.q.data.forEach((v) => assert.equal(v, pow2(2 * s)));
+    assert.equal(r.ucl, q0.ucl * pow2(2 * s), `scale 2^${s}`);
+}
+relClose(qOf(qBase.map((v) => v * pow2(200)), 4, 2, 1).ucl, 1.29001e121, 1e-5);
+for (const s of [511, 600, -512, -600]) {
+    assert.equal(qStatus(qBase.map((v) => v * pow2(s)), 4, 2, 1), NUMERICAL_FAILURE, `2^${s}`);
+}
+for (const [alpha, ca, tol] of [[0.5, 0, 1e-15], [0.9, -1.2815515655446004, 5e-8],
+                                [1e-20, 9.262340089798409, 1e-8]]) {
+    relClose(qOf(qBase, 4, 2, 1, alpha).ucl, jmSingle(4 / 3, ca), tol);
+}
+assert.equal(qStatus(qBase, 4, 2, 1, 0.99), NUMERICAL_FAILURE);
+// Constant columns centre to exact zeros; an unresolved residual subspace
+// gives Q = 0 and UCL = 0 exactly (ten rows of 0.1 used to give Q = 1.9e-65).
+for (const n of [3, 10, 101]) {
+    for (const p of [1, 2]) {
+        for (const c of [0.1, 1 / 3, -2.7e-7, 12345.678]) {
+            for (const s of [1, 3, 1e-7, 1e7, 2 ** 60, pow2(-200), pow2(200)]) {
+                const r = qOf(new Array(n * p).fill(c * s), n, p, 1);
+                assert.equal(r.ucl, 0, `${n} x ${p} of ${c * s}`);
+                assert.ok(r.q.data.every((v) => v === 0));
+            }
+        }
+    }
+}
+{
+    const a = [3, 1, -1, -3], b = [1, -1, -1, 1];
+    for (const s of [1, 3, 1e-7, 1e7, 2 ** 60, pow2(-200), pow2(200)]) {
+        for (const offset of [0, 0.1, 12345.678]) {
+            const x = [];
+            for (let i = 0; i < 4; ++i) x.push(0.1 * s, (a[i] + offset) * s, -s / 3, (b[i] + offset) * s);
+            const r = qOf(x, 4, 4, 1);
+            const tol = offset === 0 ? 1e-15 : 1e-9;
+            r.q.data.forEach((v) => relClose(v, s * s, tol));
+            relClose(r.ucl, jmSingle(4 * s * s / 3, 1.6448536269514729), 1e-8);
+            const full = qOf(x, 4, 4, 2);
+            assert.equal(full.ucl, 0);
+            assert.ok(full.q.data.every((v) => v === 0));
+        }
+    }
+}
+// Hotelling T² is exactly scale-invariant (no sigma^2: NaN beyond 2^512
+// before) and its F quantile has no fixed bracket: n = 3, r = 1 gives
+// UCL = 4/3 * 2 (1-alpha)^2 / (alpha (2-alpha)) in closed form (the former
+// [1e-10, 1e12] bracket returned about 1.1e12 for alpha = 1e-14).
+{
+    const hBase = [1, 0.5, 2, -1, 4, 3];
+    const h0 = new HotellingT2({n_components: 1, alpha: 0.05}).run({data: new Float64Array(hBase), rows: 3, cols: 2});
+    for (const s of [-1000, -600, -200, 200, 600, 1000]) {
+        const h = new HotellingT2({n_components: 1, alpha: 0.05})
+            .run({data: new Float64Array(hBase.map((v) => v * pow2(s))), rows: 3, cols: 2});
+        assert.deepEqual(Array.from(h.t2.data), Array.from(h0.t2.data), `2^${s}`);
+        assert.equal(h.ucl, h0.ucl);
+    }
+    for (const alpha of [0.05, 1e-6, 1e-14, 1e-300]) {
+        const h = new HotellingT2({n_components: 1, alpha}).run({data: new Float64Array([1, 2, 3]), rows: 3, cols: 1});
+        relClose(h.ucl, 4 / 3 * 2 * (1 - alpha) ** 2 / (alpha * (2 - alpha)), 1e-8);
+        relClose(h.t2.data[0], 1, 1e-15);
+        assert.equal(h.t2.data[1], 0);
+        relClose(h.t2.data[2], 1, 1e-15);
     }
 }
 console.log("JS/WASM Preflight diagnostics passed");

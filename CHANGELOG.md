@@ -65,9 +65,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   rank selection kept: ten observations of a constant column 0.1 with k = 1
   gave rank 1, T² = 0.9 and UCL 5.63 instead of rank 0, T² 0 and UCL 0.
   Constant columns now centre to exact zeros. Full-rank results change at
-  the rounding level of the centring (relative change <= 2e-10 over 200
-  random full-rank cases, the new values being the closer ones to an
-  extended-precision centring).
+  the rounding level of the centring; no fixed bound on that change is
+  claimed (a review measured up to 1.59e-9 relative on a 101 x 3 matrix
+  translated by 10^6, where the new values are the closer ones to an
+  extended-precision reference: error 3.5e-13 against 2.5e-9 before).
+- Hotelling T² is evaluated as `(n-1) * sum_j U_ij^2`, without forming
+  sigma_j^2: inputs of magnitude about 2^512 and above gave NaN with
+  `N4M_OK`; T² is now exactly invariant under power-of-two scaling. The F
+  quantile is the root of the upper tail on a bracket grown by factors of
+  two. The former fixed bracket [1e-10, 1e12] silently capped larger
+  quantiles (n = 3, r = 1, alpha = 1e-14: UCL 1.47e12 instead of 1.33e14),
+  and a UCL that is not a finite normal double is now
+  `N4M_ERR_NUMERICAL_FAILURE`.
+- Q residuals (`n4m_outlier_detection_q_residuals`) share the Hotelling
+  centring and compute Q and the Jackson-Mudholkar UCL at one power-of-two
+  scale, rescaled at the end. The residual moments used to overflow or
+  underflow: `2^200 * [[2,1],[2,-1],[-2,1],[-2,-1]]`, k = 1, gave the
+  correct Q_i = 2^400 but UCL 0 with `N4M_OK` instead of 1.29001e121 (same
+  at 2^-200), turning every observation into an exceedance. Q and the UCL
+  now scale exactly by 4^s with X scaled by 2^s. When no residual direction
+  is resolved (n_components = cols, constant X, numerical rank <=
+  n_components) Q and the UCL are exactly 0, the only case with UCL 0 (ten
+  rows of 0.1 gave Q = 1.9e-65 next to UCL 0). The upper normal quantile
+  takes alpha directly (alpha = 1e-20 gave UCL 0). Unrepresentable results
+  and a non-positive Jackson-Mudholkar base (alpha > 0.5 only, formerly UCL
+  0) return `N4M_ERR_NUMERICAL_FAILURE`. Tested against analytic
+  single-eigenvalue limits and an mpmath oracle on CPU and WASM.
 - Preflight PCA loadings of a wide input (n <= p): the resolved rows
   `Xc^T u / sigma` are re-orthonormalised (modified Gram-Schmidt applied
   twice; they drifted up to 5e-5 from orthonormality near the resolution),
@@ -77,12 +100,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   the last one unnormalised (`X = I_8`, k = 8: last loading of norm 0.354),
   and retried every canonical vector for each row (Θ(n^4): `X = 0`,
   320 x 320, k = 320 took about 10 s in WASM).
-- The preflight PCA budget counts the whole computation before allocating:
-  Gram and projections in long-double products, eigendecomposition and
-  loading orthonormalisation at 1/16 per double operation (250 million in total), plus a
-  1 GiB buffer limit. Every Preflight-sized request (at most 10^7 cells,
-  k <= 10) that the former Gram-only count accepted is still accepted; large
-  k on large inputs (600 x 600, k = 600) is now refused.
+- The preflight PCA checks two guaranteed bounds before allocating, listed
+  pass by pass in `cpp/src/core/diagnostics/preflight_pca_budget.hpp`. Work
+  counts every long-double multiply-add (sum of squares, Gram, projections)
+  and every double pass at 1/16, with the QL iteration at the solver's
+  ceiling (30 s sweeps), against 2.4e9. Memory counts every buffer live at
+  the peak against 1 GiB. These are bounds, not cost estimates (a square
+  s x s input typically costs about 1.1 s^3 against a bound of 8 s^3). The
+  former estimate omitted the sum of squares and the column exponents and
+  took two QL sweeps per eigenvalue: n = 3, p = 26e6, k = 1 was accepted
+  although it needs 1.144 GB, and is now refused. Every Preflight-sized
+  request (at most 10^7 cells, k <= 10) that Methods 1.3.6 accepted is still
+  accepted (enumerated in the tests); 700 x 700 with k = 700 is refused.
 
 ### Added
 

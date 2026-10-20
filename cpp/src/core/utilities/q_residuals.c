@@ -2,26 +2,29 @@
 /*
  * Q-residuals (squared prediction error) on PCA-reduced X.
  *
- * The Jackson-Mudholkar UCL needs the inverse standard normal at (1 - alpha).
- * We use the Beasley-Springer-Moro rational approximation (Wichura 1988
- * AS241 style coefficients) which is accurate to about 7 significant digits
- * over the central region — more than sufficient for the residual-statistic
- * limit which is itself an approximation.
+ * The Jackson-Mudholkar UCL needs the upper standard-normal quantile at
+ * alpha. We use Acklam's rational approximation (relative error about
+ * 1.15e-9), more than sufficient for a limit that is itself an
+ * approximation.
  */
 
 #include "q_residuals.h"
 
+#include <float.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "column_centring.h"
 #include "core/common/svd.h"
 
 /* ------------------------------------------------------------------------- */
-/* Inverse standard normal — Wichura AS241 (compact form).                    */
+/* Upper standard-normal quantile z with P(Z > z) = alpha — Acklam's rational */
+/* approximation (relative error about 1.15e-9). The tails take alpha and    */
+/* 1 - alpha directly, so a small alpha is not rounded through 1 - alpha.    */
 /* ------------------------------------------------------------------------- */
-static double inv_norm_ref(double p) {
+static double inv_norm_upper_ref(double alpha) {
     static const double a[6] = {
         -3.969683028665376e+01,  2.209460984245205e+02,
         -2.759285104469687e+02,  1.383577518672690e+02,
@@ -41,24 +44,30 @@ static double inv_norm_ref(double p) {
          7.784695709041462e-03,  3.224671290700398e-01,
          2.445134137142996e+00,  3.754408661907416e+00
     };
-    const double p_low  = 0.02425;
-    const double p_high = 1.0 - p_low;
-    double q, r, x;
-    if (p < p_low) {
-        q = sqrt(-2.0 * log(p));
-        x = (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
-    } else if (p <= p_high) {
-        q = p - 0.5;
-        r = q * q;
-        x = (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
-            (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0);
-    } else {
-        q = sqrt(-2.0 * log(1.0 - p));
-        x = -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-             ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
+    const double p_low = 0.02425;
+    double q, r;
+    if (alpha < p_low) {
+        q = sqrt(-2.0 * log(alpha));
+        return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+               ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
     }
-    return x;
+    if (alpha <= 1.0 - p_low) {
+        q = 0.5 - alpha;
+        r = q * q;
+        return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
+               (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1.0);
+    }
+    q = sqrt(-2.0 * log(1.0 - alpha));
+    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+           ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
+}
+
+/* 2^e * v for a value of the scaled space: N4M_ERR_NUMERICAL_FAILURE when a
+ * significant value (v > noise) does not map to a finite normal double. */
+static n4m_status_t unscale(double v, int e, double noise, double* out) {
+    *out = ldexp(v, e);
+    if (v > noise && !(isfinite(*out) && *out >= DBL_MIN)) return N4M_ERR_NUMERICAL_FAILURE;
+    return N4M_OK;
 }
 
 n4m_status_t n4m_util_q_residuals_impl(const double* X,
@@ -83,29 +92,30 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
     const int64_t n = rows;
     const int64_t p = cols;
     const int32_t k = n_components;
-
-    /* Centre by column means. */
-    double* Xc = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
-    if (Xc == NULL) return N4M_ERR_OUT_OF_MEMORY;
-    memcpy(Xc, X, (size_t)n * (size_t)p * sizeof(double));
-    for (int64_t j = 0; j < p; ++j) {
-        double s = 0.0;
-        for (int64_t i = 0; i < n; ++i) {
-            s += Xc[(size_t)i * (size_t)p + (size_t)j];
-        }
-        const double m = s / (double)n;
-        for (int64_t i = 0; i < n; ++i) {
-            Xc[(size_t)i * (size_t)p + (size_t)j] -= m;
-        }
-    }
-
     if (n < p) {
-        free(Xc);
         return N4M_ERR_INVALID_ARGUMENT;
     }
+
+    /* Everything below runs on Xc = (X - mean) 2^-e, max|Xc| in [0.5, 1)
+     * (corrected two-pass centring shared with Hotelling T²: a constant
+     * column centres to exact zeros). Q and the UCL are homogeneous of
+     * degree 2 in X, so they are published as 2^(2e) times their scaled
+     * values: the eigenvalue moments theta_a no longer overflow or underflow
+     * (X = 2^200 [[2,1],[2,-1],[-2,1],[-2,-1]], k = 1 used to give UCL 0
+     * instead of 1.29e121 with status OK), and the results are exactly
+     * equivariant under power-of-two scaling. */
+    double* Xc = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
+    if (Xc == NULL) return N4M_ERR_OUT_OF_MEMORY;
+    int e = 0;
+    const n4m_status_t centred = n4m_util_centre_columns_pow2(X, n, p, Xc, &e);
+    if (centred != N4M_OK) {
+        free(Xc);
+        return centred;
+    }
+
     double* U  = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
     double* S  = (double*)malloc((size_t)p * sizeof(double));
-    /* The shared SVD returns Vt (k x n) row-major where Vt[i, j] is the
+    /* The shared SVD returns Vt (p x p) row-major where Vt[i, j] is the
      * j-th component of the i-th right singular vector. */
     double* Vt = (double*)malloc((size_t)p * (size_t)p * sizeof(double));
     /* n4m_svd_compact consumes (overwrites) its input matrix. Pass a copy
@@ -121,6 +131,22 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
     if (svd_st != N4M_OK) {
         free(Xc); free(U); free(S); free(Vt);
         return svd_st;
+    }
+
+    /* Singular values are accurate to the absolute bound O(max(n,p) eps
+     * sigma_1) (svd.h); tol is the operational threshold also used by
+     * Hotelling T². When no residual direction is above it (k = p, a
+     * constant X, or an X of numerical rank <= k), the reconstructed residual
+     * is rounding noise: Q = 0 and UCL = 0 exactly, the documented
+     * "residual subspace unresolved" state (e.g. ten rows of the constant
+     * 0.1 used to give Q = 1.9e-65 everywhere next to UCL 0). Otherwise the
+     * residual is resolved and the UCL is a positive normal double. */
+    const double tol = 16.0 * (double)(n > p ? n : p) * DBL_EPSILON * S[0];
+    if (!(k < p && S[k] > tol)) {
+        for (int64_t i = 0; i < n; ++i) q_per_sample[i] = 0.0;
+        *ucl_out = 0.0;
+        free(Xc); free(U); free(S); free(Vt);
+        return N4M_OK;
     }
 
     /* Reconstruct Xc_hat = sum_{j<k} U[:, j] * Σ[j] * Vt[j, :]. */
@@ -144,43 +170,58 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
         }
     }
 
-    for (int64_t i = 0; i < n; ++i) {
+    /* Q_i at or below tol^2 (scaled space) is rounding noise: it may round
+     * towards 0 when unscaled; a larger one that is not a normal double is
+     * refused. */
+    n4m_status_t st = N4M_OK;
+    for (int64_t i = 0; i < n && st == N4M_OK; ++i) {
         double q = 0.0;
         for (int64_t d = 0; d < p; ++d) {
             const double r = Xc[(size_t)i * (size_t)p + (size_t)d] -
                              Xc_hat[(size_t)i * (size_t)p + (size_t)d];
             q += r * r;
         }
-        q_per_sample[i] = q;
+        st = unscale(q, 2 * e, tol * tol, &q_per_sample[i]);
     }
 
-    /* Jackson-Mudholkar UCL using residual eigenvalues. */
-    const double inv_nm1 = 1.0 / (double)(n - 1);
-    const int64_t rank_cap = (n < p) ? n : p;
-    double theta1 = 0.0, theta2 = 0.0, theta3 = 0.0;
-    for (int64_t j = (int64_t)k; j < rank_cap; ++j) {
-        const double lam = S[j] * S[j] * inv_nm1;
-        theta1 += lam;
-        theta2 += lam * lam;
-        theta3 += lam * lam * lam;
-    }
-    double ucl = 0.0;
-    if (theta1 > 0.0 && theta2 > 0.0) {
-        const double h0 = 1.0 - (2.0 * theta1 * theta3) / (3.0 * theta2 * theta2);
-        const double ca = inv_norm_ref(1.0 - alpha);
-        const double term1 = ca * sqrt(2.0 * theta2 * h0 * h0) / theta1;
-        const double term2 = (theta2 * h0 * (h0 - 1.0)) / (theta1 * theta1);
-        const double base  = 1.0 + term1 + term2;
-        if (base > 0.0 && h0 != 0.0) {
-            ucl = theta1 * pow(base, 1.0 / h0);
+    /* Jackson-Mudholkar UCL from the residual eigenvalues, in the scaled
+     * space: sigma_1 <= sqrt(n p), and sigma_k > tol >= 16 eps because
+     * sigma_1 >= max|Xc| >= 0.5, so theta_1..3 and theta_2^2 are normal
+     * doubles. With A = ca sqrt(2 theta_2) / theta_1 and B = theta_2 /
+     * theta_1^2, the base of the power is 1 + g, g = |h0| A + h0 (h0 - 1) B,
+     * and base^(1/h0) = exp(log1p(g) / h0) keeps its accuracy as h0 nears 0
+     * (h0 = 0 exactly takes the limit h0 -> 0+, exp(A - B)). For alpha <= 0.5
+     * (ca >= 0), g > -1 always (h0 <= 1/3, B <= 1, and |h0| B <= 2/3 when
+     * h0 < 0), and the exponent stays within [-(A + 2), A]; a larger alpha can
+     * make the base non-positive, where the approximation has no value:
+     * explicit N4M_ERR_NUMERICAL_FAILURE instead of the former 0. */
+    if (st == N4M_OK) {
+        const double inv_nm1 = 1.0 / (double)(n - 1);
+        double theta1 = 0.0, theta2 = 0.0, theta3 = 0.0;
+        for (int64_t j = (int64_t)k; j < p; ++j) {
+            const double lam = S[j] * S[j] * inv_nm1;
+            theta1 += lam;
+            theta2 += lam * lam;
+            theta3 += lam * lam * lam;
         }
+        const double h0 = 1.0 - (2.0 * theta1 * theta3) / (3.0 * theta2 * theta2);
+        const double A = inv_norm_upper_ref(alpha) * sqrt(2.0 * theta2) / theta1;
+        const double B = theta2 / (theta1 * theta1);
+        double ucl_scaled = 0.0;
+        if (h0 == 0.0) {
+            ucl_scaled = theta1 * exp(A - B);
+        } else {
+            const double g = fabs(h0) * A + h0 * (h0 - 1.0) * B;
+            if (g > -1.0) ucl_scaled = theta1 * exp(log1p(g) / h0);
+        }
+        st = (ucl_scaled > 0.0) ? unscale(ucl_scaled, 2 * e, 0.0, ucl_out)
+                                : N4M_ERR_NUMERICAL_FAILURE;
     }
-    *ucl_out = ucl;
 
     free(Xc);
     free(U);
     free(S);
     free(Vt);
     free(Xc_hat);
-    return N4M_OK;
+    return st;
 }

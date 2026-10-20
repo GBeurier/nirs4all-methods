@@ -5,8 +5,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
+#include "core/diagnostics/preflight_pca_budget.hpp"
 #include "svd_degenerate_goldens.inc"
 
 #define REQUIRE(x) do { if (!(x)) throw std::runtime_error(#x); } while (false)
@@ -346,12 +348,68 @@ static void pca_completion_tests(n4m_context_t* ctx) {
     }
 }
 
-// Budget (review b8fix4 P1): Gram, projections, eigendecomposition and
-// completion are counted before allocating. 600 x 600 with k = 600 counts
-// 4.3e8 long-double product equivalents (refused); the former Gram-only
-// count (2.16e8) accepted it.
+// Budget (reviews b8fix4 P1 and b8fix5 P1): guaranteed work and peak-memory
+// bounds of every pass and buffer (core/diagnostics/preflight_pca_budget.hpp),
+// tested by counting, without allocating the inputs they refuse.
 static void pca_budget_tests(n4m_context_t* ctx) {
-    const int64_t n=600, p=600; const int32_t k=600;
+    using ::n4m::core::preflight_pca_budget;
+    // Review b8fix5 counter-example: n = 3, p = 26e6, k = 1 was accepted at
+    // 238.9 million products and 1.040 GB, although sum1, the Gram and the
+    // projections alone need 312 million long-double products, and data,
+    // col_exp, loadings and their Householder copy 1.144 GB.
+    const auto wide = preflight_pca_budget(3, 26000000, 1);
+    REQUIRE(wide.work >= 3.12e8L);
+    REQUIRE(wide.doubles * 8.0L >= 1.144e9L);
+    REQUIRE(wide.doubles > ::n4m::core::preflight_pca_max_doubles);
+    // The QL iteration enters at its ceiling (30 s sweeps of s - 1 rotations
+    // over s rows), not at a two-sweep estimate.
+    const auto square = preflight_pca_budget(658, 658, 1);
+    REQUIRE(square.work >= 30.0L * 658 * 657 * 4 * 658 / 16);
+    REQUIRE(square.work <= ::n4m::core::preflight_pca_max_work);
+    // No shape a Preflight request can produce (n p <= 1e7, k <= 10) that
+    // Methods 1.3.6 (Gram-only s^2 l <= 2.5e8) or the previous estimate
+    // (effdf9ad) accepted is refused. Both former counts and the new bounds
+    // grow with l = max(n,p), so the largest accepted l per (s, k,
+    // orientation) is the worst case.
+    const auto old_accepts = [](long double n, long double p, long double k) {
+        const long double s = std::min(n, p), l = std::max(n, p);
+        if (s * s * l <= 2.5e8L) return true;
+        const long double work = s * (s + 1) / 2 * l + k * s * l +
+                                 (6 * s * s * s + (n <= p ? 3 * k * k * l : 0)) / 16;
+        const long double doubles = n * p + 3 * s * s + 2 * k * p + n * k + 4 * s + k;
+        return work <= 2.5e8L && doubles <= 134217728.0L;
+    };
+    long double worst = 0;
+    for (int64_t sm = 1; sm * sm <= 10000000; ++sm)
+        for (int64_t k = 1; k <= std::min<int64_t>(10, sm); ++k)
+            for (const bool wide_side : {true, false}) {
+                const auto shape = [&](int64_t l) {
+                    return wide_side ? std::make_pair(sm, l) : std::make_pair(l, sm);
+                };
+                const auto accepted = [&](int64_t l) {
+                    const auto [n, p] = shape(l);
+                    return n >= 2 && old_accepts(static_cast<long double>(n),
+                                                 static_cast<long double>(p),
+                                                 static_cast<long double>(k));
+                };
+                int64_t lo = sm, hi = 10000000 / sm;
+                if (!accepted(lo)) continue;
+                while (lo < hi) {
+                    const int64_t mid = lo + (hi - lo + 1) / 2;
+                    if (accepted(mid)) lo = mid; else hi = mid - 1;
+                }
+                const auto [n, p] = shape(lo);
+                const auto b = preflight_pca_budget(n, p, k);
+                REQUIRE(b.work <= ::n4m::core::preflight_pca_max_work);
+                REQUIRE(b.doubles <= ::n4m::core::preflight_pca_max_doubles);
+                worst = std::max(worst, b.work);
+            }
+    REQUIRE(worst > 2.3e9L);  // 658 x 658, k = 1: the limit is tight
+    // Through the ABI: 700 x 700 with k = 700 (3.2e9) is refused before
+    // allocating; 600 x 600 with k = 600 (2.0e9) is now inside the bound.
+    REQUIRE(preflight_pca_budget(700, 700, 700).work > ::n4m::core::preflight_pca_max_work);
+    REQUIRE(preflight_pca_budget(600, 600, 600).work <= ::n4m::core::preflight_pca_max_work);
+    const int64_t n=700, p=700; const int32_t k=700;
     std::vector<double> x(static_cast<size_t>(n*p),1.0), sc(static_cast<size_t>(n*k)),
         ld(static_cast<size_t>(k*p)), ev(static_cast<size_t>(k)), mom(2);
     auto X=view(x.data(),n,p), S=view(sc.data(),n,k), L=view(ld.data(),k,p);

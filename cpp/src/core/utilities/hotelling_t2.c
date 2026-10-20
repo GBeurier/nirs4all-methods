@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "column_centring.h"
 #include "core/common/svd.h"
 
 /* ------------------------------------------------------------------------- */
@@ -94,34 +95,39 @@ static double betai_ref(double a, double b, double x) {
     }
 }
 
-/* F-cdf at F0 with d1, d2 dof. */
-static double f_cdf_ref(double F0, double d1, double d2) {
-    if (F0 <= 0.0) return 0.0;
-    const double x = (d1 * F0) / (d1 * F0 + d2);
-    return betai_ref(d1 / 2.0, d2 / 2.0, x);
+/* Upper tail P(F_{d1,d2} > F0) = I_{d2 / (d2 + d1 F0)}(d2 / 2, d1 / 2). */
+static double f_upper_tail_ref(double F0, double d1, double d2) {
+    return betai_ref(d2 / 2.0, d1 / 2.0, d2 / (d2 + d1 * F0));
 }
 
-/* Invert F-cdf at probability p (0 < p < 1) via bisection. */
-static double f_quantile_ref(double p, double d1, double d2) {
-    if (p <= 0.0) return 0.0;
-    if (p >= 1.0) return HUGE_VAL;
-    /* Bracket: F_quantile grows with p; pick large upper bound. */
-    double lo = 1e-10;
-    double hi = 1.0;
-    while (f_cdf_ref(hi, d1, d2) < p) {
-        hi *= 2.0;
-        if (hi > 1e12) break;
+/* F0 with P(F_{d1,d2} > F0) = alpha, 0 < alpha < 1, by bisection on a bracket
+ * grown or shrunk by factors of two (no fixed cap: the former [1e-10, 1e12]
+ * bracket silently returned about 1.1e12 for larger quantiles, e.g. d1 = 1,
+ * d2 = 2, alpha = 1e-10, whose quantile is about 1e20). Working in the upper
+ * tail keeps a small alpha exact, where 1 - alpha rounds to 1 below 2^-53.
+ * Returns 0 when the quantile is not a finite normal double. */
+static double f_quantile_upper_ref(double alpha, double d1, double d2) {
+    double lo = 1.0, hi = 1.0;
+    if (f_upper_tail_ref(1.0, d1, d2) > alpha) {
+        while (f_upper_tail_ref(hi, d1, d2) > alpha) {
+            lo = hi;
+            hi *= 2.0;
+            if (!isfinite(hi)) return 0.0;
+        }
+    } else {
+        while (f_upper_tail_ref(lo, d1, d2) <= alpha) {
+            hi = lo;
+            lo *= 0.5;
+            if (lo < DBL_MIN) return 0.0;
+        }
     }
-    /* Bisection. */
-    for (int it = 0; it < 200; ++it) {
+    for (int it = 0; it < 200 && hi - lo > 4.0 * DBL_EPSILON * hi; ++it) {
         const double mid = 0.5 * (lo + hi);
-        const double cdf = f_cdf_ref(mid, d1, d2);
-        if (cdf < p) {
+        if (f_upper_tail_ref(mid, d1, d2) > alpha) {
             lo = mid;
         } else {
             hi = mid;
         }
-        if ((hi - lo) <= 1e-12 * (1.0 + 0.5 * (hi + lo))) break;
     }
     return 0.5 * (lo + hi);
 }
@@ -150,44 +156,21 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
     const int64_t p = cols;
     const int32_t k = n_components;
 
-    /* Centre by column means, corrected two-pass: subtract the rounded mean
-     * m, then the mean r of the residuals x - m. A plain rounded mean leaves
-     * the same offset (up to n eps |mean|) on every observation, i.e. a
-     * spurious direction along the ones vector that the rank selection
-     * below cannot tell from data (a constant column 0.1 gave rank 1 and
-     * T² = (n-1)/n everywhere). With the correction the offset falls to
-     * O(n eps) of the column's centred variation, under the resolution
-     * threshold, and a constant column centres to exact zeros: x - m is
-     * exact (Sterbenz) and the same for every row, so r equals it (its n
-     * partial sums are exact for n < 2^26). */
+    /* The SVD below requires rows >= cols. */
+    if (n < p) return N4M_ERR_INVALID_ARGUMENT;
+
+    /* Corrected two-pass centring at one power-of-two scale
+     * (column_centring.h): a constant column centres to exact zeros, and T²
+     * and the rank are scale-invariant, so the scale is not needed here. */
     double* Xc = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
     if (Xc == NULL) return N4M_ERR_OUT_OF_MEMORY;
-    memcpy(Xc, X, (size_t)n * (size_t)p * sizeof(double));
-    for (int64_t j = 0; j < p; ++j) {
-        double s = 0.0;
-        for (int64_t i = 0; i < n; ++i) {
-            s += Xc[(size_t)i * (size_t)p + (size_t)j];
-        }
-        const double m = s / (double)n;
-        double sr = 0.0;
-        for (int64_t i = 0; i < n; ++i) {
-            Xc[(size_t)i * (size_t)p + (size_t)j] -= m;
-            sr += Xc[(size_t)i * (size_t)p + (size_t)j];
-        }
-        const double r = sr / (double)n;
-        for (int64_t i = 0; i < n; ++i) {
-            Xc[(size_t)i * (size_t)p + (size_t)j] -= r;
-        }
+    int scale_exp = 0;
+    const n4m_status_t centred = n4m_util_centre_columns_pow2(X, n, p, Xc, &scale_exp);
+    if (centred != N4M_OK) {
+        free(Xc);
+        return centred;
     }
 
-    /* SVD: rows >= cols required. */
-    if (n < p) {
-        /* The Jacobi SVD requires rows >= cols. Pad with zero rows
-         * conceptually: trim to cols = min(p, n) and discard the trailing
-         * zero singular values. */
-        free(Xc);
-        return N4M_ERR_INVALID_ARGUMENT;
-    }
     double* U  = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
     double* S  = (double*)malloc((size_t)p * sizeof(double));
     /* Shared SVD (core/common/svd.h) requires a non-NULL Vt scratch even
@@ -213,31 +196,37 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
     int32_t r = 0;
     while (r < k && S[r] > tol) ++r;
 
-    /* T = U * Σ; eigenvalues λ_j = σ_j² / (n - 1). */
-    const double inv_nm1 = 1.0 / (double)(n - 1);
+    /* T[i, j] = U[i, j] σ_j and λ_j = σ_j² / (n - 1), so T[i, j]² / λ_j =
+     * (n - 1) U[i, j]²: computed without σ_j², which overflows or underflows
+     * for extreme inputs (T² was NaN with status OK for |x| ~ 2^600). */
+    const double nm1 = (double)(n - 1);
     for (int64_t i = 0; i < n; ++i) {
         double t2 = 0.0;
         for (int32_t j = 0; j < r; ++j) {
-            const double sigma_j = S[j];
-            const double lambda  = sigma_j * sigma_j * inv_nm1;
-            const double t = U[(size_t)i * (size_t)p + (size_t)j] * sigma_j;
-            t2 += (t * t) / lambda;
+            const double u = U[(size_t)i * (size_t)p + (size_t)j];
+            t2 += u * u;
         }
-        t2_per_sample[i] = t2;
+        t2_per_sample[i] = nm1 * t2;
     }
 
     /* UCL = r (n - 1)(n + 1) / (n (n - r)) * F^{-1}(1 - alpha; r, n - r),
      * with r the rank actually used (r = k for a full-rank request). No
-     * resolved direction (constant X): T² = 0 and UCL = 0. */
+     * resolved direction (constant X): T² = 0 and UCL = 0. A quantile or UCL
+     * that is not a finite normal double (only for extreme alpha) is an
+     * explicit N4M_ERR_NUMERICAL_FAILURE, never Inf or a capped value. */
+    double ucl = 0.0;
     if (r > 0) {
         const double d1 = (double)r;
         const double d2 = (double)(n - r);
-        const double Fq = f_quantile_ref(1.0 - alpha, d1, d2);
-        *ucl_out = (double)r * (double)(n - 1) * (double)(n + 1) /
-                   ((double)n * (double)(n - r)) * Fq;
-    } else {
-        *ucl_out = 0.0;
+        const double Fq = f_quantile_upper_ref(alpha, d1, d2);
+        ucl = (double)r * (double)(n - 1) * (double)(n + 1) /
+              ((double)n * (double)(n - r)) * Fq;
+        if (!(isfinite(ucl) && ucl >= DBL_MIN)) {
+            free(Xc); free(U); free(S); free(Vt);
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
     }
+    *ucl_out = ucl;
     if (rank_used != NULL) *rank_used = r;
 
     free(Xc);

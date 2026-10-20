@@ -1456,9 +1456,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "These are descriptive diagnostics, not model-validation scores. The noise proxy assumes "
         "equally spaced features and a locally polynomial signal; it is not an SNR. ICC is "
         "computed only for balanced complete groups and is NaN otherwise. The association test "
-        "assumes exchangeable units and permutes targets as one unrestricted block. A PCA above "
-        "250 million long-double product equivalents or 1 GiB of working buffers, and "
-        "permutation tests above 250 million operations, return `N4M_ERR_UNSUPPORTED`; "
+        "assumes exchangeable units and permutes targets as one unrestricted block. A PCA whose "
+        "guaranteed work bound (QL iteration at its ceiling) exceeds 2.4 billion long-double "
+        "product equivalents or whose live buffers exceed 1 GiB, and permutation tests above "
+        "250 million operations, return `N4M_ERR_UNSUPPORTED`; "
         "neighbor and pair searches are exhaustive and quadratic in rows.",
         "The ABI-2 symbols `n4m_preflight_{pca_compute,repeatability_compute,summary_compute,"
         "nearest_neighbors,local_contrast,noise_proxy_compute,pairs_within_tolerance,"
@@ -1559,15 +1560,20 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Standalone PCA Hotelling T² statistic",
         "Hotelling (1931), *The Generalization of Student's Ratio*, Annals of Mathematical "
         "Statistics 2, 360–378, https://doi.org/10.1214/aoms/1177732979.",
-        "The input matrix is column-centered and decomposed by compact SVD. For the first $k$ "
-        "PCA scores, $T_i^2=\\sum_{j=1}^k t_{ij}^2/\\lambda_j$. The upper control limit is "
-        "$k(n-1)(n+1)/[n(n-k)]\\,F_{1-\\alpha}(k,n-k)$, with the F quantile obtained through "
-        "regularized incomplete-beta inversion.",
+        "The input matrix is column-centered with a corrected two-pass mean (constant columns "
+        "centre to exact zeros) and decomposed by compact SVD. Only resolved directions enter, "
+        "$\\sigma_j > 16\\max(n,p)\\,\\varepsilon\\,\\sigma_1$; with $r\\le k$ of them, "
+        "$T_i^2=\\sum_{j=1}^r t_{ij}^2/\\lambda_j=(n-1)\\sum_{j=1}^r u_{ij}^2$, evaluated in the "
+        "second, scale-invariant form. The upper control limit is "
+        "$r(n-1)(n+1)/[n(n-r)]\\,F_{1-\\alpha}(r,n-r)$, with the F quantile obtained by bisection "
+        "on the upper tail of the regularized incomplete beta function; $r=0$ gives $T^2=0$ and "
+        "UCL $0$.",
         "Flagging multivariate score-space extremes directly from a calibration matrix when no "
         "PLS model object is involved.",
         "The implementation requires `rows >= cols`, $k< n$, finite dense F64 data, and treats "
         "the same input as both PCA fit and scored set. The finite-sample F limit assumes the "
-        "classical approximately normal model.",
+        "classical approximately normal model. A UCL that is not a finite normal double (only "
+        "for extreme $\\alpha$) returns `N4M_ERR_NUMERICAL_FAILURE`.",
         "`n4m.outlier_detection.hotelling_t2` wraps the stateless ABI-2 symbol "
         "`n4m_outlier_detection_hotelling_t2`; SVD, statistic, and UCL are in "
         "`cpp/src/core/utilities/hotelling_t2.c`.",
@@ -1580,15 +1586,23 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Jackson & Mudholkar (1979), *Control Procedures for Residuals Associated With "
         "Principal Component Analysis*, Technometrics 21, 341–349, "
         "https://doi.org/10.1080/00401706.1979.10489779.",
-        "After column centering and compact SVD, the first $k$ components reconstruct each row. "
-        "$Q_i=\\|x_i-\\hat x_i\\|_2^2$. The upper limit uses the Jackson–Mudholkar moment "
-        "approximation from residual eigenvalue sums $\\theta_1,\\theta_2,\\theta_3$ and the "
-        "standard-normal quantile at $1-\\alpha$.",
+        "After column centering (the corrected two-pass mean shared with Hotelling T²) and "
+        "compact SVD, the first $k$ components reconstruct each row. $Q_i=\\|x_i-\\hat "
+        "x_i\\|_2^2$. The upper limit uses the Jackson–Mudholkar moment approximation from "
+        "residual eigenvalue sums $\\theta_1,\\theta_2,\\theta_3$ and the upper standard-normal "
+        "quantile at $\\alpha$. Everything runs at one power-of-two scale and is rescaled at the "
+        "end, so the moments cannot overflow or underflow, and scaling X by $2^s$ scales Q and "
+        "the UCL by exactly $4^s$.",
         "Detecting observations whose variation lies outside a retained PCA subspace, "
         "complementing score-space Hotelling T².",
-        "The implementation requires `rows >= cols` and fits/scores the same matrix. The "
-        "Jackson–Mudholkar approximation can be poor for small samples, nonnormal residuals, or "
-        "near-degenerate residual eigenvalues.",
+        "The implementation requires `rows >= cols` and fits/scores the same matrix. When no "
+        "residual direction is resolved ($k=p$, constant X, or numerical rank at most $k$), Q "
+        "and the UCL are exactly 0, a documented state rather than a measurement; Q values at "
+        "or below $(16\\max(n,p)\\,\\varepsilon\\,\\sigma_1)^2$ are rounding noise. Values that are "
+        "not representable, or a non-positive Jackson–Mudholkar base (possible only for "
+        "$\\alpha>0.5$), return `N4M_ERR_NUMERICAL_FAILURE`. The Jackson–Mudholkar approximation "
+        "can be poor for small samples, nonnormal residuals, or near-degenerate residual "
+        "eigenvalues.",
         "`n4m.outlier_detection.q_residuals` wraps "
         "`n4m_outlier_detection_q_residuals`; reconstruction and the moment-based UCL are in "
         "`cpp/src/core/utilities/q_residuals.c`.",
