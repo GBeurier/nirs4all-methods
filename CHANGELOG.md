@@ -4,6 +4,40 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.8] - 2026-10-20
+
+ABI 2.20.0 unchanged (no new or changed symbol). Patch release for the CI
+failures of 1.3.7 on MSVC, Apple clang and the clang sanitizer presets.
+
+### Fixed
+
+- Precision where `long double` is `double` (MSVC, Apple arm64): three
+  kernels relied on the x87 extended format, found by running ctest and the
+  Python suite on an x86-64 build with `-mlong-double-64`, which both pass.
+  - `n4m_stats_permanova_freedman_lane`: the reduced-design basis and the
+    reduced-model residuals are computed in double-double. A basis rounded
+    to double left about `DBL_EPSILON` times a large between-condition
+    offset in every residual: an offset stratum `c = 2^31` (inside the
+    domain D) gave `SS_term` off by 6e-8 relative on MSVC and Apple clang.
+  - `n4m_stats_permanova`: stratum means in double-double. A rounded mean
+    shifted every within-stratum row by about `DBL_EPSILON c` (relative
+    error 5e-11 on x86, 7e-9 where `long double` is `double`, for a 3/5
+    stratum split at `c = 2^31`); both kernels now match the rational
+    oracle to 1e-12 with 80-bit and 64-bit `long double`.
+  - `utilities.ragged_summary`: Welford updates in double on each channel
+    prescaled by an exact power of two; `[1e308, -1e308]` overflowed the
+    deltas and was refused where `long double` is `double`.
+  - Headers and method pages no longer imply extended precision for these
+    kernels.
+- clang `-Wdouble-promotion -Werror` (linux-clang16, macOS universal2,
+  sanitizer presets, Rust sanitized jobs): explicit `long double`
+  promotions in `cpp/tests/test_models_pls.cpp`. MinGW GCC 16
+  `-Wnull-dereference` in `cpp/tests/test_pls_null_components.cpp`. A
+  clang 20 sweep with the warning set finds no `-Wdouble-promotion` left in
+  the sources, the tests or the WebAssembly build; the tests compiled
+  without the warning set (shadowing, `NAN` and integer promotions) were
+  cleaned as well.
+
 ## [1.3.7] - 2026-10-20
 
 ABI 2.20.0 (minor: 20 new symbols and two new `n4m_model_array_t` tags,
