@@ -650,6 +650,293 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     return N4M_OK;
 }
 
+// Householder tridiagonalization of a symmetric (p x p) matrix in place.
+// On entry `A` is row-major symmetric. On exit:
+//   * `diag[i]` = tridiagonal diagonal
+//   * `subd[i]` = subdiagonal between row i and row i+1 (length p - 1)
+//   * `Q` (row-major p x p) accumulates the orthogonal transform such
+//     that `A_original = Q * T * Q^T` where `T` is tridiagonal.
+//
+// Uses the standard Golub-Van Loan algorithm 8.3.1: at each step build a
+// Householder reflector that zeros entries below the subdiagonal in column
+// `k`, apply it to the trailing submatrix, and accumulate into `Q`.
+// Complexity: ~4/3 p^3 flops (vs Jacobi's ~5 p^3 per sweep).
+void householder_tridiag(std::vector<double>& A,
+                                 std::size_t p,
+                                 std::vector<double>& diag,
+                                 std::vector<double>& subd,
+                                 std::vector<double>& Q) {
+    diag.assign(p, 0.0);
+    subd.assign(p > 0 ? p - 1 : 0, 0.0);
+    Q.assign(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) Q[idx(i, p, i)] = 1.0;
+    if (p <= 1U) {
+        if (p == 1U) diag[0] = A[0];
+        return;
+    }
+
+    std::vector<double> v(p, 0.0);
+    std::vector<double> w(p, 0.0);
+    for (std::size_t k = 0; k + 2U <= p; ++k) {
+        const std::size_t m = p - k - 1;  // length of vector below A[k, k]
+        // Compute alpha = -sign(A[k+1, k]) * ||A[k+1:p, k]||
+        double sigma = 0.0;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            const double x = A[idx(i, p, k)];
+            sigma += x * x;
+        }
+        const double sub = A[idx(k + 1, p, k)];
+        if (sigma <= std::numeric_limits<double>::min()) {
+            // Already tridiagonal at this column; skip.
+            continue;
+        }
+        const double norm_x = std::sqrt(sigma);
+        const double alpha = (sub >= 0.0 ? -norm_x : norm_x);
+        // v = x - alpha*e_1
+        std::fill(v.begin(), v.end(), 0.0);
+        for (std::size_t i = k + 1; i < p; ++i) {
+            v[i] = A[idx(i, p, k)];
+        }
+        v[k + 1] -= alpha;
+        // ||v||^2 = 2 * (sigma - alpha * sub)
+        const double vtv = 2.0 * (sigma - alpha * sub);
+        if (vtv <= std::numeric_limits<double>::min()) continue;
+        const double beta = 2.0 / vtv;
+
+        // Apply H = I - beta * v v^T from both sides:
+        //   A := H * A * H
+        // Compute p_vec = beta * A * v   (only lower trailing p - k - 1 block
+        // matters; but since A is dense symmetric we work over the whole
+        // trailing block A[k+1:p, k+1:p] for now). Actually since v is zero
+        // above index k, A * v only touches rows/cols k+1:p.
+        // 1. w = beta * A[k+1:p, k+1:p] * v[k+1:p]
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = k + 1; i < p; ++i) {
+            double sum = 0.0;
+            for (std::size_t j = k + 1; j < p; ++j) {
+                sum += A[idx(i, p, j)] * v[j];
+            }
+            w[i] = beta * sum;
+        }
+        // 2. K = beta/2 * v^T * w
+        double k_val = 0.0;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            k_val += v[i] * w[i];
+        }
+        k_val *= 0.5 * beta;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            w[i] -= k_val * v[i];
+        }
+        // 3. A := A - v w^T - w v^T  (in trailing block)
+        for (std::size_t i = k + 1; i < p; ++i) {
+            const double vi = v[i];
+            const double wi = w[i];
+            for (std::size_t j = k + 1; j < p; ++j) {
+                A[idx(i, p, j)] -= vi * w[j] + wi * v[j];
+            }
+        }
+        // 4. Zero out below-subdiagonal entries in column k (and row k by
+        //    symmetry); record subdiagonal value.
+        A[idx(k + 1, p, k)] = alpha;
+        A[idx(k, p, k + 1)] = alpha;
+        for (std::size_t i = k + 2; i < p; ++i) {
+            A[idx(i, p, k)] = 0.0;
+            A[idx(k, p, i)] = 0.0;
+        }
+        // 5. Accumulate Q := Q * H = Q - (beta * Q * v) v^T
+        //    Compute u = Q * v (length p), then Q -= beta * u v^T.
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = 0; i < p; ++i) {
+            double sum = 0.0;
+            for (std::size_t j = k + 1; j < p; ++j) {
+                sum += Q[idx(i, p, j)] * v[j];
+            }
+            w[i] = beta * sum;
+        }
+        for (std::size_t i = 0; i < p; ++i) {
+            const double wi = w[i];
+            for (std::size_t j = k + 1; j < p; ++j) {
+                Q[idx(i, p, j)] -= wi * v[j];
+            }
+        }
+        (void)m;
+    }
+    for (std::size_t i = 0; i < p; ++i) {
+        diag[i] = A[idx(i, p, i)];
+    }
+    for (std::size_t i = 0; i + 1 < p; ++i) {
+        subd[i] = A[idx(i + 1, p, i)];
+    }
+}
+
+// Symmetric tridiagonal QL with implicit Wilkinson shift (Numerical
+// Recipes `tqli`). Operates on the tridiagonal (`diag`, `subd`) produced
+// by `householder_tridiag`, accumulating Givens rotations into `Q`
+// (already initialized to the Householder transform) so that the final
+// `Q` columns are the eigenvectors of the original symmetric matrix.
+// On exit `diag` holds the eigenvalues (unsorted).
+//
+// `subd` is conceptually of length p-1 but the algorithm pads with a
+// trailing zero so subd[i] is accessed for i in [0, p-1]; in our storage
+// we keep subd at length p with subd[p-1] = 0.
+[[nodiscard]] n4m_status_t symmetric_qr_tridiag(
+    ::n4m::core::Context& ctx,
+    std::vector<double>& diag,
+    std::vector<double>& subd,
+    std::vector<double>& Q,
+    std::size_t p,
+    double tol,
+    const char* label) {
+    if (p <= 1U) return N4M_OK;
+    // Pad subd to length p (treat the last subdiagonal as 0).
+    subd.resize(p, 0.0);
+    constexpr std::size_t kMaxIter = 30U;  // per-eigenvalue cap (NR)
+    const double safe_tol = std::max(tol, 1e-15);
+
+    for (std::size_t l = 0; l < p; ++l) {
+        std::size_t iter = 0;
+        std::size_t m = 0;
+        while (true) {
+            // Find m >= l with subd[m] negligible relative to the
+            // surrounding diagonals.
+            for (m = l; m + 1 < p; ++m) {
+                const double dd = std::fabs(diag[m]) + std::fabs(diag[m + 1]);
+                if (std::fabs(subd[m]) <= safe_tol * dd) {
+                    break;
+                }
+            }
+            if (m == l) break;
+            if (iter++ >= kMaxIter) {
+                ctx.set_errorf("%s symmetric QR failed to converge", label);
+                return N4M_ERR_CONVERGENCE_FAILED;
+            }
+            // Wilkinson shift from the trailing 2x2 starting at l.
+            double g = (diag[l + 1] - diag[l]) / (2.0 * subd[l]);
+            double r = std::hypot(g, 1.0);
+            const double sign_r = (g >= 0.0 ? 1.0 : -1.0);
+            g = diag[m] - diag[l] + subd[l] / (g + sign_r * r);
+            double s = 1.0;
+            double c = 1.0;
+            double pp = 0.0;
+            // Implicit QL sweep, walking from index m-1 down to l.
+            for (std::size_t ii = m; ii-- > l;) {
+                double f = s * subd[ii];
+                double b = c * subd[ii];
+                r = std::hypot(f, g);
+                subd[ii + 1] = r;
+                if (r == 0.0) {
+                    diag[ii + 1] -= pp;
+                    subd[m] = 0.0;
+                    break;
+                }
+                s = f / r;
+                c = g / r;
+                g = diag[ii + 1] - pp;
+                r = (diag[ii] - g) * s + 2.0 * c * b;
+                pp = s * r;
+                diag[ii + 1] = g + pp;
+                g = c * r - b;
+                // Accumulate rotation into eigenvector matrix Q.
+                for (std::size_t row = 0; row < p; ++row) {
+                    const double qi = Q[idx(row, p, ii + 1)];
+                    const double qj = Q[idx(row, p, ii)];
+                    Q[idx(row, p, ii + 1)] = s * qj + c * qi;
+                    Q[idx(row, p, ii)]     = c * qj - s * qi;
+                }
+                if (ii == l) break;  // bounded explicitly because ii is size_t
+            }
+            if (r == 0.0 && m > l) continue;
+            diag[l] -= pp;
+            subd[l] = g;
+            subd[m] = 0.0;
+        }
+    }
+    return N4M_OK;
+}
+
+// Full symmetric eigendecomposition: matrix -> (eigvals, eigvecs) such
+// that  matrix = eigvecs * diag(eigvals) * eigvecs^T. Composes Householder
+// tridiagonalization with implicit-shift symmetric QR; substantially
+// faster than cyclic Jacobi at p >= a few hundred where Jacobi's many
+// full-matrix sweeps dominate cost.
+[[nodiscard]] n4m_status_t symmetric_eigh(
+    ::n4m::core::Context& ctx,
+    std::vector<double> matrix,
+    std::size_t p,
+    double tol,
+    const char* label,
+    std::vector<double>& eigvals_out,
+    std::vector<double>& eigvecs_out) {
+    eigvals_out.assign(p, 0.0);
+    eigvecs_out.assign(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) eigvecs_out[idx(i, p, i)] = 1.0;
+    if (p == 0U) return N4M_OK;
+    if (p == 1U) {
+        eigvals_out[0] = matrix[0];
+        return N4M_OK;
+    }
+
+    std::vector<double> diag;
+    std::vector<double> subd;
+    householder_tridiag(matrix, p, diag, subd, eigvecs_out);
+    const n4m_status_t status =
+        symmetric_qr_tridiag(ctx, diag, subd, eigvecs_out, p,
+                              std::max(tol, 1e-14), label);
+    if (status != N4M_OK) return status;
+    eigvals_out = std::move(diag);
+    return N4M_OK;
+}
+
+// Largest eigenpair of a symmetric positive semidefinite (n x n) matrix from
+// its full decomposition by symmetric_eigh (Householder tridiagonalisation and
+// implicit QL, O(n^3) and independent of the spectral gap); the lowest index
+// wins ties. Same contract and checks as largest_symmetric_eigenvector.
+[[nodiscard]] n4m_status_t largest_symmetric_eigenvector_ql(
+    ::n4m::core::Context& ctx,
+    const std::vector<double>& symmetric,
+    std::size_t n,
+    const char* label,
+    std::size_t component,
+    std::vector<double>& eigenvector,
+    double& eigenvalue) {
+    resize_fill(eigenvector, n, 0.0);
+    eigenvalue = 0.0;
+    std::vector<double> values;
+    std::vector<double> vectors;
+    const n4m_status_t status = symmetric_eigh(ctx, symmetric, n, 0.0, label, values, vectors);
+    if (status != N4M_OK) {
+        return status;
+    }
+    std::size_t best = 0;
+    for (std::size_t i = 1; i < n; ++i) {
+        if (values[i] > values[best]) {
+            best = i;
+        }
+    }
+    if (!(values[best] > std::numeric_limits<double>::epsilon())) {
+        ctx.set_errorf("%s covariance vanished at component %llu", label, ull(component));
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        eigenvector[i] = vectors[idx(i, n, best)];
+    }
+    const double norm = std::sqrt(squared_norm(eigenvector));
+    if (norm <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_errorf("%s eigenvector vanished at component %llu", label, ull(component));
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    for (double& value : eigenvector) {
+        value /= norm;
+    }
+    eigenvalue = values[best];
+    return N4M_OK;
+}
+
+// Eigen-solver of the Gram matrix in dominant_svd_pair: the largest-pivot
+// Jacobi rotations of the SVD solver (O(m^2) search per rotation, up to
+// O(m^4) in all for m = min(features, targets)), or Householder-QL (O(m^3)).
+enum class GramEigenSolver { kJacobi, kHouseholderQl };
+
 [[nodiscard]] n4m_status_t dominant_svd_pair(
     ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
@@ -657,6 +944,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     std::size_t targets,
     std::int32_t max_iter,
     double tol,
+    GramEigenSolver solver,
     std::size_t component,
     std::vector<double>& left,
     std::vector<double>& right) {
@@ -699,8 +987,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             }
         }
         double eigenvalue = 0.0;
-        status = largest_symmetric_eigenvector(ctx, gram, targets, max_iter, tol,
-                                               "SVD right", component, right, eigenvalue);
+        status = solver == GramEigenSolver::kJacobi
+                     ? largest_symmetric_eigenvector(ctx, gram, targets, max_iter, tol,
+                                                     "SVD right", component, right, eigenvalue)
+                     : largest_symmetric_eigenvector_ql(ctx, gram, targets, "SVD right",
+                                                        component, right, eigenvalue);
         if (status != N4M_OK) {
             return status;
         }
@@ -727,8 +1018,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             }
         }
         double eigenvalue = 0.0;
-        status = largest_symmetric_eigenvector(ctx, gram, features, max_iter, tol,
-                                               "SVD left", component, left, eigenvalue);
+        status = solver == GramEigenSolver::kJacobi
+                     ? largest_symmetric_eigenvector(ctx, gram, features, max_iter, tol,
+                                                     "SVD left", component, left, eigenvalue)
+                     : largest_symmetric_eigenvector_ql(ctx, gram, features, "SVD left",
+                                                        component, left, eigenvalue);
         if (status != N4M_OK) {
             return status;
         }
@@ -770,29 +1064,161 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
 // these are close the iteration stalls: it fails to converge (X = [a, b],
 // Y = [a + 2^-12 b, 2^-12 a + b], sigma = 20 (1 +- 2^-12)), or its step-size
 // test passes while the iterate is still far from the dominant direction (the
-// error is about step / (1 - (sigma_2 / sigma_1)^2)). The dominant singular
-// pair is then taken from the deterministic Jacobi eigen-solver of the SVD
-// solver (dominant_svd_pair), which has no such gap dependence. An iterate is
-// kept when it is within kIterateAcceptanceFactor times its nominal step
-// tolerance of that pair, so converged fits with well-separated singular
-// values are unchanged.
+// error is about step / (1 - (sigma_2 / sigma_1)^2)), so the step size alone
+// never proves convergence. A converged iterate is kept without further work
+// when an a posteriori bound (dominant_direction_certified) proves it within
+// kIterateAcceptanceFactor times its nominal step tolerance of the dominant
+// singular vector. Otherwise (no convergence, small or unproven spectral gap)
+// the dominant pair is computed by reference_dominant_pair, which has no gap
+// dependence, and the iterate is kept only when it lies within the same
+// distance of it.
 constexpr double kIterateAcceptanceFactor = 16.0;
 
 // Dominant singular pair (unit left and right singular vectors) of a nonzero
-// cross-covariance by dominant_svd_pair, on a copy rescaled by an exact power
-// of two to a largest |value| in [1, 2) (singular vectors unchanged).
-[[nodiscard]] n4m_status_t jacobi_dominant_pair(::n4m::core::Context& ctx,
-                                                std::vector<double> covariance,
+// cross-covariance from the Householder-QL decomposition of its smaller Gram
+// matrix (dominant_svd_pair, O(m^3) for m = min(features, targets)), on a copy
+// rescaled by an exact power of two to a largest |value| in [1, 2) (singular
+// vectors unchanged).
+[[nodiscard]] n4m_status_t reference_dominant_pair(::n4m::core::Context& ctx,
+                                                   std::vector<double> covariance,
+                                                   std::size_t features,
+                                                   std::size_t targets,
+                                                   std::int32_t max_iter,
+                                                   double tol,
+                                                   std::size_t component,
+                                                   std::vector<double>& left,
+                                                   std::vector<double>& right) {
+    static_cast<void>(scale_to_unit_magnitude(covariance));
+    return dominant_svd_pair(ctx, covariance, features, targets, max_iter, tol,
+                             GramEigenSolver::kHouseholderQl, component, left, right);
+}
+
+// Whether `iterate`, a candidate dominant left (left_side) or right singular
+// vector of the cross-covariance C (features x targets), is proven to lie
+// within direction distance `acceptance` (see direction_distance) of the true
+// dominant singular vector. With M = C C' (or C'C), x the unit iterate, the
+// Rayleigh quotient l = x'Mx <= lambda_1 and the residual r = Mx - l x, the
+// Davis-Kahan bound gives sin(angle) <= ||r|| / (lambda_1 - lambda_2), and
+// lambda_2 <= min(trace M - lambda_1, sqrt(||M||_F^2 - lambda_1^2)). The
+// computation works on C rescaled to a largest |value| in [1, 2), costs
+// O(features x targets) (plus O(m^2 max(features, targets)) for ||M||_F, only
+// when the trace bound does not suffice) and widens every quantity by a
+// bound on its rounding error, so a false certificate would need rounding
+// errors above those bounds. `amplification` >= 1 converts the bound to the
+// direction of X x (factor ||X||_F ||x|| / ||X x||) for iterations that test
+// their X scores. Returns false (not certified) when the bound is not small
+// enough, never the other way round.
+[[nodiscard]] bool dominant_direction_certified(std::vector<double> covariance,
                                                 std::size_t features,
                                                 std::size_t targets,
-                                                std::int32_t max_iter,
-                                                double tol,
-                                                std::size_t component,
-                                                std::vector<double>& left,
-                                                std::vector<double>& right) {
+                                                const std::vector<double>& iterate,
+                                                bool left_side,
+                                                double amplification,
+                                                double acceptance) {
+    const std::size_t dim = left_side ? features : targets;
+    const std::size_t other = left_side ? targets : features;
+    const double iterate_norm = std::sqrt(squared_norm(iterate));
+    if (iterate.size() != dim || !(iterate_norm > 0.0) || !std::isfinite(iterate_norm)) {
+        return false;
+    }
     static_cast<void>(scale_to_unit_magnitude(covariance));
-    return dominant_svd_pair(ctx, covariance, features, targets, max_iter, tol, component, left,
-                             right);
+    std::vector<double> x(dim, 0.0);
+    for (std::size_t i = 0; i < dim; ++i) {
+        x[i] = iterate[i] / iterate_norm;
+    }
+    // y = C'x and z = C y for a left iterate; y = C x and z = C'y for a right one.
+    std::vector<double> y(other, 0.0);
+    std::vector<double> z(dim, 0.0);
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        for (std::size_t target = 0; target < targets; ++target) {
+            const double c = covariance[idx(feature, targets, target)];
+            if (left_side) {
+                y[target] += c * x[feature];
+            } else {
+                y[feature] += c * x[target];
+            }
+        }
+    }
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        for (std::size_t target = 0; target < targets; ++target) {
+            const double c = covariance[idx(feature, targets, target)];
+            if (left_side) {
+                z[feature] += c * y[target];
+            } else {
+                z[target] += c * y[feature];
+            }
+        }
+    }
+    const double rayleigh = squared_norm(y);
+    double residual_ss = 0.0;
+    for (std::size_t i = 0; i < dim; ++i) {
+        const double r = z[i] - rayleigh * x[i];
+        residual_ss += r * r;
+    }
+    const double eps = std::numeric_limits<double>::epsilon();
+    const double trace = squared_norm(covariance);
+    const auto f = static_cast<double>(features);
+    const auto t = static_cast<double>(targets);
+    // Rounding of y, z, the Rayleigh quotient, the residual and the
+    // normalisation of x, all bounded by a multiple of eps (f + t) trace M.
+    const double rounding = 8.0 * (f + t + 4.0) * eps * trace;
+    const double lambda_lower = rayleigh - rounding;
+    if (!(lambda_lower > 0.0)) {
+        return false;
+    }
+    const double numerator = std::sqrt(residual_ss) + rounding;
+    const auto bound_ok = [&](double second_upper) {
+        const double gap = lambda_lower - second_upper;
+        if (!(gap > 0.0)) {
+            return false;
+        }
+        const double sine = (numerator / gap + (f + 2.0) * eps) * amplification;
+        if (!(sine < 1.0)) {
+            return false;
+        }
+        // direction_distance = 2 sin(angle / 2) = sine sqrt(2 / (1 + cos)).
+        const double distance = sine * std::sqrt(2.0 / (1.0 + std::sqrt(1.0 - sine * sine)));
+        return distance <= acceptance;
+    };
+    const double trace_upper = trace * (1.0 + (f * t + 2.0) * eps);
+    if (bound_ok(trace_upper - lambda_lower)) {
+        return true;
+    }
+    // ||M||_F^2 from the smaller Gram matrix G (m x m): each entry is within
+    // gamma_k ||c_i|| ||c_j|| of its exact value, so ||G||_F^2 is within
+    // (2 k + m^2 + 4) eps trace^2.
+    const std::size_t m = std::min(features, targets);
+    const std::size_t k = std::max(features, targets);
+    double frobenius_ss = 0.0;
+    for (std::size_t i = 0; i < m; ++i) {
+        for (std::size_t j = i; j < m; ++j) {
+            double g = 0.0;
+            for (std::size_t l = 0; l < k; ++l) {
+                g += features <= targets
+                         ? covariance[idx(i, targets, l)] * covariance[idx(j, targets, l)]
+                         : covariance[idx(l, targets, i)] * covariance[idx(l, targets, j)];
+            }
+            frobenius_ss += (i == j ? 1.0 : 2.0) * g * g;
+        }
+    }
+    const auto md = static_cast<double>(m);
+    const double frobenius_upper =
+        frobenius_ss + 2.0 * (2.0 * static_cast<double>(k) + md * md + 4.0) * eps * trace * trace;
+    const double second_frobenius =
+        std::sqrt(std::max(frobenius_upper - lambda_lower * lambda_lower, 0.0));
+    return bound_ok(std::min(trace_upper - lambda_lower, second_frobenius));
+}
+
+// ||X||_F ||w|| / ||X w||: the factor by which an angle on the X weights w
+// can grow on the X scores X w (dominant_direction_certified).
+[[nodiscard]] double score_amplification(const std::vector<double>& xk,
+                                         const std::vector<double>& weights,
+                                         const std::vector<double>& scores) {
+    const double score_norm = std::sqrt(squared_norm(scores));
+    if (!(score_norm > 0.0)) {
+        return std::numeric_limits<double>::infinity();
+    }
+    return std::sqrt(squared_norm(xk)) * std::sqrt(squared_norm(weights)) / score_norm;
 }
 
 // Sign-insensitive distance min(|u - v|, |u + v|) between the directions of
@@ -919,10 +1345,10 @@ constexpr double kIterateAcceptanceFactor = 16.0;
         }
     }
 
-    // A converged iterate is refined once more; it is kept only when it agrees
-    // with the Jacobi pair within its nominal accuracy (see
-    // kIterateAcceptanceFactor), else, and when the iteration did not
-    // converge, the Jacobi pair is used.
+    // A converged iterate is refined once more; it is kept only when it is
+    // certified or agrees with the reference pair within its nominal accuracy
+    // (see kIterateAcceptanceFactor), else, and when the iteration did not
+    // converge, the reference pair is used.
     if (converged) {
         for (std::size_t feature = 0; feature < features; ++feature) {
             double sum = 0.0;
@@ -958,17 +1384,21 @@ constexpr double kIterateAcceptanceFactor = 16.0;
             value /= right_norm;
         }
     }
-    std::vector<double> jacobi_left;
-    std::vector<double> jacobi_right;
-    const n4m_status_t jacobi_status = jacobi_dominant_pair(
-        ctx, covariance, features, targets, max_iter, tol, component, jacobi_left, jacobi_right);
-    if (jacobi_status != N4M_OK) {
-        return jacobi_status;
-    }
-    if (!converged ||
-        direction_distance(right, jacobi_right) > kIterateAcceptanceFactor * std::sqrt(tol)) {
-        left = std::move(jacobi_left);
-        right = std::move(jacobi_right);
+    const double acceptance = kIterateAcceptanceFactor * std::sqrt(tol);
+    if (!converged || !dominant_direction_certified(covariance, features, targets, right, false,
+                                                    1.0, acceptance)) {
+        std::vector<double> reference_left;
+        std::vector<double> reference_right;
+        const n4m_status_t reference_status =
+            reference_dominant_pair(ctx, covariance, features, targets, max_iter, tol, component,
+                                    reference_left, reference_right);
+        if (reference_status != N4M_OK) {
+            return reference_status;
+        }
+        if (!converged || direction_distance(right, reference_right) > acceptance) {
+            left = std::move(reference_left);
+            right = std::move(reference_right);
+        }
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
@@ -1076,10 +1506,10 @@ constexpr double kIterateAcceptanceFactor = 16.0;
         }
     }
 
-    // A converged iterate is refined once more; it is kept only when it agrees
-    // with the Jacobi pair within its nominal accuracy (see
-    // kIterateAcceptanceFactor), else, and when the iteration did not
-    // converge, the Jacobi pair is used.
+    // A converged iterate is refined once more; it is kept only when it is
+    // certified or agrees with the reference pair within its nominal accuracy
+    // (see kIterateAcceptanceFactor), else, and when the iteration did not
+    // converge, the reference pair is used.
     if (converged) {
         for (std::size_t feature = 0; feature < features; ++feature) {
             double sum = 0.0;
@@ -1115,17 +1545,21 @@ constexpr double kIterateAcceptanceFactor = 16.0;
             value /= right_norm;
         }
     }
-    std::vector<double> jacobi_left;
-    std::vector<double> jacobi_right;
-    const n4m_status_t jacobi_status = jacobi_dominant_pair(
-        ctx, covariance, features, targets, max_iter, tol, component, jacobi_left, jacobi_right);
-    if (jacobi_status != N4M_OK) {
-        return jacobi_status;
-    }
-    if (!converged ||
-        direction_distance(right, jacobi_right) > kIterateAcceptanceFactor * std::sqrt(tol)) {
-        left = std::move(jacobi_left);
-        right = std::move(jacobi_right);
+    const double acceptance = kIterateAcceptanceFactor * std::sqrt(tol);
+    if (!converged || !dominant_direction_certified(covariance, features, targets, right, false,
+                                                    1.0, acceptance)) {
+        std::vector<double> reference_left;
+        std::vector<double> reference_right;
+        const n4m_status_t reference_status =
+            reference_dominant_pair(ctx, covariance, features, targets, max_iter, tol, component,
+                                    reference_left, reference_right);
+        if (reference_status != N4M_OK) {
+            return reference_status;
+        }
+        if (!converged || direction_distance(right, reference_right) > acceptance) {
+            left = std::move(reference_left);
+            right = std::move(reference_right);
+        }
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
@@ -1232,14 +1666,19 @@ constexpr double kIterateAcceptanceFactor = 16.0;
             break;
         }
     }
-    std::vector<double> jacobi_right;
-    const n4m_status_t jacobi_status = jacobi_dominant_pair(
-        ctx, covariance, features, targets, max_iter, tol, component, next_left, jacobi_right);
-    if (jacobi_status != N4M_OK) {
-        return jacobi_status;
-    }
-    if (!converged || direction_distance(out, next_left) > kIterateAcceptanceFactor * stop_tol) {
-        out = std::move(next_left);
+    const double acceptance = kIterateAcceptanceFactor * stop_tol;
+    if (!converged || !dominant_direction_certified(covariance, features, targets, out, true, 1.0,
+                                                    acceptance)) {
+        std::vector<double> reference_right;
+        const n4m_status_t reference_status =
+            reference_dominant_pair(ctx, covariance, features, targets, max_iter, tol, component,
+                                    next_left, reference_right);
+        if (reference_status != N4M_OK) {
+            return reference_status;
+        }
+        if (!converged || direction_distance(out, next_left) > acceptance) {
+            out = std::move(next_left);
+        }
     }
     canonicalize_direction_sign(out);
     return N4M_OK;
@@ -1578,25 +2017,28 @@ enum class CanonicalWeightSolver {
     }
 
     if (targets > 1U) {
-        // The X weights are checked against the Jacobi dominant pair of
-        // X_k'Y_k (kIterateAcceptanceFactor) and replaced by it (left and
-        // right singular vectors) when the iteration did not converge or
-        // stopped away from it.
+        // Unless certified, the X weights are checked against the reference
+        // dominant pair of X_k'Y_k (kIterateAcceptanceFactor) and replaced by
+        // it (left and right singular vectors) when the iteration did not
+        // converge or stopped away from it.
         std::vector<double> covariance;
-        std::vector<double> jacobi_left;
-        std::vector<double> jacobi_right;
         cross_covariance(xk, yk, rows, features, targets, covariance);
-        const n4m_status_t status =
-            jacobi_dominant_pair(ctx, covariance, features, targets, cfg.max_iter, cfg.tol,
-                                 component, jacobi_left, jacobi_right);
-        if (status != N4M_OK) {
-            return status;
-        }
-        if (!converged || direction_distance(x_weights, jacobi_left) >
-                              kIterateAcceptanceFactor * std::sqrt(cfg.tol)) {
-            x_weights = std::move(jacobi_left);
-            y_weights = std::move(jacobi_right);
-            converged = true;
+        const double acceptance = kIterateAcceptanceFactor * std::sqrt(cfg.tol);
+        if (!converged || !dominant_direction_certified(covariance, features, targets, x_weights,
+                                                        true, 1.0, acceptance)) {
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            const n4m_status_t status =
+                reference_dominant_pair(ctx, covariance, features, targets, cfg.max_iter,
+                                        cfg.tol, component, reference_left, reference_right);
+            if (status != N4M_OK) {
+                return status;
+            }
+            if (!converged || direction_distance(x_weights, reference_left) > acceptance) {
+                x_weights = std::move(reference_left);
+                y_weights = std::move(reference_right);
+                converged = true;
+            }
         }
     }
     if (!converged) {
@@ -1649,7 +2091,7 @@ enum class CanonicalWeightSolver {
         0.0,
         covariance.data(), targets);
     return dominant_svd_pair(ctx, covariance, features, targets,
-                             cfg.max_iter, cfg.tol,
+                             cfg.max_iter, cfg.tol, GramEigenSolver::kJacobi,
                              component, x_weights, y_weights);
 }
 
@@ -2016,21 +2458,28 @@ n4m_status_t fit_pls_regression_nipals(
 
         if (q > 1U) {
             // One target converges in one step; with several, the X weights
-            // are checked against the Jacobi dominant pair of X_k'Y_k
-            // (kIterateAcceptanceFactor) and replaced by it when the
-            // iteration did not converge or stopped away from it.
+            // are kept when certified, else checked against the reference
+            // dominant pair of X_k'Y_k (kIterateAcceptanceFactor) and
+            // replaced by it when the iteration did not converge or stopped
+            // away from it.
             std::vector<double> covariance;
-            std::vector<double> jacobi_left;
-            std::vector<double> jacobi_right;
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
             cross_covariance(xk, yk, n, p, q, covariance);
-            status = jacobi_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol, comp,
-                                          jacobi_left, jacobi_right);
-            if (status != N4M_OK) {
-                return status;
+            const double acceptance = kIterateAcceptanceFactor * std::sqrt(cfg.tol);
+            bool use_reference = false;
+            if (!converged || !dominant_direction_certified(covariance, p, q, x_weights, true,
+                                                            1.0, acceptance)) {
+                status = reference_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                                 comp, reference_left, reference_right);
+                if (status != N4M_OK) {
+                    return status;
+                }
+                use_reference =
+                    !converged || direction_distance(x_weights, reference_left) > acceptance;
             }
-            if (!converged || direction_distance(x_weights, jacobi_left) >
-                                  kIterateAcceptanceFactor * std::sqrt(cfg.tol)) {
-                x_weights = std::move(jacobi_left);
+            if (use_reference) {
+                x_weights = std::move(reference_left);
                 matrix_vector_product(xk, n, p, x_weights, x_score);
                 const double x_score_ss = squared_norm(x_score);
                 if (!(x_score_ss > 0.0)) {
@@ -2259,7 +2708,7 @@ n4m_status_t fit_pls_svd(
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
-                                   comp, x_weights, y_weights);
+                                   GramEigenSolver::kJacobi, comp, x_weights, y_weights);
         if (status != N4M_OK) {
             return status;
         }
@@ -2502,7 +2951,8 @@ n4m_status_t fit_opls_nipals(
                     covariance.data(), q);
                 const n4m_status_t pair_status =
                     dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter,
-                                      cfg.tol, component, weights, y_weights);
+                                      cfg.tol, GramEigenSolver::kJacobi, component, weights,
+                                      y_weights);
                 if (pair_status != N4M_OK) {
                     return pair_status;
                 }
@@ -2880,25 +3330,34 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
         }
 
         if (q > 1U) {
-            // The X scores are checked against those of the Jacobi dominant
-            // pair of X_k'Y_k (kIterateAcceptanceFactor, nominal step tol on
-            // the relative score changes) and replaced when the iteration did
-            // not converge or stopped away from it.
+            // The X scores are kept when certified, else checked against
+            // those of the reference dominant pair of X_k'Y_k
+            // (kIterateAcceptanceFactor, nominal step tol on the relative
+            // score changes) and replaced when the iteration did not converge
+            // or stopped away from it.
             std::vector<double> covariance;
-            std::vector<double> jacobi_left;
-            std::vector<double> jacobi_right;
-            std::vector<double> jacobi_score;
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            std::vector<double> reference_score;
             cross_covariance(xk, yk, n, p, q, covariance);
-            status = jacobi_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol, comp,
-                                          jacobi_left, jacobi_right);
-            if (status != N4M_OK) {
-                return status;
+            const double acceptance = kIterateAcceptanceFactor * cfg.tol;
+            bool use_reference = false;
+            if (!converged ||
+                !dominant_direction_certified(covariance, p, q, x_weights, true,
+                                              score_amplification(xk, x_weights, x_score),
+                                              acceptance)) {
+                status = reference_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                                 comp, reference_left, reference_right);
+                if (status != N4M_OK) {
+                    return status;
+                }
+                matrix_vector_product(xk, n, p, reference_left, reference_score);
+                use_reference =
+                    !converged || direction_distance(x_score, reference_score) > acceptance;
             }
-            matrix_vector_product(xk, n, p, jacobi_left, jacobi_score);
-            if (!converged || direction_distance(x_score, jacobi_score) >
-                                  kIterateAcceptanceFactor * cfg.tol) {
-                x_weights = std::move(jacobi_left);
-                x_score = std::move(jacobi_score);
+            if (use_reference) {
+                x_weights = std::move(reference_left);
+                x_score = std::move(reference_score);
                 const double x_score_ss = squared_norm(x_score);
                 if (!(x_score_ss > 0.0)) {
                     ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
@@ -3201,34 +3660,42 @@ n4m_status_t fit_pls_regression_kernel(
         }
 
         if (q > 1U) {
-            // The unit X scores are checked against those of the Jacobi
-            // dominant pair of X_k'Y_k (kIterateAcceptanceFactor) and
-            // replaced when the iteration did not converge or stopped away
-            // from it.
+            // The unit X scores are kept when certified, else checked against
+            // those of the reference dominant pair of X_k'Y_k
+            // (kIterateAcceptanceFactor) and replaced when the iteration did
+            // not converge or stopped away from it.
             std::vector<double> covariance;
-            std::vector<double> jacobi_left;
-            std::vector<double> jacobi_right;
-            std::vector<double> jacobi_score;
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            std::vector<double> reference_score;
             cross_covariance(xk, yk, n, p, q, covariance);
-            status = jacobi_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol, comp,
-                                          jacobi_left, jacobi_right);
-            if (status != N4M_OK) {
-                return status;
+            const double acceptance = kIterateAcceptanceFactor * std::sqrt(cfg.tol);
+            bool use_reference = false;
+            if (!converged ||
+                !dominant_direction_certified(covariance, p, q, x_weights, true,
+                                              score_amplification(xk, x_weights, x_score),
+                                              acceptance)) {
+                status = reference_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                                 comp, reference_left, reference_right);
+                if (status != N4M_OK) {
+                    return status;
+                }
+                matrix_vector_product(xk, n, p, reference_left, reference_score);
+                use_reference =
+                    !converged || direction_distance(x_score, reference_score) > acceptance;
             }
-            matrix_vector_product(xk, n, p, jacobi_left, jacobi_score);
-            if (!converged || direction_distance(x_score, jacobi_score) >
-                                  kIterateAcceptanceFactor * std::sqrt(cfg.tol)) {
-                const double score_norm = std::sqrt(squared_norm(jacobi_score));
+            if (use_reference) {
+                const double score_norm = std::sqrt(squared_norm(reference_score));
                 if (!(score_norm > 0.0)) {
                     ctx.set_errorf("kernel PLS X score vanished at component %llu",
                                    ull(comp));
                     return N4M_ERR_NUMERICAL_FAILURE;
                 }
                 for (std::size_t row = 0; row < n; ++row) {
-                    x_score[row] = jacobi_score[row] / score_norm;
+                    x_score[row] = reference_score[row] / score_norm;
                 }
                 for (std::size_t feature = 0; feature < p; ++feature) {
-                    x_weights[feature] = jacobi_left[feature] / score_norm;
+                    x_weights[feature] = reference_left[feature] / score_norm;
                 }
                 const double x_score_ss = squared_norm(x_score);
                 for (std::size_t target = 0; target < q; ++target) {
@@ -3423,7 +3890,7 @@ n4m_status_t fit_pls_regression_svd(
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
-                                   comp, x_weights, y_weights);
+                                   GramEigenSolver::kJacobi, comp, x_weights, y_weights);
         if (status != N4M_OK) {
             return status;
         }
@@ -4625,243 +5092,6 @@ static n4m_status_t fit_di_pls_legacy(Context& ctx,
 
     out_model = std::move(model);
     ctx.clear_error();
-    return N4M_OK;
-}
-
-// Householder tridiagonalization of a symmetric (p x p) matrix in place.
-// On entry `A` is row-major symmetric. On exit:
-//   * `diag[i]` = tridiagonal diagonal
-//   * `subd[i]` = subdiagonal between row i and row i+1 (length p - 1)
-//   * `Q` (row-major p x p) accumulates the orthogonal transform such
-//     that `A_original = Q * T * Q^T` where `T` is tridiagonal.
-//
-// Uses the standard Golub-Van Loan algorithm 8.3.1: at each step build a
-// Householder reflector that zeros entries below the subdiagonal in column
-// `k`, apply it to the trailing submatrix, and accumulate into `Q`.
-// Complexity: ~4/3 p^3 flops (vs Jacobi's ~5 p^3 per sweep).
-static void householder_tridiag(std::vector<double>& A,
-                                 std::size_t p,
-                                 std::vector<double>& diag,
-                                 std::vector<double>& subd,
-                                 std::vector<double>& Q) {
-    diag.assign(p, 0.0);
-    subd.assign(p > 0 ? p - 1 : 0, 0.0);
-    Q.assign(p * p, 0.0);
-    for (std::size_t i = 0; i < p; ++i) Q[idx(i, p, i)] = 1.0;
-    if (p <= 1U) {
-        if (p == 1U) diag[0] = A[0];
-        return;
-    }
-
-    std::vector<double> v(p, 0.0);
-    std::vector<double> w(p, 0.0);
-    for (std::size_t k = 0; k + 2U <= p; ++k) {
-        const std::size_t m = p - k - 1;  // length of vector below A[k, k]
-        // Compute alpha = -sign(A[k+1, k]) * ||A[k+1:p, k]||
-        double sigma = 0.0;
-        for (std::size_t i = k + 1; i < p; ++i) {
-            const double x = A[idx(i, p, k)];
-            sigma += x * x;
-        }
-        const double sub = A[idx(k + 1, p, k)];
-        if (sigma <= std::numeric_limits<double>::min()) {
-            // Already tridiagonal at this column; skip.
-            continue;
-        }
-        const double norm_x = std::sqrt(sigma);
-        const double alpha = (sub >= 0.0 ? -norm_x : norm_x);
-        // v = x - alpha*e_1
-        std::fill(v.begin(), v.end(), 0.0);
-        for (std::size_t i = k + 1; i < p; ++i) {
-            v[i] = A[idx(i, p, k)];
-        }
-        v[k + 1] -= alpha;
-        // ||v||^2 = 2 * (sigma - alpha * sub)
-        const double vtv = 2.0 * (sigma - alpha * sub);
-        if (vtv <= std::numeric_limits<double>::min()) continue;
-        const double beta = 2.0 / vtv;
-
-        // Apply H = I - beta * v v^T from both sides:
-        //   A := H * A * H
-        // Compute p_vec = beta * A * v   (only lower trailing p - k - 1 block
-        // matters; but since A is dense symmetric we work over the whole
-        // trailing block A[k+1:p, k+1:p] for now). Actually since v is zero
-        // above index k, A * v only touches rows/cols k+1:p.
-        // 1. w = beta * A[k+1:p, k+1:p] * v[k+1:p]
-        std::fill(w.begin(), w.end(), 0.0);
-        for (std::size_t i = k + 1; i < p; ++i) {
-            double sum = 0.0;
-            for (std::size_t j = k + 1; j < p; ++j) {
-                sum += A[idx(i, p, j)] * v[j];
-            }
-            w[i] = beta * sum;
-        }
-        // 2. K = beta/2 * v^T * w
-        double k_val = 0.0;
-        for (std::size_t i = k + 1; i < p; ++i) {
-            k_val += v[i] * w[i];
-        }
-        k_val *= 0.5 * beta;
-        for (std::size_t i = k + 1; i < p; ++i) {
-            w[i] -= k_val * v[i];
-        }
-        // 3. A := A - v w^T - w v^T  (in trailing block)
-        for (std::size_t i = k + 1; i < p; ++i) {
-            const double vi = v[i];
-            const double wi = w[i];
-            for (std::size_t j = k + 1; j < p; ++j) {
-                A[idx(i, p, j)] -= vi * w[j] + wi * v[j];
-            }
-        }
-        // 4. Zero out below-subdiagonal entries in column k (and row k by
-        //    symmetry); record subdiagonal value.
-        A[idx(k + 1, p, k)] = alpha;
-        A[idx(k, p, k + 1)] = alpha;
-        for (std::size_t i = k + 2; i < p; ++i) {
-            A[idx(i, p, k)] = 0.0;
-            A[idx(k, p, i)] = 0.0;
-        }
-        // 5. Accumulate Q := Q * H = Q - (beta * Q * v) v^T
-        //    Compute u = Q * v (length p), then Q -= beta * u v^T.
-        std::fill(w.begin(), w.end(), 0.0);
-        for (std::size_t i = 0; i < p; ++i) {
-            double sum = 0.0;
-            for (std::size_t j = k + 1; j < p; ++j) {
-                sum += Q[idx(i, p, j)] * v[j];
-            }
-            w[i] = beta * sum;
-        }
-        for (std::size_t i = 0; i < p; ++i) {
-            const double wi = w[i];
-            for (std::size_t j = k + 1; j < p; ++j) {
-                Q[idx(i, p, j)] -= wi * v[j];
-            }
-        }
-        (void)m;
-    }
-    for (std::size_t i = 0; i < p; ++i) {
-        diag[i] = A[idx(i, p, i)];
-    }
-    for (std::size_t i = 0; i + 1 < p; ++i) {
-        subd[i] = A[idx(i + 1, p, i)];
-    }
-}
-
-// Symmetric tridiagonal QL with implicit Wilkinson shift (Numerical
-// Recipes `tqli`). Operates on the tridiagonal (`diag`, `subd`) produced
-// by `householder_tridiag`, accumulating Givens rotations into `Q`
-// (already initialized to the Householder transform) so that the final
-// `Q` columns are the eigenvectors of the original symmetric matrix.
-// On exit `diag` holds the eigenvalues (unsorted).
-//
-// `subd` is conceptually of length p-1 but the algorithm pads with a
-// trailing zero so subd[i] is accessed for i in [0, p-1]; in our storage
-// we keep subd at length p with subd[p-1] = 0.
-[[nodiscard]] static n4m_status_t symmetric_qr_tridiag(
-    ::n4m::core::Context& ctx,
-    std::vector<double>& diag,
-    std::vector<double>& subd,
-    std::vector<double>& Q,
-    std::size_t p,
-    double tol,
-    const char* label) {
-    if (p <= 1U) return N4M_OK;
-    // Pad subd to length p (treat the last subdiagonal as 0).
-    subd.resize(p, 0.0);
-    constexpr std::size_t kMaxIter = 30U;  // per-eigenvalue cap (NR)
-    const double safe_tol = std::max(tol, 1e-15);
-
-    for (std::size_t l = 0; l < p; ++l) {
-        std::size_t iter = 0;
-        std::size_t m = 0;
-        while (true) {
-            // Find m >= l with subd[m] negligible relative to the
-            // surrounding diagonals.
-            for (m = l; m + 1 < p; ++m) {
-                const double dd = std::fabs(diag[m]) + std::fabs(diag[m + 1]);
-                if (std::fabs(subd[m]) <= safe_tol * dd) {
-                    break;
-                }
-            }
-            if (m == l) break;
-            if (iter++ >= kMaxIter) {
-                ctx.set_errorf("%s symmetric QR failed to converge", label);
-                return N4M_ERR_CONVERGENCE_FAILED;
-            }
-            // Wilkinson shift from the trailing 2x2 starting at l.
-            double g = (diag[l + 1] - diag[l]) / (2.0 * subd[l]);
-            double r = std::hypot(g, 1.0);
-            const double sign_r = (g >= 0.0 ? 1.0 : -1.0);
-            g = diag[m] - diag[l] + subd[l] / (g + sign_r * r);
-            double s = 1.0;
-            double c = 1.0;
-            double pp = 0.0;
-            // Implicit QL sweep, walking from index m-1 down to l.
-            for (std::size_t ii = m; ii-- > l;) {
-                double f = s * subd[ii];
-                double b = c * subd[ii];
-                r = std::hypot(f, g);
-                subd[ii + 1] = r;
-                if (r == 0.0) {
-                    diag[ii + 1] -= pp;
-                    subd[m] = 0.0;
-                    break;
-                }
-                s = f / r;
-                c = g / r;
-                g = diag[ii + 1] - pp;
-                r = (diag[ii] - g) * s + 2.0 * c * b;
-                pp = s * r;
-                diag[ii + 1] = g + pp;
-                g = c * r - b;
-                // Accumulate rotation into eigenvector matrix Q.
-                for (std::size_t row = 0; row < p; ++row) {
-                    const double qi = Q[idx(row, p, ii + 1)];
-                    const double qj = Q[idx(row, p, ii)];
-                    Q[idx(row, p, ii + 1)] = s * qj + c * qi;
-                    Q[idx(row, p, ii)]     = c * qj - s * qi;
-                }
-                if (ii == l) break;  // bounded explicitly because ii is size_t
-            }
-            if (r == 0.0 && m > l) continue;
-            diag[l] -= pp;
-            subd[l] = g;
-            subd[m] = 0.0;
-        }
-    }
-    return N4M_OK;
-}
-
-// Full symmetric eigendecomposition: matrix -> (eigvals, eigvecs) such
-// that  matrix = eigvecs * diag(eigvals) * eigvecs^T. Composes Householder
-// tridiagonalization with implicit-shift symmetric QR; substantially
-// faster than cyclic Jacobi at p >= a few hundred where Jacobi's many
-// full-matrix sweeps dominate cost.
-[[nodiscard]] static n4m_status_t symmetric_eigh(
-    ::n4m::core::Context& ctx,
-    std::vector<double> matrix,
-    std::size_t p,
-    double tol,
-    const char* label,
-    std::vector<double>& eigvals_out,
-    std::vector<double>& eigvecs_out) {
-    eigvals_out.assign(p, 0.0);
-    eigvecs_out.assign(p * p, 0.0);
-    for (std::size_t i = 0; i < p; ++i) eigvecs_out[idx(i, p, i)] = 1.0;
-    if (p == 0U) return N4M_OK;
-    if (p == 1U) {
-        eigvals_out[0] = matrix[0];
-        return N4M_OK;
-    }
-
-    std::vector<double> diag;
-    std::vector<double> subd;
-    householder_tridiag(matrix, p, diag, subd, eigvecs_out);
-    const n4m_status_t status =
-        symmetric_qr_tridiag(ctx, diag, subd, eigvecs_out, p,
-                              std::max(tol, 1e-14), label);
-    if (status != N4M_OK) return status;
-    eigvals_out = std::move(diag);
     return N4M_OK;
 }
 

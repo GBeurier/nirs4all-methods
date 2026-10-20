@@ -184,24 +184,43 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   1e-6 NIPALS, kernel, wide kernel, power and randomized SVD returned
   status OK with the weights (1, 0) instead of (1, 1) / sqrt 2 (coefficients
   off by 1/2 instead of (1 + d) / 2 everywhere). With several targets, each
-  of these solvers now also computes the dominant singular pair of the
-  component's cross-covariance with the deterministic Jacobi eigen-solver of
-  the SVD solver (which has no spectral-gap dependence) and uses it when the
-  iteration did not converge or stopped farther than 16 times its nominal
-  step tolerance from it (sqrt(tol) for NIPALS, canonical NIPALS, kernel,
-  power and randomized SVD, tol for orthogonal scores, min(max(tol, 1e-14),
-  1e-12) for SIMPLS). One-target fits converge in one step and are
+  of these solvers now keeps a converged iterate only when it is proven
+  within 16 times its nominal step tolerance (sqrt(tol) for NIPALS,
+  canonical NIPALS, kernel, power and randomized SVD, tol for orthogonal
+  scores, min(max(tol, 1e-14), 1e-12) for SIMPLS) of the dominant singular
+  vector of the component's cross-covariance C, by an a posteriori
+  Davis-Kahan bound: sin(angle) <= ||M x - l x|| / (lambda_1 - lambda_2) for
+  M = C C' (or C'C), the Rayleigh quotient l <= lambda_1 and
+  lambda_2 <= min(trace M - lambda_1, sqrt(||M||_F^2 - lambda_1^2)), every
+  term widened by a bound on its rounding error (O(p q) work, plus
+  O(m^2 max(p, q)) for ||M||_F, m = min(p, q), only when the trace bound
+  does not suffice). Otherwise (no convergence, close or unproven leading
+  singular values) the dominant pair is computed from the Householder
+  tridiagonalisation and implicit QL of the smaller Gram matrix of C
+  (O(m^3), no spectral-gap dependence) and used when the iteration did not
+  converge or stopped farther than the same distance from it. The step size
+  alone is never taken as proof: in the d cases the bound fails and the
+  reference pair is used. One-target fits converge in one step and are
   unchanged. A bitwise before/after sweep of the 3690 fits of the sweep
   below changes two cases only: a random 3-target fit with
   sigma_2 / sigma_1 = 0.98, whose first-component weights were 0.018-0.023
   away from the dominant singular vector for NIPALS, kernel, wide kernel and
-  power (5e-13 now; SIMPLS failed to converge and now fits; coefficients and
-  predictions move by <= 7e-16 relative since that fit uses all components),
-  and the exactly degenerate X = [a, b], Y = [a, b] (sigma_1 = sigma_2), where
-  randomized SVD now returns the Jacobi direction instead of its random one
-  (coefficients unchanged). C++ and JS/WASM tests check the analytic arrays
-  of the d = 2^-12, 2^-20, 2^-30 cases for every PLS solver and PLS-DA, at
-  tol 1e-6 and 1e-12, and the canonical weights.
+  power (2.4e-15 now, against a 50-digit SVD; SIMPLS failed to converge and
+  now fits; coefficients and predictions move by <= 8e-16 relative since
+  that fit uses all components), and the exactly degenerate X = [a, b],
+  Y = [a, b] (sigma_1 = sigma_2), where randomized SVD now returns the first
+  coordinate direction of the reference pair instead of its random one
+  (coefficients unchanged). Cost (median of 5 fits, one component,
+  n = 256, p = 128, before the iteration control -> now): 1 target
+  unchanged (0.3 ms), 8 targets 0.6-2.7 ms unchanged, 128 targets
+  5.5-13 ms -> 12-20 ms (5 components: 21-76 ms -> 50-108 ms). The
+  certificate costs one matrix-vector product pair; the reference pair,
+  when needed, O(m^3). C++ and JS/WASM tests check the analytic arrays of
+  the d = 2^-12, 2^-20, 2^-30 cases for every PLS solver and PLS-DA, at
+  tol 1e-6 and 1e-12, the canonical weights, and the coefficients and
+  predictions of X = [a, b, c] with c = (1, -1, -1, 1) and 64 targets
+  (Y = [a + d b, d a + b, s_j c], X'Y with singular values 20 (1 +- d) and
+  ~2.9; coefficients (1 + d) / 2 in the leading 2 x 2 block, 0 elsewhere).
 
 - PLS regression (`models.pls.pls_regression`, every solver: NIPALS, SIMPLS,
   orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD) and PCR

@@ -44,6 +44,7 @@
 //  (9) X = [a3, b3], Y = [a3 + d b3, d a3 + b3], d = 2^-12, 2^-20, 2^-30:
 //      close leading singular values 20 (1 +- d); every solver and PLS-DA
 //      returns the dominant direction (1, 1) / sqrt 2 (see below).
+//  (10) the same with X = [a3, b3, c3] and 64 targets (see below).
 
 import assert from "node:assert/strict";
 import * as n4m from "../dist/index.js";
@@ -359,6 +360,31 @@ for (const e of [12, 20, 30]) {
                   fit([tag, alg, solver], x, 2, y, 1, 2), want);
             ++cases;
         }
+    }
+}
+// (10) close leading singular values with 64 targets (reference dominant pair
+// on a nontrivial Gram matrix): c3 = (1, -1, -1, 1), X = [a3, b3, c3],
+// Y = [a3 + d b3, d a3 + b3, s_j c3] with s_j = (64 + j) 2^-10, j = 1..62.
+// X'Y = [[20, 20 d, 0], [20 d, 20, 0], [0, 0, 4 s']]: dominant left singular
+// vector (1, 1, 0) / sqrt 2, coefficients h = (1 + d) / 2 in the leading
+// 2 x 2 block and 0 elsewhere, predictions h (a3 + b3) in the first two
+// columns and 0 in the others.
+for (const e of [12, 30]) {
+    const d = p2(-e), h = (1 + d) / 2, q = 64;
+    const c3 = [1, -1, -1, 1];
+    const x = a3.flatMap((v, i) => [v, b3[i], c3[i]]);
+    const y = a3.flatMap((v, i) => [v + d * b3[i], d * v + b3[i],
+                                    ...Array.from({ length: q - 2 }, (_, j) => (65 + j) * p2(-10) * c3[i])]);
+    const coefficients = Array.from({ length: 3 * q }, (_, k) => (k === 0 || k === 1 || k === q || k === q + 1 ? h : 0));
+    const ab = combine3(1, 1);
+    const predictions = ab.flatMap((v) => [h * v, h * v, ...new Array(q - 2).fill(0)]);
+    for (const s0 of SOLVERS) {
+        const [tag, algorithm, solver] = s0;
+        if (algorithm === PCR) continue;  // X'X = diag(20, 20, 4): PCR is undetermined
+        const want = [coefficients, undefined, undefined, undefined, undefined, undefined, undefined,
+                      resolution(PLS, x, 3, y, 1), [0], predictions];
+        check(`${tag} X = [a3, b3, c3], 64 targets, d = 2^-${e}`, fit([tag, algorithm, solver], x, 3, y, 1, q), want);
+        ++cases;
     }
 }
 // Models without a component resolution (here canonical PLS) refuse the
