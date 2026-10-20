@@ -73,6 +73,9 @@ class _PlsRegressorBase(_Pls4allModelEstimator, BaseEstimator, RegressorMixin):
         self.intercept_ = self.y_mean_ - self.x_mean_ @ self.coef_.T
         if self.store_scores:
             self.x_scores_ = model.get_array(ctx, ModelArrayKind.SCORES_T)
+        resolution = model.component_resolution(ctx)
+        if resolution is not None:
+            self.component_resolution_, self.unresolved_components_ = resolution
         self._store_fitted_model(ctx, model)
         return self
 
@@ -123,6 +126,13 @@ class PLSRegression(_PlsRegressorBase):
         Max NIPALS iterations.
     store_scores : bool, default=False
         Keep the latent score matrices (`x_scores_`) after fit.
+
+    Attributes
+    ----------
+    component_resolution_ : float
+        Absolute resolution of the components' X-Y cross-covariance.
+    unresolved_components_ : ndarray of bool, shape (n_components,)
+        Always ``False``: an unresolved PLS component is refused at fit.
     """
 
     _algorithm = Algorithm.PLS_REGRESSION
@@ -198,6 +208,14 @@ class PCR(_PlsRegressorBase):
     advantage that pls4all centers / scales in lock-step with the
     inverse transform, so coefficient inspection matches the original
     feature space.
+
+    Attributes
+    ----------
+    component_resolution_ : float
+        Absolute resolution of the components' Y'X-score cross-covariance.
+    unresolved_components_ : ndarray of bool, shape (n_components,)
+        ``True`` for a component whose Y loading is not resolved
+        numerically (its Y scores are not computed).
     """
 
     _algorithm = Algorithm.PCR
