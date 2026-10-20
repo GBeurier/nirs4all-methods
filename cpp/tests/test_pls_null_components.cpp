@@ -2,7 +2,8 @@
 //
 // Consumers of fitted PLS / PCR models with null components (components
 // flagged in N4M_MODEL_UNRESOLVED_COMPONENTS with zero W, P, R, T columns):
-// the PLS diagnostics and monitoring. Every expected value is written down
+// the PLS diagnostics and monitoring, the PLS-LDA / PLS-logistic heads and
+// the T2 variable selection. Every expected value is written down
 // analytically with the centred, orthogonal a = (-3, -1, 1, 3),
 // b = (1, -3, 3, -1) (a'a = b'b = 20, a'b = 0), and the statistics of a model
 // with null components are compared with those of the model truncated to its
@@ -293,6 +294,102 @@ void test_diagnostics_autoscaled() {
                  rows_of([](std::size_t i) { return 3.0 * kB[i] * kB[i] / 20.0; }));
 }
 
+struct HeadFit {
+    std::vector<double> decision, probabilities, coefficients;
+    std::vector<std::int32_t> predictions;
+};
+
+// n4m_estimators_pls_{lda,logistic}_fit on centred, unscaled X.
+HeadFit fit_head(bool logistic, n4m_solver_t solver, std::vector<double> x, std::int64_t p,
+                 const std::vector<std::int32_t>& labels, std::int32_t components) {
+    n4m_context_t* ctx = nullptr;
+    n4m_config_t* cfg = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, components) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, solver) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+    const n4m_matrix_view_t xv = view(x, 4, p);
+    n4m_method_result_t* result = nullptr;
+    const n4m_status_t st =
+        logistic ? n4m_estimators_pls_logistic_fit(ctx, cfg, &xv, labels.data(), 4, 2, &result)
+                 : n4m_estimators_pls_lda_fit(ctx, cfg, &xv, labels.data(), 4, 2, &result);
+    if (st != N4M_OK) {
+        const std::string message = n4m_context_last_error(ctx);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        throw std::runtime_error("head fit refused: " + message);
+    }
+    HeadFit out;
+    out.decision = result_matrix(result, "decision_scores");
+    if (logistic) {
+        out.probabilities = result_matrix(result, "probabilities");
+        out.coefficients = result_matrix(result, "coefficients");
+    }
+    const std::int32_t* pred = nullptr;
+    std::int32_t size = 0;
+    N4M_TEST_REQUIRE(n4m_method_result_get_int_vector(result, "predictions", &pred, &size) ==
+                     N4M_OK);
+    out.predictions.assign(pred, pred + size);
+    n4m_method_result_destroy(result);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+    return out;
+}
+
+// PLS-LDA on X = [a, a], classes (0, 0, 1, 1), two components: the second
+// PLS-DA component is null and its zero score column made the pooled
+// covariance singular ("failed to invert PLS-LDA pooled covariance"). The
+// head now uses the one resolved direction t ~ a: class means -+2 sqrt 2 (in
+// unit-weight units), pooled variance 4, so the decision is
+// log(1/2) - 1 - a_i for class 0 and log(1/2) - 1 + a_i for class 1 (any
+// weight normalisation), predictions (0, 0, 1, 1), bit-identical to the
+// one-component head. PLS-logistic (ridge-regularised Newton) already
+// handled it; its two-component fit equals the one-component one with a
+// zero coefficient for the null component.
+void test_score_heads_null_component() {
+    std::vector<double> x(8);
+    for (std::size_t i = 0; i < 4; ++i) x[i * 2] = x[i * 2 + 1] = kA[i];
+    const std::vector<std::int32_t> labels = {0, 0, 1, 1};
+    std::vector<double> decision(8);
+    for (std::size_t i = 0; i < 4; ++i) {
+        decision[i * 2] = std::log(0.5) - 1.0 - kA[i];
+        decision[i * 2 + 1] = std::log(0.5) - 1.0 + kA[i];
+    }
+    for (const n4m_solver_t solver : {N4M_SOLVER_NIPALS, N4M_SOLVER_SIMPLS}) {
+        const std::string tag = solver == N4M_SOLVER_NIPALS ? "nipals" : "simpls";
+        const HeadFit two = fit_head(false, solver, x, 2, labels, 2);
+        const HeadFit one = fit_head(false, solver, x, 2, labels, 1);
+        expect_close("pls-lda " + tag + " decision", two.decision, decision);
+        if (two.predictions != std::vector<std::int32_t>{0, 0, 1, 1})
+            throw std::runtime_error("pls-lda " + tag + ": predictions");
+        if (two.decision != one.decision)
+            throw std::runtime_error("pls-lda " + tag + ": differs from the one-component head");
+
+        const HeadFit ltwo = fit_head(true, solver, x, 2, labels, 2);
+        const HeadFit lone = fit_head(true, solver, x, 2, labels, 1);
+        if (ltwo.decision != lone.decision || ltwo.probabilities != lone.probabilities ||
+            ltwo.predictions != lone.predictions || ltwo.coefficients.size() != 2 ||
+            ltwo.coefficients[0] != lone.coefficients[0] || ltwo.coefficients[1] != 0.0)
+            throw std::runtime_error("pls-logistic " + tag +
+                                     ": differs from the one-component head");
+    }
+}
+
+// No resolved direction: X = a, classes (0, 1, 1, 0) (the centred class
+// indicators are orthogonal to a, so the only component is null). PLS-LDA
+// decides by the class priors: decision log(1/2) everywhere, predictions the
+// lowest class id on the tie (0).
+void test_lda_no_direction() {
+    std::vector<double> x(kA, kA + 4);
+    const HeadFit fit = fit_head(false, N4M_SOLVER_NIPALS, x, 1, {0, 1, 1, 0}, 1);
+    expect_close("pls-lda no direction decision", fit.decision,
+                 std::vector<double>(8, std::log(0.5)));
+    if (fit.predictions != std::vector<std::int32_t>{0, 0, 0, 0})
+        throw std::runtime_error("pls-lda no direction: predictions");
+}
+
 }  // namespace
 
 void register_pls_null_component_tests(n4m_testing::Runner& r) {
@@ -301,4 +398,6 @@ void register_pls_null_component_tests(n4m_testing::Runner& r) {
     r.run("pls_null_components/diagnostics_no_direction", test_diagnostics_no_direction);
     r.run("pls_null_components/monitoring", test_monitoring_null_component);
     r.run("pls_null_components/diagnostics_autoscaled", test_diagnostics_autoscaled);
+    r.run("pls_null_components/score_heads", test_score_heads_null_component);
+    r.run("pls_null_components/lda_no_direction", test_lda_no_direction);
 }

@@ -45,7 +45,12 @@ N4M_API n4m_status_t n4m_estimators_pls_qda_fit(
     int64_t y_labels_size,
     n4m_method_result_t** out_result);
 
-/* PLS-LDA — Linear Discriminant Analysis on PLS scores (Phase 4p). Result
+/* PLS-LDA — Linear Discriminant Analysis on PLS scores (Phase 4p). The
+ * discriminant uses the resolved PLS-DA components: a null component
+ * (flagged unresolved, zero score column) gets zero discriminant weights,
+ * so the head equals the one fitted on the resolved components; with no
+ * resolved component the decision is the log class prior and the
+ * prediction the most frequent class (lowest id on ties). Result
  * keys:
  *   "decision_scores"   (n × n_classes)
  *   int "predictions"   (n)
@@ -61,6 +66,7 @@ N4M_API n4m_status_t n4m_estimators_pls_lda_fit(
     n4m_method_result_t** out_result);
 
 /* PLS-Logistic — multinomial logistic regression on PLS scores (Phase 4q).
+ * A null PLS component has a zero score column and a zero coefficient.
  * Result keys:
  *   "decision_scores"  (n × n_classes)
  *   "probabilities"    (n × n_classes)
