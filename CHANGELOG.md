@@ -167,7 +167,10 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   onto rotations fitted on autoscaled X, so with `scale_x = 1` (the default)
   T2 and DModX were wrong (X = [a, 2 b], Y = a, one component: T2 = a^2
   instead of 3 a^2 / 20) and Q mixed raw and scaled units. Unscaled models
-  without pipeline are unchanged up to rounding.
+  without pipeline are unchanged up to rounding. The `pls_diagnostics` and
+  `pls_monitoring` outputs of the cross-language estimator-role fixture
+  (`parity/fixtures/estimator_roles_n4me.json` and its R copy), computed with
+  the default autoscaling, are regenerated; every other entry is unchanged.
 
 - Power-type PLS iterations no longer fail, or stop on a wrong direction,
   when the two leading singular values of X_k'Y_k are close. NIPALS,
