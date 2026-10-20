@@ -4,7 +4,7 @@ _Namespace_: **`n4m.outlier_detection`** · _Fully-qualified_: `n4m.outlier_dete
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_outlier_detection_hotelling_t2`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L127) · [`n4m_outlier_detection_hotelling_t2_resolved`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L135). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_outlier_detection_hotelling_t2`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L136) · [`n4m_outlier_detection_hotelling_t2_resolved`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L144). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.outlier_detection import hotelling_t2`
 
@@ -30,7 +30,7 @@ Hotelling (1931), *The Generalization of Student's Ratio*, Annals of Mathematica
 
 ### Mathematical principle
 
-The input matrix is column-centered and decomposed by compact SVD. For the first $k$ PCA scores, $T_i^2=\sum_{j=1}^k t_{ij}^2/\lambda_j$. The upper control limit is $k(n-1)(n+1)/[n(n-k)]\,F_{1-\alpha}(k,n-k)$, with the F quantile obtained through regularized incomplete-beta inversion.
+The input matrix is column-centered with a corrected two-pass mean (constant columns centre to exact zeros) and decomposed by compact SVD. Only resolved directions enter, $\sigma_j > 16\max(n,p)\,\varepsilon\,\sigma_1$; with $r\le k$ of them, $T_i^2=\sum_{j=1}^r t_{ij}^2/\lambda_j=(n-1)\sum_{j=1}^r u_{ij}^2$, evaluated in the second, scale-invariant form. The upper control limit is $r(n-1)(n+1)/[n(n-r)]\,F_{1-\alpha}(r,n-r)$, solved directly in the UCL $G$: with $\kappa=(n^2-1)/n$, $G/(\kappa+G)$ follows a Beta$(r/2,(n-r)/2)$ law whose small tail (upper for $\alpha\le 0.5$, lower otherwise) is evaluated in logarithms from $G/\kappa$ and inverted by bisection on the normal doubles; $r=0$ gives $T^2=0$ and UCL $0$.
 
 ### Appropriate uses
 
@@ -38,7 +38,7 @@ Flagging multivariate score-space extremes directly from a calibration matrix wh
 
 ### Limits and validation
 
-The implementation requires `rows >= cols`, $k< n$, finite dense F64 data, and treats the same input as both PCA fit and scored set. The finite-sample F limit assumes the classical approximately normal model.
+The implementation requires `rows >= cols`, $k< n$, finite dense F64 data, and treats the same input as both PCA fit and scored set. The finite-sample F limit assumes the classical approximately normal model. The measured relative error of the UCL is below $10^{-12}$ against mpmath references ($n$ up to $10^6$, $\alpha$ from $10^{-300}$ to $1-2^{-53}$), not a proven bound and not uniform in the rank: columns 1–127 of $H_{128}$ with $k=127$ and $\alpha=10^{-100}$ give $7.2\times10^{-12}$. A UCL that is not a finite normal double (only for extreme $\alpha$, e.g. $n=3$, $r=1$, $\alpha<7.4\times10^{-309}$) returns `N4M_ERR_NUMERICAL_FAILURE`.
 
 ### Implementation
 

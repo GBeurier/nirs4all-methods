@@ -43,6 +43,22 @@ surface). No model-state serialization format changes.
   `n4m_outlier_detection_hotelling_t2` (and the `utilities.hotelling_t2`
   procedure) uses only resolved directions and the UCL of the rank actually
   used, so collinear columns no longer inflate T².
+- `n4m_outlier_detection_hotelling_t2`: full-rank results are no longer
+  bit-identical to 1.3.6. The corrected two-pass centring, T² evaluated as
+  `(n-1) * sum_j U_ij^2` and the UCL solved from the beta tail change them
+  at the rounding level of the centring (no fixed bound claimed; see
+  Fixed); constant columns centre to exact zeros (rank 0, T² 0, UCL 0).
+- `n4m_outlier_detection_q_residuals`: shares the Hotelling centring, uses
+  the signed Jackson-Mudholkar h0 (h0 < 0 previously gave a far too low
+  UCL), returns Q = UCL = 0 exactly when no residual direction is resolved,
+  and returns `N4M_ERR_NUMERICAL_FAILURE` for an unrepresentable result or a
+  non-positive Jackson-Mudholkar base instead of UCL 0 with `N4M_OK`.
+- `n4m_preflight_pca_compute` / `_resolved`: loadings of wide inputs
+  (n <= p) are orthonormal rows; the request is checked against guaranteed
+  work (2.4e9) and memory (1 GiB) bounds before allocating, so some inputs
+  1.3.6 accepted beyond the Preflight profile (e.g. n = 3, p = 26e6, k = 1)
+  are now refused with `N4M_ERR_UNSUPPORTED`. Every
+  Preflight-sized request (at most 10^7 cells, k <= 10) is still accepted.
 - PLS regression (all eight solvers) and PCR without autoscaling are
   scale-equivariant: data at 2^-30 that returned `N4M_ERR_NUMERICAL_FAILURE`
   now fit. Previously successful fits are bit-identical except NIPALS
@@ -57,8 +73,8 @@ surface). No model-state serialization format changes.
   computed as double-double (TwoSum) sums divided once by the group size.
   Regression scores are RMSE, MAE and R² computed from explicit residuals
   and from deviations around a double-double mean, with every sum in
-  double-double. R² is returned as a significand and a power-of-two
-  exponent: R² below the double range (SSE/SST ≥ 2^999, possible inside
+  double-double, written as four doubles {RMSE, MAE, R² significand, R²
+  exponent}: R² below the double range (SSE/SST ≥ 2^999, possible inside
   the domain) is published scaled, never as -Inf. R² is NaN (undefined)
   for a constant target.
   Both kernels declare a numerical domain: finite values and every nonzero

@@ -99,7 +99,7 @@ static double betacf_ref(double a, double b, double x) {
         h *= del;
         if (fabs(del - 1.0) < EPS) return h;
     }
-    return NAN;
+    return (double)NAN;
 }
 
 /* Logarithms of both tails of Y ~ Beta(a, b) at y = s / (1 + s), s > 0,
@@ -121,7 +121,7 @@ static void beta_log_tails(double a, double b, double s, double log_s,
         *log_upper = log_front + log(betacf_ref(b, a, 1.0 / (1.0 + s)) / b);
         *log_lower = log1p(-fmin(exp(*log_upper), 1.0));
     }
-    if (isnan(*log_upper)) *log_lower = NAN;
+    if (isnan(*log_upper)) *log_lower = (double)NAN;
 }
 
 /* Position of G with respect to the UCL quantile: +1 below it, 0 at or above

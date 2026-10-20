@@ -32,7 +32,7 @@ Multivariate outlier filter on the design matrix ``X``.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_outlier_detection_x_outlier_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L170) · [`n4m_outlier_detection_x_outlier_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L155) · [`n4m_outlier_detection_x_outlier_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L165) · [`n4m_outlier_detection_x_outlier_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L166) · [`n4m_outlier_detection_x_outlier_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L168). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_outlier_detection_x_outlier_apply`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L208) · [`n4m_outlier_detection_x_outlier_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L193) · [`n4m_outlier_detection_x_outlier_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L203) · [`n4m_outlier_detection_x_outlier_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L204) · [`n4m_outlier_detection_x_outlier_is_fitted`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/outlier_detection.h#L206). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

@@ -111,7 +111,7 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
         abs_dev += d;
         dmax = fmax(dmax, d);
     }
-    if (bound) *bound = NAN;
+    if (bound) *bound = (double)NAN;
     const int scale = state->with_std && denom_count > 0 && dmax > 0.0;
     if (!scale) {
         /* Centre only (or no SD available): x - mean at the original scale. */
@@ -171,7 +171,7 @@ n4m_status_t n4m_pp_snv_apply_bounded(const n4m_pp_snv_state_t* state,
         const double* row_in = X + (size_t)i * (size_t)cols;
         double*       row_out = out + (size_t)i * (size_t)cols;
         double* bound = row_bounds ? row_bounds + i : NULL;
-        if (bound) *bound = NAN;
+        if (bound) *bound = (double)NAN;
         if (cols == 0) continue;
         int finite = 1;
         for (int64_t j = 0; j < cols && finite; ++j) finite = isfinite(row_in[j]);
