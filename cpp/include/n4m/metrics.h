@@ -50,11 +50,20 @@ extern "C" {
  * nears the resolution) are re-orthonormalised by modified Gram-Schmidt
  * applied twice, and unresolved rows complete them by Householder QR; for
  * n > p the rows are the Gram eigenvectors.
- * Budget: N4M_ERR_UNSUPPORTED before allocating when the work exceeds 250
- * million long-double products (Gram s(s+1)/2 * l and projections k s l,
- * s = min(n,p), l = max(n,p), plus the double-precision eigendecomposition
- * 6 s^3 and loading re-orthonormalisation and completion 3 k^2 l counted at
- * 1/16 each) or the working buffers exceed 1 GiB.
+ * Budget: N4M_ERR_UNSUPPORTED before allocating when a GUARANTEED bound
+ * exceeds its limit; both bounds count every pass and every buffer, not a
+ * typical cost. Work, in long-double multiply-adds with double operations at
+ * 1/16 (s = min(n,p), l = max(n,p)): sum of squares n p, Gram s(s+1)/2 * l,
+ * projections k s l, centring and scans, tridiagonalisation, the QL
+ * iteration at the solver's ceiling (30 s sweeps of s - 1 rotations), and
+ * for n <= p the loading re-orthonormalisation and completion; limit 2.4e9.
+ * The typical cost is much lower (QL converges in about two sweeps per
+ * eigenvalue: about 1.1 s^3 against the bound's 8 s^3 for a square input).
+ * Memory: every buffer live at the peak (centred copy n p, column exponents,
+ * Gram, eigenvectors and solver copy 3 s^2, loadings and their Householder
+ * copy 2 k p, scores n k, vectors); limit 1 GiB. Every shape a Preflight
+ * request can produce (n p <= 10^7, k <= 10) that Methods 1.3.6 accepted is
+ * accepted.
  * Resolved eigenvalues, the resolution and both moments are normal doubles.
  * This 2.19 entry point cannot flag unresolved components;
  * n4m_preflight_pca_compute_resolved (ABI 2.20) returns the resolution and

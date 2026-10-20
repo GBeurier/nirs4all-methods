@@ -4,7 +4,7 @@ _Namespace_: **`n4m.metrics.preflight`** · _Fully-qualified_: `n4m.metrics.pref
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_preflight_factor_association`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L185) · [`n4m_preflight_local_contrast`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L74) · [`n4m_preflight_nearest_neighbors`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L51) · [`n4m_preflight_noise_proxy_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L137) · [`n4m_preflight_pairs_within_tolerance`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L155) · [`n4m_preflight_pca_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L17) · [`n4m_preflight_repeatability_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L32) · [`n4m_preflight_summary_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L42). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_preflight_factor_association`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L251) · [`n4m_preflight_local_contrast`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L140) · [`n4m_preflight_nearest_neighbors`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L117) · [`n4m_preflight_noise_proxy_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L203) · [`n4m_preflight_pairs_within_tolerance`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L221) · [`n4m_preflight_pca_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L71) · [`n4m_preflight_pca_compute_resolved`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L69) · [`n4m_preflight_repeatability_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L98) · [`n4m_preflight_summary_compute`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L108). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -26,7 +26,7 @@ Qualifying a spectral dataset before modelling: spectral rank and dominance, rep
 
 ### Limits and validation
 
-These are descriptive diagnostics, not model-validation scores. The noise proxy assumes equally spaced features and a locally polynomial signal; it is not an SNR. ICC is computed only for balanced complete groups and is NaN otherwise. The association test assumes exchangeable units and permutes targets as one unrestricted block. A PCA above 250 million long-double product equivalents or 1 GiB of working buffers, and permutation tests above 250 million operations, return `N4M_ERR_UNSUPPORTED`; neighbor and pair searches are exhaustive and quadratic in rows.
+These are descriptive diagnostics, not model-validation scores. The noise proxy assumes equally spaced features and a locally polynomial signal; it is not an SNR. ICC is computed only for balanced complete groups and is NaN otherwise. The association test assumes exchangeable units and permutes targets as one unrestricted block. A PCA whose guaranteed work bound (QL iteration at its ceiling) exceeds 2.4 billion long-double product equivalents or whose live buffers exceed 1 GiB, and permutation tests above 250 million operations, return `N4M_ERR_UNSUPPORTED`; neighbor and pair searches are exhaustive and quadratic in rows.
 
 ### Implementation
 
@@ -38,7 +38,7 @@ https://doi.org/10.1021/ac60214a047; https://doi.org/10.1037/0033-2909.86.2.420;
 
 ## Catalog note
 
-Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts.
+Caller-buffer dataset-qualification kernels for Preflight (ABI 2.18: PCA spectral moments, repeatability/ICC(1,1), finite summary, group-excluding nearest neighbors, local target contrast; ABI 2.19: Savitzky-Golay residual noise proxy, tolerance pairs, factor-target association with seeded permutation test; ABI 2.20: PCA with its absolute resolution bound and per-component unresolved flags). Native contract tests in cpp/tests/test_preflight.cpp; JS/WASM wrappers in bindings/js/src/preflightDiagnostics.ts.
 
 
 _See also_: [methods index](index.md).

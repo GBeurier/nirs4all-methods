@@ -124,7 +124,11 @@ N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
  * freedom: r (n-1)(n+1) / (n (n-r)) * F^{-1}(1 - alpha; r, n - r). A
  * rank-deficient X (e.g. a column that is an exact combination of others)
  * therefore gets r < n_components; r = 0 (constant X) gives T² = 0 and
- * UCL = 0. */
+ * UCL = 0. T²_i = (n-1) * sum_{j<r} U_ij^2 (equal to sum t_ij^2 / lambda_j,
+ * without forming sigma_j^2), exactly invariant under power-of-two scaling
+ * of X. The F quantile is found on the upper tail with an unbounded
+ * bracket; a UCL that is not a finite normal double (extreme alpha only) is
+ * N4M_ERR_NUMERICAL_FAILURE. Requires rows >= cols. */
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
                                             int32_t n_components,
                                             double alpha,
@@ -136,6 +140,26 @@ N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2_resolved(
     n4m_matrix_view_t X, int32_t n_components, double alpha, double* t2_per_sample,
     int64_t n_samples, double* ucl_out, int32_t* rank_used);
+/* Q residuals (squared prediction error) of the column-centred X (same
+ * corrected two-pass centring as Hotelling T²) outside its leading
+ * n_components PCA directions, and the Jackson-Mudholkar UCL from the
+ * residual eigenvalue moments theta_1..3 and the upper normal quantile at
+ * alpha. Requires rows >= cols.
+ *  - Computed at one power-of-two scale (max |Xc| in [0.5, 1)) and rescaled:
+ *    the moments cannot overflow or underflow, and scaling X by 2^s scales
+ *    every Q and the UCL by exactly 4^s.
+ *  - Unresolved residual subspace: when no residual singular value is above
+ *    16 * max(n,p) * DBL_EPSILON * sigma_1 (n_components = cols, constant X,
+ *    or numerical rank <= n_components), the reconstructed residual is
+ *    rounding noise and Q = 0 and UCL = 0 exactly. UCL = 0 occurs only in
+ *    that state; otherwise the UCL is a positive normal double.
+ *  - Accuracy is absolute: Q_i is computed from the explicit residual and is
+ *    rounding noise at or below (16 * max(n,p) * DBL_EPSILON * sigma_1)^2.
+ *    The quantile approximation has a relative error of about 1.15e-9.
+ *  - N4M_ERR_NUMERICAL_FAILURE (never 0, Inf or NaN with N4M_OK) when a Q
+ *    above that noise level or the UCL is not a finite normal double, or
+ *    when the Jackson-Mudholkar base is not positive (possible only for
+ *    alpha > 0.5, where the approximation has no value). */
 N4M_API n4m_status_t n4m_outlier_detection_q_residuals(n4m_matrix_view_t X,
                                            int32_t n_components,
                                            double alpha,

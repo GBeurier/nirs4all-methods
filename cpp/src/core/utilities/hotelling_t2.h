@@ -2,13 +2,14 @@
 /*
  * Hotelling T² statistic on the PCA-reduced score space.
  *
- * For a (n_samples x n_features) matrix X:
- *   1. Centre by column means (corrected two-pass: constant columns centre
- *      to exact zeros).
+ * For a (n_samples x n_features) matrix X, n_samples >= n_features:
+ *   1. Centre by column means (corrected two-pass, column_centring.h:
+ *      constant columns centre to exact zeros) at one power-of-two scale.
  *   2. Compute the thin SVD of the centred matrix: Xc = U Σ V^T.
  *   3. Take the first k = n_components columns of T = U Σ as the scores.
  *   4. Eigenvalues of the sample covariance are λ_j = σ_j² / (n_samples - 1).
- *   5. T²[i] = sum_{j<k} (T[i, j]² / λ_j).
+ *   5. T²[i] = sum_{j<k} (T[i, j]² / λ_j) = (n_samples - 1) sum_{j<k} U[i, j]²,
+ *      evaluated in the second form (no σ², exactly scale-invariant).
  *
  * Only resolved directions are used: sigma_j > 16 max(n,p) eps sigma_1
  * (the SVD's absolute accuracy, core/common/svd.h). With r <= k such
@@ -16,8 +17,9 @@
  * the standard F-distribution bound with r degrees of freedom:
  *     UCL = r * (n - 1) * (n + 1) / (n * (n - r)) * F^{-1}(1 - alpha; r, n - r)
  * r = 0 (constant X) gives T² = 0 and UCL = 0.
- * Implemented internally via a numerical inverse of the regularised
- * incomplete beta function.
+ * The F quantile is the bisection root of the upper tail (regularised
+ * incomplete beta) on a bracket grown by factors of two, with no fixed cap;
+ * a UCL that is not a finite normal double is N4M_ERR_NUMERICAL_FAILURE.
  */
 #ifndef N4M_CORE_UTILITIES_HOTELLING_T2_H
 #define N4M_CORE_UTILITIES_HOTELLING_T2_H

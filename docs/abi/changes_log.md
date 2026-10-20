@@ -57,14 +57,22 @@ For n <= p the resolved loading rows `Xc^T u / sigma` are re-orthonormalised
 Householder QR, so every loading row is a unit vector orthogonal to the
 others (the former Gram-Schmidt on canonical vectors could publish an
 unnormalised row, norm 0.354 for `X = I_8`, k = 8, and cost Θ(n^4); resolved
-rows near the resolution drifted up to 5e-5 from orthonormality). The
-budget checked before allocating counts the Gram and the projections in
-long-double products, plus the eigendecomposition and the loading
-re-orthonormalisation and completion at 1/16
-per double operation (250 million in total), and the working buffers
-(1 GiB); both return `N4M_ERR_UNSUPPORTED` when exceeded. Every shape a
-Preflight request can produce (at most 10^7 cells, k <= 10) that the former
-Gram-only count accepted is still accepted.
+rows near the resolution drifted up to 5e-5 from orthonormality). Before
+allocating, both entry points check two guaranteed bounds, listed pass by
+pass in `cpp/src/core/diagnostics/preflight_pca_budget.hpp`, and return
+`N4M_ERR_UNSUPPORTED` above either. The work bound counts long-double
+multiply-adds (sum of squares, Gram, projections) and every double-precision
+pass at 1/16, with the QL iteration at the solver's ceiling (30 s sweeps,
+s = min(n,p)); its limit is 2.4e9. The memory bound adds every buffer live at
+the peak, including the column exponents and the Householder copy of the
+loadings; its limit is 1 GiB. These are bounds, not cost estimates: QL
+typically converges in about two sweeps per eigenvalue, so a square s x s
+input costs about 1.1 s^3 against a bound of 8 s^3. The former estimate (250
+million, eigendecomposition at two sweeps, without the sum of squares or
+the column exponents) accepted n = 3, p = 26e6, k = 1, which needs 1.144 GB.
+Every shape a Preflight request can produce (at most 10^7 cells, k <= 10)
+that Methods 1.3.6 or that estimate accepted is still accepted (enumerated in
+`cpp/tests/test_preflight.cpp`; the worst is 658 x 658, k = 1, at 2.33e9).
 
 `n4m_outlier_detection_hotelling_t2_resolved` is
 `n4m_outlier_detection_hotelling_t2` plus `rank_used` (one `int32_t`). Both
@@ -76,9 +84,36 @@ the exact 2-column values (e.g. 4113/2428 instead of 2.998). With r = 0
 (constant X), T² = 0 and UCL = 0. Columns are centred with a corrected
 two-pass mean, so a constant column centres to exact zeros: the plain rounded
 mean left a common offset that the rank selection kept as a direction (ten
-observations of 0.1, k = 1: rank 1, T² = 0.9). Full-rank results change only
-at the rounding level of the centring. The
-registry procedure `utilities.hotelling_t2` publishes `n_components_used`.
+observations of 0.1, k = 1: rank 1, T² = 0.9). T² is evaluated as
+`(n-1) * sum_j U_ij^2`, without forming sigma_j^2 (NaN with `N4M_OK` beyond
+|x| ~ 2^512), so it is exactly invariant under power-of-two scaling. The F
+quantile is now the root of the upper tail on a bracket grown by factors of
+two: the former fixed bracket [1e-10, 1e12] silently returned about 1.1e12
+for larger quantiles (d1 = 1, d2 = 2, alpha = 1e-14: quantile 1e14), and a
+UCL that is not a finite normal double is `N4M_ERR_NUMERICAL_FAILURE`.
+Full-rank results change at the rounding level of the centring and of the
+T² evaluation; no fixed bound on that change is claimed (a review measured
+up to 1.59e-9 relative for the centring alone, on a 101 x 3 matrix
+translated by 10^6, where the new values are the closer ones to an
+extended-precision reference). The registry procedure
+`utilities.hotelling_t2` publishes `n_components_used`.
+
+`n4m_outlier_detection_q_residuals` (2.19 signature unchanged) uses the same
+corrected centring and computes Q and the Jackson-Mudholkar UCL at one
+power-of-two scale, rescaled at the end. The residual moments theta_1..3 used
+to overflow or underflow inside the supported magnitudes:
+`X = 2^200 [[2,1],[2,-1],[-2,1],[-2,-1]]`, k = 1, gave Q_i = 2^400 correctly
+but UCL 0 with `N4M_OK` (Jackson-Mudholkar: 1.29001e121); the same at 2^-200.
+Q and the UCL now scale exactly by 4^s with X scaled by 2^s. When no
+residual singular value is above `16 * max(n,p) * DBL_EPSILON * sigma_1`
+(n_components = cols, constant X, numerical rank <= n_components), the
+residual is rounding noise and Q = 0, UCL = 0 exactly; UCL = 0 marks that
+documented state only (ten rows of 0.1 used to give Q = 1.9e-65 next to
+UCL 0). The upper normal quantile takes alpha directly (alpha = 1e-20 used
+to give UCL 0 through 1 - alpha = 1). A Q above the noise level or a UCL that
+is not a finite normal double, and a non-positive Jackson-Mudholkar base
+(possible only for alpha > 0.5, formerly UCL 0), return
+`N4M_ERR_NUMERICAL_FAILURE`.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
