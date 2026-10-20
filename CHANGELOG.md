@@ -103,6 +103,37 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- Power-type PLS iterations no longer fail, or stop on a wrong direction,
+  when the two leading singular values of X_k'Y_k are close. NIPALS,
+  canonical NIPALS, orthogonal scores, kernel, wide kernel, power, randomized
+  SVD and SIMPLS (also used by PLS-DA and di-PLS) contract their error by
+  about (sigma_2 / sigma_1)^2 per step. With a = (-3,-1,1,3), b = (1,-3,3,-1),
+  X = [a, b], Y = [a + d b, d a + b], d = 2^-12 (centred, unscaled, one
+  component), X'Y = 20 [[1, d], [d, 1]] has the singular values
+  20.0048828125 and 19.9951171875: SIMPLS, and every iterative solver at
+  tol 1e-12, returned `N4M_ERR_CONVERGENCE_FAILED`, and at the default tol
+  1e-6 NIPALS, kernel, wide kernel, power and randomized SVD returned
+  status OK with the weights (1, 0) instead of (1, 1) / sqrt 2 (coefficients
+  off by 1/2 instead of (1 + d) / 2 everywhere). With several targets, each
+  of these solvers now also computes the dominant singular pair of the
+  component's cross-covariance with the deterministic Jacobi eigen-solver of
+  the SVD solver (which has no spectral-gap dependence) and uses it when the
+  iteration did not converge or stopped farther than 16 times its nominal
+  step tolerance from it (sqrt(tol) for NIPALS, canonical NIPALS, kernel,
+  power and randomized SVD, tol for orthogonal scores, min(max(tol, 1e-14),
+  1e-12) for SIMPLS). One-target fits converge in one step and are
+  unchanged. A bitwise before/after sweep of the 3690 fits of the sweep
+  below changes two cases only: a random 3-target fit with
+  sigma_2 / sigma_1 = 0.98, whose first-component weights were 0.018-0.023
+  away from the dominant singular vector for NIPALS, kernel, wide kernel and
+  power (5e-13 now; SIMPLS failed to converge and now fits; coefficients and
+  predictions move by <= 7e-16 relative since that fit uses all components),
+  and the exactly degenerate X = [a, b], Y = [a, b] (sigma_1 = sigma_2), where
+  randomized SVD now returns the Jacobi direction instead of its random one
+  (coefficients unchanged). C++ and JS/WASM tests check the analytic arrays
+  of the d = 2^-12, 2^-20, 2^-30 cases for every PLS solver and PLS-DA, at
+  tol 1e-6 and 1e-12, and the canonical weights.
+
 - PLS regression (`models.pls.pls_regression`, every solver: NIPALS, SIMPLS,
   orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD) and PCR
   (`models.pls.pcr`) without autoscaling are now scale-equivariant. Their
