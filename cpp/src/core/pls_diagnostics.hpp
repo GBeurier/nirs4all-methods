@@ -62,12 +62,16 @@ namespace n4m::core {
 // comes from X_reference when it is provided (n_ref >= k + 2). When
 // X_reference is NULL the function reports the unnormalized residual standard
 // deviation per sample, sqrt(Q[i] / (n_features - k)). n_features <= k is
-// refused.
+// refused. When the reference residual norm sqrt(sum Q_ref) is not above
+// (n_ref + n_features + k) eps ||X_ref||_F (model space), i.e. the reference
+// rows lie in the latent space up to rounding, sigma_ref is degenerate:
+// out_reference_degenerate is set and every DModX is NaN (Q is unaffected).
 [[nodiscard]] n4m_status_t pls_dmodx(
     Context& ctx,
     const Model& model,
     const n4m_matrix_view_t& X,
     const n4m_matrix_view_t* X_reference,
-    std::vector<double>& out_dmodx);
+    std::vector<double>& out_dmodx,
+    bool& out_reference_degenerate);
 
 }  // namespace n4m::core

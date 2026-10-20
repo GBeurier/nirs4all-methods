@@ -292,12 +292,21 @@ N4M_API n4m_status_t n4m_metrics_one_se_rule_compute(
  * for every row when k = 0), and DModX uses n_features - k (and
  * n_reference - k - 1) degrees of freedom.
  *
+ * DModX is sqrt(Q / (n_features - k)) without reference, and that value
+ * divided by sigma_ref = sqrt(sum Q_ref / ((n_features - k)(n_ref - k - 1)))
+ * with one. When the reference residual norm sqrt(sum Q_ref) is not above
+ * (n_ref + n_features + k) eps ||X_ref||_F (model space), the reference rows
+ * lie in the latent space up to rounding and the normalized distance is
+ * undefined: "dmodx" is NaN on every row and "dmodx_reference_degenerate"
+ * is 1; Q and T² are unaffected (no substitute scale is used).
+ *
  * The result contains:
  *   "t2"     (1 x n_samples) — Hotelling T² statistic per row
  *   "q"      (1 x n_samples) — squared reconstruction residual per row
- *   "dmodx"  (1 x n_samples) — distance-to-model X per row
+ *   "dmodx"  (1 x n_samples) — distance-to-model X per row (NaN when the
+ *            reference residual is degenerate)
  *   scalar "n_components", scalar "n_latent_directions" (k),
- *   scalar "n_features"
+ *   scalar "n_features", scalar "dmodx_reference_degenerate" (0 or 1)
  */
 N4M_API n4m_status_t n4m_metrics_pls_diagnostics_compute(
     n4m_context_t* ctx,

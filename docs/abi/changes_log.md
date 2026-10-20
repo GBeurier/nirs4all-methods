@@ -30,6 +30,13 @@ still read; earlier readers reject format 3 with
 `n4m_serialization_inspect_pipeline_v1` validate the new section and report
 the pipeline from its flag.
 
+`n4m_metrics_pls_diagnostics_compute` results gain the scalar
+`dmodx_reference_degenerate` (and `n_latent_directions`): 1 when
+`X_reference` is given and its residual norm sqrt(sum Q_ref) is not above
+(n_ref + n_features + k) eps ||X_ref||_F in model space; "dmodx" is then NaN
+on every row (the normalized distance is undefined; it used to divide by a
+substituted sigma_ref = 1), while "q" and "t2" are unchanged.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

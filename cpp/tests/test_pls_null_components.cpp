@@ -579,6 +579,61 @@ void test_selectivity_ratio_scale_invariance() {
         throw std::runtime_error("SR X = [a, 0]: expected (+inf, 0)");
 }
 
+// DModX against a reference whose residual vanishes. Fit on X_ref = 2^e [a, 0],
+// Y = a, one component (w = p = (1, 0)), evaluate X = 2^e [a, b] with X_ref as
+// reference: every reference row is reconstructed (sum Q_ref = 0), so the
+// normalized distance is undefined. It used to replace sigma_ref = 0 by 1 and
+// publish DModX = |b| 2^e = (1, 3, 3, 1) 2^e, which depends on the units; it
+// is now NaN on every row with dmodx_reference_degenerate = 1, while
+// Q = 2^2e b^2 and T2 = 3 a^2 / 20 stay available. With
+// X_ref = 2^e [a, 2^-20 b] the reference residual 2^(e-20) b is resolved:
+// sigma_ref^2 = sum Q_ref / ((2 - 1)(4 - 1 - 1)) = 10 2^(2e-40) and
+// DModX = |b| 2^20 / sqrt 10 for every e, flag 0.
+void test_dmodx_degenerate_reference() {
+    for (const auto& s : kSolvers) {
+        for (const int e : {0, -30, 200}) {
+            for (const bool degenerate : {true, false}) {
+                std::vector<double> x_ref(8), x(8), y(4);
+                for (std::size_t i = 0; i < 4; ++i) {
+                    x_ref[i * 2] = x[i * 2] = std::ldexp(kA[i], e);
+                    x_ref[i * 2 + 1] = degenerate ? 0.0 : std::ldexp(kB[i], e - 20);
+                    x[i * 2 + 1] = std::ldexp(kB[i], e);
+                    y[i] = kA[i];
+                }
+                const std::string where = std::string(s.tag) + " DModX X_ref = 2^" +
+                                          std::to_string(e) +
+                                          (degenerate ? " [a, 0]" : " [a, 2^-20 b]");
+                Fit f;
+                fit(f, N4M_ALGO_PLS_REGRESSION, s.solver, x_ref, 2, y, 1, 1);
+                const n4m_matrix_view_t xv = view(x, 4, 2);
+                const n4m_matrix_view_t rv = view(x_ref, 4, 2);
+                n4m_method_result_t* result = nullptr;
+                if (n4m_metrics_pls_diagnostics_compute(f.ctx, f.model, &xv, &rv, &result) !=
+                    N4M_OK)
+                    throw std::runtime_error(where + ": refused: " + n4m_context_last_error(f.ctx));
+                const std::vector<double> dmodx = result_matrix(result, "dmodx");
+                const double flag = result_scalar(result, "dmodx_reference_degenerate");
+                std::vector<double> q(4);
+                for (std::size_t i = 0; i < 4; ++i) q[i] = std::ldexp(kB[i] * kB[i], 2 * e);
+                expect_close(where + " q", result_matrix(result, "q"), q);
+                expect_close(where + " t2", result_matrix(result, "t2"),
+                             rows_of([](std::size_t i) { return 3.0 * kA[i] * kA[i] / 20.0; }));
+                n4m_method_result_destroy(result);
+                if (degenerate) {
+                    if (flag != 1.0) throw std::runtime_error(where + ": flag not set");
+                    for (const double d : dmodx)
+                        if (!std::isnan(d)) throw std::runtime_error(where + ": DModX is not NaN");
+                } else {
+                    if (flag != 0.0) throw std::runtime_error(where + ": flag set");
+                    expect_close(where + " dmodx", dmodx, rows_of([](std::size_t i) {
+                                     return std::fabs(kB[i]) * std::ldexp(1.0, 20) / std::sqrt(10.0);
+                                 }));
+                }
+            }
+        }
+    }
+}
+
 }  // namespace
 
 void register_pls_null_component_tests(n4m_testing::Runner& r) {
@@ -593,4 +648,5 @@ void register_pls_null_component_tests(n4m_testing::Runner& r) {
     r.run("pls_null_components/vip_scale_invariance", test_vip_scale_invariance);
     r.run("pls_null_components/selectivity_ratio_scale_invariance",
           test_selectivity_ratio_scale_invariance);
+    r.run("pls_null_components/dmodx_degenerate_reference", test_dmodx_degenerate_reference);
 }
