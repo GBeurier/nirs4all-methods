@@ -19,17 +19,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   the caller's units, so fitting X 2^k, Y 2^m scales coefficients by exactly
   2^(m-k) and every weight, loading, rotation and score by its exact power
   of two. On every compared case where they previously succeeded, SIMPLS,
-  orthogonal scores, kernel, wide kernel, SVD, power and randomized SVD are
-  bit-identical; PCR is bit-identical except for the stored Y scores it
-  previously zeroed; NIPALS coefficients move by at most a few 1e-12
-  relative and its latent arrays by up to ~4e-7 relative when Y was much
-  larger than X (the solver's absolute `+eps` normalization terms now act at
-  unit scale). C++ sweeps over
+  orthogonal scores, power and randomized SVD are bit-identical; PCR is
+  bit-identical except for the stored Y scores it previously zeroed; SVD is
+  bit-identical except for multi-target fits whose X-Y covariance had no
+  entry of magnitude 1 or more, where its Jacobi stop test now applies its
+  relative tolerance instead of an absolute floor (closer to the exact
+  singular vectors); kernel and wide kernel move by rounding only (latent
+  arrays <= 5e-14 relative). NIPALS no longer adds scikit-learn's absolute
+  eps to its weight norm and Y-score denominators: its coefficients move by
+  at most a few 1e-12 relative, and its latent arrays now satisfy their
+  definitions (unit-norm W, U = Y Q / Q'Q) where that eps distorted them by
+  up to ~4e-7 relative when Y was much larger than X. C++ sweeps over
   k, m in {0, +-30, +-60, +-200} (one and two targets) check exact
   equivariance of every fitted array and agreement with scikit-learn 1.7.2
   `PLSRegression(scale=False)` / PCA + linear regression and NumPy analytic
   references (exact-singular-vector deflation, de Jong SIMPLS); a JS/WASM
   sweep checks the same on predictions.
+- The same solvers no longer apply absolute `DBL_EPSILON` thresholds to
+  derived quantities (X-Y covariance, weight, loading and score norms),
+  which the unit scaling alone did not make safe because it bounds X and Y
+  but not their covariance. With a = (-1,-1,1,1), b = (-1,1,-1,1), centred,
+  unscaled: for X = 2^15 a, Y = 2^25 b + a, NIPALS returned Y scores ~20 %
+  too small, and for Y = 2^30 b + a it refused the fit ("Y weights
+  vanished"), SIMPLS and PCR returned all-zero Y scores and kernel PLS
+  refused; PCR refused X = [2^30 a, b], Y = a + b (singular values 2^31 and
+  2) at its second component; every PLS solver refused X = [a, 2^-32 b],
+  Y = b. A PLS component is now refused (`N4M_ERR_NUMERICAL_FAILURE`, "X-Y
+  covariance is below its numerical resolution") only when
+  ||X_k'Y_k||_F <= (n + a) eps ||X_0||_F ||Y_0||_F on the unit-scaled centred
+  working matrices, and a PCR component only when its singular value is
+  <= (n + p) eps sigma_max (the SVD resolution); above these bounds the
+  remaining guards act on unit vectors or exact zeros only. NIPALS, kernel
+  and orthogonal scores start the power iteration from a Y column whose
+  covariance with X is resolved when their usual start column is not
+  (previously a refusal). Kernel PLS forms its raw X scores as X (X'u)
+  instead of through the n x n kernel X X', which rounded away X columns
+  below ~2^-26 of the largest. PCR leaves the Y-score column of a component
+  zero only when its Y loading is below the rounding of Y't, about
+  (n + p) eps ||Y||_F sigma_max: Y is then uncorrelated with that X score
+  within numerical resolution and u = Y q / q'q is undefined (documented on
+  `N4M_MODEL_Y_SCORES_U`). C++ and JS/WASM tests check these cases against
+  analytic W, P, Q, R, T, U, coefficients and predictions, on the fitted and
+  on the exported/imported model, and the rank-one X = [a, a] refusal of a
+  second component. No ABI or serialization format change.
 
 ## [1.3.6] - 2026-10-13
 

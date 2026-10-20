@@ -59,16 +59,28 @@ void scale_by_power_of_two(std::vector<double>& values, int e) noexcept {
     }
 }
 
+// Rescales `values` by the exact power of two that puts their largest |value|
+// in [1, 2) and returns the exponent removed (0 for an all-zero array).
+int scale_to_unit_magnitude(std::vector<double>& values) noexcept {
+    double largest = 0.0;
+    for (double v : values) largest = std::max(largest, std::fabs(v));
+    if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
+    const int e = std::ilogb(largest);
+    scale_by_power_of_two(values, -e);
+    return e;
+}
+
 // Exact power-of-two rescaling of the centred working matrices of a PLS-family
-// fit so that each largest |value| lies in [1, 2). The absolute epsilon
-// thresholds of the scikit-learn-compatible solvers then act at a fixed
-// relative scale, and since power-of-two scaling is exact, fits of X 2^k,
-// Y 2^m are exactly equivariant. restore() maps the latent arrays back to the
+// fit so that each largest |value| lies in [1, 2). Since power-of-two scaling
+// is exact, fits of X 2^k, Y 2^m are exactly equivariant. The solvers decide
+// whether a component is resolved from the norms of these working matrices
+// (cross_covariance_resolution); their remaining unit-scale guards act only on
+// unit vectors or on exact zeros. restore() maps the latent arrays back to the
 // caller's units before rotations and coefficients are formed.
 class UnitScaling {
 public:
     UnitScaling(std::vector<double>& x, std::vector<double>& y) noexcept
-        : ex_(normalise(x)), ey_(normalise(y)) {}
+        : ex_(scale_to_unit_magnitude(x)), ey_(scale_to_unit_magnitude(y)) {}
 
     void restore(::n4m::core::Model& model, std::vector<double>& scores_t,
                  std::vector<double>& y_scores_u, const LatentUnits& units) const noexcept {
@@ -80,15 +92,6 @@ public:
     }
 
 private:
-    static int normalise(std::vector<double>& values) noexcept {
-        double largest = 0.0;
-        for (double v : values) largest = std::max(largest, std::fabs(v));
-        if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
-        const int e = std::ilogb(largest);
-        scale_by_power_of_two(values, -e);
-        return e;
-    }
-
     [[nodiscard]] int exponent(ScaleUnits units) const noexcept {
         return units.x * ex_ + units.y * ey_;
     }
@@ -115,6 +118,96 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     values.clear();
     values.resize(n);
     std::fill(values.begin(), values.end(), fill);
+}
+
+// Absolute numerical resolution of the cross-covariance X_k'Y_k of the
+// deflated working matrices, from the unit-scaled X_0, Y_0 (before any
+// deflation): its n-term inner products and up to `a` rank-one deflations
+// perturb it by at most about (n + a) eps ||X_0||_F ||Y_0||_F. A component
+// whose cross-covariance does not exceed this bound has no resolved direction
+// and is refused explicitly; above it the solvers use no absolute threshold.
+[[nodiscard]] double cross_covariance_resolution(const std::vector<double>& x,
+                                                 const std::vector<double>& y,
+                                                 std::size_t n,
+                                                 std::size_t a) noexcept {
+    return static_cast<double>(n + a) * std::numeric_limits<double>::epsilon() *
+           std::sqrt(squared_norm(x)) * std::sqrt(squared_norm(y));
+}
+
+// Squared norms of the q columns of the row-major (p x q) matrix `m`.
+void column_squared_norms(const std::vector<double>& m, std::size_t p, std::size_t q,
+                          std::vector<double>& out) {
+    resize_fill(out, q, 0.0);
+    for (std::size_t row = 0; row < p; ++row) {
+        for (std::size_t col = 0; col < q; ++col) {
+            const double value = m[idx(row, q, col)];
+            out[col] += value * value;
+        }
+    }
+}
+
+// Refuses a component whose cross-covariance X_k'Y_k (column squared norms
+// `column_ss`) does not exceed `resolution`. Otherwise returns in `target` the
+// start target of the power iteration: `preferred` when its own covariance
+// column is resolved, else the target with the largest one (a start vector
+// uncorrelated with X would stall the iteration although a resolved direction
+// exists).
+[[nodiscard]] n4m_status_t resolved_start_target(::n4m::core::Context& ctx,
+                                                 const char* label,
+                                                 const std::vector<double>& column_ss,
+                                                 double resolution,
+                                                 std::size_t preferred,
+                                                 std::size_t component,
+                                                 std::size_t& target) {
+    double total = 0.0;
+    std::size_t best = 0;
+    for (std::size_t col = 0; col < column_ss.size(); ++col) {
+        total += column_ss[col];
+        if (column_ss[col] > column_ss[best]) best = col;
+    }
+    if (!(std::sqrt(total) > resolution)) {
+        ctx.set_errorf("%s X-Y covariance is below its numerical resolution at component %llu",
+                       label, ull(component));
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    target = std::sqrt(column_ss[preferred]) > resolution ? preferred : best;
+    return N4M_OK;
+}
+
+// Column squared norms of X'Y for row-major working matrices X (n x p), Y (n x q).
+void cross_covariance_column_squared_norms(const std::vector<double>& x,
+                                           const std::vector<double>& y,
+                                           std::size_t n, std::size_t p, std::size_t q,
+                                           std::vector<double>& out) {
+    std::vector<double> covariance;
+    resize_fill(covariance, p * q, 0.0);
+    n4m::linalg::gemm(
+        n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
+        p, q, n,
+        1.0,
+        x.data(), p,
+        y.data(), q,
+        0.0,
+        covariance.data(), q);
+    column_squared_norms(covariance, p, q, out);
+}
+
+// Refuses a component whose cross-covariance matrix does not exceed
+// `resolution`, then rescales it (and the resolution with it) by an exact power
+// of two to a largest |value| in [1, 2). Its singular vectors are unchanged,
+// and the unit-scale guards of the singular-vector helpers become inactive.
+[[nodiscard]] n4m_status_t resolve_covariance(::n4m::core::Context& ctx,
+                                              const char* label,
+                                              std::vector<double>& covariance,
+                                              double& resolution,
+                                              std::size_t component) {
+    if (!(std::sqrt(squared_norm(covariance)) > resolution)) {
+        ctx.set_errorf("%s X-Y covariance is below its numerical resolution at component %llu",
+                       label, ull(component));
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    resolution = std::ldexp(resolution, -scale_to_unit_magnitude(covariance));
+    return N4M_OK;
 }
 
 [[nodiscard]] double read_value(const n4m_matrix_view_t& v,
@@ -1646,6 +1739,8 @@ n4m_status_t fit_pls_regression_nipals(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    std::vector<double> covariance_ss;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -1688,6 +1783,12 @@ n4m_status_t fit_pls_regression_nipals(
             ctx.set_errorf("Y residual became constant at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
+        cross_covariance_column_squared_norms(xk, yk, n, p, q, covariance_ss);
+        status = resolved_start_target(ctx, "NIPALS", covariance_ss, resolution,
+                                       initial_target, comp, initial_target);
+        if (status != N4M_OK) {
+            return status;
+        }
 
         std::vector<double> y_score;
         resize_fill(y_score, n, 0.0);
@@ -1707,7 +1808,7 @@ n4m_status_t fit_pls_regression_nipals(
 
         for (std::int32_t iter = 0; iter < cfg.max_iter; ++iter) {
             const double y_score_ss = squared_norm(y_score);
-            if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_score_ss > 0.0)) {
                 ctx.set_errorf("Y score vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
@@ -1722,19 +1823,22 @@ n4m_status_t fit_pls_regression_nipals(
                 0.0,
                 x_weights.data());
 
+            // scikit-learn adds an absolute eps to the norm here and to the
+            // Y-score denominator below. With a resolved cross-covariance
+            // these quantities are nonzero, and the eps would distort the
+            // latent arrays whenever Y is much larger than X.
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
-            if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_weight_norm > 0.0)) {
                 ctx.set_errorf("X weights vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
-            const double x_weight_denom = x_weight_norm + std::numeric_limits<double>::epsilon();
             for (double& value : x_weights) {
-                value /= x_weight_denom;
+                value /= x_weight_norm;
             }
 
             matrix_vector_product(xk, n, p, x_weights, x_score);
             const double x_score_ss = squared_norm(x_score);
-            if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_score_ss > 0.0)) {
                 ctx.set_errorf("X score vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
@@ -1748,17 +1852,16 @@ n4m_status_t fit_pls_regression_nipals(
             }
 
             const double y_weight_ss = squared_norm(y_weights);
-            if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_weight_ss > 0.0)) {
                 ctx.set_errorf("Y weights vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
-            const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
             for (std::size_t row = 0; row < n; ++row) {
                 double sum = 0.0;
                 for (std::size_t target = 0; target < q; ++target) {
                     sum += yk[idx(row, q, target)] * y_weights[target];
                 }
-                y_score[row] = sum / y_score_denom;
+                y_score[row] = sum / y_weight_ss;
             }
 
             double diff = 0.0;
@@ -1801,13 +1904,13 @@ n4m_status_t fit_pls_regression_nipals(
         }
 
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("X score vanished after sign normalization at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_weight_ss = squared_norm(y_weights);
-        if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(y_weight_ss > 0.0)) {
             ctx.set_errorf("Y weights vanished after sign normalization at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
@@ -1815,13 +1918,12 @@ n4m_status_t fit_pls_regression_nipals(
 
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
-        const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
         for (std::size_t row = 0; row < n; ++row) {
             double sum = 0.0;
             for (std::size_t target = 0; target < q; ++target) {
                 sum += yk[idx(row, q, target)] * y_weights[target];
             }
-            y_scores[row] = sum / y_score_denom;
+            y_scores[row] = sum / y_weight_ss;
         }
 
         std::vector<double> x_loadings;
@@ -2470,6 +2572,8 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    std::vector<double> covariance_ss;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -2482,7 +2586,14 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
     for (std::size_t comp = 0; comp < a; ++comp) {
         std::vector<double> y_score;
         resize_fill(y_score, n, 0.0);
+        cross_covariance_column_squared_norms(xk, yk, n, p, q, covariance_ss);
         if (q == 1U) {
+            std::size_t initial_target = 0;
+            status = resolved_start_target(ctx, "orthogonal-scores", covariance_ss, resolution,
+                                           0, comp, initial_target);
+            if (status != N4M_OK) {
+                return status;
+            }
             for (std::size_t row = 0; row < n; ++row) {
                 y_score[row] = yk[idx(row, q, 0)];
             }
@@ -2500,10 +2611,15 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
                     initial_target = target;
                 }
             }
-            if (best_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(best_ss > 0.0)) {
                 ctx.set_errorf("orthogonal-scores Y residual became constant at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
+            }
+            status = resolved_start_target(ctx, "orthogonal-scores", covariance_ss, resolution,
+                                           initial_target, comp, initial_target);
+            if (status != N4M_OK) {
+                return status;
             }
             for (std::size_t row = 0; row < n; ++row) {
                 y_score[row] = yk[idx(row, q, initial_target)];
@@ -2530,7 +2646,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
             }
 
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
-            if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_weight_norm > 0.0)) {
                 ctx.set_errorf("orthogonal-scores X weights vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2541,7 +2657,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
 
             matrix_vector_product(xk, n, p, x_weights, x_score);
             const double x_score_ss = squared_norm(x_score);
-            if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_score_ss > 0.0)) {
                 ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2581,7 +2697,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
             }
 
             const double y_loading_ss = squared_norm(y_loadings);
-            if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_loading_ss > 0.0)) {
                 ctx.set_errorf("orthogonal-scores Y loadings vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2603,7 +2719,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
         }
 
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("orthogonal-scores X score vanished after convergence at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
@@ -2738,6 +2854,8 @@ n4m_status_t fit_pls_regression_kernel(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    std::vector<double> covariance_ss;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -2766,18 +2884,11 @@ n4m_status_t fit_pls_regression_kernel(
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
-
-        std::vector<double> kernel;
-        resize_fill(kernel, n * n, 0.0);
-        for (std::size_t row = 0; row < n; ++row) {
-            for (std::size_t col = row; col < n; ++col) {
-                double sum = 0.0;
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    sum += xk[idx(row, p, feature)] * xk[idx(col, p, feature)];
-                }
-                kernel[idx(row, n, col)] = sum;
-                kernel[idx(col, n, row)] = sum;
-            }
+        cross_covariance_column_squared_norms(xk, yk, n, p, q, covariance_ss);
+        status = resolved_start_target(ctx, "kernel PLS", covariance_ss, resolution,
+                                       initial_target, comp, initial_target);
+        if (status != N4M_OK) {
+            return status;
         }
 
         std::vector<double> y_score;
@@ -2798,23 +2909,27 @@ n4m_status_t fit_pls_regression_kernel(
 
         for (std::int32_t iter = 0; iter < cfg.max_iter; ++iter) {
             const double y_score_ss = squared_norm(y_score);
-            if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_score_ss > 0.0)) {
                 ctx.set_errorf("kernel PLS Y score vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
 
-            std::vector<double> raw_score;
-            resize_fill(raw_score, n, 0.0);
-            for (std::size_t row = 0; row < n; ++row) {
+            // Raw score X X'u / u'u, formed as X (X'u / u'u) rather than with
+            // the n x n kernel X X': the kernel squares the dynamic range of
+            // X and rounds away columns below ~2^-26 of the largest one, and
+            // the X weights below are X'u / u'u anyway.
+            for (std::size_t feature = 0; feature < p; ++feature) {
                 double sum = 0.0;
-                for (std::size_t col = 0; col < n; ++col) {
-                    sum += kernel[idx(row, n, col)] * y_score[col];
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += xk[idx(row, p, feature)] * y_score[row];
                 }
-                raw_score[row] = sum / y_score_ss;
+                x_weights[feature] = sum / y_score_ss;
             }
+            std::vector<double> raw_score;
+            matrix_vector_product(xk, n, p, x_weights, raw_score);
             const double raw_score_norm = std::sqrt(squared_norm(raw_score));
-            if (raw_score_norm <= std::numeric_limits<double>::epsilon()) {
+            if (!(raw_score_norm > 0.0)) {
                 ctx.set_errorf("kernel PLS X score vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2822,13 +2937,8 @@ n4m_status_t fit_pls_regression_kernel(
             for (std::size_t row = 0; row < n; ++row) {
                 x_score[row] = raw_score[row] / raw_score_norm;
             }
-
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                double sum = 0.0;
-                for (std::size_t row = 0; row < n; ++row) {
-                    sum += xk[idx(row, p, feature)] * y_score[row];
-                }
-                x_weights[feature] = (sum / y_score_ss) / raw_score_norm;
+            for (double& value : x_weights) {
+                value /= raw_score_norm;
             }
 
             const double x_score_ss = squared_norm(x_score);
@@ -2847,7 +2957,7 @@ n4m_status_t fit_pls_regression_kernel(
             }
 
             const double y_loading_ss = squared_norm(y_loadings);
-            if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_loading_ss > 0.0)) {
                 ctx.set_errorf("kernel PLS Y loadings vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2918,15 +3028,15 @@ n4m_status_t fit_pls_regression_kernel(
 
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
+        // Nonzero: checked on the same (possibly sign-flipped) loadings in
+        // the last iteration.
         const double y_loading_ss = squared_norm(y_loadings);
-        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-            for (std::size_t row = 0; row < n; ++row) {
-                double sum = 0.0;
-                for (std::size_t target = 0; target < q; ++target) {
-                    sum += yk[idx(row, q, target)] * y_loadings[target];
-                }
-                y_scores[row] = sum / y_loading_ss;
+        for (std::size_t row = 0; row < n; ++row) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                sum += yk[idx(row, q, target)] * y_loadings[target];
             }
+            y_scores[row] = sum / y_loading_ss;
         }
 
         N4M_PARALLEL_FOR_STATIC
@@ -3020,6 +3130,7 @@ n4m_status_t fit_pls_regression_svd(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3042,6 +3153,12 @@ n4m_status_t fit_pls_regression_svd(
             }
         }
 
+        double covariance_resolution = resolution;
+        status = resolve_covariance(ctx, "SVD", covariance, covariance_resolution, comp);
+        if (status != N4M_OK) {
+            return status;
+        }
+
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
@@ -3053,7 +3170,7 @@ n4m_status_t fit_pls_regression_svd(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("SVD X score vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3188,6 +3305,7 @@ n4m_status_t fit_pls_regression_power(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3210,6 +3328,12 @@ n4m_status_t fit_pls_regression_power(
             }
         }
 
+        double covariance_resolution = resolution;
+        status = resolve_covariance(ctx, "power PLS", covariance, covariance_resolution, comp);
+        if (status != N4M_OK) {
+            return status;
+        }
+
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair_power(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
@@ -3221,7 +3345,7 @@ n4m_status_t fit_pls_regression_power(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("power PLS X score vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3356,6 +3480,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3379,6 +3504,12 @@ n4m_status_t fit_pls_regression_randomized_svd(
             }
         }
 
+        double covariance_resolution = resolution;
+        status = resolve_covariance(ctx, "randomized SVD", covariance, covariance_resolution, comp);
+        if (status != N4M_OK) {
+            return status;
+        }
+
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair_randomized(ctx, covariance, p, q, cfg.max_iter,
@@ -3391,7 +3522,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("randomized SVD PLS X score vanished at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
@@ -3605,6 +3736,12 @@ n4m_status_t fit_pcr_svd(
     // weights_w == loadings_p == V[:, i] in closed form because each
     // singular vector is orthonormal and the per-component deflation reduces
     // to the identity in the right-singular-vector basis.
+    //
+    // The SVD resolves each singular value to an absolute accuracy of about
+    // (n + p) eps sigma_max. A direction at or below that bound is refused
+    // explicitly; one above it is kept, however small relative to sigma_max.
+    const double sigma_resolution =
+        static_cast<double>(n + p) * std::numeric_limits<double>::epsilon() * svd_s[0];
     std::vector<double> direction(p, 0.0);
     std::vector<double> directions;
     std::vector<double> eigenvalues;
@@ -3612,12 +3749,13 @@ n4m_status_t fit_pcr_svd(
     resize_fill(eigenvalues, a, 0.0);
     for (std::size_t comp = 0; comp < a; ++comp) {
         const double sigma = svd_s[comp];
-        const double eigenvalue = sigma * sigma;  // ||Xc v||^2 = sigma^2
-        if (!(eigenvalue > std::numeric_limits<double>::epsilon())) {
-            ctx.set_errorf("PCR X covariance vanished at component %llu",
+        if (!(sigma > sigma_resolution)) {
+            ctx.set_errorf("PCR X singular value is below its numerical resolution at "
+                           "component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
+        const double eigenvalue = sigma * sigma;  // ||Xc v||^2 = sigma^2
         for (std::size_t feature = 0; feature < p; ++feature) {
             direction[feature] = svd_vt[idx(comp, p, feature)];
         }
@@ -3654,6 +3792,14 @@ n4m_status_t fit_pcr_svd(
     }
 
     if (cfg.store_scores != 0) {
+        // u = Y q / q'q. Y't = sigma^2 q is resolved when it exceeds the
+        // rounding of Y't, about (n + p) eps ||Y||_F sigma_max (the scores
+        // t = X v carry an absolute error of about (n + p) eps sigma_max).
+        // A Y loading at or below that bound means Y is uncorrelated with the
+        // X score within numerical resolution: u is then undefined and its
+        // column stays zero, as documented for N4M_MODEL_Y_SCORES_U.
+        const double y_cross_resolution =
+            sigma_resolution * std::sqrt(squared_norm(ys));
         resize_fill(y_scores_u, n * a, 0.0);
         std::vector<double> scaled_y_loadings;
         resize_fill(scaled_y_loadings, q * a, 0.0);
@@ -3663,7 +3809,7 @@ n4m_status_t fit_pcr_svd(
                 const double value = model->y_loadings_q[idx(target, a, comp)];
                 y_loading_ss += value * value;
             }
-            if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
+            if (std::sqrt(y_loading_ss) * eigenvalues[comp] > y_cross_resolution) {
                 const double inv = 1.0 / y_loading_ss;
                 for (std::size_t target = 0; target < q; ++target) {
                     scaled_y_loadings[idx(target, a, comp)] =
@@ -3749,6 +3895,8 @@ n4m_status_t fit_pls_regression_simpls(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    // Tracks the deflated covariance, which resolve_covariance rescales.
+    double covariance_resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3775,6 +3923,10 @@ n4m_status_t fit_pls_regression_simpls(
     resize_fill(basis_v, p * a, 0.0);
 
     for (std::size_t comp = 0; comp < a; ++comp) {
+        status = resolve_covariance(ctx, "SIMPLS", covariance, covariance_resolution, comp);
+        if (status != N4M_OK) {
+            return status;
+        }
         std::vector<double> direction;
         status = dominant_left_singular_direction(ctx, covariance, p, q, cfg.max_iter,
                                                   cfg.tol, comp, direction);
@@ -3785,7 +3937,7 @@ n4m_status_t fit_pls_regression_simpls(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, direction, x_score);
         const double x_score_norm = std::sqrt(squared_norm(x_score));
-        if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_norm > 0.0)) {
             ctx.set_errorf("SIMPLS X score vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3841,7 +3993,7 @@ n4m_status_t fit_pls_regression_simpls(
             }
         }
         const double v_norm = std::sqrt(squared_norm(v));
-        if (v_norm <= std::numeric_limits<double>::epsilon()) {
+        if (!(v_norm > 0.0)) {
             ctx.set_errorf("SIMPLS deflation basis vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3849,17 +4001,21 @@ n4m_status_t fit_pls_regression_simpls(
             value /= v_norm;
         }
 
+        // Y't = C_0' r / ||X r|| = C_k' r / ||X r|| (r lies in the deflated
+        // covariance's column space), nonzero for a resolved C_k.
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
         const double y_loading_ss = squared_norm(y_loadings);
-        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-            for (std::size_t row = 0; row < n; ++row) {
-                double sum = 0.0;
-                for (std::size_t target = 0; target < q; ++target) {
-                    sum += yk[idx(row, q, target)] * y_loadings[target];
-                }
-                y_scores[row] = sum / y_loading_ss;
+        if (!(y_loading_ss > 0.0)) {
+            ctx.set_errorf("SIMPLS Y loadings vanished at component %llu", ull(comp));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                sum += yk[idx(row, q, target)] * y_loadings[target];
             }
+            y_scores[row] = sum / y_loading_ss;
         }
 
         for (std::size_t feature = 0; feature < p; ++feature) {
