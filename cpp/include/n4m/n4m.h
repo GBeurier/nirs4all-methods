@@ -878,7 +878,11 @@ typedef enum n4m_model_array_t {
     N4M_MODEL_Y_LOADINGS_Q = 8,
     N4M_MODEL_ROTATIONS_R  = 9,
     N4M_MODEL_SCORES_T     = 10,  /* optional — store_scores=1 */
-    N4M_MODEL_Y_SCORES_U   = 11   /* optional — store_scores=1 */
+    N4M_MODEL_Y_SCORES_U   = 11   /* optional — store_scores=1. PCR leaves a
+                                   * component's column zero when its Y loading
+                                   * is below numerical resolution (Y
+                                   * uncorrelated with that X score: u = Y q /
+                                   * q'q undefined). */
 } n4m_model_array_t;
 
 N4M_API n4m_status_t n4m_model_get_array(
