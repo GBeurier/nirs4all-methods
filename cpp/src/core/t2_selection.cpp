@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/common/beta_quantile.h"
 #include "core/cross_validation.hpp"
 #include "core/common/matrix_view.hpp"
 #include "core/model.hpp"
@@ -216,114 +217,6 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     return true;
 }
 
-// ---- Beta quantile ---------------------------------------------------------
-// The UCL needs the upper (1 - alpha) quantile of Beta(a, b), a, b >= 1/2.
-// Both tails are evaluated in logarithms from the odds s = x / (1 - x), so no
-// beta argument goes through a complement close to 1, and the small tail is
-// the one inverted (upper for alpha <= 1/2, lower otherwise), by bisection on
-// the normal doubles. Same scheme as the Hotelling T2 outlier UCL
-// (core/utilities/hotelling_t2.c).
-
-// Lanczos approximation (g = 7, nine terms; relative error about 1e-15 on
-// Gamma for x >= 0.5): Gamma(x) = sqrt(2 pi) t^(x - 0.5) e^-t S(x), t = x + 6.5.
-[[nodiscard]] double lanczos_sum(double x) noexcept {
-    static const double c[9] = {
-        0.99999999999980993,  676.5203681218851,     -1259.1392167224028,
-        771.32342877765313,   -176.61502916214059,   12.507343278686905,
-        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7};
-    double sum = c[0];
-    for (int i = 1; i < 9; ++i) sum += c[i] / (x - 1.0 + static_cast<double>(i));
-    return sum;
-}
-
-[[nodiscard]] double log_gamma(double x) noexcept {
-    const double t = x + 6.5;
-    return 0.91893853320467274178 + (x - 0.5) * std::log(t) - t + std::log(lanczos_sum(x));
-}
-
-// ln B(a, b) for a, b >= 0.5 without the difference of two terms of order
-// b ln b (b >= a): -(b - 0.5) log1p(a / (b + 6.5)) - a ln(a + b + 6.5) + a +
-// ln(S(b) / S(a + b)) for ln Gamma(b) - ln Gamma(a + b).
-[[nodiscard]] double log_beta(double a, double b) noexcept {
-    if (a > b) std::swap(a, b);
-    const double tb = b + 6.5;
-    return log_gamma(a) - (b - 0.5) * std::log1p(a / tb) - a * std::log(a + tb) + a +
-           std::log(lanczos_sum(b) / lanczos_sum(a + b));
-}
-
-// Continued fraction of I_x(a, b) (Numerical Recipes 6.4, modified Lentz);
-// NaN when it has not converged within the cap.
-[[nodiscard]] double beta_continued_fraction(double a, double b, double x) noexcept {
-    constexpr int kMaxIter = 20000;
-    constexpr double kEps = 3e-16;
-    constexpr double kFpMin = 1e-300;
-    const double qab = a + b;
-    const double qap = a + 1.0;
-    const double qam = a - 1.0;
-    double c = 1.0;
-    double d = 1.0 - qab * x / qap;
-    if (std::fabs(d) < kFpMin) d = kFpMin;
-    d = 1.0 / d;
-    double h = d;
-    for (int m = 1; m <= kMaxIter; ++m) {
-        const double dm = static_cast<double>(m);
-        const double m2 = 2.0 * dm;
-        double aa = dm * (b - dm) * x / ((qam + m2) * (a + m2));
-        d = 1.0 + aa * d;
-        if (std::fabs(d) < kFpMin) d = kFpMin;
-        c = 1.0 + aa / c;
-        if (std::fabs(c) < kFpMin) c = kFpMin;
-        d = 1.0 / d;
-        h *= d * c;
-        aa = -(a + dm) * (qab + dm) * x / ((a + m2) * (qap + m2));
-        d = 1.0 + aa * d;
-        if (std::fabs(d) < kFpMin) d = kFpMin;
-        c = 1.0 + aa / c;
-        if (std::fabs(c) < kFpMin) c = kFpMin;
-        d = 1.0 / d;
-        const double del = d * c;
-        h *= del;
-        if (std::fabs(del - 1.0) < kEps) return h;
-    }
-    return std::numeric_limits<double>::quiet_NaN();
-}
-
-// Logarithms of both tails of Beta(a, b) at x = s / (1 + s), s > 0: ln x =
-// ln s - log1p(s) and ln(1 - x) = -log1p(s) without forming x or 1 - x; the
-// tail on the side of x is computed directly, the other as log1p(-exp(.)) of
-// it (at least about 0.3). NaN when the continued fraction did not converge.
-void beta_log_tails(double a, double b, double odds, double& log_lower,
-                    double& log_upper) noexcept {
-    const double log_complement = -std::log1p(odds);
-    const double log_x = std::log(odds) + log_complement;
-    const double log_front = a * log_x + b * log_complement - log_beta(a, b);
-    const double x = odds / (1.0 + odds);
-    if (x < (a + 1.0) / (a + b + 2.0)) {
-        log_lower = log_front + std::log(beta_continued_fraction(a, b, x) / a);
-        log_upper = std::log1p(-std::min(std::exp(log_lower), 1.0));
-    } else {
-        log_upper = log_front + std::log(beta_continued_fraction(b, a, 1.0 / (1.0 + odds)) / b);
-        log_lower = std::log1p(-std::min(std::exp(log_upper), 1.0));
-    }
-    if (std::isnan(log_upper) || std::isnan(log_lower)) log_lower = log_upper =
-        std::numeric_limits<double>::quiet_NaN();
-}
-
-struct BetaTarget {
-    double a, b, log_target;
-    bool upper;
-};
-
-// +1 when the odds s are below the quantile, 0 at or above it, -1 when a
-// tail could not be evaluated.
-[[nodiscard]] int below_quantile(const BetaTarget& t, double odds) noexcept {
-    double log_lower = 0.0;
-    double log_upper = 0.0;
-    beta_log_tails(t.a, t.b, odds, log_lower, log_upper);
-    if (std::isnan(log_lower)) return -1;
-    return t.upper ? (log_upper > t.log_target ? 1 : 0) : (log_lower < t.log_target ? 1 : 0);
-}
-
 [[nodiscard]] n4m_status_t copy_columns(::n4m::core::Context& ctx,
                                         const n4m_matrix_view_t& X,
                                         const std::vector<std::int64_t>& columns,
@@ -387,41 +280,10 @@ struct BetaTarget {
 namespace n4m::core {
 
 bool t2_beta_upper_quantile(double alpha, double a, double b, double& out) noexcept {
-    BetaTarget t{a, b, 0.0, alpha <= 0.5};
-    t.log_target = t.upper ? std::log(alpha) : std::log1p(-alpha);
-    constexpr double kMax = std::numeric_limits<double>::max();
-    constexpr double kMin = std::numeric_limits<double>::min();
-    double lo = 1.0;
-    double hi = 1.0;
-    int side = below_quantile(t, 1.0);
-    if (side < 0) return false;
-    if (side == 1) {
-        while (side == 1 && hi < kMax) {
-            lo = hi;
-            hi = hi > kMax / 2.0 ? kMax : 2.0 * hi;
-            side = below_quantile(t, hi);
-            if (side < 0) return false;
-        }
-    } else {
-        while (side == 0 && lo > kMin) {
-            hi = lo;
-            lo = lo / 2.0 < kMin ? kMin : lo / 2.0;
-            side = below_quantile(t, lo);
-            if (side < 0) return false;
-        }
+    double odds = 0.0;
+    if (n4m_util_beta_small_tail_root(alpha, a, b, 1.0, &odds) == N4M_BETA_ROOT_TAIL_FAILURE) {
+        return false;
     }
-    for (int it = 0; it < 200 && hi - lo > 2.0 * std::numeric_limits<double>::epsilon() * hi;
-         ++it) {
-        const double mid = lo + (hi - lo) / 2.0;
-        side = below_quantile(t, mid);
-        if (side < 0) return false;
-        if (side == 1) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    const double odds = lo + (hi - lo) / 2.0;
     out = odds / (1.0 + odds);
     return true;
 }
