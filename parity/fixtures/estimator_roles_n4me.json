@@ -39172,6 +39172,7 @@
       0.734144199292631
      ]
     ],
+    "dmodx_reference_degenerate": 0.0,
     "n_components": 2.0,
     "n_features": 12.0,
     "n_latent_directions": 2.0,

@@ -9,6 +9,10 @@
 //    NIPALS refused Y = 2^-30 a.
 //  - selectivity ratio, X = 2^e [a + b, a - b], Y = a, one component: (1, 1)
 //    (was 0.078125 at 2^-30); NIPALS on X = [a, 0], Y = a: (+inf, 0).
+//  - DModX against X_ref = 2^e [a, 0] (Y = a, one component, every reference
+//    row reconstructed): NaN with dmodx_reference_degenerate = 1 instead of
+//    the unit-dependent 2^e (1, 3, 3, 1); Q = 2^2e b^2, T2 = 3 a^2 / 20 kept.
+//    X_ref = 2^e [a, 2^-20 b]: DModX = |b| 2^20 / sqrt 10, flag 0.
 
 import assert from "node:assert/strict";
 import * as n4m from "../dist/index.js";
@@ -138,6 +142,43 @@ for (const solver of SOLVERS) {
         ++checks;
     } finally {
         release(fit);
+    }
+}
+// DModX against a reference whose residual vanishes.
+for (const solver of SOLVERS) {
+    for (const e of [0, -30, 200]) {
+        for (const degenerate of [true, false]) {
+            const xRef = a.flatMap((v, i) => [v * p2(e), degenerate ? 0 : b[i] * p2(e - 20)]);
+            const x = a.flatMap((v, i) => [v * p2(e), b[i] * p2(e)]);
+            const fit = fitModel(xRef, 2, a, 1, 1, solver);
+            const xv = n4m.makeMatrixView(Float64Array.from(x), 4, 2);
+            const rv = n4m.makeMatrixView(Float64Array.from(xRef), 4, 2);
+            try {
+                const where = `DModX solver ${solver} X_ref = 2^${e} ${degenerate ? "[a, 0]" : "[a, 2^-20 b]"}`;
+                const res = withPtr((o) => ok(cc("n4m_metrics_pls_diagnostics_compute",
+                    [fit.ctx, fit.model, xv.viewPtr, rv.viewPtr, o]), "diagnostics"));
+                const r = new MethodResult(res);
+                try {
+                    close(`${where} q`, Array.from(r.matrix("q").data), b.map((v) => v * v * p2(2 * e)));
+                    close(`${where} t2`, Array.from(r.matrix("t2").data), a.map((v) => 3 * v * v / 20));
+                    const dmodx = Array.from(r.matrix("dmodx").data);
+                    if (degenerate) {
+                        assert.equal(r.scalar("dmodx_reference_degenerate"), 1, `${where}: flag`);
+                        assert.ok(dmodx.every(Number.isNaN), `${where}: DModX is NaN`);
+                    } else {
+                        assert.equal(r.scalar("dmodx_reference_degenerate"), 0, `${where}: flag`);
+                        close(`${where} dmodx`, dmodx, b.map((v) => Math.abs(v) * p2(20) / Math.sqrt(10)));
+                    }
+                    ++checks;
+                } finally {
+                    r.destroy();
+                }
+            } finally {
+                xv.free();
+                rv.free();
+                release(fit);
+            }
+        }
     }
 }
 console.log(`PLS scale-invariant consumers OK (${checks} checks)`);

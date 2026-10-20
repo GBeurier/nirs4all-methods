@@ -3020,8 +3020,9 @@ N4M_API n4m_status_t n4m_metrics_pls_diagnostics_compute(
             *as_core(ctx), m, *X, q);
         if (s != N4M_OK) return s;
         std::vector<double> dmodx;
+        bool reference_degenerate = false;
         s = ::n4m::core::pls_dmodx(
-            *as_core(ctx), m, *X, X_reference, dmodx);
+            *as_core(ctx), m, *X, X_reference, dmodx, reference_degenerate);
         if (s != N4M_OK) return s;
 
         auto handle = std::make_unique<n4m_method_result_s>();
@@ -3035,6 +3036,7 @@ N4M_API n4m_status_t n4m_metrics_pls_diagnostics_compute(
                             static_cast<double>(::n4m::core::pls_latent_directions(m)));
         handle->set_scalar("n_features",
                             static_cast<double>(m.n_features));
+        handle->set_scalar("dmodx_reference_degenerate", reference_degenerate ? 1.0 : 0.0);
         *out_result = handle.release();
         return N4M_OK;
     } catch (const std::bad_alloc&) {

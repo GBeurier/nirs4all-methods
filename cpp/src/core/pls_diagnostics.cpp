@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "core/common/matrix_view.hpp"
@@ -227,12 +228,18 @@ std::size_t pls_latent_directions(const Model& model) {
     return model.rotations_r.empty() ? 0U : latent_directions(model).size();
 }
 
-n4m_status_t pls_q_residuals(
-    Context& ctx,
-    const Model& model,
-    const n4m_matrix_view_t& X,
-    std::vector<double>& out_q) {
+namespace {
+
+// Q residuals of the rows of X (see pls_q_residuals) and the Frobenius norm of
+// those rows in the model's X space, accumulated on values divided by their
+// largest magnitude.
+[[nodiscard]] n4m_status_t q_residuals_and_norm(Context& ctx,
+                                                const Model& model,
+                                                const n4m_matrix_view_t& X,
+                                                std::vector<double>& out_q,
+                                                double& out_norm) {
     out_q.clear();
+    out_norm = 0.0;
     if (model.loadings_p.empty() || model.rotations_r.empty()) {
         ctx.set_error("model is not fitted (loadings/rotations missing)");
         return N4M_ERR_NOT_FITTED;
@@ -261,7 +268,28 @@ n4m_status_t pls_q_residuals(
         }
         out_q[row] = sumsq;
     }
+    double largest = 0.0;
+    for (const double value : x_buf) largest = std::max(largest, std::fabs(value));
+    if (largest > 0.0) {
+        double sum = 0.0;
+        for (const double value : x_buf) {
+            const double scaled = value / largest;
+            sum += scaled * scaled;
+        }
+        out_norm = largest * std::sqrt(sum);
+    }
     return N4M_OK;
+}
+
+}  // namespace
+
+n4m_status_t pls_q_residuals(
+    Context& ctx,
+    const Model& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& out_q) {
+    double norm = 0.0;
+    return q_residuals_and_norm(ctx, model, X, out_q, norm);
 }
 
 n4m_status_t pls_dmodx(
@@ -269,8 +297,10 @@ n4m_status_t pls_dmodx(
     const Model& model,
     const n4m_matrix_view_t& X,
     const n4m_matrix_view_t* X_reference,
-    std::vector<double>& out_dmodx) {
+    std::vector<double>& out_dmodx,
+    bool& out_reference_degenerate) {
     out_dmodx.clear();
+    out_reference_degenerate = false;
     std::vector<double> q;
     n4m_status_t status = pls_q_residuals(ctx, model, X, q);
     if (status != N4M_OK) return status;
@@ -286,7 +316,8 @@ n4m_status_t pls_dmodx(
     double sigma = 1.0;
     if (X_reference != nullptr) {
         std::vector<double> q_ref;
-        status = pls_q_residuals(ctx, model, *X_reference, q_ref);
+        double reference_norm = 0.0;
+        status = q_residuals_and_norm(ctx, model, *X_reference, q_ref, reference_norm);
         if (status != N4M_OK) return status;
         const std::size_t n_ref = q_ref.size();
         if (n_ref < k + 2U) {
@@ -295,9 +326,21 @@ n4m_status_t pls_dmodx(
         }
         double sum = 0.0;
         for (double q_value : q_ref) sum += q_value;
+        // The reference rows are reconstructed by the latent directions up to
+        // rounding when their residual norm is not above the resolution
+        // (n_ref + p + k) eps ||X_ref||_F (model space): sigma_ref is then
+        // zero or rounding noise, and the normalized distance is undefined.
+        // It is published as NaN with the degenerate flag, never with a
+        // substituted scale; Q stays available.
+        const double resolution = static_cast<double>(n_ref + p + k) *
+                                  std::numeric_limits<double>::epsilon() * reference_norm;
+        if (!(std::sqrt(sum) > resolution)) {
+            out_reference_degenerate = true;
+            out_dmodx.assign(n, std::numeric_limits<double>::quiet_NaN());
+            return N4M_OK;
+        }
         const double dof_ref = static_cast<double>(n_ref - k - 1U);
         sigma = std::sqrt(sum / (dof * dof_ref));
-        if (!(sigma > 0.0)) sigma = 1.0;
     }
 
     out_dmodx.assign(n, 0.0);

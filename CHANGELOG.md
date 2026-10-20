@@ -103,6 +103,24 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- PLS diagnostics (`n4m_metrics_pls_diagnostics_compute`) no longer
+  invent a reference scale for DModX. When the reference residual vanished
+  (sum Q_ref = 0) sigma_ref was replaced by 1: with a = (-3,-1,1,3),
+  b = (1,-3,3,-1), a model fitted on X_ref = [a, 0], Y = a (one component,
+  centred, unscaled) and X = [a, b] evaluated against X_ref, DModX was
+  (1, 3, 3, 1), and (9.3e-10, 2.8e-9, ...) after multiplying both X by 2^-30,
+  i.e. the unnormalized residual in the caller's units; orthogonal scores,
+  whose reconstruction leaves a rounding-level residual, returned ~2.3e15.
+  The reference residual is now degenerate when its norm sqrt(sum Q_ref) is
+  not above (n_ref + n_features + k) eps ||X_ref||_F in model space: "dmodx"
+  is NaN on every row and the new scalar `dmodx_reference_degenerate` is 1
+  (0 otherwise); Q and T2 are unchanged. Every other DModX is bit-identical
+  (the `pls_diagnostics` role fixture gains only the new scalar). No other
+  substituted scale or absolute floor remains in the diagnostics and
+  monitoring kernels (the monitoring thresholds are empirical quantiles of
+  T2 and Q). C++ and JS/WASM tests, every PLS solver, X_ref = 2^e [a, 0],
+  e in {0, -30, 200}: NaN and flag 1, Q = 2^2e b^2, T2 = 3 a^2 / 20; with
+  X_ref = 2^e [a, 2^-20 b]: DModX = 2^20 |b| / sqrt 10, flag 0.
 - VIP and the selectivity ratio (`n4m_feature_selection_variable_select_rank`
   methods 0 and 2, also used by VIP-SPA) no longer depend on the units of X
   and Y. With a = (-3,-1,1,3), b = (1,-3,3,-1), centred, unscaled, one
