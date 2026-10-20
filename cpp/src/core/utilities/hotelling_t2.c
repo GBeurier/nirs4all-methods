@@ -8,11 +8,9 @@
  *
  *     Y = G / (kappa + G) ~ Beta(r / 2, (n - r) / 2),
  *
- * whose tails are regularised incomplete beta functions (continued fraction,
- * Numerical Recipes §6.4), evaluated in logarithms from G / kappa so that no
- * beta argument goes through a complement close to 1. The small tail is the
- * one inverted (upper for alpha <= 0.5, lower otherwise), by bisection on
- * the normal doubles.
+ * whose small tail is inverted in logarithms from G / kappa by the shared
+ * Beta root (core/common/beta_quantile.h, also used by the T2-PLS variable
+ * selection limit).
  */
 
 #include "hotelling_t2.h"
@@ -24,173 +22,24 @@
 #include <string.h>
 
 #include "column_centring.h"
+#include "core/common/beta_quantile.h"
 #include "core/common/svd.h"
 
-/* ------------------------------------------------------------------------- */
-/* Lanczos approximation (g = 7, nine terms; relative error about 1e-15 on   */
-/* Gamma for x >= 0.5): Gamma(x) = sqrt(2 pi) t^(x - 0.5) e^-t S(x), with    */
-/* t = x + 6.5. Kept in this split form so that ln B(a, b) cancels its large */
-/* terms analytically.                                                       */
-/* ------------------------------------------------------------------------- */
-static double lanczos_sum(double x) {
-    static const double c[9] = {
-        0.99999999999980993,  676.5203681218851,     -1259.1392167224028,
-        771.32342877765313,   -176.61502916214059,   12.507343278686905,
-        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
-    };
-    double s = c[0];
-    for (int i = 1; i < 9; ++i) s += c[i] / (x - 1.0 + (double)i);
-    return s;
-}
-
-static double lngamma_ref(double x) {
-    const double t = x + 6.5;
-    return 0.91893853320467274178 + (x - 0.5) * log(t) - t + log(lanczos_sum(x));
-}
-
-/* ln B(a, b), a, b >= 0.5. With b >= a, ln Gamma(b) - ln Gamma(a + b) is
- * -(b - 0.5) log1p(a / (b + 6.5)) - a ln(a + b + 6.5) + a + ln(S(b) / S(a + b)):
- * no difference of two terms of order b ln b, so a large b (many
- * observations) keeps the relative accuracy of the tails. */
-static double lbeta_ref(double a, double b) {
-    if (a > b) {
-        const double t = a;
-        a = b;
-        b = t;
-    }
-    const double tb = b + 6.5;
-    return lngamma_ref(a) - (b - 0.5) * log1p(a / tb) - a * log(a + tb) + a +
-           log(lanczos_sum(b) / lanczos_sum(a + b));
-}
-
-/* Continued fraction of I_x(a, b) (Numerical Recipes §6.4, modified Lentz).
- * It needs O(sqrt(max(a, b))) terms; NaN when it has not converged within
- * the cap, so a truncated value is never used. */
-static double betacf_ref(double a, double b, double x) {
-    const int    MAX_IT = 20000;
-    const double FPMIN  = 1e-300;
-    const double EPS    = 3.0e-16;
-    const double qab = a + b;
-    const double qap = a + 1.0;
-    const double qam = a - 1.0;
-    double c = 1.0;
-    double d = 1.0 - qab * x / qap;
-    if (fabs(d) < FPMIN) d = FPMIN;
-    d = 1.0 / d;
-    double h = d;
-    for (int m = 1; m <= MAX_IT; ++m) {
-        const int m2 = 2 * m;
-        double aa = (double)m * (b - (double)m) * x /
-                    ((qam + (double)m2) * (a + (double)m2));
-        d = 1.0 + aa * d;
-        if (fabs(d) < FPMIN) d = FPMIN;
-        c = 1.0 + aa / c;
-        if (fabs(c) < FPMIN) c = FPMIN;
-        d = 1.0 / d;
-        h *= d * c;
-        aa = -(a + (double)m) * (qab + (double)m) * x /
-              ((a + (double)m2) * (qap + (double)m2));
-        d = 1.0 + aa * d;
-        if (fabs(d) < FPMIN) d = FPMIN;
-        c = 1.0 + aa / c;
-        if (fabs(c) < FPMIN) c = FPMIN;
-        d = 1.0 / d;
-        const double del = d * c;
-        h *= del;
-        if (fabs(del - 1.0) < EPS) return h;
-    }
-    return (double)NAN;
-}
-
-/* Logarithms of both tails of Y ~ Beta(a, b) at y = s / (1 + s), s > 0,
- * given s and ln s. ln y = ln s - log1p(s) and ln(1 - y) = -log1p(s) are
- * taken without forming 1 - y or y (which round to 1, or underflow, at the
- * extremes), and the tail on the side of y is computed directly, the other
- * one as log1p(-exp(.)) of it (that side is at least about 0.3). Returns
- * NAN in *log_lower when the continued fraction has not converged. */
-static void beta_log_tails(double a, double b, double s, double log_s,
-                           double* log_lower, double* log_upper) {
-    const double log_x = -log1p(s);
-    const double log_y = log_s + log_x;
-    const double log_front = a * log_y + b * log_x - lbeta_ref(a, b);
-    const double y = s / (1.0 + s);
-    if (y < (a + 1.0) / (a + b + 2.0)) {
-        *log_lower = log_front + log(betacf_ref(a, b, y) / a);
-        *log_upper = log1p(-fmin(exp(*log_lower), 1.0));
-    } else {
-        *log_upper = log_front + log(betacf_ref(b, a, 1.0 / (1.0 + s)) / b);
-        *log_lower = log1p(-fmin(exp(*log_upper), 1.0));
-    }
-    if (isnan(*log_upper)) *log_lower = (double)NAN;
-}
-
-/* Position of G with respect to the UCL quantile: +1 below it, 0 at or above
- * it, -1 when the tail could not be evaluated. With kappa = (n^2 - 1) / n,
- * the Hotelling limit G = r (n-1)(n+1) / (n (n-r)) F, F ~ F(r, n-r), maps to
- * Y = G / (kappa + G) ~ Beta(r/2, (n-r)/2), so s = G / kappa. For
- * alpha <= 0.5 the upper tail is compared with ln alpha; above 0.5 the lower
- * tail is compared with ln(1 - alpha), exact there: the small tail is always
- * the one inverted (alpha = 1 - 2^-30 gave a UCL 128 times too large through
- * a beta argument that rounded to 1). */
-typedef struct {
-    double a, b, kappa, log_kappa, log_target;
-    int upper;
-} ucl_target;
-
-static int below_quantile(const ucl_target* t, double G) {
-    double log_lower, log_upper;
-    beta_log_tails(t->a, t->b, G / t->kappa, log(G) - t->log_kappa, &log_lower, &log_upper);
-    if (isnan(log_lower)) return -1;
-    return t->upper ? (log_upper > t->log_target) : (log_lower < t->log_target);
-}
-
-/* The Hotelling UCL itself, root of the tail equation in G on the normal
- * doubles [DBL_MIN, DBL_MAX]: the bracket is grown or shrunk by factors of
- * two from 1, saturating at DBL_MAX and DBL_MIN, then bisected with
- * lo + (hi - lo) / 2. N4M_ERR_NUMERICAL_FAILURE only when the UCL is not a
+/* The Hotelling UCL G: with kappa = (n^2 - 1) / n, G = r (n-1)(n+1) /
+ * (n (n-r)) F, F ~ F(r, n-r), maps to Y = G / (kappa + G) ~
+ * Beta(r/2, (n-r)/2), so G is the small-tail Beta root at scale kappa
+ * (core/common/beta_quantile.h). For alpha <= 0.5 the upper tail is compared
+ * with ln alpha; above 0.5 the lower tail with ln(1 - alpha), exact there
+ * (alpha = 1 - 2^-30 gave a UCL 128 times too large through a beta argument
+ * that rounded to 1). N4M_ERR_NUMERICAL_FAILURE only when the UCL is not a
  * finite normal double (alpha = 1e-308, n = 3, r = 1: 1.333e308 is
- * returned; the former doubling of F overflowed first) or a tail could not be
- * evaluated. */
+ * returned; the former doubling of F overflowed first) or a tail could not
+ * be evaluated. */
 static n4m_status_t hotelling_ucl_ref(double alpha, int64_t n, int32_t r, double* ucl) {
-    ucl_target t;
-    t.a = (double)r / 2.0;
-    t.b = (double)(n - r) / 2.0;
-    t.kappa = (double)(n - 1) * ((double)(n + 1) / (double)n);
-    t.log_kappa = log(t.kappa);
-    t.upper = alpha <= 0.5;
-    t.log_target = t.upper ? log(alpha) : log(1.0 - alpha);
-    double lo = 1.0, hi = 1.0;
-    int side = below_quantile(&t, 1.0);
-    if (side < 0) return N4M_ERR_NUMERICAL_FAILURE;
-    if (side == 1) {
-        while (side == 1) {
-            if (hi == DBL_MAX) return N4M_ERR_NUMERICAL_FAILURE;
-            lo = hi;
-            hi = hi > DBL_MAX / 2.0 ? DBL_MAX : 2.0 * hi;
-            side = below_quantile(&t, hi);
-            if (side < 0) return N4M_ERR_NUMERICAL_FAILURE;
-        }
-    } else {
-        while (side == 0) {
-            if (lo == DBL_MIN) return N4M_ERR_NUMERICAL_FAILURE;
-            hi = lo;
-            lo = lo / 2.0 < DBL_MIN ? DBL_MIN : lo / 2.0;
-            side = below_quantile(&t, lo);
-            if (side < 0) return N4M_ERR_NUMERICAL_FAILURE;
-        }
-    }
-    for (int it = 0; it < 200 && hi - lo > 2.0 * DBL_EPSILON * hi; ++it) {
-        const double mid = lo + (hi - lo) / 2.0;
-        side = below_quantile(&t, mid);
-        if (side < 0) return N4M_ERR_NUMERICAL_FAILURE;
-        if (side == 1) {
-            lo = mid;
-        } else {
-            hi = mid;
-        }
-    }
-    *ucl = lo + (hi - lo) / 2.0;
-    return N4M_OK;
+    const double kappa = (double)(n - 1) * ((double)(n + 1) / (double)n);
+    const n4m_beta_root_status_t st = n4m_util_beta_small_tail_root(
+        alpha, (double)r / 2.0, (double)(n - r) / 2.0, kappa, ucl);
+    return st == N4M_BETA_ROOT_OK ? N4M_OK : N4M_ERR_NUMERICAL_FAILURE;
 }
 
 n4m_status_t n4m_util_hotelling_t2_impl(const double* X,

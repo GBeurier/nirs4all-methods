@@ -40,7 +40,8 @@ struct T2SelectionResult {
 // the x with P(X > x) = alpha. The small tail (upper for alpha <= 1/2, lower
 // otherwise) is inverted in logarithms on the odds x / (1 - x), by bisection
 // on the normal doubles, so neither tail is lost to a complement close to 1;
-// relative accuracy of x about 1e-14 (continued fraction and Lanczos ln B).
+// relative accuracy of x about 1e-14 (continued fraction and Lanczos ln B;
+// shared with the Hotelling T2 UCL, core/common/beta_quantile.h).
 // A quantile below DBL_MIN / (1 + DBL_MIN) is returned as about DBL_MIN.
 // False when the continued fraction did not converge.
 [[nodiscard]] bool t2_beta_upper_quantile(double alpha, double a, double b, double& out) noexcept;
