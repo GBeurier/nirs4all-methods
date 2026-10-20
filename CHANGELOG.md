@@ -110,7 +110,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   `X = [1, 2, 3]`, returns 1.333e308 instead of `N4M_ERR_NUMERICAL_FAILURE`.
   Log-gamma (Lanczos, 1e-15) and log-beta are more accurate and the
   continued fraction fails explicitly instead of truncating; measured
-  relative error below 1e-12 against mpmath up to n = 10^6. Tested against
+  relative error below 1e-12 against mpmath up to n = 10^6 on the sampled
+  grid; not uniform in the rank (7.2e-12 at r = 127, alpha = 1e-100).
+  Tested against
   the closed forms of F(1,2) and F(2,4) at both extremes, on CPU and WASM.
   No other outlier or Preflight kernel inverts a distribution by bisection
   (the x-outlier and MCD chi-square cut-offs are fixed Wilson-Hilferty

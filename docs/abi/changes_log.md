@@ -149,7 +149,8 @@ still refused. ln Gamma uses a 1e-15 Lanczos approximation and ln B(a, b)
 cancels its large terms analytically, and the continued fraction reports
 non-convergence instead of returning a truncated value. Measured relative
 error below 1e-12 against mpmath (n from 3 to 10^6, alpha from 1e-300 to
-1 - 2^-53); this is a measurement, not a proven bound. At usual alpha
+1 - 2^-53); this is a measurement, not a proven bound,
+and it is not uniform in the rank (7.2e-12 at r = 127, alpha = 1e-100). At usual alpha
 (0.001 to 0.1, n <= 10^4) UCLs changed by at most 3.1e-11 relative.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
