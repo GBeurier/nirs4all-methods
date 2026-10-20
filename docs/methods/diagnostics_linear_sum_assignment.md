@@ -4,7 +4,7 @@ _Namespace_: **`n4m.optimize`** · _Fully-qualified_: `n4m.optimize.linear_sum_a
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_linear_sum_assignment`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L280). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_linear_sum_assignment`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L282). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 

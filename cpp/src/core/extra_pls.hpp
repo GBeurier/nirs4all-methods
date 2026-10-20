@@ -186,6 +186,13 @@ struct PlsQdaResult {
     std::vector<double> x_mean;
 };
 
+// PLS-QDA: the latent space of the PLS-DA SIMPLS solver (fit_model) on the
+// one-hot labels, centred and unscaled, with min(cfg.n_components, n - 1, p)
+// components (only n_components is read from cfg). The scores
+// t = (x - x_mean) R have unit norm, so the class Gaussians do not depend on
+// the units of X; a component the solver publishes as null (flagged
+// unresolved, zero rotation column) is not a latent direction and keeps zero
+// class means and covariance rows / columns.
 [[nodiscard]] n4m_status_t fit_pls_qda(
     Context& ctx,
     const Config& cfg,
@@ -194,10 +201,12 @@ struct PlsQdaResult {
     PlsQdaResult& out);
 
 // Quadratic discriminant decision for new rows of X (row-major n x
-// n_classes): with s = (x - x_mean) R, the score of class c is
+// n_classes): with s = (x - x_mean) R on the m latent directions (nonzero
+// rotation columns), the score of class c is
 //   -0.5 * ((s - mu_c)' Sigma_c^{-1} (s - mu_c) + log|Sigma_c|) + log pi_c,
-// the scikit-learn QuadraticDiscriminantAnalysis decision. Fails with
-// N4M_ERR_NUMERICAL_FAILURE when a class covariance is not positive definite.
+// the scikit-learn QuadraticDiscriminantAnalysis decision (log pi_c alone
+// when m = 0). Fails with N4M_ERR_NUMERICAL_FAILURE when a class covariance
+// on the latent directions is not positive definite.
 [[nodiscard]] n4m_status_t pls_qda_decision(
     Context& ctx,
     const PlsQdaResult& model,

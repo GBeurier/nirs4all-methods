@@ -52,7 +52,7 @@ Current implementation: [cpp/src/core/vissa_selection.cpp](https://github.com/GB
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_vissa_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L216). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_vissa_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L232). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

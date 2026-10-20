@@ -52,7 +52,7 @@ Current implementation: [cpp/src/core/cars_selection.cpp](https://github.com/GBe
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_cars_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L108). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_cars_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L124). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

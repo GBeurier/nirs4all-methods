@@ -46,7 +46,7 @@ Current implementation: [cpp/src/core/randomization_selection.cpp](https://githu
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_randomization_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L302). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_randomization_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L324). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "core/common/matrix_view.hpp"
@@ -16,11 +17,11 @@ namespace {
     return row * cols + col;
 }
 
-// Project rows of X (n_rows x n_features) onto the model's latent space.
-// Returns row-major scores (n_rows x n_components). Uses model.rotations_r
-// and model.x_mean.
+// Scores (n_rows x n_components, row-major) of rows already in the model's
+// X space (model_space_x): t = x @ rotations_R. A null component (zero
+// rotation column) has a zero score column.
 void project_to_scores(const ::n4m::core::Model& model,
-                       const std::vector<double>& X,
+                       const std::vector<double>& x_model,
                        std::size_t n_rows,
                        std::vector<double>& out_scores) {
     const std::size_t p = static_cast<std::size_t>(model.n_features);
@@ -30,13 +31,31 @@ void project_to_scores(const ::n4m::core::Model& model,
         for (std::size_t comp = 0; comp < a; ++comp) {
             double sum = 0.0;
             for (std::size_t feature = 0; feature < p; ++feature) {
-                const double centered =
-                    X[idx(row, p, feature)] - model.x_mean[feature];
-                sum += centered * model.rotations_r[idx(feature, a, comp)];
+                sum += x_model[idx(row, p, feature)] * model.rotations_r[idx(feature, a, comp)];
             }
             out_scores[idx(row, a, comp)] = sum;
         }
     }
+}
+
+// The latent X directions the model keeps: the components whose rotation
+// column is nonzero. A PLS component flagged unresolved is a null component
+// (zero W, P, R columns) and has no X direction; a PCR component flagged
+// unresolved only for its Y side (u = Y q / q'q undefined or below the
+// resolution) keeps a resolved X direction and is kept.
+std::vector<std::size_t> latent_directions(const ::n4m::core::Model& model) {
+    const std::size_t p = static_cast<std::size_t>(model.n_features);
+    const std::size_t a = static_cast<std::size_t>(model.n_components);
+    std::vector<std::size_t> kept;
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            if (model.rotations_r[idx(feature, a, comp)] != 0.0) {
+                kept.push_back(comp);
+                break;
+            }
+        }
+    }
+    return kept;
 }
 
 [[nodiscard]] ::n4m_status_t copy_x(::n4m::core::Context& ctx,
@@ -84,6 +103,40 @@ void project_to_scores(const ::n4m::core::Model& model,
     return N4M_OK;
 }
 
+// Rows of X in the model's X space, as n4m_model_transform maps them: the
+// fitted SNV/Savitzky-Golay pipeline when the model owns one, then centring
+// and scaling by the model's x_mean / x_scale.
+[[nodiscard]] ::n4m_status_t model_space_x(::n4m::core::Context& ctx,
+                                           const n4m_matrix_view_t& X,
+                                           const ::n4m::core::Model& model,
+                                           std::vector<double>& out) {
+    n4m_status_t status = copy_x(ctx, X, model, out);
+    if (status != N4M_OK) return status;
+    const std::size_t rows = static_cast<std::size_t>(X.rows);
+    const std::size_t p = static_cast<std::size_t>(model.n_features);
+    if (model.has_snv_savgol_pipeline && rows > 0 && p > 0) {
+        const std::vector<double> raw = out;
+        n4m_matrix_view_t raw_view{};
+        raw_view.data = const_cast<double*>(raw.data());
+        raw_view.rows = X.rows;
+        raw_view.cols = X.cols;
+        raw_view.row_stride = X.cols;
+        raw_view.col_stride = 1;
+        raw_view.dtype = N4M_DTYPE_F64;
+        n4m_matrix_view_t out_view = raw_view;
+        out_view.data = out.data();
+        status = model.pipeline.transform(ctx, raw_view, out_view);
+        if (status != N4M_OK) return status;
+    }
+    for (std::size_t row = 0; row < rows; ++row) {
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            double& value = out[idx(row, p, feature)];
+            value = (value - model.x_mean[feature]) / model.x_scale[feature];
+        }
+    }
+    return N4M_OK;
+}
+
 }  // namespace
 
 namespace n4m::core {
@@ -100,68 +153,56 @@ n4m_status_t pls_hotelling_t2(
         return N4M_ERR_NOT_FITTED;
     }
     std::vector<double> x_buf;
-    n4m_status_t status = copy_x(ctx, X, model, x_buf);
+    n4m_status_t status = model_space_x(ctx, X, model, x_buf);
     if (status != N4M_OK) return status;
 
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t a = static_cast<std::size_t>(model.n_components);
+    const std::vector<std::size_t> kept = latent_directions(model);
 
-    // Reference variances per component.
-    std::vector<double> score_var(a, 0.0);
+    // Reference score variance of every kept direction, from X_reference or
+    // from the stored training scores.
+    std::vector<double> ref_scores;
+    std::size_t n_ref = 0;
+    const std::vector<double>* reference = nullptr;
     if (X_reference != nullptr) {
         std::vector<double> ref_buf;
-        status = copy_x(ctx, *X_reference, model, ref_buf);
+        status = model_space_x(ctx, *X_reference, model, ref_buf);
         if (status != N4M_OK) return status;
-        std::vector<double> ref_scores;
-        project_to_scores(model, ref_buf,
-                          static_cast<std::size_t>(X_reference->rows),
-                          ref_scores);
-        const std::size_t n_ref = static_cast<std::size_t>(X_reference->rows);
+        n_ref = static_cast<std::size_t>(X_reference->rows);
         if (n_ref < 2) {
             ctx.set_error("Hotelling T2 reference requires at least 2 rows");
             return N4M_ERR_INVALID_ARGUMENT;
         }
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            double mean = 0.0;
-            for (std::size_t row = 0; row < n_ref; ++row) {
-                mean += ref_scores[idx(row, a, comp)];
-            }
-            mean /= static_cast<double>(n_ref);
-            double sumsq = 0.0;
-            for (std::size_t row = 0; row < n_ref; ++row) {
-                const double centered = ref_scores[idx(row, a, comp)] - mean;
-                sumsq += centered * centered;
-            }
-            score_var[comp] = sumsq / static_cast<double>(n_ref - 1);
-        }
+        project_to_scores(model, ref_buf, n_ref, ref_scores);
+        reference = &ref_scores;
     } else if (!model.scores_t.empty()) {
-        const std::size_t n_train = static_cast<std::size_t>(model.n_samples);
-        if (n_train < 2) {
+        n_ref = static_cast<std::size_t>(model.n_samples);
+        if (n_ref < 2) {
             ctx.set_error("Hotelling T2 fallback requires >= 2 stored scores");
             return N4M_ERR_INVALID_ARGUMENT;
         }
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            double mean = 0.0;
-            for (std::size_t row = 0; row < n_train; ++row) {
-                mean += model.scores_t[idx(row, a, comp)];
-            }
-            mean /= static_cast<double>(n_train);
-            double sumsq = 0.0;
-            for (std::size_t row = 0; row < n_train; ++row) {
-                const double centered =
-                    model.scores_t[idx(row, a, comp)] - mean;
-                sumsq += centered * centered;
-            }
-            score_var[comp] = sumsq / static_cast<double>(n_train - 1);
-        }
+        reference = &model.scores_t;
     } else {
         ctx.set_error(
             "Hotelling T2 needs either X_reference or model.store_scores=1");
         return N4M_ERR_INVALID_ARGUMENT;
     }
-
-    for (std::size_t comp = 0; comp < a; ++comp) {
-        if (!(score_var[comp] > 0.0)) {
+    std::vector<double> score_var(kept.size(), 0.0);
+    for (std::size_t k = 0; k < kept.size(); ++k) {
+        const std::size_t comp = kept[k];
+        double mean = 0.0;
+        for (std::size_t row = 0; row < n_ref; ++row) {
+            mean += (*reference)[idx(row, a, comp)];
+        }
+        mean /= static_cast<double>(n_ref);
+        double sumsq = 0.0;
+        for (std::size_t row = 0; row < n_ref; ++row) {
+            const double centered = (*reference)[idx(row, a, comp)] - mean;
+            sumsq += centered * centered;
+        }
+        score_var[k] = sumsq / static_cast<double>(n_ref - 1);
+        if (!(score_var[k] > 0.0)) {
             ctx.set_errorf(
                 "Hotelling T2 reference variance is zero at component %llu",
                 static_cast<unsigned long long>(comp));
@@ -174,27 +215,37 @@ n4m_status_t pls_hotelling_t2(
     out_t2.assign(n, 0.0);
     for (std::size_t row = 0; row < n; ++row) {
         double sum = 0.0;
-        for (std::size_t comp = 0; comp < a; ++comp) {
-            const double t = scores[idx(row, a, comp)];
-            sum += (t * t) / score_var[comp];
+        for (std::size_t k = 0; k < kept.size(); ++k) {
+            const double t = scores[idx(row, a, kept[k])];
+            sum += (t * t) / score_var[k];
         }
         out_t2[row] = sum;
     }
     return N4M_OK;
 }
 
-n4m_status_t pls_q_residuals(
-    Context& ctx,
-    const Model& model,
-    const n4m_matrix_view_t& X,
-    std::vector<double>& out_q) {
+std::size_t pls_latent_directions(const Model& model) {
+    return model.rotations_r.empty() ? 0U : latent_directions(model).size();
+}
+
+namespace {
+
+// Q residuals of the rows of X (see pls_q_residuals) and the Frobenius norm of
+// those rows in the model's X space, accumulated on values divided by their
+// largest magnitude.
+[[nodiscard]] n4m_status_t q_residuals_and_norm(Context& ctx,
+                                                const Model& model,
+                                                const n4m_matrix_view_t& X,
+                                                std::vector<double>& out_q,
+                                                double& out_norm) {
     out_q.clear();
+    out_norm = 0.0;
     if (model.loadings_p.empty() || model.rotations_r.empty()) {
         ctx.set_error("model is not fitted (loadings/rotations missing)");
         return N4M_ERR_NOT_FITTED;
     }
     std::vector<double> x_buf;
-    n4m_status_t status = copy_x(ctx, X, model, x_buf);
+    n4m_status_t status = model_space_x(ctx, X, model, x_buf);
     if (status != N4M_OK) return status;
     const std::size_t n = static_cast<std::size_t>(X.rows);
     const std::size_t p = static_cast<std::size_t>(model.n_features);
@@ -212,14 +263,33 @@ n4m_status_t pls_q_residuals(
                 reconstructed += scores[idx(row, a, comp)] *
                                  model.loadings_p[idx(feature, a, comp)];
             }
-            const double centered =
-                x_buf[idx(row, p, feature)] - model.x_mean[feature];
-            const double residual = centered - reconstructed;
+            const double residual = x_buf[idx(row, p, feature)] - reconstructed;
             sumsq += residual * residual;
         }
         out_q[row] = sumsq;
     }
+    double largest = 0.0;
+    for (const double value : x_buf) largest = std::max(largest, std::fabs(value));
+    if (largest > 0.0) {
+        double sum = 0.0;
+        for (const double value : x_buf) {
+            const double scaled = value / largest;
+            sum += scaled * scaled;
+        }
+        out_norm = largest * std::sqrt(sum);
+    }
     return N4M_OK;
+}
+
+}  // namespace
+
+n4m_status_t pls_q_residuals(
+    Context& ctx,
+    const Model& model,
+    const n4m_matrix_view_t& X,
+    std::vector<double>& out_q) {
+    double norm = 0.0;
+    return q_residuals_and_norm(ctx, model, X, out_q, norm);
 }
 
 n4m_status_t pls_dmodx(
@@ -227,40 +297,50 @@ n4m_status_t pls_dmodx(
     const Model& model,
     const n4m_matrix_view_t& X,
     const n4m_matrix_view_t* X_reference,
-    std::vector<double>& out_dmodx) {
+    std::vector<double>& out_dmodx,
+    bool& out_reference_degenerate) {
     out_dmodx.clear();
+    out_reference_degenerate = false;
     std::vector<double> q;
     n4m_status_t status = pls_q_residuals(ctx, model, X, q);
     if (status != N4M_OK) return status;
     const std::size_t n = q.size();
     const std::size_t p = static_cast<std::size_t>(model.n_features);
-    const std::size_t a = static_cast<std::size_t>(model.n_components);
-    if (p <= a) {
-        ctx.set_error("DModX requires n_features > n_components");
+    const std::size_t k = pls_latent_directions(model);
+    if (p <= k) {
+        ctx.set_error("DModX requires n_features > the number of latent directions");
         return N4M_ERR_INVALID_ARGUMENT;
     }
-    const double dof = static_cast<double>(p - a);
+    const double dof = static_cast<double>(p - k);
 
     double sigma = 1.0;
     if (X_reference != nullptr) {
         std::vector<double> q_ref;
-        status = pls_q_residuals(ctx, model, *X_reference, q_ref);
+        double reference_norm = 0.0;
+        status = q_residuals_and_norm(ctx, model, *X_reference, q_ref, reference_norm);
         if (status != N4M_OK) return status;
         const std::size_t n_ref = q_ref.size();
-        if (n_ref < a + 2U) {
-            ctx.set_error("DModX reference requires at least n_components + 2 rows");
+        if (n_ref < k + 2U) {
+            ctx.set_error("DModX reference requires at least latent directions + 2 rows");
             return N4M_ERR_INVALID_ARGUMENT;
         }
         double sum = 0.0;
         for (double q_value : q_ref) sum += q_value;
-        const double dof_ref =
-            static_cast<double>(n_ref) - static_cast<double>(a) - 1.0;
-        if (!(dof_ref > 0.0)) {
-            ctx.set_error("DModX reference DoF is non-positive");
-            return N4M_ERR_INVALID_ARGUMENT;
+        // The reference rows are reconstructed by the latent directions up to
+        // rounding when their residual norm is not above the resolution
+        // (n_ref + p + k) eps ||X_ref||_F (model space): sigma_ref is then
+        // zero or rounding noise, and the normalized distance is undefined.
+        // It is published as NaN with the degenerate flag, never with a
+        // substituted scale; Q stays available.
+        const double resolution = static_cast<double>(n_ref + p + k) *
+                                  std::numeric_limits<double>::epsilon() * reference_norm;
+        if (!(std::sqrt(sum) > resolution)) {
+            out_reference_degenerate = true;
+            out_dmodx.assign(n, std::numeric_limits<double>::quiet_NaN());
+            return N4M_OK;
         }
+        const double dof_ref = static_cast<double>(n_ref - k - 1U);
         sigma = std::sqrt(sum / (dof * dof_ref));
-        if (!(sigma > 0.0)) sigma = 1.0;
     }
 
     out_dmodx.assign(n, 0.0);

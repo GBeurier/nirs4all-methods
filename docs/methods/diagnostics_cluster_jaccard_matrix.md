@@ -4,7 +4,7 @@ _Namespace_: **`n4m.cluster`** · _Fully-qualified_: `n4m.cluster.jaccard_matrix
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_cluster_jaccard_matrix`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L253). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_cluster_jaccard_matrix`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L255). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 

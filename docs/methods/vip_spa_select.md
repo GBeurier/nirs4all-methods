@@ -48,7 +48,7 @@ Current implementation: [cpp/src/core/vip_spa_selection.cpp](https://github.com/
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_vip_spa_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L447). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_vip_spa_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L469). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

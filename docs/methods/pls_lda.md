@@ -48,7 +48,7 @@ Current implementation: [cpp/src/core/pls_lda.cpp](https://github.com/GBeurier/n
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_estimators_pls_lda_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/classification.h#L54). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_estimators_pls_lda_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimators/classification.h#L67). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 

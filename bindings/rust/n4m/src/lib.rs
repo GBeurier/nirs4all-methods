@@ -36,6 +36,7 @@ const N4MM_MAGIC: &[u8; 4] = b"N4MM";
 const N4MM_HEADER_BYTES: usize = 20;
 const N4MM_FORMAT_VERSION_V1: u32 = 1;
 const N4MM_FORMAT_VERSION_V2: u32 = 2;
+const N4MM_FORMAT_VERSION_V3: u32 = 3;
 pub const SERIALIZED_MODEL_INFO_SCHEMA_V1: u32 = 1;
 pub const SERIALIZED_MODEL_CAPABILITY_PREDICT: u64 = 1 << 0;
 pub const SERIALIZED_MODEL_CAPABILITY_TRANSFORM: u64 = 1 << 1;
@@ -2658,7 +2659,10 @@ fn inspect_serialized_pipeline(
     }
 
     let capability_present = capabilities & SERIALIZED_MODEL_CAPABILITY_PIPELINE != 0;
-    if format == N4MM_FORMAT_VERSION_V1 {
+    // Format 1 never carries a pipeline, format 2 always does, and format 3
+    // flags it explicitly (reported through the PIPELINE capability).
+    if format == N4MM_FORMAT_VERSION_V1 || (format == N4MM_FORMAT_VERSION_V3 && !capability_present)
+    {
         if raw.present != 0
             || capability_present
             || raw.operator_count != 0
@@ -2679,7 +2683,9 @@ fn inspect_serialized_pipeline(
             || raw.savgol_mode != 0
             || raw.savgol_cval.to_bits() != 0
         {
-            return Err(corrupt("native N4MM v1 unexpectedly reports a pipeline"));
+            return Err(corrupt(
+                "native N4MM payload without a pipeline unexpectedly reports one",
+            ));
         }
         return Ok(None);
     }
@@ -2706,9 +2712,7 @@ fn inspect_serialized_pipeline(
         || raw.savgol_mode != SerializedSavitzkyGolayMode::Interp as i32
         || raw.savgol_cval.to_bits() != 0.0f64.to_bits()
     {
-        return Err(corrupt(
-            "native N4MM v2 pipeline inspection result is invalid",
-        ));
+        return Err(corrupt("native N4MM pipeline inspection result is invalid"));
     }
 
     Ok(Some(SerializedPipelineInfo {
@@ -2762,7 +2766,10 @@ pub fn inspect_n4mm(bytes: &[u8]) -> Result<SerializedModelInfo, Error> {
         },
         None,
     )?;
-    if format != N4MM_FORMAT_VERSION_V1 && format != N4MM_FORMAT_VERSION_V2 {
+    if format != N4MM_FORMAT_VERSION_V1
+        && format != N4MM_FORMAT_VERSION_V2
+        && format != N4MM_FORMAT_VERSION_V3
+    {
         return Err(Error {
             kind: ErrorKind::VersionIncompatible,
             status: VERSION_INCOMPATIBLE,
@@ -3291,7 +3298,8 @@ mod tests {
         let bytes = model.export_n4mm().unwrap();
         let info = inspect_n4mm(&bytes).unwrap();
         assert_eq!(info.schema_version, SERIALIZED_MODEL_INFO_SCHEMA_V1);
-        assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V1);
+        // A PLS fit records its component resolution: N4MM format 3.
+        assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V3);
         assert!(!info.has_pipeline());
         assert_eq!(info.pipeline, None);
         assert_eq!(info.writer_abi, (ABI_MAJOR, ABI_MINOR, 0));
@@ -3367,7 +3375,7 @@ mod tests {
         let expected = model.predict(&ctx, x).unwrap();
         let bytes = model.export_n4mm().unwrap();
         let info = inspect_n4mm(&bytes).unwrap();
-        assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V2);
+        assert_eq!(info.format_version, N4MM_FORMAT_VERSION_V3);
         assert!(info.has_pipeline());
         assert_eq!(
             info.capabilities,

@@ -54,7 +54,7 @@ Current implementation: [cpp/src/core/ga_selection.cpp](https://github.com/GBeur
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_ga_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L147). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_ga_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L163). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

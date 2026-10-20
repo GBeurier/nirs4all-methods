@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [1.3.7] - 2026-10-16
 
-ABI 2.20.0 (minor: 20 new symbols, no signature change of the 2.19
-surface). No model-state serialization format changes.
+ABI 2.20.0 (minor: 20 new symbols and two new `n4m_model_array_t` tags,
+no signature change of the 2.19 surface). Model-state serialization: PLS
+regression, PLS-DA and PCR models are now written as N4MM format 3
+(component resolution section, see Compatibility); formats 1 and 2 are
+unchanged for the other models and still read.
 
 ### Behaviour changes of symbols published in 1.3.6
 
@@ -221,6 +224,31 @@ surface). No model-state serialization format changes.
   contract). The JS `preflightPca` wrapper returns `resolution` and
   `unresolved`. Tested against mpmath references (`B_n(t)` cancellation
   families, a Kronecker product, permutations) on CPU and WASM.
+- Component resolution of PLS regression and PCR models (ABI 2.20).
+  `n4m_model_get_array(..., N4M_MODEL_COMPONENT_RESOLUTION)` returns (1, 1)
+  the absolute resolution below which a component's X-Y cross-covariance
+  cannot be told apart from rounding, in centred (scaled) X times Y units:
+  (n + a) eps ||X||_F ||Y||_F on ||X_k'Y_k||_F for every PLS regression
+  solver (and PLS-DA), (n + p) eps sigma_max(X) ||Y||_F on ||Y't_k|| for PCR.
+  `N4M_MODEL_UNRESOLVED_COMPONENTS` returns (1, n_components) flags, 1.0 for
+  a component whose cross-covariance is not above it. One flag covers two
+  cases that double precision cannot tell apart: a component that is
+  mathematically undefined (exact cross-covariance zero, e.g. beyond the rank
+  of X, or u = Y q / q'q with q = 0) and one that is merely not resolved
+  numerically (nonzero but below the bound). Neither is refused any more
+  inside the supported domain (see Changed for the PLS convention). PCR
+  keeps a component whose X direction is resolved, publishes its Y loading
+  (absolute accuracy only) and a zero Y-score column, and now flags it: with
+  a = (-3,-1,1,3), b = (1,-3,3,-1), X = a, Y = b + 2^-50 a (one component,
+  centred, unscaled) the exact Y scores are 2^50 Y, but the cross-covariance
+  20 * 2^-50 is below the resolution and the zero column used to be
+  published without any indication. Other models return
+  `N4M_ERR_UNSUPPORTED` for both tags. The values are kept by export/import
+  in N4MM format 3 (see Changed) and exposed by the JS/WASM
+  `NativeModel.getArray` / `componentResolution()` and `ModelArray` enum, and
+  by Python `pls4all.Model.component_resolution()`, `ModelArrayKind` and the
+  `component_resolution_` / `unresolved_components_` attributes of the
+  sklearn PLS regression and PCR wrappers.
 
 ### Changed
 
@@ -317,6 +345,77 @@ surface). No model-state serialization format changes.
   build (2 GiB maximum, C++ exceptions not caught) aborts on a failed
   allocation. ARI and Jaccard take integer labels: no numerical domain, but
   memory and size limits (`n <= 2^23` for ARI, `n <= 2^53` for Jaccard).
+- Unresolved PLS components are published as flagged null components
+  instead of being refused. For every PLS regression solver (NIPALS, SIMPLS,
+  orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD) and
+  PLS-DA, with one convention across solvers: a component whose X-Y
+  cross-covariance is not above the published resolution (not resolved
+  numerically, or mathematically undefined) has exactly zero W, P, Q, R and
+  (with store_scores=1) T and U columns, does not contribute to the
+  coefficients, and is flagged in `N4M_MODEL_UNRESOLVED_COMPONENTS`. Its
+  deflation leaves the residuals unchanged, so every later component is null
+  and flagged too (the solver stops there); the coefficients are those of
+  the model truncated to the resolved components, bit for bit, and all zero
+  with predictions equal to the Y mean when none is resolved. Previously the
+  fit returned `N4M_ERR_NUMERICAL_FAILURE` ("X-Y covariance is below its
+  numerical resolution"). With X = a, Y = b + 2^-50 a (a, b as above), NIPALS
+  and every other PLS solver now return one null component, coefficient 0,
+  predictions = the Y mean; with X = [a, a] and two components, the second
+  component is null and the coefficients are those of the one-component
+  model. PCR keeps its convention for a component whose X direction is
+  resolved (direction, Y loading and coefficients kept, Y-score column zero,
+  flagged); a component whose X singular value is not resolved (beyond the
+  rank of X), which PCR also refused, is now a flagged null component, like
+  every later one. Requests that are invalid (e.g. more components than
+  min(n - 1, p)) and inputs outside the supported numerical domain are still
+  refused. `n4m_model_coefficients_by_component` returns the truncated
+  coefficients for prefixes that include null components, and the
+  FastAOM-PLS CV path still scores only the resolved prefixes (the others
+  remain infinite, as when the fit was refused). A before/after bitwise sweep
+  (3690 fits, see Fixed) found no change of array or prediction on any fit
+  that succeeded before; the 298 fits that were refused (35 per PLS solver:
+  20 with more components than the rank of X, 6 with Y exactly in the span
+  of X, 9 with X columns scaled over up to 2^60 whose remaining covariance
+  falls below the absolute resolution; 18 PCR, all beyond the rank of X)
+  now return flagged null components after the resolved prefix, whose
+  coefficients, latent arrays and predictions are bit-identical to a fit
+  with the resolved number of components.
+- N4MM fitted-model format 3 (`N4M_SERIALIZATION_FORMAT_VERSION_V3`, now the
+  current version) is written for every model that records a component
+  resolution, i.e. every PLS regression (PLS-DA) and PCR fit: the eleven
+  format-1 vectors, then the resolution, the per-component flags and an
+  explicit pipeline flag before the optional SNV/Savitzky-Golay block.
+  Models without a resolution (canonical PLS, PLS-SVD, OPLS, imported linear
+  predictors) keep formats 1 and 2 byte for byte, and formats 1 and 2 remain
+  readable (without a recorded resolution). Readers before ABI 2.20 reject
+  format 3 with `N4M_ERR_VERSION_INCOMPATIBLE`. The Rust binding accepts it.
+
+- PCR with exactly equal (or, within rounding, indistinguishable) singular
+  values now documents its convention (`n4m.h`, `n4m_model_array_t`): only
+  the singular subspace is defined, and PCR returns the deterministic basis
+  of its one-sided Jacobi SVD (fixed rotation order, stable descending sort,
+  largest-magnitude entry positive). With a = (-3,-1,1,3), b = (1,-3,3,-1),
+  X = [a, b] (X'X = 20 I), Y = [a + d b, d a + b], d = 2^-12, one component
+  has W = (1, 0) and coefficients [[1, d], [0, 0]] (column order decides;
+  [[d, 1], [0, 0]] for X = [b, a]); two components do not depend on the
+  convention. Behaviour unchanged; C++ and JS/WASM tests pin it.
+
+### Compatibility
+
+- N4MM version 3: consumers that validate the N4MM byte version of a stored
+  model must accept 3 when moving to Methods >= 1.3.7, because every PLS
+  regression, PLS-DA and PCR model is now exported as format 3. This
+  includes the nirs4all-core V2/V3 archive contracts, whose `format_version`
+  field declares the N4MM payload version and is compared with the version
+  read from the bytes at replay: a new PLS/PCR model declared as 3 is
+  rejected by validators that only allow 1 or 2, and declaring 1 or 2 fails
+  the comparison with the bytes. Formats 1 and 2 are unchanged for the
+  other models.
+- PLS fits that used to fail with `N4M_ERR_NUMERICAL_FAILURE` on an
+  unresolved component now succeed with flagged null components (see
+  Changed). Callers that relied on that refusal (e.g. to find the usable
+  rank by retrying with fewer components) should read
+  `N4M_MODEL_UNRESOLVED_COMPONENTS` instead.
 
 ### Fixed
 
@@ -476,17 +575,71 @@ surface). No model-state serialization format changes.
   the caller's units, so fitting X 2^k, Y 2^m scales coefficients by exactly
   2^(m-k) and every weight, loading, rotation and score by its exact power
   of two. On every compared case where they previously succeeded, SIMPLS,
-  orthogonal scores, kernel, wide kernel, SVD, power and randomized SVD are
-  bit-identical; PCR is bit-identical except for the stored Y scores it
-  previously zeroed; NIPALS coefficients move by at most a few 1e-12
-  relative and its latent arrays by up to ~4e-7 relative when Y was much
-  larger than X (the solver's absolute `+eps` normalization terms now act at
-  unit scale). C++ sweeps over
+  orthogonal scores, power and randomized SVD are bit-identical; PCR is
+  bit-identical except for the stored Y scores it previously zeroed; SVD is
+  bit-identical except for multi-target fits whose X-Y covariance had no
+  entry of magnitude 1 or more, where its Jacobi stop test now applies its
+  relative tolerance instead of an absolute floor (closer to the exact
+  singular vectors); kernel and wide kernel move by rounding only (latent
+  arrays <= 5e-14 relative). NIPALS no longer adds scikit-learn's absolute
+  eps to its weight norm and Y-score denominators: its coefficients move by
+  at most a few 1e-12 relative, and its latent arrays now satisfy their
+  definitions (unit-norm W, U = Y Q / Q'Q) where that eps distorted them by
+  up to ~4e-7 relative when Y was much larger than X. C++ sweeps over
   k, m in {0, +-30, +-60, +-200} (one and two targets) check exact
   equivariance of every fitted array and agreement with scikit-learn 1.7.2
   `PLSRegression(scale=False)` / PCA + linear regression and NumPy analytic
   references (exact-singular-vector deflation, de Jong SIMPLS); a JS/WASM
   sweep checks the same on predictions.
+- The same solvers no longer apply absolute `DBL_EPSILON` thresholds to
+  derived quantities (X-Y covariance, weight, loading and score norms),
+  which the unit scaling alone did not make safe because it bounds X and Y
+  but not their covariance. With a = (-1,-1,1,1), b = (-1,1,-1,1), centred,
+  unscaled: for X = 2^15 a, Y = 2^25 b + a, NIPALS returned Y scores ~20 %
+  too small, and for Y = 2^30 b + a it refused the fit ("Y weights
+  vanished"), SIMPLS and PCR returned all-zero Y scores and kernel PLS
+  refused; PCR refused X = [2^30 a, b], Y = a + b (singular values 2^31 and
+  2) at its second component; every PLS solver refused X = [a, 2^-32 b],
+  Y = b. A PLS component is now refused (`N4M_ERR_NUMERICAL_FAILURE`, "X-Y
+  covariance is below its numerical resolution") only when
+  ||X_k'Y_k||_F <= (n + a) eps ||X_0||_F ||Y_0||_F on the unit-scaled centred
+  working matrices, and a PCR component only when its singular value is
+  <= (n + p) eps sigma_max (the SVD resolution); above these bounds the
+  remaining guards act on unit vectors or exact zeros only (NIPALS keeps
+  scikit-learn's 10 eps residual mask only where it leaves the covariance
+  resolved; see below). NIPALS, kernel
+  and orthogonal scores start the power iteration from a Y column whose
+  covariance with X is resolved when their usual start column is not
+  (previously a refusal). Kernel PLS forms its raw X scores as X (X'u)
+  instead of through the n x n kernel X X', which rounded away X columns
+  below ~2^-26 of the largest. PCR leaves the Y-score column of a component
+  zero only when its Y loading is below the rounding of Y't, about
+  (n + p) eps ||Y||_F sigma_max, and flags that component unresolved (see
+  Added). C++ and JS/WASM tests check these cases against analytic W, P, Q,
+  R, T, U, coefficients and predictions, on the fitted and on the
+  exported/imported model, and the rank-one X = [a, a] second component
+  (now a flagged null component, see Changed).
+- NIPALS and kernel / wide-kernel PLS decided that the Y residual was
+  constant from absolute thresholds before checking the cross-covariance:
+  NIPALS zeroed every Y column whose residual stayed below 10 eps
+  (scikit-learn's mask) and both refused when no residual entry exceeded
+  eps, although many such columns can carry a resolved covariance together.
+  With a, b as above, X = [a, b] and Y = a followed by 64 identical columns
+  2^-29 a + 2^-51 b (two components, centred, unscaled), the residual
+  columns after the first component are 2^-51 b, below the mask, while
+  ||X_1'Y_1||_F ~ 1.8e-14 exceeds the resolution ~ 9.4e-15; NIPALS refused
+  ("Y residual became constant at component 1"). With the unit vectors
+  (-1,-1,1,1), (-1,1,-1,1) and 100 columns 2^-29 a + 2^-52 b, no residual
+  entry exceeds eps and NIPALS and kernel PLS both refused. Both solvers now
+  decide whether a component is resolved on the intact residuals, apply the
+  mask only when the remaining columns keep the covariance resolved, and
+  start from the covariance-preferred column when no column exceeds eps:
+  every solver now returns the exact coefficients
+  [[1, 2^-29 ...], [0, 2^-51 ...]] and predictions = Y (NIPALS also its
+  analytic W, P, Q, T, U). The other solvers had no such pre-check. A
+  before/after bitwise sweep (3690 fits: random and structured X, Y with
+  1-5 targets, scales 2^-60..2^60, autoscaling on and off, every solver and
+  PCR) found no change of status, array or prediction.
 - The preflight PCA no longer uses the randomized sketch on large truncated
   requests, whose error the published resolution did not cover (a first
   variance 7 % low with `N4M_OK`). It now eigendecomposes the smaller-side
@@ -583,6 +736,201 @@ surface). No model-state serialization format changes.
   for 600 x 600, k = 600 (outside the Preflight profile k <= 10). A browser
   profile needs its own execution budget (p50/p95 timings, inter-module
   copies, cumulative memory) before qualification.
+- PLS-QDA (`n4m_estimators_pls_qda_fit` and the `pls_qda` classifier role)
+  now takes its latent space from the qualified PLS-DA SIMPLS solver
+  (centred, unscaled X, unit-norm scores) and fits the class Gaussians on
+  the resolved components only. Its private SIMPLS used absolute 1e-12
+  thresholds: with x = (-4,-3,-2,-1,1,2,3,5), X = [x, x], classes
+  (0,0,1,0,1,1,0,1), two components were refused ("a PLS-QDA class
+  covariance is not positive definite": the second component of the rank-one
+  X was rounding noise), and after multiplying X by 2^-50 one component was
+  refused too (no component computed). The second component is now a
+  flagged null component of the solver: zero rotation column, zero
+  class-mean and covariance rows / columns, left out of the discriminant
+  (log class priors only when no component is resolved). The decision,
+  -0.5 ((x_i - m_c)^2 / v_c + log(v_c / S)) + log(1/2) (m = (-1.25, 1.5),
+  v = (28.75, 25) / 3, S = 68.875), is now the same for one and two
+  components and for X 2^e, e in {0, -50, 50, -200, 250} (C++ and JS/WASM
+  tests, with the class means, covariances and rotations). Sweep against
+  the previous kernel (60 random fits): one refusal now fits, decisions
+  move by <= 1.6e-9 relative (3.6e-13 on the role fixture, within its
+  replay tolerance). The shared SIMPLS helper of the other extra PLS
+  estimators (sparse PLS-DA legacy, group sparse, CPPLS, weighted, ridge,
+  continuum, DS, MIR-PLS, missing-aware NIPALS, approximate PRESS,
+  bagging, boosting, random subspace) no longer uses scale-dependent
+  absolute thresholds either: a component is computed while the deflated
+  covariance is above (n + a) eps ||X||_F ||Y||_F, the other guards test
+  exact zeros (the Gauss-Jordan pivots of P'W, which is dimensionless, keep
+  their 1e-12). Same sweep: random subspace on X 2^-31 used to stop early
+  (predictions 4 % off those of the unscaled fit, now equal); bagging,
+  boosting, MIR-PLS and missing-aware NIPALS move by <= 1.3e-7 relative on
+  5 or fewer of 60 fits, the others are bit-identical.
+- PLS diagnostics (`n4m_metrics_pls_diagnostics_compute`) no longer
+  invent a reference scale for DModX. When the reference residual vanished
+  (sum Q_ref = 0) sigma_ref was replaced by 1: with a = (-3,-1,1,3),
+  b = (1,-3,3,-1), a model fitted on X_ref = [a, 0], Y = a (one component,
+  centred, unscaled) and X = [a, b] evaluated against X_ref, DModX was
+  (1, 3, 3, 1), and (9.3e-10, 2.8e-9, ...) after multiplying both X by 2^-30,
+  i.e. the unnormalized residual in the caller's units; orthogonal scores,
+  whose reconstruction leaves a rounding-level residual, returned ~2.3e15.
+  The reference residual is now degenerate when its norm sqrt(sum Q_ref) is
+  not above (n_ref + n_features + k) eps ||X_ref||_F in model space: "dmodx"
+  is NaN on every row and the new scalar `dmodx_reference_degenerate` is 1
+  (0 otherwise); Q and T2 are unchanged. Every other DModX is bit-identical
+  (the `pls_diagnostics` role fixture gains only the new scalar). No other
+  substituted scale or absolute floor remains in the diagnostics and
+  monitoring kernels (the monitoring thresholds are empirical quantiles of
+  T2 and Q). C++ and JS/WASM tests, every PLS solver, X_ref = 2^e [a, 0],
+  e in {0, -30, 200}: NaN and flag 1, Q = 2^2e b^2, T2 = 3 a^2 / 20; with
+  X_ref = 2^e [a, 2^-20 b]: DModX = 2^20 |b| / sqrt 10, flag 0.
+- VIP and the selectivity ratio (`n4m_feature_selection_variable_select_rank`
+  methods 0 and 2, also used by VIP-SPA) no longer depend on the units of X
+  and Y. With a = (-3,-1,1,3), b = (1,-3,3,-1), centred, unscaled, one
+  component: VIP skipped every weight column whose sum of squares was below
+  eps, so SIMPLS (whose stored weights scale as 1 / ||X||) on X = 2^30 [a, b],
+  Y = a returned VIP (0, 0) with status OK instead of (sqrt 2, 0) (same at
+  2^254), and it refused NIPALS on X = [a, b], Y = 2^-30 a ("Y variance
+  explained by components vanished") because sum_a ||t_a||^2 ||q_a||^2 was
+  below eps. The selectivity ratio divided by max(residual, eps): with
+  X = s [a + b, a - b], Y = a (explained and residual sums both 20 s^2, ratio
+  1) it returned 0.078125 at s = 2^-30 and ~6.7e-138 at s = 2^-256. VIP now
+  forms SSY_a / sum SSY and w_ja / ||w_a|| from scaled norms with no
+  threshold and leaves out only components that are flagged unresolved or
+  have an exactly zero weight, score or Y-loading column (refusal only when
+  none remains: VIP undefined). The selectivity ratio divides the two sums
+  accumulated on the column scaled by the exact power of two of its largest
+  value; an exactly zero residual gives +inf (0 for a column that is zero in
+  model space), as documented in `feature_selection.h`. A before/after sweep
+  (300 random fits x NIPALS, SIMPLS, kernel, SVD, PCR, VIP and SR, 3000
+  rankings): 90 VIP refusals now succeed; 71 VIP results that were all zero
+  and 15 that dropped components with small SIMPLS/kernel weights are now
+  correct; 545 SR results that hit the floor change (residual below eps, e.g.
+  scaled data or as many components as the rank of X); every other VIP moves
+  by <= 6e-16 relative and every other SR by <= 5e-14 (residual just below
+  eps) or not at all. C++ and JS/WASM tests: VIP (sqrt 2, 0) for
+  X = 2^e [a, b], Y = 2^f a, e in {0, 30, 254, -200}, f in {0, -30, -200, 200};
+  (sqrt 1.6, sqrt 0.4) for Y = 2^f [2 a, b] with two components; (1, 1) for
+  X = [a, a] with a null second component; SR (1, 1) for s = 2^e,
+  e in {0, -30, -256, 30, 250} (every PLS solver); SR (+inf, 0) for NIPALS on
+  X = [a, 0].
+- T2-PLS variable selection (`n4m_feature_selection_t2_select`) works on
+  models with null components. With a = (-3,-1,1,3), X = [a, 2a, 3a, 4a],
+  Y = a and two components, the zero second weight column made the weight
+  covariance singular and the selection returned `N4M_ERR_INVALID_ARGUMENT`.
+  The weight T2 now uses the m components with a nonzero weight column and
+  the limit (p - 1)^2 / p Beta_{1-alpha}(m / 2, (p - m - 1) / 2), so scores,
+  limits, masks and CV RMSE equal those of the model truncated to its
+  resolved components (here T2 = (1.35, 0.15, 0.15, 1.35), limit
+  2.25 (1 - alpha)^2); with m = 0 every T2 and limit is 0. The result gains
+  the scalar `n_latent_directions` (JS/WASM tests cover the diagnostics,
+  PLS-LDA and T2-selection cases above). Its singularity test was an absolute
+  1e-14 on the pivots of the weight covariance, whose scale follows the
+  solver (W ~ 1 / ||X|| for SIMPLS): SIMPLS on unscaled X of magnitude
+  ~2^18 or more was refused; the test is now relative to the largest
+  diagonal entry. A before/after sweep (150 random selections x NIPALS,
+  SIMPLS, alpha 0.001-0.75) is bit-identical on the 249 that ran before; the
+  7 refused ones (SIMPLS, X ~ 2^18-2^20) now run.
+- The T2-PLS selection limit inverted the Beta CDF against 1 - alpha by
+  bisection on [0, 1] with lgamma and a complement: 1 - alpha rounding to 1
+  made the quantile ~1 (alpha = 1e-20, Beta(1, 50): 0.6019 expected), and the
+  small lower tail was lost for alpha close to 1. As for the Hotelling T2
+  outlier limit, the small tail (upper for alpha <= 1/2, lower otherwise) is
+  now inverted in logarithms on the odds x / (1 - x), with a Lanczos ln B
+  free of large cancellations and a continued fraction that reports
+  non-convergence (`N4M_ERR_NUMERICAL_FAILURE`), by bisection on the normal
+  doubles with midpoint lo + (hi - lo) / 2. Internal tests check
+  Beta(1, b) and Beta(a, 1) closed forms to 1e-12 relative for alpha from
+  1e-300 to 1 - 2^-40 and shapes 0.5 to 5000.
+
+- PLS-LDA (`n4m_estimators_pls_lda_fit` and the `pls_lda` classifier role)
+  fits its discriminant on the resolved PLS-DA components. With
+  a = (-3,-1,1,3), X = [a, a], classes (0, 0, 1, 1) and two components, the
+  null second component's zero score column made the pooled within-class
+  covariance singular (diag(4, 0) with NIPALS) and the fit was refused
+  ("failed to invert PLS-LDA pooled covariance"). Identically zero score
+  columns now get zero discriminant weights at their positions, so
+  decisions and predictions are bit-identical to the head fitted on the
+  resolved components (here log(1/2) - 1 -+ a_i); with no resolved
+  component the decision is the log class prior (prediction: most frequent
+  class, lowest id on ties). PLS-logistic (ridge-regularised Newton)
+  already gave the truncated fit with a zero coefficient; it is now tested.
+
+- PLS diagnostics (`n4m_metrics_pls_diagnostics_compute`) and monitoring
+  (`n4m_metrics_pls_monitoring_run`) accept models with null components.
+  Hotelling T2 required a positive reference variance on every component,
+  so with a = (-3,-1,1,3), b = (1,-3,3,-1), X = [a, a, b], Y = a, two
+  components (centred, unscaled) it refused the whole result ("Hotelling T2
+  reference variance is zero at component 1"), and DModX used
+  n_features - n_components degrees of freedom (a factor sqrt 2 too large
+  without reference). T2 now sums over the model's latent directions, the
+  components with a nonzero rotation column: a PLS component flagged
+  unresolved is a null component without X direction, while a PCR component
+  flagged only for its Y side keeps its resolved X direction. DModX uses
+  n_features - k and n_reference - k - 1 degrees of freedom for k latent
+  directions; with k = 0 (no resolved component) T2 is 0 on every row. A
+  model with null components now has exactly the diagnostics of the model
+  truncated to its resolved components. The result gains the scalar
+  `n_latent_directions` (k).
+- PLS diagnostics and monitoring now map the rows into the model's X space
+  as `n4m_model_transform` does (fitted SNV/Savitzky-Golay pipeline, then
+  x_mean and x_scale). They used to project the centred but unscaled rows
+  onto rotations fitted on autoscaled X, so with `scale_x = 1` (the default)
+  T2 and DModX were wrong (X = [a, 2 b], Y = a, one component: T2 = a^2
+  instead of 3 a^2 / 20) and Q mixed raw and scaled units. Unscaled models
+  without pipeline are unchanged up to rounding. The `pls_diagnostics` and
+  `pls_monitoring` outputs of the cross-language estimator-role fixture
+  (`parity/fixtures/estimator_roles_n4me.json` and its R copy), computed with
+  the default autoscaling, are regenerated; every other entry is unchanged.
+
+- Power-type PLS iterations no longer fail, or stop on a wrong direction,
+  when the two leading singular values of X_k'Y_k are close. NIPALS,
+  canonical NIPALS, orthogonal scores, kernel, wide kernel, power, randomized
+  SVD and SIMPLS (also used by PLS-DA and di-PLS) contract their error by
+  about (sigma_2 / sigma_1)^2 per step. With a = (-3,-1,1,3), b = (1,-3,3,-1),
+  X = [a, b], Y = [a + d b, d a + b], d = 2^-12 (centred, unscaled, one
+  component), X'Y = 20 [[1, d], [d, 1]] has the singular values
+  20.0048828125 and 19.9951171875: SIMPLS, and every iterative solver at
+  tol 1e-12, returned `N4M_ERR_CONVERGENCE_FAILED`, and at the default tol
+  1e-6 NIPALS, kernel, wide kernel, power and randomized SVD returned
+  status OK with the weights (1, 0) instead of (1, 1) / sqrt 2 (coefficients
+  off by 1/2 instead of (1 + d) / 2 everywhere). With several targets, each
+  of these solvers now keeps a converged iterate only when it is proven
+  within 16 times its nominal step tolerance (sqrt(tol) for NIPALS,
+  canonical NIPALS, kernel, power and randomized SVD, tol for orthogonal
+  scores, min(max(tol, 1e-14), 1e-12) for SIMPLS) of the dominant singular
+  vector of the component's cross-covariance C, by an a posteriori
+  Davis-Kahan bound: sin(angle) <= ||M x - l x|| / (lambda_1 - lambda_2) for
+  M = C C' (or C'C), the Rayleigh quotient l <= lambda_1 and
+  lambda_2 <= min(trace M - lambda_1, sqrt(||M||_F^2 - lambda_1^2)), every
+  term widened by a bound on its rounding error (O(p q) work, plus
+  O(m^2 max(p, q)) for ||M||_F, m = min(p, q), only when the trace bound
+  does not suffice). Otherwise (no convergence, close or unproven leading
+  singular values) the dominant pair is computed from the Householder
+  tridiagonalisation and implicit QL of the smaller Gram matrix of C
+  (O(m^3), no spectral-gap dependence) and used when the iteration did not
+  converge or stopped farther than the same distance from it. The step size
+  alone is never taken as proof: in the d cases the bound fails and the
+  reference pair is used. One-target fits converge in one step and are
+  unchanged. A bitwise before/after sweep of the 3690 fits of the sweep
+  below changes two cases only: a random 3-target fit with
+  sigma_2 / sigma_1 = 0.98, whose first-component weights were 0.018-0.023
+  away from the dominant singular vector for NIPALS, kernel, wide kernel and
+  power (2.4e-15 now, against a 50-digit SVD; SIMPLS failed to converge and
+  now fits; coefficients and predictions move by <= 8e-16 relative since
+  that fit uses all components), and the exactly degenerate X = [a, b],
+  Y = [a, b] (sigma_1 = sigma_2), where randomized SVD now returns the first
+  coordinate direction of the reference pair instead of its random one
+  (coefficients unchanged). Cost (median of 5 fits, one component,
+  n = 256, p = 128, before the iteration control -> now): 1 target
+  unchanged (0.3 ms), 8 targets 0.6-2.7 ms unchanged, 128 targets
+  5.5-13 ms -> 12-20 ms (5 components: 21-76 ms -> 50-108 ms). The
+  certificate costs one matrix-vector product pair; the reference pair,
+  when needed, O(m^3). C++ and JS/WASM tests check the analytic arrays of
+  the d = 2^-12, 2^-20, 2^-30 cases for every PLS solver and PLS-DA, at
+  tol 1e-6 and 1e-12, the canonical weights, and the coefficients and
+  predictions of X = [a, b, c] with c = (1, -1, -1, 1) and 64 targets
+  (Y = [a + d b, d a + b, s_j c], X'Y with singular values 20 (1 +- d) and
+  ~2.9; coefficients (1 + d) / 2 in the leading 2 x 2 block, 0 elsewhere).
 
 ## [1.3.6] - 2026-10-13
 

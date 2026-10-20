@@ -55,7 +55,7 @@ Current implementation: [cpp/src/core/pso_selection.cpp](https://github.com/GBeu
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_pso_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L178). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_pso_select`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L194). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
