@@ -4470,6 +4470,10 @@ n4m_status_t fit_pcr_svd(
     // singular vector is orthonormal and the per-component deflation reduces
     // to the identity in the right-singular-vector basis.
     //
+    // Equal singular values only define their subspace: the directions are
+    // then the deterministic basis of n4m_svd_compact (fixed rotation order,
+    // stable sort, canonical sign), as documented in n4m.h.
+    //
     // The SVD resolves each singular value to an absolute accuracy of about
     // (n + p) eps sigma_max. A direction above that bound is kept, however
     // small relative to sigma_max. At or below it the direction is not

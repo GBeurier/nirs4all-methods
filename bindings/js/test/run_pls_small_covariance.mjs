@@ -45,6 +45,7 @@
 //      close leading singular values 20 (1 +- d); every solver and PLS-DA
 //      returns the dominant direction (1, 1) / sqrt 2 (see below).
 //  (10) the same with X = [a3, b3, c3] and 64 targets (see below).
+//  (11) PCR with equal singular values: the documented deterministic basis.
 
 import assert from "node:assert/strict";
 import * as n4m from "../dist/index.js";
@@ -385,6 +386,27 @@ for (const e of [12, 30]) {
                       resolution(PLS, x, 3, y, 1), [0], predictions];
         check(`${tag} X = [a3, b3, c3], 64 targets, d = 2^-${e}`, fit([tag, algorithm, solver], x, 3, y, 1, q), want);
         ++cases;
+    }
+}
+// (11) PCR with exactly equal singular values, X = [a3, b3] (X'X = 20 I):
+// only the singular subspace is defined; PCR returns the deterministic Jacobi
+// basis in column order: one component W = (1, 0), coefficients
+// [[1, d], [0, 0]] ([[d, 1], [0, 0]] for X = [b3, a3]); two components W = I.
+{
+    const d = p2(-12);
+    const y = a3.flatMap((v, i) => [v + d * b3[i], d * v + b3[i]]);
+    for (const swapped of [false, true]) {
+        const x = a3.flatMap((v, i) => (swapped ? [b3[i], v] : [v, b3[i]]));
+        for (const components of [1, 2]) {
+            const where = `pcr equal singular values ${swapped ? "[b3, a3]" : "[a3, b3]"}, ${components} component(s)`;
+            const r = fit(SOLVERS[1], x, 2, y, components, 2);
+            assert.equal(r.status, 0, `${where}: status`);
+            expectClose(where, "weights_w", r.fitted[1], components === 1 ? [1, 0] : [1, 0, 0, 1]);
+            const want = components === 1 ? (swapped ? [d, 1, 0, 0] : [1, d, 0, 0])
+                                          : (swapped ? [d, 1, 1, d] : [1, d, d, 1]);
+            expectClose(where, "coefficients", r.fitted[0], want);
+            ++cases;
+        }
     }
 }
 // Models without a component resolution (here canonical PLS) refuse the

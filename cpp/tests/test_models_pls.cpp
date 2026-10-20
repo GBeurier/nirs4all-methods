@@ -1267,6 +1267,66 @@ void test_pls_close_singular_values() {
     }
 }
 
+// (11) PCR with exactly equal singular values: X = [a3, b3] (X'X = 20 I),
+// Y = [a3 + d b3, d a3 + b3], d = 2^-12. Only the singular subspace is
+// defined; PCR returns the deterministic Jacobi basis in column order, so
+// with one component W = (1, 0), T = a3, coefficients [[1, d], [0, 0]], and
+// with the columns swapped (X = [b3, a3]) again W = (1, 0) (now along b3),
+// coefficients [[d, 1], [0, 0]]. Keeping both components does not depend on
+// the convention: W = I, coefficients [[1, d], [d, 1]].
+void test_pcr_equal_singular_values() {
+    const double d = std::ldexp(1.0, -12);
+    for (const bool swapped : {false, true}) {
+        std::vector<double> x(8), y(8);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = swapped ? kVecB3[i] : kVecA3[i];
+            x[i * 2 + 1] = swapped ? kVecA3[i] : kVecB3[i];
+            y[i * 2] = kVecA3[i] + d * kVecB3[i];
+            y[i * 2 + 1] = d * kVecA3[i] + kVecB3[i];
+        }
+        for (const std::int32_t components : {1, 2}) {
+            const std::string where = std::string("pcr equal singular values") +
+                                      (swapped ? " X = [b3, a3]" : " X = [a3, b3]") + ", " +
+                                      std::to_string(components) + " component(s)";
+            n4m_context_t* ctx = nullptr;
+            n4m_config_t* cfg = nullptr;
+            N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, components) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, N4M_ALGO_PCR) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, N4M_SOLVER_SVD) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+            n4m_matrix_view_t Xv{}, Yv{};
+            N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, x.data(), 4, 2, N4M_DTYPE_F64) ==
+                             N4M_OK);
+            N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Yv, y.data(), 4, 2, N4M_DTYPE_F64) ==
+                             N4M_OK);
+            n4m_model_t* model = nullptr;
+            N4M_TEST_REQUIRE(n4m_model_fit(ctx, cfg, &Xv, &Yv, &model) == N4M_OK);
+            n4m_array_t* arr = nullptr;
+            N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_WEIGHTS_W, &arr) == N4M_OK);
+            expect_analytic(where, "weights_w", array_values(arr),
+                            components == 1 ? std::vector<double>{1.0, 0.0}
+                                            : std::vector<double>{1.0, 0.0, 0.0, 1.0});
+            n4m_array_free(arr);
+            N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_COEFFICIENTS, &arr) ==
+                             N4M_OK);
+            std::vector<double> want = swapped ? std::vector<double>{d, 1.0, 0.0, 0.0}
+                                               : std::vector<double>{1.0, d, 0.0, 0.0};
+            if (components == 2) {
+                want = swapped ? std::vector<double>{d, 1.0, 1.0, d}
+                               : std::vector<double>{1.0, d, d, 1.0};
+            }
+            expect_analytic(where, "coefficients", array_values(arr), want);
+            n4m_array_free(arr);
+            n4m_model_destroy(model);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+        }
+    }
+}
+
 // (10) Close leading singular values with many targets, so that the reference
 // dominant pair (Householder-QL on a nontrivial Gram matrix) is exercised:
 // c3 = (1, -1, -1, 1) is orthogonal to a3 and b3 (||c3||^2 = 4), X = [a3, b3, c3],
@@ -1358,6 +1418,7 @@ void register_models_pls_tests(n4m_testing::Runner& r) {
     r.run("models_pls/close_singular_values", test_pls_close_singular_values);
     r.run("models_pls/close_singular_values_many_targets",
           test_pls_close_singular_values_many_targets);
+    r.run("models_pls/pcr_equal_singular_values", test_pcr_equal_singular_values);
     r.run("models_pls/kernel",             test_kernel);
     r.run("models_pls/wide_kernel",        test_wide_kernel);
     r.run("models_pls/orthogonal_scores",  test_orthogonal_scores);
