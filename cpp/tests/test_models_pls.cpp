@@ -28,6 +28,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -581,6 +583,826 @@ void test_pls_scale_equivariance() {
     for (const ScaleCase& c : kScaleCases) check_scale_sweep(c);
 }
 
+// Analytic small-covariance cases. With the centred, orthogonal vectors
+// a = (-1, -1, 1, 1) and b = (-1, 1, -1, 1), center on and scale off, every
+// fitted array below is written down from the solver conventions, not from a
+// solver run:
+//  (1) X = 2^15 a, Y = 2^e b + a (e = 25, 30), one component. Y is nearly
+//      orthogonal to X, so after the unit scaling the X-Y covariance is
+//      ~2^-e: an absolute eps in NIPALS shrank U by ~20 % (e = 25) or refused
+//      the fit (e = 30), and SIMPLS, kernel and PCR zeroed or refused U.
+//      Unit X weights (NIPALS, PCR, orthogonal scores, SVD, power, randomized
+//      SVD): W = P = R = 1, T = 2^15 a, Q = Y't / t't = 2^-15, coefficient
+//      2^-15, U = Y Q / Q'Q = 2^15 Y (NIPALS, PCR) or U = Y (one target with
+//      a unit Y weight). Unit-norm X scores (SIMPLS, kernel): T = a / 2,
+//      W = R = 2^-16, P = X'T = 2^16, Q = Y'T = 2, U = Y Q / Q'Q = Y / 2.
+//  (2) X = [2^30 a, b], Y = a + b, two components: singular values 2^31 and
+//      2, coefficients (2^-30, 1), predictions = Y. The second PCR direction
+//      (relative singular value 2^-30) was refused against an absolute eps on
+//      sigma^2. PCR: W = P = R = I, T = [2^30 a, b], Q = (2^-30, 1),
+//      U = [2^30 Y, Y].
+//  (3) X = [a, a], Y = a + b, two components: the second component does not
+//      exist (X has rank 1). Every solver publishes it as a null component
+//      flagged unresolved (zero W, P, Q, R, T, U columns): coefficients
+//      (1/2, 1/2) of the one-component model, predictions = a.
+// Every fit also publishes its component resolution, (n + a) eps ||X||_F
+// ||Y||_F for the PLS solvers and (n + p) eps sigma_max ||Y||_F for PCR, and
+// per-component unresolved flags; every fit is exported and re-imported and
+// the restored arrays (resolution and flags included) must be bit-identical.
+constexpr double kVecA[4] = {-1.0, -1.0, 1.0, 1.0};
+constexpr double kVecB[4] = {-1.0, 1.0, -1.0, 1.0};
+constexpr double kAnalyticTol = 1e-12;
+
+struct AnalyticSolver {
+    const char* tag;
+    n4m_algorithm_t algorithm;
+    n4m_solver_t solver;
+    bool unit_scores;    // unit-norm X scores (SIMPLS, kernel)
+    bool raw_y_scores;   // U = y for one target (unit Y weight)
+};
+
+constexpr AnalyticSolver kAnalyticSolvers[] = {
+    {"nipals", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS, false, false},
+    {"pcr", N4M_ALGO_PCR, N4M_SOLVER_SVD, false, false},
+    {"simpls", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_SIMPLS, true, false},
+    {"kernel", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_KERNEL_ALGORITHM, true, false},
+    {"wide kernel", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_WIDE_KERNEL, true, false},
+    {"orthogonal scores", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_ORTHOGONAL_SCORES, false, true},
+    {"svd", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_SVD, false, true},
+    {"power", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_POWER, false, true},
+    {"randomized svd", N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_RANDOMIZED_SVD, false, true},
+};
+
+// Fitted arrays in kSweepArrays order (coefficients, W, P, Q, R, T, U) plus
+// predictions on the training X; an empty expected array is not checked.
+struct AnalyticArrays {
+    std::vector<double> arrays[7];
+    std::vector<double> predictions;
+    std::vector<double> resolution;  // N4M_MODEL_COMPONENT_RESOLUTION
+    std::vector<double> unresolved;  // N4M_MODEL_UNRESOLVED_COMPONENTS
+};
+
+AnalyticArrays model_arrays(n4m_context_t* ctx, const n4m_model_t* model,
+                            const n4m_matrix_view_t& Xv) {
+    AnalyticArrays out;
+    n4m_array_t* arr = nullptr;
+    for (std::size_t i = 0; i < 7; ++i) {
+        N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, kSweepArrays[i], &arr) == N4M_OK);
+        out.arrays[i] = array_values(arr);
+        n4m_array_free(arr);
+    }
+    N4M_TEST_REQUIRE(n4m_model_predict_alloc(ctx, model, &Xv, &arr) == N4M_OK);
+    out.predictions = array_values(arr);
+    n4m_array_free(arr);
+    N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_COMPONENT_RESOLUTION, &arr) ==
+                     N4M_OK);
+    out.resolution = array_values(arr);
+    n4m_array_free(arr);
+    N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_UNRESOLVED_COMPONENTS, &arr) ==
+                     N4M_OK);
+    out.unresolved = array_values(arr);
+    n4m_array_free(arr);
+    return out;
+}
+
+// Fits with center on, scale off and stored scores; returns the fit status
+// and, on success, the fitted arrays (`fitted`) and those of the exported and
+// re-imported model (`restored`).
+n4m_status_t fit_analytic(const AnalyticSolver& s, std::vector<double> x, std::int64_t p,
+                          std::vector<double> y, std::int32_t components,
+                          AnalyticArrays& fitted, AnalyticArrays& restored,
+                          std::int64_t q = 1, double tol = 0.0) {
+    n4m_context_t* ctx = nullptr;
+    n4m_config_t* cfg = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_context_set_seed(ctx, kRandomizedSvdFixtureSeed) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, components) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, s.algorithm) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, s.solver) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_center_x(cfg, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_center_y(cfg, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_store_scores(cfg, 1) == N4M_OK);
+    if (tol > 0.0) N4M_TEST_REQUIRE(n4m_config_set_tol(cfg, tol) == N4M_OK);
+    n4m_matrix_view_t Xv{}, Yv{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, x.data(), 4, p, N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Yv, y.data(), 4, q, N4M_DTYPE_F64) == N4M_OK);
+    n4m_model_t* model = nullptr;
+    const n4m_status_t st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+    if (st == N4M_OK) {
+        fitted = model_arrays(ctx, model, Xv);
+        std::size_t bytes = 0;
+        N4M_TEST_REQUIRE(n4m_model_export_size(model, &bytes) == N4M_OK);
+        std::vector<unsigned char> payload(bytes);
+        std::size_t written = 0;
+        N4M_TEST_REQUIRE(n4m_model_export_to_buffer(model, payload.data(), payload.size(),
+                                                     &written) == N4M_OK);
+        n4m_model_t* imported = nullptr;
+        N4M_TEST_REQUIRE(n4m_model_import_from_buffer(ctx, payload.data(), written,
+                                                      &imported) == N4M_OK);
+        restored = model_arrays(ctx, imported, Xv);
+        n4m_model_destroy(imported);
+        n4m_model_destroy(model);
+    }
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+    return st;
+}
+
+// Elementwise relative agreement; a zero expected entry is compared against
+// the largest expected magnitude of the array.
+void expect_analytic(const std::string& where, const char* name, const std::vector<double>& got,
+                     const std::vector<double>& want) {
+    if (want.empty()) return;
+    if (got.size() != want.size())
+        throw std::runtime_error(where + ": " + name + " has the wrong size");
+    const double largest = max_abs(want.data(), want.size());
+    for (std::size_t i = 0; i < want.size(); ++i) {
+        const double scale = want[i] != 0.0 ? std::fabs(want[i]) : largest;
+        if (!(std::fabs(got[i] - want[i]) <= kAnalyticTol * scale))
+            throw std::runtime_error(where + ": " + name + "[" + std::to_string(i) +
+                                     "] = " + std::to_string(got[i]) + ", expected " +
+                                     std::to_string(want[i]));
+    }
+}
+
+void expect_fit(const std::string& where, const AnalyticArrays& fitted,
+                const AnalyticArrays& restored, const AnalyticArrays& want) {
+    for (std::size_t i = 0; i < 7; ++i) {
+        expect_analytic(where, kSweepArrayNames[i], fitted.arrays[i], want.arrays[i]);
+        if (restored.arrays[i] != fitted.arrays[i])
+            throw std::runtime_error(where + ": " + kSweepArrayNames[i] +
+                                     " changed through export/import");
+    }
+    expect_analytic(where, "predictions", fitted.predictions, want.predictions);
+    if (restored.predictions != fitted.predictions)
+        throw std::runtime_error(where + ": predictions changed through export/import");
+    expect_analytic(where, "resolution", fitted.resolution, want.resolution);
+    if (!want.unresolved.empty() && fitted.unresolved != want.unresolved)
+        throw std::runtime_error(where + ": unresolved flags differ from the expected ones");
+    if (restored.resolution != fitted.resolution || restored.unresolved != fitted.unresolved)
+        throw std::runtime_error(where + ": resolution or flags changed through export/import");
+}
+
+// Frobenius norm of a centred array, in long double (independent of the
+// solver's accumulation order).
+long double frobenius(const std::vector<double>& v) {
+    long double ss = 0.0L;
+    for (double x : v) ss += static_cast<long double>(x) * x;
+    return std::sqrt(ss);
+}
+
+// Expected component resolution, n = 4: PLS (n + a) eps ||X||_F ||Y||_F,
+// PCR (n + p) eps sigma_max ||Y||_F.
+std::vector<double> expected_resolution(const AnalyticSolver& s, const std::vector<double>& x,
+                                        int p, const std::vector<double>& y, int components,
+                                        long double sigma_max) {
+    const long double eps = std::numeric_limits<double>::epsilon();
+    const long double value = s.algorithm == N4M_ALGO_PCR
+                                  ? (4 + p) * eps * sigma_max * frobenius(y)
+                                  : (4 + components) * eps * frobenius(x) * frobenius(y);
+    return {static_cast<double>(value)};
+}
+
+std::vector<double> combine(double ca, double cb) {
+    std::vector<double> out(4);
+    for (std::size_t i = 0; i < 4; ++i) out[i] = ca * kVecA[i] + cb * kVecB[i];
+    return out;
+}
+
+// Every latent column `comp` (W, P, R: p x a; Q: q x a; T, U: 4 x a) of a
+// fitted model is exactly zero (a null component).
+void expect_null_component(const std::string& where, const AnalyticArrays& fitted,
+                           std::size_t a, std::size_t comp, std::size_t p, std::size_t q = 1) {
+    const std::size_t rows[7] = {0, p, p, q, p, 4, 4};
+    for (std::size_t i = 1; i < 7; ++i) {
+        const std::vector<double>& values = fitted.arrays[i];
+        if (values.size() != rows[i] * a)
+            throw std::runtime_error(where + ": " + kSweepArrayNames[i] + " has the wrong size");
+        for (std::size_t row = 0; row < rows[i]; ++row) {
+            const double value = values[row * a + comp];
+            if (value != 0.0 || std::signbit(value))
+                throw std::runtime_error(where + ": " + kSweepArrayNames[i] + " column " +
+                                         std::to_string(comp) + " of the null component is " +
+                                         std::to_string(value));
+        }
+    }
+}
+
+void test_pls_small_covariance_analytic() {
+    // (1) one feature, Y nearly orthogonal to X.
+    for (const int e : {25, 30}) {
+        const std::vector<double> x = combine(std::ldexp(1.0, 15), 0.0);
+        const std::vector<double> y = combine(1.0, std::ldexp(1.0, e));
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) + " X = 2^15 a, Y = 2^" +
+                                      std::to_string(e) + " b + a";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 1, y, 1, fitted, restored);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " +
+                                         std::to_string(st));
+            want.arrays[0] = {std::ldexp(1.0, -15)};
+            if (s.unit_scores) {
+                want.arrays[1] = {std::ldexp(1.0, -16)};
+                want.arrays[2] = {std::ldexp(1.0, 16)};
+                want.arrays[3] = {2.0};
+                want.arrays[4] = {std::ldexp(1.0, -16)};
+                want.arrays[5] = combine(0.5, 0.0);
+                want.arrays[6] = combine(0.5, std::ldexp(1.0, e - 1));
+            } else {
+                want.arrays[1] = {1.0};
+                want.arrays[2] = {1.0};
+                want.arrays[3] = {std::ldexp(1.0, -15)};
+                want.arrays[4] = {1.0};
+                want.arrays[5] = x;
+                want.arrays[6] = s.raw_y_scores
+                                     ? y
+                                     : combine(std::ldexp(1.0, 15), std::ldexp(1.0, e + 15));
+            }
+            want.predictions = combine(1.0, 0.0);
+            want.resolution = expected_resolution(s, x, 1, y, 1, std::ldexp(1.0L, 16));
+            want.unresolved = {0.0};
+            expect_fit(where, fitted, restored, want);
+        }
+    }
+
+    // (2) two features with singular values 2^31 and 2.
+    {
+        std::vector<double> x(8);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = std::ldexp(kVecA[i], 30);
+            x[i * 2 + 1] = kVecB[i];
+        }
+        const std::vector<double> y = combine(1.0, 1.0);
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) + " X = [2^30 a, b], Y = a + b";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " +
+                                         std::to_string(st));
+            want.arrays[0] = {std::ldexp(1.0, -30), 1.0};
+            if (s.algorithm == N4M_ALGO_PCR) {
+                const std::vector<double> identity = {1.0, 0.0, 0.0, 1.0};
+                want.arrays[1] = identity;
+                want.arrays[2] = identity;
+                want.arrays[3] = {std::ldexp(1.0, -30), 1.0};
+                want.arrays[4] = identity;
+                want.arrays[5] = x;
+                std::vector<double> u(8);
+                for (std::size_t i = 0; i < 4; ++i) {
+                    u[i * 2] = std::ldexp(y[i], 30);
+                    u[i * 2 + 1] = y[i];
+                }
+                want.arrays[6] = u;
+            }
+            want.predictions = y;
+            want.resolution = expected_resolution(s, x, 2, y, 2, std::ldexp(1.0L, 31));
+            want.unresolved = {0.0, 0.0};
+            expect_fit(where, fitted, restored, want);
+        }
+    }
+
+    // (4) X = [a, 2^-32 b], Y = b (spread 2^32), one component. PLS follows
+    // the tiny column: coefficients (0, 2^32), predictions = Y; unit X
+    // weights: W = P = R = (0, 1), T = 2^-32 b, Q = 2^32, U = 2^-32 b (or Y);
+    // unit-norm X scores: T = b / 2, W = R = (0, 2^31), P = (0, 2^-31), Q = 2,
+    // U = Y / 2. PCR keeps the dominant direction a, which Y does not
+    // correlate with: Q = 0 and coefficients 0. Its Y score u = Y q / q'q is
+    // mathematically undefined (q = 0): the component is flagged unresolved
+    // and its U column is zero.
+    {
+        std::vector<double> x(8);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = kVecA[i];
+            x[i * 2 + 1] = std::ldexp(kVecB[i], -32);
+        }
+        const std::vector<double> y = combine(0.0, 1.0);
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) + " X = [a, 2^-32 b], Y = b";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 1, fitted, restored);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " +
+                                         std::to_string(st));
+            if (s.algorithm == N4M_ALGO_PCR) {
+                want.arrays[0] = {0.0, 0.0};
+                want.arrays[1] = {1.0, 0.0};
+                want.arrays[2] = {1.0, 0.0};
+                want.arrays[3] = {0.0};
+                want.arrays[4] = {1.0, 0.0};
+                want.arrays[5] = combine(1.0, 0.0);
+                want.arrays[6] = {0.0, 0.0, 0.0, 0.0};
+                want.predictions = {0.0, 0.0, 0.0, 0.0};
+                want.unresolved = {1.0};
+            } else {
+                want.arrays[0] = {0.0, std::ldexp(1.0, 32)};
+                if (s.unit_scores) {
+                    want.arrays[1] = {0.0, std::ldexp(1.0, 31)};
+                    want.arrays[2] = {0.0, std::ldexp(1.0, -31)};
+                    want.arrays[3] = {2.0};
+                    want.arrays[4] = {0.0, std::ldexp(1.0, 31)};
+                    want.arrays[5] = combine(0.0, 0.5);
+                    want.arrays[6] = combine(0.0, 0.5);
+                } else {
+                    want.arrays[1] = {0.0, 1.0};
+                    want.arrays[2] = {0.0, 1.0};
+                    want.arrays[3] = {std::ldexp(1.0, 32)};
+                    want.arrays[4] = {0.0, 1.0};
+                    want.arrays[5] = combine(0.0, std::ldexp(1.0, -32));
+                    want.arrays[6] = s.raw_y_scores ? y : combine(0.0, std::ldexp(1.0, -32));
+                }
+                want.predictions = y;
+                want.unresolved = {0.0};
+            }
+            want.resolution = expected_resolution(s, x, 2, y, 1, 2.0L);
+            expect_fit(where, fitted, restored, want);
+        }
+    }
+
+    // (3) rank-one X: the second component is a flagged null component.
+    {
+        std::vector<double> x(8);
+        for (std::size_t i = 0; i < 4; ++i) x[i * 2] = x[i * 2 + 1] = kVecA[i];
+        const std::vector<double> y = combine(1.0, 1.0);
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) + " X = [a, a], Y = a + b";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " +
+                                         std::to_string(st));
+            want.arrays[0] = {0.5, 0.5};
+            want.predictions = combine(1.0, 0.0);
+            want.resolution = expected_resolution(s, x, 2, y, 2, std::sqrt(8.0L));
+            want.unresolved = {0.0, 1.0};
+            expect_fit(where, fitted, restored, want);
+            expect_null_component(where, fitted, 2, 1, 2);
+        }
+    }
+}
+
+// Unresolved components and multi-target resolution, with the centred,
+// orthogonal a = (-3, -1, 1, 3), b = (1, -3, 3, -1) (a'a = b'b = 20):
+//  (5) X = a, Y = b + 2^-50 a, one component. Exactly, Q = 2^-50 and
+//      U = Y q / q'q = 2^50 Y, but ||Y't|| = 20 2^-50 ~ 1.8e-14 does not
+//      exceed the PCR resolution 5 eps sqrt(20) ||Y|| ~ 2.2e-14: PCR keeps
+//      the component (W = P = R = 1, T = a, Q = 2^-50, coefficient 2^-50),
+//      flags it unresolved and leaves its U column zero. The PLS
+//      cross-covariance is unresolved as well: every PLS solver (and PLS-DA)
+//      publishes a null component flagged unresolved (W = P = Q = R = 0,
+//      T = U = 0), coefficient 0, predictions = the Y mean (0).
+//  (6) X = [2 a, b], Y = [a + 2^-48 b, 3 a - 2^-48 b] (exactly
+//      representable, as are all its products and partial sums), two PCR
+//      components: W = P = R = I, T = X, Q = [[1/2, 2^-48], [3/2, -2^-48]],
+//      coefficients Q', predictions = Y; the second component
+//      (||Y't_2|| = 20 sqrt(2) 2^-48 ~ 1.0e-13) is below the resolution
+//      6 eps sqrt(80) ||Y|| ~ 1.7e-13 and unresolved, U = [Y q_1 / q_1'q_1, 0].
+//  (7) X = [a, b], Y = [a, c, ..., c] with 64 copies of c = 2^-29 a + 2^-51 b,
+//      two components. After the first component each residual c column is
+//      2^-51 b, below scikit-learn's 10 eps mask, yet together they carry
+//      ||X_1'Y_1||_F = 64 * 20 * 2^-51 ~ 1.8e-14 above the resolution
+//      6 eps ||X|| ||Y|| ~ 9.4e-15. Every solver resolves both components:
+//      coefficients [[1, 2^-29 ...], [0, 2^-51 ...]], predictions = Y.
+//      NIPALS: W = P = I, T = X, Q = [[1, 0], [2^-29, 2^-51] x 64],
+//      U = [Y q_1 / q_1'q_1, Y_1 q_2 / q_2'q_2 = b] with
+//      Y q_1 / q_1'q_1 = a + 64 2^-80 / (1 + 2^-52) b.
+//  (8) As (7) with the unit vectors a = (-1, -1, 1, 1), b = (-1, 1, -1, 1)
+//      and 100 copies of c = 2^-29 a + 2^-52 b: the residual c columns are
+//      2^-52 b, no entry above eps (NIPALS and kernel took that for a constant
+//      residual and refused), while ||X_1'Y_1||_F = 10 * 4 * 2^-52 ~ 8.9e-15
+//      exceeds the resolution 6 eps ||X|| ||Y|| ~ 7.5e-15. Coefficients
+//      [[1, 2^-29 ...], [0, 2^-52 ...]], predictions = Y, for every solver.
+constexpr double kVecA3[4] = {-3.0, -1.0, 1.0, 3.0};
+constexpr double kVecB3[4] = {1.0, -3.0, 3.0, -1.0};
+
+std::vector<double> combine3(double ca, double cb) {
+    std::vector<double> out(4);
+    for (std::size_t i = 0; i < 4; ++i) out[i] = ca * kVecA3[i] + cb * kVecB3[i];
+    return out;
+}
+
+void test_pls_unresolved_components() {
+    const long double sqrt20 = std::sqrt(20.0L);
+    // (5)
+    {
+        const std::vector<double> x = combine3(1.0, 0.0);
+        const std::vector<double> y = combine3(std::ldexp(1.0, -50), 1.0);
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) + " X = a, Y = b + 2^-50 a";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 1, y, 1, fitted, restored);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
+            want.resolution = expected_resolution(s, x, 1, y, 1, sqrt20);
+            want.unresolved = {1.0};
+            if (s.algorithm != N4M_ALGO_PCR) {
+                const std::vector<double> zeros = {0.0, 0.0, 0.0, 0.0};
+                want.arrays[0] = {0.0};
+                for (std::size_t i = 1; i < 5; ++i) want.arrays[i] = {0.0};
+                want.arrays[5] = zeros;
+                want.arrays[6] = zeros;
+                want.predictions = zeros;
+                expect_fit(where, fitted, restored, want);
+                expect_null_component(where, fitted, 1, 0, 1);
+                // PLS-DA runs the same solvers.
+                AnalyticSolver da = s;
+                da.algorithm = N4M_ALGO_PLS_DA;
+                AnalyticArrays da_fitted, da_restored;
+                if (fit_analytic(da, x, 1, y, 1, da_fitted, da_restored) != N4M_OK)
+                    throw std::runtime_error(where + ": PLS-DA fit refused");
+                expect_fit(where + " (PLS-DA)", da_fitted, da_restored, want);
+                continue;
+            }
+            want.arrays[0] = {std::ldexp(1.0, -50)};
+            want.arrays[1] = {1.0};
+            want.arrays[2] = {1.0};
+            want.arrays[3] = {std::ldexp(1.0, -50)};
+            want.arrays[4] = {1.0};
+            want.arrays[5] = x;
+            want.arrays[6] = {0.0, 0.0, 0.0, 0.0};
+            want.predictions = combine3(std::ldexp(1.0, -50), 0.0);
+            expect_fit(where, fitted, restored, want);
+        }
+    }
+    // (6)
+    {
+        std::vector<double> x(8), y(8);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = 2.0 * kVecA3[i];
+            x[i * 2 + 1] = kVecB3[i];
+            y[i * 2] = kVecA3[i] + std::ldexp(kVecB3[i], -48);
+            y[i * 2 + 1] = 3.0 * kVecA3[i] - std::ldexp(kVecB3[i], -48);
+        }
+        const AnalyticSolver& pcr = kAnalyticSolvers[1];
+        const std::string where = "pcr X = [2a, b], Y = [a + 2^-48 b, 3a - 2^-48 b]";
+        AnalyticArrays fitted, restored, want;
+        const n4m_status_t st = fit_analytic(pcr, x, 2, y, 2, fitted, restored, 2);
+        if (st != N4M_OK)
+            throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
+        const double tiny = std::ldexp(1.0, -48);
+        const std::vector<double> identity = {1.0, 0.0, 0.0, 1.0};
+        want.arrays[0] = {0.5, 1.5, tiny, -tiny};
+        want.arrays[1] = identity;
+        want.arrays[2] = identity;
+        want.arrays[3] = {0.5, tiny, 1.5, -tiny};
+        want.arrays[4] = identity;
+        want.arrays[5] = x;
+        std::vector<double> u(8, 0.0);
+        for (std::size_t i = 0; i < 4; ++i)
+            u[i * 2] = (0.5 * y[i * 2] + 1.5 * y[i * 2 + 1]) / 2.5;
+        want.arrays[6] = u;
+        want.predictions = y;
+        want.resolution = expected_resolution(pcr, x, 2, y, 2, 2.0L * sqrt20);
+        want.unresolved = {0.0, 1.0};
+        expect_fit(where, fitted, restored, want);
+    }
+    // (7)
+    {
+        constexpr std::size_t q = 65;
+        std::vector<double> x(8), y(4 * q);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = kVecA3[i];
+            x[i * 2 + 1] = kVecB3[i];
+            y[i * q] = kVecA3[i];
+            for (std::size_t t = 1; t < q; ++t)
+                y[i * q + t] = std::ldexp(kVecA3[i], -29) + std::ldexp(kVecB3[i], -51);
+        }
+        std::vector<double> coefficients(2 * q), y_loadings(q * 2), u(8);
+        coefficients[0] = 1.0;
+        coefficients[q] = 0.0;
+        y_loadings[0] = 1.0;
+        y_loadings[1] = 0.0;
+        for (std::size_t t = 1; t < q; ++t) {
+            coefficients[t] = std::ldexp(1.0, -29);
+            coefficients[q + t] = std::ldexp(1.0, -51);
+            y_loadings[t * 2] = std::ldexp(1.0, -29);
+            y_loadings[t * 2 + 1] = std::ldexp(1.0, -51);
+        }
+        const double tilt = std::ldexp(64.0, -80) / (1.0 + std::ldexp(1.0, -52));
+        for (std::size_t i = 0; i < 4; ++i) {
+            u[i * 2] = kVecA3[i] + tilt * kVecB3[i];
+            u[i * 2 + 1] = kVecB3[i];
+        }
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) + " X = [a, b], Y = [a, 64 x (2^-29 a + 2^-51 b)]";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored, static_cast<std::int64_t>(q));
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
+            if (s.solver == N4M_SOLVER_NIPALS) {
+                // NIPALS reproduces every entry; the other solvers resolve
+                // the 2^-51 coefficients to ~1e-10 of themselves, i.e. to
+                // rounding of their column (checked below).
+                want.arrays[0] = coefficients;
+                const std::vector<double> identity = {1.0, 0.0, 0.0, 1.0};
+                want.arrays[1] = identity;
+                want.arrays[2] = identity;
+                want.arrays[3] = y_loadings;
+                want.arrays[4] = identity;
+                want.arrays[5] = x;
+                want.arrays[6] = u;
+            }
+            want.predictions = y;
+            want.resolution = expected_resolution(s, x, 2, y, 2, sqrt20);
+            want.unresolved = {0.0, 0.0};
+            expect_fit(where, fitted, restored, want);
+            const std::vector<double>& got = fitted.arrays[0];
+            for (std::size_t t = 0; t < q; ++t) {
+                const double column = std::max(std::fabs(coefficients[t]),
+                                               std::fabs(coefficients[q + t]));
+                for (std::size_t f = 0; f < 2; ++f) {
+                    const std::size_t k = static_cast<std::size_t>(f * q + t);
+                    if (!(std::fabs(got[k] - coefficients[k]) <= kAnalyticTol * column))
+                        throw std::runtime_error(where + ": coefficient (" + std::to_string(f) +
+                                                 ", " + std::to_string(t) + ") is wrong");
+                }
+            }
+        }
+    }
+    // (8)
+    {
+        constexpr std::size_t q = 101;
+        std::vector<double> x(8), y(4 * q), coefficients(2 * q, 0.0);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = kVecA[i];
+            x[i * 2 + 1] = kVecB[i];
+            y[i * q] = kVecA[i];
+            for (std::size_t t = 1; t < q; ++t)
+                y[i * q + t] = std::ldexp(kVecA[i], -29) + std::ldexp(kVecB[i], -52);
+        }
+        coefficients[0] = 1.0;
+        for (std::size_t t = 1; t < q; ++t) {
+            coefficients[t] = std::ldexp(1.0, -29);
+            coefficients[q + t] = std::ldexp(1.0, -52);
+        }
+        for (const AnalyticSolver& s : kAnalyticSolvers) {
+            const std::string where = std::string(s.tag) +
+                                      " X = [a, b], Y = [a, 100 x (2^-29 a + 2^-52 b)]";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored, static_cast<std::int64_t>(q));
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
+            want.arrays[0] = coefficients;
+            want.predictions = y;
+            want.resolution = expected_resolution(s, x, 2, y, 2, 2.0L);
+            want.unresolved = {0.0, 0.0};
+            expect_fit(where, fitted, restored, want);
+        }
+    }
+}
+
+// (9) Close leading singular values: X = [a3, b3], Y = [a3 + d b3, d a3 + b3]
+// with d = 2^-e (e = 12, 20, 30), one component. X'Y = 20 [[1, d], [d, 1]]
+// has the singular values 20 (1 +- d) and the dominant singular vectors
+// (1, 1) / sqrt 2 on both sides. The power-type iterations contract their
+// error by (1 - d)^2 / (1 + d)^2 per step: SIMPLS (and every iterative solver
+// at tol 1e-12) failed to converge, and NIPALS, kernel, power and randomized
+// SVD stopped at the default tol 1e-6 with weights (1, 0) (coefficients off by
+// 1/2). Both the default tol and tol = 1e-12 are checked. With s = 1 / sqrt 2 and h = (1 + d) / 2: coefficients h everywhere,
+// predictions h (a3 + b3) in both columns. Unit X weights (NIPALS, orthogonal
+// scores, SVD, power, randomized SVD): W = P = R = (s, s), T = s (a3 + b3),
+// Q = (1 + d) s (1, 1), U = s (a3 + b3) (u = Y q / q'q) or (1 + d) s (a3 + b3)
+// (u = Y c, unit Y weights). Unit-norm X scores (SIMPLS, kernel):
+// W = R = (1, 1) / sqrt 40, T = (a3 + b3) / sqrt 40, P = sqrt 10 (1, 1),
+// Q = (1 + d) sqrt 10 (1, 1), U = (a3 + b3) / sqrt 40. PLS-DA runs the same solvers;
+// canonical PLS (NIPALS and SVD) has the weights (s, s) as well.
+void test_pls_close_singular_values() {
+    const double s = 1.0 / std::sqrt(2.0);
+    const double r40 = 1.0 / std::sqrt(40.0);
+    const double r10 = std::sqrt(10.0);
+    const std::vector<double> ab = combine3(1.0, 1.0);
+    for (const int e : {12, 20, 30}) {
+        const double d = std::ldexp(1.0, -e);
+        const double h = (1.0 + d) / 2.0;
+        std::vector<double> x(8), y(8), predictions(8), t(4), u(4);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = kVecA3[i];
+            x[i * 2 + 1] = kVecB3[i];
+            y[i * 2] = kVecA3[i] + d * kVecB3[i];
+            y[i * 2 + 1] = d * kVecA3[i] + kVecB3[i];
+            predictions[i * 2] = predictions[i * 2 + 1] = h * ab[i];
+        }
+        for (const AnalyticSolver& solver : kAnalyticSolvers) {
+            if (solver.algorithm == N4M_ALGO_PCR) continue;  // X'X = 20 I: PCR is undetermined
+            for (const n4m_algorithm_t algorithm : {N4M_ALGO_PLS_REGRESSION, N4M_ALGO_PLS_DA})
+            for (const double tol : {0.0, 1e-12}) {
+                AnalyticSolver run = solver;
+                run.algorithm = algorithm;
+                const std::string where = std::string(solver.tag) +
+                                          (algorithm == N4M_ALGO_PLS_DA ? " (PLS-DA)" : "") +
+                                          (tol > 0.0 ? " tol 1e-12" : "") +
+                                          " X = [a3, b3], Y = [a3 + 2^-" + std::to_string(e) +
+                                          " b3, 2^-" + std::to_string(e) + " a3 + b3]";
+                AnalyticArrays fitted, restored, want;
+                const n4m_status_t st = fit_analytic(run, x, 2, y, 1, fitted, restored, 2, tol);
+                if (st != N4M_OK)
+                    throw std::runtime_error(where + ": fit refused with status " +
+                                             std::to_string(st));
+                want.arrays[0] = {h, h, h, h};
+                if (solver.unit_scores) {
+                    want.arrays[1] = {r40, r40};
+                    want.arrays[2] = {r10, r10};
+                    want.arrays[3] = {(1.0 + d) * r10, (1.0 + d) * r10};
+                    want.arrays[4] = {r40, r40};
+                    for (std::size_t i = 0; i < 4; ++i) {
+                        t[i] = r40 * ab[i];
+                        u[i] = r40 * ab[i];
+                    }
+                } else {
+                    want.arrays[1] = {s, s};
+                    want.arrays[2] = {s, s};
+                    want.arrays[3] = {(1.0 + d) * s, (1.0 + d) * s};
+                    want.arrays[4] = {s, s};
+                    for (std::size_t i = 0; i < 4; ++i) {
+                        t[i] = s * ab[i];
+                        u[i] = (solver.raw_y_scores && solver.solver != N4M_SOLVER_ORTHOGONAL_SCORES
+                                    ? (1.0 + d) * s
+                                    : s) *
+                               ab[i];
+                    }
+                }
+                want.arrays[5] = t;
+                want.arrays[6] = u;
+                want.predictions = predictions;
+                want.resolution = expected_resolution(run, x, 2, y, 1, 20.0L * (1.0L + d));
+                want.unresolved = {0.0};
+                expect_fit(where, fitted, restored, want);
+            }
+        }
+        for (const n4m_solver_t solver : {N4M_SOLVER_NIPALS, N4M_SOLVER_SVD}) {
+            const std::string where = std::string("canonical ") +
+                                      (solver == N4M_SOLVER_SVD ? "svd" : "nipals") +
+                                      " d = 2^-" + std::to_string(e);
+            n4m_context_t* ctx = nullptr;
+            n4m_config_t* cfg = nullptr;
+            N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, 1) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_CANONICAL) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, solver) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_deflation(cfg, N4M_DEFLATION_CANONICAL) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+            n4m_matrix_view_t Xv{}, Yv{};
+            N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, x.data(), 4, 2, N4M_DTYPE_F64) ==
+                             N4M_OK);
+            N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Yv, y.data(), 4, 2, N4M_DTYPE_F64) ==
+                             N4M_OK);
+            n4m_model_t* model = nullptr;
+            const n4m_status_t st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
+            n4m_array_t* arr = nullptr;
+            N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_WEIGHTS_W, &arr) == N4M_OK);
+            expect_analytic(where, "weights_w", array_values(arr), {s, s});
+            n4m_array_free(arr);
+            n4m_model_destroy(model);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+        }
+    }
+}
+
+// (11) PCR with exactly equal singular values: X = [a3, b3] (X'X = 20 I),
+// Y = [a3 + d b3, d a3 + b3], d = 2^-12. Only the singular subspace is
+// defined; PCR returns the deterministic Jacobi basis in column order, so
+// with one component W = (1, 0), T = a3, coefficients [[1, d], [0, 0]], and
+// with the columns swapped (X = [b3, a3]) again W = (1, 0) (now along b3),
+// coefficients [[d, 1], [0, 0]]. Keeping both components does not depend on
+// the convention: W = I, coefficients [[1, d], [d, 1]].
+void test_pcr_equal_singular_values() {
+    const double d = std::ldexp(1.0, -12);
+    for (const bool swapped : {false, true}) {
+        std::vector<double> x(8), y(8);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = swapped ? kVecB3[i] : kVecA3[i];
+            x[i * 2 + 1] = swapped ? kVecA3[i] : kVecB3[i];
+            y[i * 2] = kVecA3[i] + d * kVecB3[i];
+            y[i * 2 + 1] = d * kVecA3[i] + kVecB3[i];
+        }
+        for (const std::int32_t components : {1, 2}) {
+            const std::string where = std::string("pcr equal singular values") +
+                                      (swapped ? " X = [b3, a3]" : " X = [a3, b3]") + ", " +
+                                      std::to_string(components) + " component(s)";
+            n4m_context_t* ctx = nullptr;
+            n4m_config_t* cfg = nullptr;
+            N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, components) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, N4M_ALGO_PCR) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, N4M_SOLVER_SVD) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+            n4m_matrix_view_t Xv{}, Yv{};
+            N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, x.data(), 4, 2, N4M_DTYPE_F64) ==
+                             N4M_OK);
+            N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Yv, y.data(), 4, 2, N4M_DTYPE_F64) ==
+                             N4M_OK);
+            n4m_model_t* model = nullptr;
+            N4M_TEST_REQUIRE(n4m_model_fit(ctx, cfg, &Xv, &Yv, &model) == N4M_OK);
+            n4m_array_t* arr = nullptr;
+            N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_WEIGHTS_W, &arr) == N4M_OK);
+            expect_analytic(where, "weights_w", array_values(arr),
+                            components == 1 ? std::vector<double>{1.0, 0.0}
+                                            : std::vector<double>{1.0, 0.0, 0.0, 1.0});
+            n4m_array_free(arr);
+            N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_COEFFICIENTS, &arr) ==
+                             N4M_OK);
+            std::vector<double> want = swapped ? std::vector<double>{d, 1.0, 0.0, 0.0}
+                                               : std::vector<double>{1.0, d, 0.0, 0.0};
+            if (components == 2) {
+                want = swapped ? std::vector<double>{d, 1.0, 1.0, d}
+                               : std::vector<double>{1.0, d, d, 1.0};
+            }
+            expect_analytic(where, "coefficients", array_values(arr), want);
+            n4m_array_free(arr);
+            n4m_model_destroy(model);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+        }
+    }
+}
+
+// (10) Close leading singular values with many targets, so that the reference
+// dominant pair (Householder-QL on a nontrivial Gram matrix) is exercised:
+// c3 = (1, -1, -1, 1) is orthogonal to a3 and b3 (||c3||^2 = 4), X = [a3, b3, c3],
+// Y = [a3 + d b3, d a3 + b3, s_1 c3, ..., s_62 c3] with s_j = (64 + j) 2^-10.
+// X'Y = [[20, 20 d, 0], [20 d, 20, 0], [0, 0, 4 s']] has the singular values
+// 20 (1 +- d) and 4 ||s|| (~2.9): the dominant left singular vector is
+// (1, 1, 0) / sqrt 2. One component: t = (a3 + b3) / sqrt 2, t't = 20 and
+// t'Y_j = 0 for j >= 3, so the coefficients are h = (1 + d) / 2 in the
+// leading 2 x 2 block and 0 elsewhere, the predictions h (a3 + b3) in the
+// first two columns and 0 in the others (Y is centred).
+void test_pls_close_singular_values_many_targets() {
+    constexpr double kVecC3[4] = {1.0, -1.0, -1.0, 1.0};
+    constexpr std::size_t q = 64;
+    const std::vector<double> ab = combine3(1.0, 1.0);
+    for (const int e : {12, 30}) {
+        const double d = std::ldexp(1.0, -e);
+        const double h = (1.0 + d) / 2.0;
+        std::vector<double> x(12), y(4 * q), coefficients(3 * q, 0.0), predictions(4 * q, 0.0);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 3] = kVecA3[i];
+            x[i * 3 + 1] = kVecB3[i];
+            x[i * 3 + 2] = kVecC3[i];
+            y[i * q] = kVecA3[i] + d * kVecB3[i];
+            y[i * q + 1] = d * kVecA3[i] + kVecB3[i];
+            for (std::size_t j = 2; j < q; ++j) {
+                y[i * q + j] = std::ldexp(static_cast<double>(64 + j - 1), -10) * kVecC3[i];
+            }
+            predictions[i * q] = predictions[i * q + 1] = h * ab[i];
+        }
+        coefficients[0] = coefficients[1] = coefficients[q] = coefficients[q + 1] = h;
+        for (const AnalyticSolver& solver : kAnalyticSolvers) {
+            if (solver.algorithm == N4M_ALGO_PCR) continue;  // X'X = diag(20, 20, 4): undetermined
+            for (const double tol : {0.0, 1e-12}) {
+                const std::string where = std::string(solver.tag) + (tol > 0.0 ? " tol 1e-12" : "") +
+                                          " 64 targets, d = 2^-" + std::to_string(e);
+                n4m_context_t* ctx = nullptr;
+                n4m_config_t* cfg = nullptr;
+                N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, 1) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, solver.algorithm) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, solver.solver) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+                if (tol > 0.0) N4M_TEST_REQUIRE(n4m_config_set_tol(cfg, tol) == N4M_OK);
+                n4m_matrix_view_t Xv{}, Yv{};
+                N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&Xv, x.data(), 4, 3, N4M_DTYPE_F64) ==
+                                 N4M_OK);
+                N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(
+                                     &Yv, y.data(), 4, static_cast<std::int64_t>(q),
+                                     N4M_DTYPE_F64) == N4M_OK);
+                n4m_model_t* model = nullptr;
+                const n4m_status_t st = n4m_model_fit(ctx, cfg, &Xv, &Yv, &model);
+                if (st != N4M_OK)
+                    throw std::runtime_error(where + ": fit refused with status " +
+                                             std::to_string(st));
+                n4m_array_t* arr = nullptr;
+                N4M_TEST_REQUIRE(n4m_model_get_array(ctx, model, N4M_MODEL_COEFFICIENTS, &arr) ==
+                                 N4M_OK);
+                expect_analytic(where, "coefficients", array_values(arr), coefficients);
+                n4m_array_free(arr);
+                std::vector<double> predicted(4 * q, 0.0);
+                n4m_matrix_view_t Pv{};
+                N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(
+                                     &Pv, predicted.data(), 4, static_cast<std::int64_t>(q),
+                                     N4M_DTYPE_F64) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_model_predict(ctx, model, &Xv, &Pv) == N4M_OK);
+                expect_analytic(where, "predictions", predicted, predictions);
+                n4m_model_destroy(model);
+                n4m_config_destroy(cfg);
+                n4m_context_destroy(ctx);
+            }
+        }
+    }
+}
+
 }  // namespace
 
 void register_models_pls_tests(n4m_testing::Runner& r) {
@@ -591,6 +1413,12 @@ void register_models_pls_tests(n4m_testing::Runner& r) {
     r.run("models_pls/pcr",                test_pcr);
     r.run("models_pls/pcr_illconditioned", test_pcr_illconditioned);
     r.run("models_pls/scale_equivariance", test_pls_scale_equivariance);
+    r.run("models_pls/small_covariance_analytic", test_pls_small_covariance_analytic);
+    r.run("models_pls/unresolved_components", test_pls_unresolved_components);
+    r.run("models_pls/close_singular_values", test_pls_close_singular_values);
+    r.run("models_pls/close_singular_values_many_targets",
+          test_pls_close_singular_values_many_targets);
+    r.run("models_pls/pcr_equal_singular_values", test_pcr_equal_singular_values);
     r.run("models_pls/kernel",             test_kernel);
     r.run("models_pls/wide_kernel",        test_wide_kernel);
     r.run("models_pls/orthogonal_scores",  test_orthogonal_scores);

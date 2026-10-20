@@ -27,7 +27,15 @@ N4M_API n4m_status_t n4m_estimators_sparse_pls_da_fit(
     n4m_method_result_t** out_result);
 
 /* PLS-QDA (§5). Quadratic discriminant analysis on PLS scores.
- * `y_labels` is a length-n_samples buffer of non-negative class IDs.
+ * `y_labels` is a length-n_samples buffer of non-negative class IDs. The
+ * scores are those of the PLS-DA SIMPLS solver on the one-hot labels
+ * (centred, unscaled X; only cfg's n_components is used): unit-norm
+ * t = (x - x_mean) R, independent of the units of X. A null PLS-DA component
+ * (flagged unresolved, e.g. beyond the rank of X) has a zero rotation column
+ * and zero class-mean and covariance rows / columns, and the discriminant
+ * uses the resolved components only (log class priors when none is). A
+ * class covariance that is singular on the resolved components is refused
+ * (N4M_ERR_NUMERICAL_FAILURE).
  * The result contains:
  *   "class_means"        (n_classes x n_components)
  *   "class_covariances"  (n_classes x (n_components * n_components))
@@ -45,7 +53,12 @@ N4M_API n4m_status_t n4m_estimators_pls_qda_fit(
     int64_t y_labels_size,
     n4m_method_result_t** out_result);
 
-/* PLS-LDA — Linear Discriminant Analysis on PLS scores (Phase 4p). Result
+/* PLS-LDA — Linear Discriminant Analysis on PLS scores (Phase 4p). The
+ * discriminant uses the resolved PLS-DA components: a null component
+ * (flagged unresolved, zero score column) gets zero discriminant weights,
+ * so the head equals the one fitted on the resolved components; with no
+ * resolved component the decision is the log class prior and the
+ * prediction the most frequent class (lowest id on ties). Result
  * keys:
  *   "decision_scores"   (n × n_classes)
  *   int "predictions"   (n)
@@ -61,6 +74,7 @@ N4M_API n4m_status_t n4m_estimators_pls_lda_fit(
     n4m_method_result_t** out_result);
 
 /* PLS-Logistic — multinomial logistic regression on PLS scores (Phase 4q).
+ * A null PLS component has a zero score column and a zero coefficient.
  * Result keys:
  *   "decision_scores"  (n × n_classes)
  *   "probabilities"    (n × n_classes)

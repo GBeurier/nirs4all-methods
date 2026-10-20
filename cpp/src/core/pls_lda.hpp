@@ -32,7 +32,12 @@ struct PlsLdaHead {
     std::vector<double> constants;  // n_classes
 };
 
-// Fits the head on row-major scores (n x k) and 0-based labels.
+// Fits the head on row-major scores (n x k) and 0-based labels. Score
+// columns that are identically zero (null PLS components, flagged in
+// N4M_MODEL_UNRESOLVED_COMPONENTS) get zero discriminant weights: the head is
+// the LDA of the nonzero columns, kept at their positions, and with no
+// nonzero column the decision of every row is the log class prior (the
+// prediction is the most frequent class, the lowest id on ties).
 [[nodiscard]] n4m_status_t fit_pls_lda_head(Context& ctx,
                                             const std::vector<double>& scores,
                                             const std::vector<std::int32_t>& labels,

@@ -48,7 +48,7 @@ Current implementation: [cpp/src/core/variable_selection.cpp](https://github.com
 
 ### API and bindings
 
-**C ABI (ABI 2):** [`n4m_feature_selection_variable_select_rank`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L58). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_feature_selection_variable_select_rank`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/feature_selection.h#L74). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 

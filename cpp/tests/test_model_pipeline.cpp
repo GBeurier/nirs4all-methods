@@ -204,13 +204,13 @@ void test_pipeline_model_round_trip_and_parity() {
     N4M_TEST_REQUIRE(n4m_serialization_inspect(
                          plain_bytes.data(), plain_bytes.size(), &plain_format,
                          &major, &minor, &patch) == N4M_OK);
-    N4M_TEST_REQUIRE(plain_format == N4M_SERIALIZATION_FORMAT_VERSION_V1);
+    N4M_TEST_REQUIRE(plain_format == N4M_SERIALIZATION_FORMAT_VERSION_V3);
 
     const std::vector<unsigned char> bytes = export_model(pipeline_model);
     n4m_serialized_model_info_v1_t info{};
     N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
                          bytes.data(), bytes.size(), &info) == N4M_OK);
-    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION_V2);
+    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION_V3);
     N4M_TEST_REQUIRE(info.algorithm == N4M_ALGO_PLS_REGRESSION);
     N4M_TEST_REQUIRE(info.n_features == kFeatures);
     N4M_TEST_REQUIRE(info.capabilities ==
@@ -227,7 +227,8 @@ void test_pipeline_model_round_trip_and_parity() {
                          &restored_predictions) == N4M_OK);
     require_close(predicted, array_values(restored_predictions));
 
-    // The v2 extension is fixed-width and immediately precedes the checksum.
+    // The pipeline block is fixed-width and immediately precedes the checksum
+    // (format 3 writes it after the component-resolution section).
     constexpr std::size_t kExtensionBytes = 11U * 4U + 5U * 8U;
     const std::size_t extension = bytes.size() - 8U - kExtensionBytes;
 

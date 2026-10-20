@@ -59,36 +59,45 @@ void scale_by_power_of_two(std::vector<double>& values, int e) noexcept {
     }
 }
 
+// Rescales `values` by the exact power of two that puts their largest |value|
+// in [1, 2) and returns the exponent removed (0 for an all-zero array).
+int scale_to_unit_magnitude(std::vector<double>& values) noexcept {
+    double largest = 0.0;
+    for (double v : values) largest = std::max(largest, std::fabs(v));
+    if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
+    const int e = std::ilogb(largest);
+    scale_by_power_of_two(values, -e);
+    return e;
+}
+
 // Exact power-of-two rescaling of the centred working matrices of a PLS-family
-// fit so that each largest |value| lies in [1, 2). The absolute epsilon
-// thresholds of the scikit-learn-compatible solvers then act at a fixed
-// relative scale, and since power-of-two scaling is exact, fits of X 2^k,
-// Y 2^m are exactly equivariant. restore() maps the latent arrays back to the
+// fit so that each largest |value| lies in [1, 2). Since power-of-two scaling
+// is exact, fits of X 2^k, Y 2^m are exactly equivariant. The solvers decide
+// whether a component is resolved from the norms of these working matrices
+// (cross_covariance_resolution); their remaining unit-scale guards act only on
+// unit vectors or on exact zeros. restore() maps the latent arrays back to the
 // caller's units before rotations and coefficients are formed.
 class UnitScaling {
 public:
     UnitScaling(std::vector<double>& x, std::vector<double>& y) noexcept
-        : ex_(normalise(x)), ey_(normalise(y)) {}
+        : ex_(scale_to_unit_magnitude(x)), ey_(scale_to_unit_magnitude(y)) {}
 
+    // Also publishes the X-Y cross-covariance `resolution` of the unit-scaled
+    // working matrices in the caller's units (X times Y) and the
+    // per-component `unresolved` flags (1.0 or 0.0).
     void restore(::n4m::core::Model& model, std::vector<double>& scores_t,
-                 std::vector<double>& y_scores_u, const LatentUnits& units) const noexcept {
+                 std::vector<double>& y_scores_u, const LatentUnits& units,
+                 double resolution, std::vector<double> unresolved) const {
         scale_by_power_of_two(model.weights_w, exponent(units.weights_w));
         scale_by_power_of_two(model.loadings_p, exponent(units.loadings_p));
         scale_by_power_of_two(model.y_loadings_q, exponent(units.y_loadings_q));
         scale_by_power_of_two(scores_t, exponent(units.scores_t));
         scale_by_power_of_two(y_scores_u, exponent(units.y_scores_u));
+        model.component_resolution.assign(1, std::ldexp(resolution, ex_ + ey_));
+        model.unresolved_components = std::move(unresolved);
     }
 
 private:
-    static int normalise(std::vector<double>& values) noexcept {
-        double largest = 0.0;
-        for (double v : values) largest = std::max(largest, std::fabs(v));
-        if (!(largest > 0.0) || !std::isfinite(largest)) return 0;
-        const int e = std::ilogb(largest);
-        scale_by_power_of_two(values, -e);
-        return e;
-    }
-
     [[nodiscard]] int exponent(ScaleUnits units) const noexcept {
         return units.x * ex_ + units.y * ey_;
     }
@@ -115,6 +124,109 @@ void resize_fill(std::vector<double>& values, std::size_t n, double fill) {
     values.clear();
     values.resize(n);
     std::fill(values.begin(), values.end(), fill);
+}
+
+// Absolute numerical resolution of the cross-covariance X_k'Y_k of the
+// deflated working matrices, from the unit-scaled X_0, Y_0 (before any
+// deflation): its n-term inner products and up to `a` rank-one deflations
+// perturb it by at most about (n + a) eps ||X_0||_F ||Y_0||_F. A component
+// whose cross-covariance does not exceed this bound has no resolved direction
+// and is published as a null component (null_component_flags); above it the
+// solvers use no absolute threshold.
+[[nodiscard]] double cross_covariance_resolution(const std::vector<double>& x,
+                                                 const std::vector<double>& y,
+                                                 std::size_t n,
+                                                 std::size_t a) noexcept {
+    return static_cast<double>(n + a) * std::numeric_limits<double>::epsilon() *
+           std::sqrt(squared_norm(x)) * std::sqrt(squared_norm(y));
+}
+
+// Squared norms of the q columns of the row-major (p x q) matrix `m`.
+void column_squared_norms(const std::vector<double>& m, std::size_t p, std::size_t q,
+                          std::vector<double>& out) {
+    resize_fill(out, q, 0.0);
+    for (std::size_t row = 0; row < p; ++row) {
+        for (std::size_t col = 0; col < q; ++col) {
+            const double value = m[idx(row, q, col)];
+            out[col] += value * value;
+        }
+    }
+}
+
+// Whether a component's cross-covariance X_k'Y_k (column squared norms
+// `column_ss`) exceeds `resolution`.
+[[nodiscard]] bool cross_covariance_resolved(const std::vector<double>& column_ss,
+                                             double resolution) noexcept {
+    double total = 0.0;
+    for (double value : column_ss) total += value;
+    return std::sqrt(total) > resolution;
+}
+
+// Start target of the power iteration of a resolved component: `preferred`
+// when it is a target whose own covariance column is resolved, else the
+// target with the largest one (a start vector uncorrelated with X would stall
+// the iteration although a resolved direction exists). `preferred` may be
+// column_ss.size() (none).
+[[nodiscard]] std::size_t resolved_start_target(const std::vector<double>& column_ss,
+                                                double resolution,
+                                                std::size_t preferred) noexcept {
+    std::size_t best = 0;
+    for (std::size_t col = 1; col < column_ss.size(); ++col) {
+        if (column_ss[col] > column_ss[best]) best = col;
+    }
+    return preferred < column_ss.size() && std::sqrt(column_ss[preferred]) > resolution
+        ? preferred
+        : best;
+}
+
+// Per-component unresolved flags of a PLS fit whose first `resolved` of `a`
+// components are resolved. A component whose cross-covariance is not above
+// the resolution is published as a null component (zero W, P, Q, R, T and U
+// columns, no contribution to the coefficients) and flagged. Its deflation
+// leaves the residuals unchanged, so every later component is null as well
+// and the solvers stop at the first one.
+[[nodiscard]] std::vector<double> null_component_flags(std::size_t a, std::size_t resolved) {
+    std::vector<double> flags(a, 0.0);
+    for (std::size_t comp = resolved; comp < a; ++comp) flags[comp] = 1.0;
+    return flags;
+}
+
+// Cross-covariance X'Y (p x q, row-major) of row-major working matrices
+// X (n x p), Y (n x q).
+void cross_covariance(const std::vector<double>& x,
+                      const std::vector<double>& y,
+                      std::size_t n, std::size_t p, std::size_t q,
+                      std::vector<double>& covariance) {
+    resize_fill(covariance, p * q, 0.0);
+    n4m::linalg::gemm(
+        n4m::linalg::Trans_Yes, n4m::linalg::Trans_No,
+        p, q, n,
+        1.0,
+        x.data(), p,
+        y.data(), q,
+        0.0,
+        covariance.data(), q);
+}
+
+// Column squared norms of X'Y for row-major working matrices X (n x p), Y (n x q).
+void cross_covariance_column_squared_norms(const std::vector<double>& x,
+                                           const std::vector<double>& y,
+                                           std::size_t n, std::size_t p, std::size_t q,
+                                           std::vector<double>& out) {
+    std::vector<double> covariance;
+    cross_covariance(x, y, n, p, q, covariance);
+    column_squared_norms(covariance, p, q, out);
+}
+
+// Whether a component's cross-covariance matrix exceeds `resolution`. If so,
+// rescales it (and the resolution with it) by an exact power of two to a
+// largest |value| in [1, 2): its singular vectors are unchanged, and the
+// unit-scale guards of the singular-vector helpers become inactive.
+[[nodiscard]] bool rescale_resolved_covariance(std::vector<double>& covariance,
+                                               double& resolution) noexcept {
+    if (!(std::sqrt(squared_norm(covariance)) > resolution)) return false;
+    resolution = std::ldexp(resolution, -scale_to_unit_magnitude(covariance));
+    return true;
 }
 
 [[nodiscard]] double read_value(const n4m_matrix_view_t& v,
@@ -538,6 +650,293 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     return N4M_OK;
 }
 
+// Householder tridiagonalization of a symmetric (p x p) matrix in place.
+// On entry `A` is row-major symmetric. On exit:
+//   * `diag[i]` = tridiagonal diagonal
+//   * `subd[i]` = subdiagonal between row i and row i+1 (length p - 1)
+//   * `Q` (row-major p x p) accumulates the orthogonal transform such
+//     that `A_original = Q * T * Q^T` where `T` is tridiagonal.
+//
+// Uses the standard Golub-Van Loan algorithm 8.3.1: at each step build a
+// Householder reflector that zeros entries below the subdiagonal in column
+// `k`, apply it to the trailing submatrix, and accumulate into `Q`.
+// Complexity: ~4/3 p^3 flops (vs Jacobi's ~5 p^3 per sweep).
+void householder_tridiag(std::vector<double>& A,
+                                 std::size_t p,
+                                 std::vector<double>& diag,
+                                 std::vector<double>& subd,
+                                 std::vector<double>& Q) {
+    diag.assign(p, 0.0);
+    subd.assign(p > 0 ? p - 1 : 0, 0.0);
+    Q.assign(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) Q[idx(i, p, i)] = 1.0;
+    if (p <= 1U) {
+        if (p == 1U) diag[0] = A[0];
+        return;
+    }
+
+    std::vector<double> v(p, 0.0);
+    std::vector<double> w(p, 0.0);
+    for (std::size_t k = 0; k + 2U <= p; ++k) {
+        const std::size_t m = p - k - 1;  // length of vector below A[k, k]
+        // Compute alpha = -sign(A[k+1, k]) * ||A[k+1:p, k]||
+        double sigma = 0.0;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            const double x = A[idx(i, p, k)];
+            sigma += x * x;
+        }
+        const double sub = A[idx(k + 1, p, k)];
+        if (sigma <= std::numeric_limits<double>::min()) {
+            // Already tridiagonal at this column; skip.
+            continue;
+        }
+        const double norm_x = std::sqrt(sigma);
+        const double alpha = (sub >= 0.0 ? -norm_x : norm_x);
+        // v = x - alpha*e_1
+        std::fill(v.begin(), v.end(), 0.0);
+        for (std::size_t i = k + 1; i < p; ++i) {
+            v[i] = A[idx(i, p, k)];
+        }
+        v[k + 1] -= alpha;
+        // ||v||^2 = 2 * (sigma - alpha * sub)
+        const double vtv = 2.0 * (sigma - alpha * sub);
+        if (vtv <= std::numeric_limits<double>::min()) continue;
+        const double beta = 2.0 / vtv;
+
+        // Apply H = I - beta * v v^T from both sides:
+        //   A := H * A * H
+        // Compute p_vec = beta * A * v   (only lower trailing p - k - 1 block
+        // matters; but since A is dense symmetric we work over the whole
+        // trailing block A[k+1:p, k+1:p] for now). Actually since v is zero
+        // above index k, A * v only touches rows/cols k+1:p.
+        // 1. w = beta * A[k+1:p, k+1:p] * v[k+1:p]
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = k + 1; i < p; ++i) {
+            double sum = 0.0;
+            for (std::size_t j = k + 1; j < p; ++j) {
+                sum += A[idx(i, p, j)] * v[j];
+            }
+            w[i] = beta * sum;
+        }
+        // 2. K = beta/2 * v^T * w
+        double k_val = 0.0;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            k_val += v[i] * w[i];
+        }
+        k_val *= 0.5 * beta;
+        for (std::size_t i = k + 1; i < p; ++i) {
+            w[i] -= k_val * v[i];
+        }
+        // 3. A := A - v w^T - w v^T  (in trailing block)
+        for (std::size_t i = k + 1; i < p; ++i) {
+            const double vi = v[i];
+            const double wi = w[i];
+            for (std::size_t j = k + 1; j < p; ++j) {
+                A[idx(i, p, j)] -= vi * w[j] + wi * v[j];
+            }
+        }
+        // 4. Zero out below-subdiagonal entries in column k (and row k by
+        //    symmetry); record subdiagonal value.
+        A[idx(k + 1, p, k)] = alpha;
+        A[idx(k, p, k + 1)] = alpha;
+        for (std::size_t i = k + 2; i < p; ++i) {
+            A[idx(i, p, k)] = 0.0;
+            A[idx(k, p, i)] = 0.0;
+        }
+        // 5. Accumulate Q := Q * H = Q - (beta * Q * v) v^T
+        //    Compute u = Q * v (length p), then Q -= beta * u v^T.
+        std::fill(w.begin(), w.end(), 0.0);
+        for (std::size_t i = 0; i < p; ++i) {
+            double sum = 0.0;
+            for (std::size_t j = k + 1; j < p; ++j) {
+                sum += Q[idx(i, p, j)] * v[j];
+            }
+            w[i] = beta * sum;
+        }
+        for (std::size_t i = 0; i < p; ++i) {
+            const double wi = w[i];
+            for (std::size_t j = k + 1; j < p; ++j) {
+                Q[idx(i, p, j)] -= wi * v[j];
+            }
+        }
+        (void)m;
+    }
+    for (std::size_t i = 0; i < p; ++i) {
+        diag[i] = A[idx(i, p, i)];
+    }
+    for (std::size_t i = 0; i + 1 < p; ++i) {
+        subd[i] = A[idx(i + 1, p, i)];
+    }
+}
+
+// Symmetric tridiagonal QL with implicit Wilkinson shift (Numerical
+// Recipes `tqli`). Operates on the tridiagonal (`diag`, `subd`) produced
+// by `householder_tridiag`, accumulating Givens rotations into `Q`
+// (already initialized to the Householder transform) so that the final
+// `Q` columns are the eigenvectors of the original symmetric matrix.
+// On exit `diag` holds the eigenvalues (unsorted).
+//
+// `subd` is conceptually of length p-1 but the algorithm pads with a
+// trailing zero so subd[i] is accessed for i in [0, p-1]; in our storage
+// we keep subd at length p with subd[p-1] = 0.
+[[nodiscard]] n4m_status_t symmetric_qr_tridiag(
+    ::n4m::core::Context& ctx,
+    std::vector<double>& diag,
+    std::vector<double>& subd,
+    std::vector<double>& Q,
+    std::size_t p,
+    double tol,
+    const char* label) {
+    if (p <= 1U) return N4M_OK;
+    // Pad subd to length p (treat the last subdiagonal as 0).
+    subd.resize(p, 0.0);
+    constexpr std::size_t kMaxIter = 30U;  // per-eigenvalue cap (NR)
+    const double safe_tol = std::max(tol, 1e-15);
+
+    for (std::size_t l = 0; l < p; ++l) {
+        std::size_t iter = 0;
+        std::size_t m = 0;
+        while (true) {
+            // Find m >= l with subd[m] negligible relative to the
+            // surrounding diagonals.
+            for (m = l; m + 1 < p; ++m) {
+                const double dd = std::fabs(diag[m]) + std::fabs(diag[m + 1]);
+                if (std::fabs(subd[m]) <= safe_tol * dd) {
+                    break;
+                }
+            }
+            if (m == l) break;
+            if (iter++ >= kMaxIter) {
+                ctx.set_errorf("%s symmetric QR failed to converge", label);
+                return N4M_ERR_CONVERGENCE_FAILED;
+            }
+            // Wilkinson shift from the trailing 2x2 starting at l.
+            double g = (diag[l + 1] - diag[l]) / (2.0 * subd[l]);
+            double r = std::hypot(g, 1.0);
+            const double sign_r = (g >= 0.0 ? 1.0 : -1.0);
+            g = diag[m] - diag[l] + subd[l] / (g + sign_r * r);
+            double s = 1.0;
+            double c = 1.0;
+            double pp = 0.0;
+            // Implicit QL sweep, walking from index m-1 down to l.
+            for (std::size_t ii = m; ii-- > l;) {
+                double f = s * subd[ii];
+                double b = c * subd[ii];
+                r = std::hypot(f, g);
+                subd[ii + 1] = r;
+                if (r == 0.0) {
+                    diag[ii + 1] -= pp;
+                    subd[m] = 0.0;
+                    break;
+                }
+                s = f / r;
+                c = g / r;
+                g = diag[ii + 1] - pp;
+                r = (diag[ii] - g) * s + 2.0 * c * b;
+                pp = s * r;
+                diag[ii + 1] = g + pp;
+                g = c * r - b;
+                // Accumulate rotation into eigenvector matrix Q.
+                for (std::size_t row = 0; row < p; ++row) {
+                    const double qi = Q[idx(row, p, ii + 1)];
+                    const double qj = Q[idx(row, p, ii)];
+                    Q[idx(row, p, ii + 1)] = s * qj + c * qi;
+                    Q[idx(row, p, ii)]     = c * qj - s * qi;
+                }
+                if (ii == l) break;  // bounded explicitly because ii is size_t
+            }
+            if (r == 0.0 && m > l) continue;
+            diag[l] -= pp;
+            subd[l] = g;
+            subd[m] = 0.0;
+        }
+    }
+    return N4M_OK;
+}
+
+// Full symmetric eigendecomposition: matrix -> (eigvals, eigvecs) such
+// that  matrix = eigvecs * diag(eigvals) * eigvecs^T. Composes Householder
+// tridiagonalization with implicit-shift symmetric QR; substantially
+// faster than cyclic Jacobi at p >= a few hundred where Jacobi's many
+// full-matrix sweeps dominate cost.
+[[nodiscard]] n4m_status_t symmetric_eigh(
+    ::n4m::core::Context& ctx,
+    std::vector<double> matrix,
+    std::size_t p,
+    double tol,
+    const char* label,
+    std::vector<double>& eigvals_out,
+    std::vector<double>& eigvecs_out) {
+    eigvals_out.assign(p, 0.0);
+    eigvecs_out.assign(p * p, 0.0);
+    for (std::size_t i = 0; i < p; ++i) eigvecs_out[idx(i, p, i)] = 1.0;
+    if (p == 0U) return N4M_OK;
+    if (p == 1U) {
+        eigvals_out[0] = matrix[0];
+        return N4M_OK;
+    }
+
+    std::vector<double> diag;
+    std::vector<double> subd;
+    householder_tridiag(matrix, p, diag, subd, eigvecs_out);
+    const n4m_status_t status =
+        symmetric_qr_tridiag(ctx, diag, subd, eigvecs_out, p,
+                              std::max(tol, 1e-14), label);
+    if (status != N4M_OK) return status;
+    eigvals_out = std::move(diag);
+    return N4M_OK;
+}
+
+// Largest eigenpair of a symmetric positive semidefinite (n x n) matrix from
+// its full decomposition by symmetric_eigh (Householder tridiagonalisation and
+// implicit QL, O(n^3) and independent of the spectral gap); the lowest index
+// wins ties. Same contract and checks as largest_symmetric_eigenvector.
+[[nodiscard]] n4m_status_t largest_symmetric_eigenvector_ql(
+    ::n4m::core::Context& ctx,
+    const std::vector<double>& symmetric,
+    std::size_t n,
+    const char* label,
+    std::size_t component,
+    std::vector<double>& eigenvector,
+    double& eigenvalue) {
+    resize_fill(eigenvector, n, 0.0);
+    eigenvalue = 0.0;
+    std::vector<double> values;
+    std::vector<double> vectors;
+    const n4m_status_t status = symmetric_eigh(ctx, symmetric, n, 0.0, label, values, vectors);
+    if (status != N4M_OK) {
+        return status;
+    }
+    std::size_t best = 0;
+    for (std::size_t i = 1; i < n; ++i) {
+        if (values[i] > values[best]) {
+            best = i;
+        }
+    }
+    if (!(values[best] > std::numeric_limits<double>::epsilon())) {
+        ctx.set_errorf("%s covariance vanished at component %llu", label, ull(component));
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    for (std::size_t i = 0; i < n; ++i) {
+        eigenvector[i] = vectors[idx(i, n, best)];
+    }
+    const double norm = std::sqrt(squared_norm(eigenvector));
+    if (norm <= std::numeric_limits<double>::epsilon()) {
+        ctx.set_errorf("%s eigenvector vanished at component %llu", label, ull(component));
+        return N4M_ERR_NUMERICAL_FAILURE;
+    }
+    for (double& value : eigenvector) {
+        value /= norm;
+    }
+    eigenvalue = values[best];
+    return N4M_OK;
+}
+
+// Eigen-solver of the Gram matrix in dominant_svd_pair: the largest-pivot
+// Jacobi rotations of the SVD solver (O(m^2) search per rotation, up to
+// O(m^4) in all for m = min(features, targets)), or Householder-QL (O(m^3)).
+enum class GramEigenSolver { kJacobi, kHouseholderQl };
+
 [[nodiscard]] n4m_status_t dominant_svd_pair(
     ::n4m::core::Context& ctx,
     const std::vector<double>& covariance,
@@ -545,6 +944,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     std::size_t targets,
     std::int32_t max_iter,
     double tol,
+    GramEigenSolver solver,
     std::size_t component,
     std::vector<double>& left,
     std::vector<double>& right) {
@@ -587,8 +987,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             }
         }
         double eigenvalue = 0.0;
-        status = largest_symmetric_eigenvector(ctx, gram, targets, max_iter, tol,
-                                               "SVD right", component, right, eigenvalue);
+        status = solver == GramEigenSolver::kJacobi
+                     ? largest_symmetric_eigenvector(ctx, gram, targets, max_iter, tol,
+                                                     "SVD right", component, right, eigenvalue)
+                     : largest_symmetric_eigenvector_ql(ctx, gram, targets, "SVD right",
+                                                        component, right, eigenvalue);
         if (status != N4M_OK) {
             return status;
         }
@@ -615,8 +1018,11 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             }
         }
         double eigenvalue = 0.0;
-        status = largest_symmetric_eigenvector(ctx, gram, features, max_iter, tol,
-                                               "SVD left", component, left, eigenvalue);
+        status = solver == GramEigenSolver::kJacobi
+                     ? largest_symmetric_eigenvector(ctx, gram, features, max_iter, tol,
+                                                     "SVD left", component, left, eigenvalue)
+                     : largest_symmetric_eigenvector_ql(ctx, gram, features, "SVD left",
+                                                        component, left, eigenvalue);
         if (status != N4M_OK) {
             return status;
         }
@@ -649,6 +1055,190 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
+}
+
+// Power-type iterations (NIPALS, canonical NIPALS, orthogonal scores, kernel,
+// power, randomized SVD, SIMPLS with several targets) contract the error of
+// their iterate by about (sigma_2 / sigma_1)^2 per step, where sigma_1 >=
+// sigma_2 are the two leading singular values of the cross-covariance. When
+// these are close the iteration stalls: it fails to converge (X = [a, b],
+// Y = [a + 2^-12 b, 2^-12 a + b], sigma = 20 (1 +- 2^-12)), or its step-size
+// test passes while the iterate is still far from the dominant direction (the
+// error is about step / (1 - (sigma_2 / sigma_1)^2)), so the step size alone
+// never proves convergence. A converged iterate is kept without further work
+// when an a posteriori bound (dominant_direction_certified) proves it within
+// kIterateAcceptanceFactor times its nominal step tolerance of the dominant
+// singular vector. Otherwise (no convergence, small or unproven spectral gap)
+// the dominant pair is computed by reference_dominant_pair, which has no gap
+// dependence, and the iterate is kept only when it lies within the same
+// distance of it.
+constexpr double kIterateAcceptanceFactor = 16.0;
+
+// Dominant singular pair (unit left and right singular vectors) of a nonzero
+// cross-covariance from the Householder-QL decomposition of its smaller Gram
+// matrix (dominant_svd_pair, O(m^3) for m = min(features, targets)), on a copy
+// rescaled by an exact power of two to a largest |value| in [1, 2) (singular
+// vectors unchanged).
+[[nodiscard]] n4m_status_t reference_dominant_pair(::n4m::core::Context& ctx,
+                                                   std::vector<double> covariance,
+                                                   std::size_t features,
+                                                   std::size_t targets,
+                                                   std::int32_t max_iter,
+                                                   double tol,
+                                                   std::size_t component,
+                                                   std::vector<double>& left,
+                                                   std::vector<double>& right) {
+    static_cast<void>(scale_to_unit_magnitude(covariance));
+    return dominant_svd_pair(ctx, covariance, features, targets, max_iter, tol,
+                             GramEigenSolver::kHouseholderQl, component, left, right);
+}
+
+// Whether `iterate`, a candidate dominant left (left_side) or right singular
+// vector of the cross-covariance C (features x targets), is proven to lie
+// within direction distance `acceptance` (see direction_distance) of the true
+// dominant singular vector. With M = C C' (or C'C), x the unit iterate, the
+// Rayleigh quotient l = x'Mx <= lambda_1 and the residual r = Mx - l x, the
+// Davis-Kahan bound gives sin(angle) <= ||r|| / (lambda_1 - lambda_2), and
+// lambda_2 <= min(trace M - lambda_1, sqrt(||M||_F^2 - lambda_1^2)). The
+// computation works on C rescaled to a largest |value| in [1, 2), costs
+// O(features x targets) (plus O(m^2 max(features, targets)) for ||M||_F, only
+// when the trace bound does not suffice) and widens every quantity by a
+// bound on its rounding error, so a false certificate would need rounding
+// errors above those bounds. `amplification` >= 1 converts the bound to the
+// direction of X x (factor ||X||_F ||x|| / ||X x||) for iterations that test
+// their X scores. Returns false (not certified) when the bound is not small
+// enough, never the other way round.
+[[nodiscard]] bool dominant_direction_certified(std::vector<double> covariance,
+                                                std::size_t features,
+                                                std::size_t targets,
+                                                const std::vector<double>& iterate,
+                                                bool left_side,
+                                                double amplification,
+                                                double acceptance) {
+    const std::size_t dim = left_side ? features : targets;
+    const std::size_t other = left_side ? targets : features;
+    const double iterate_norm = std::sqrt(squared_norm(iterate));
+    if (iterate.size() != dim || !(iterate_norm > 0.0) || !std::isfinite(iterate_norm)) {
+        return false;
+    }
+    static_cast<void>(scale_to_unit_magnitude(covariance));
+    std::vector<double> x(dim, 0.0);
+    for (std::size_t i = 0; i < dim; ++i) {
+        x[i] = iterate[i] / iterate_norm;
+    }
+    // y = C'x and z = C y for a left iterate; y = C x and z = C'y for a right one.
+    std::vector<double> y(other, 0.0);
+    std::vector<double> z(dim, 0.0);
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        for (std::size_t target = 0; target < targets; ++target) {
+            const double c = covariance[idx(feature, targets, target)];
+            if (left_side) {
+                y[target] += c * x[feature];
+            } else {
+                y[feature] += c * x[target];
+            }
+        }
+    }
+    for (std::size_t feature = 0; feature < features; ++feature) {
+        for (std::size_t target = 0; target < targets; ++target) {
+            const double c = covariance[idx(feature, targets, target)];
+            if (left_side) {
+                z[feature] += c * y[target];
+            } else {
+                z[target] += c * y[feature];
+            }
+        }
+    }
+    const double rayleigh = squared_norm(y);
+    double residual_ss = 0.0;
+    for (std::size_t i = 0; i < dim; ++i) {
+        const double r = z[i] - rayleigh * x[i];
+        residual_ss += r * r;
+    }
+    const double eps = std::numeric_limits<double>::epsilon();
+    const double trace = squared_norm(covariance);
+    const auto f = static_cast<double>(features);
+    const auto t = static_cast<double>(targets);
+    // Rounding of y, z, the Rayleigh quotient, the residual and the
+    // normalisation of x, all bounded by a multiple of eps (f + t) trace M.
+    const double rounding = 8.0 * (f + t + 4.0) * eps * trace;
+    const double lambda_lower = rayleigh - rounding;
+    if (!(lambda_lower > 0.0)) {
+        return false;
+    }
+    const double numerator = std::sqrt(residual_ss) + rounding;
+    const auto bound_ok = [&](double second_upper) {
+        const double gap = lambda_lower - second_upper;
+        if (!(gap > 0.0)) {
+            return false;
+        }
+        const double sine = (numerator / gap + (f + 2.0) * eps) * amplification;
+        if (!(sine < 1.0)) {
+            return false;
+        }
+        // direction_distance = 2 sin(angle / 2) = sine sqrt(2 / (1 + cos)).
+        const double distance = sine * std::sqrt(2.0 / (1.0 + std::sqrt(1.0 - sine * sine)));
+        return distance <= acceptance;
+    };
+    const double trace_upper = trace * (1.0 + (f * t + 2.0) * eps);
+    if (bound_ok(trace_upper - lambda_lower)) {
+        return true;
+    }
+    // ||M||_F^2 from the smaller Gram matrix G (m x m): each entry is within
+    // gamma_k ||c_i|| ||c_j|| of its exact value, so ||G||_F^2 is within
+    // (2 k + m^2 + 4) eps trace^2.
+    const std::size_t m = std::min(features, targets);
+    const std::size_t k = std::max(features, targets);
+    double frobenius_ss = 0.0;
+    for (std::size_t i = 0; i < m; ++i) {
+        for (std::size_t j = i; j < m; ++j) {
+            double g = 0.0;
+            for (std::size_t l = 0; l < k; ++l) {
+                g += features <= targets
+                         ? covariance[idx(i, targets, l)] * covariance[idx(j, targets, l)]
+                         : covariance[idx(l, targets, i)] * covariance[idx(l, targets, j)];
+            }
+            frobenius_ss += (i == j ? 1.0 : 2.0) * g * g;
+        }
+    }
+    const auto md = static_cast<double>(m);
+    const double frobenius_upper =
+        frobenius_ss + 2.0 * (2.0 * static_cast<double>(k) + md * md + 4.0) * eps * trace * trace;
+    const double second_frobenius =
+        std::sqrt(std::max(frobenius_upper - lambda_lower * lambda_lower, 0.0));
+    return bound_ok(std::min(trace_upper - lambda_lower, second_frobenius));
+}
+
+// ||X||_F ||w|| / ||X w||: the factor by which an angle on the X weights w
+// can grow on the X scores X w (dominant_direction_certified).
+[[nodiscard]] double score_amplification(const std::vector<double>& xk,
+                                         const std::vector<double>& weights,
+                                         const std::vector<double>& scores) {
+    const double score_norm = std::sqrt(squared_norm(scores));
+    if (!(score_norm > 0.0)) {
+        return std::numeric_limits<double>::infinity();
+    }
+    return std::sqrt(squared_norm(xk)) * std::sqrt(squared_norm(weights)) / score_norm;
+}
+
+// Sign-insensitive distance min(|u - v|, |u + v|) between the directions of
+// two vectors, each normalised first; +inf when either vanishes.
+[[nodiscard]] double direction_distance(const std::vector<double>& u,
+                                        const std::vector<double>& v) noexcept {
+    const double u_norm = std::sqrt(squared_norm(u));
+    const double v_norm = std::sqrt(squared_norm(v));
+    if (!(u_norm > 0.0) || !(v_norm > 0.0) || u.size() != v.size()) {
+        return std::numeric_limits<double>::infinity();
+    }
+    double same = 0.0;
+    double opposite = 0.0;
+    for (std::size_t i = 0; i < u.size(); ++i) {
+        const double a = u[i] / u_norm;
+        const double b = v[i] / v_norm;
+        same += (a - b) * (a - b);
+        opposite += (a + b) * (a + b);
+    }
+    return std::sqrt(std::min(same, opposite));
 }
 
 [[nodiscard]] n4m_status_t dominant_svd_pair_power(
@@ -755,44 +1345,60 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
     }
 
-    if (!converged) {
-        ctx.set_errorf("power singular-vector iteration failed to converge at component %llu",
-                       ull(component));
-        return N4M_ERR_CONVERGENCE_FAILED;
-    }
-
-    for (std::size_t feature = 0; feature < features; ++feature) {
-        double sum = 0.0;
-        for (std::size_t target = 0; target < targets; ++target) {
-            sum += covariance[idx(feature, targets, target)] * right[target];
-        }
-        left[feature] = sum;
-    }
-    const double left_norm = std::sqrt(squared_norm(left));
-    if (left_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("power final left singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-    for (double& value : left) {
-        value /= left_norm;
-    }
-
-    for (std::size_t target = 0; target < targets; ++target) {
-        double sum = 0.0;
+    // A converged iterate is refined once more; it is kept only when it is
+    // certified or agrees with the reference pair within its nominal accuracy
+    // (see kIterateAcceptanceFactor), else, and when the iteration did not
+    // converge, the reference pair is used.
+    if (converged) {
         for (std::size_t feature = 0; feature < features; ++feature) {
-            sum += covariance[idx(feature, targets, target)] * left[feature];
+            double sum = 0.0;
+            for (std::size_t target = 0; target < targets; ++target) {
+                sum += covariance[idx(feature, targets, target)] * right[target];
+            }
+            left[feature] = sum;
         }
-        right[target] = sum;
+        const double left_norm = std::sqrt(squared_norm(left));
+        if (left_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("power final left singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : left) {
+            value /= left_norm;
+        }
+
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += covariance[idx(feature, targets, target)] * left[feature];
+            }
+            right[target] = sum;
+        }
+        const double right_norm = std::sqrt(squared_norm(right));
+        if (right_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("power final right singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : right) {
+            value /= right_norm;
+        }
     }
-    const double right_norm = std::sqrt(squared_norm(right));
-    if (right_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("power final right singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-    for (double& value : right) {
-        value /= right_norm;
+    const double acceptance = kIterateAcceptanceFactor * std::sqrt(tol);
+    if (!converged || !dominant_direction_certified(covariance, features, targets, right, false,
+                                                    1.0, acceptance)) {
+        std::vector<double> reference_left;
+        std::vector<double> reference_right;
+        const n4m_status_t reference_status =
+            reference_dominant_pair(ctx, covariance, features, targets, max_iter, tol, component,
+                                    reference_left, reference_right);
+        if (reference_status != N4M_OK) {
+            return reference_status;
+        }
+        if (!converged || direction_distance(right, reference_right) > acceptance) {
+            left = std::move(reference_left);
+            right = std::move(reference_right);
+        }
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
@@ -900,44 +1506,60 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
         }
     }
 
-    if (!converged) {
-        ctx.set_errorf("randomized SVD iteration failed to converge at component %llu",
-                       ull(component));
-        return N4M_ERR_CONVERGENCE_FAILED;
-    }
-
-    for (std::size_t feature = 0; feature < features; ++feature) {
-        double sum = 0.0;
-        for (std::size_t target = 0; target < targets; ++target) {
-            sum += covariance[idx(feature, targets, target)] * right[target];
-        }
-        left[feature] = sum;
-    }
-    const double left_norm = std::sqrt(squared_norm(left));
-    if (left_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("randomized SVD final left singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-    for (double& value : left) {
-        value /= left_norm;
-    }
-
-    for (std::size_t target = 0; target < targets; ++target) {
-        double sum = 0.0;
+    // A converged iterate is refined once more; it is kept only when it is
+    // certified or agrees with the reference pair within its nominal accuracy
+    // (see kIterateAcceptanceFactor), else, and when the iteration did not
+    // converge, the reference pair is used.
+    if (converged) {
         for (std::size_t feature = 0; feature < features; ++feature) {
-            sum += covariance[idx(feature, targets, target)] * left[feature];
+            double sum = 0.0;
+            for (std::size_t target = 0; target < targets; ++target) {
+                sum += covariance[idx(feature, targets, target)] * right[target];
+            }
+            left[feature] = sum;
         }
-        right[target] = sum;
+        const double left_norm = std::sqrt(squared_norm(left));
+        if (left_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("randomized SVD final left singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : left) {
+            value /= left_norm;
+        }
+
+        for (std::size_t target = 0; target < targets; ++target) {
+            double sum = 0.0;
+            for (std::size_t feature = 0; feature < features; ++feature) {
+                sum += covariance[idx(feature, targets, target)] * left[feature];
+            }
+            right[target] = sum;
+        }
+        right_norm = std::sqrt(squared_norm(right));
+        if (right_norm <= std::numeric_limits<double>::epsilon()) {
+            ctx.set_errorf("randomized SVD final right singular vector vanished at component %llu",
+                           ull(component));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (double& value : right) {
+            value /= right_norm;
+        }
     }
-    right_norm = std::sqrt(squared_norm(right));
-    if (right_norm <= std::numeric_limits<double>::epsilon()) {
-        ctx.set_errorf("randomized SVD final right singular vector vanished at component %llu",
-                       ull(component));
-        return N4M_ERR_NUMERICAL_FAILURE;
-    }
-    for (double& value : right) {
-        value /= right_norm;
+    const double acceptance = kIterateAcceptanceFactor * std::sqrt(tol);
+    if (!converged || !dominant_direction_certified(covariance, features, targets, right, false,
+                                                    1.0, acceptance)) {
+        std::vector<double> reference_left;
+        std::vector<double> reference_right;
+        const n4m_status_t reference_status =
+            reference_dominant_pair(ctx, covariance, features, targets, max_iter, tol, component,
+                                    reference_left, reference_right);
+        if (reference_status != N4M_OK) {
+            return reference_status;
+        }
+        if (!converged || direction_distance(right, reference_right) > acceptance) {
+            left = std::move(reference_left);
+            right = std::move(reference_right);
+        }
     }
     canonicalize_svd_pair_sign(left, right);
     return N4M_OK;
@@ -1044,48 +1666,60 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
             break;
         }
     }
-    if (!converged) {
-        ctx.set_errorf(
-            "SIMPLS singular-vector iteration failed to converge at component %llu",
-            ull(component));
-        return N4M_ERR_CONVERGENCE_FAILED;
+    const double acceptance = kIterateAcceptanceFactor * stop_tol;
+    if (!converged || !dominant_direction_certified(covariance, features, targets, out, true, 1.0,
+                                                    acceptance)) {
+        std::vector<double> reference_right;
+        const n4m_status_t reference_status =
+            reference_dominant_pair(ctx, covariance, features, targets, max_iter, tol, component,
+                                    next_left, reference_right);
+        if (reference_status != N4M_OK) {
+            return reference_status;
+        }
+        if (!converged || direction_distance(out, next_left) > acceptance) {
+            out = std::move(next_left);
+        }
     }
     canonicalize_direction_sign(out);
     return N4M_OK;
 }
 
+// R = W (P'W)^-1 and the coefficients R Q' from the first `resolved`
+// components; the rotations of the remaining (null) components are zero and
+// they do not contribute to the coefficients.
 [[nodiscard]] n4m_status_t compute_rotations_and_coefficients(
     ::n4m::core::Context& ctx,
     ::n4m::core::Model& model,
     std::size_t features,
     std::size_t targets,
-    std::size_t components) {
+    std::size_t components,
+    std::size_t resolved) {
     std::vector<double> ptw;
-    resize_fill(ptw, components * components, 0.0);
-    for (std::size_t row_comp = 0; row_comp < components; ++row_comp) {
-        for (std::size_t col_comp = 0; col_comp < components; ++col_comp) {
+    resize_fill(ptw, resolved * resolved, 0.0);
+    for (std::size_t row_comp = 0; row_comp < resolved; ++row_comp) {
+        for (std::size_t col_comp = 0; col_comp < resolved; ++col_comp) {
             double sum = 0.0;
             for (std::size_t feature = 0; feature < features; ++feature) {
                 sum += model.loadings_p[idx(feature, components, row_comp)] *
                        model.weights_w[idx(feature, components, col_comp)];
             }
-            ptw[idx(row_comp, components, col_comp)] = sum;
+            ptw[idx(row_comp, resolved, col_comp)] = sum;
         }
     }
 
     std::vector<double> ptw_inv;
-    if (!invert_square(ptw, components, ptw_inv)) {
+    if (resolved > 0U && !invert_square(ptw, resolved, ptw_inv)) {
         ctx.set_error("failed to invert P.T @ W while computing rotations");
         return N4M_ERR_NUMERICAL_FAILURE;
     }
 
     resize_fill(model.rotations_r, features * components, 0.0);
     for (std::size_t feature = 0; feature < features; ++feature) {
-        for (std::size_t comp = 0; comp < components; ++comp) {
+        for (std::size_t comp = 0; comp < resolved; ++comp) {
             double sum = 0.0;
-            for (std::size_t inner = 0; inner < components; ++inner) {
+            for (std::size_t inner = 0; inner < resolved; ++inner) {
                 sum += model.weights_w[idx(feature, components, inner)] *
-                       ptw_inv[idx(inner, components, comp)];
+                       ptw_inv[idx(inner, resolved, comp)];
             }
             model.rotations_r[idx(feature, components, comp)] = sum;
         }
@@ -1095,7 +1729,7 @@ void canonicalize_svd_pair_sign(std::vector<double>& left,
     for (std::size_t feature = 0; feature < features; ++feature) {
         for (std::size_t target = 0; target < targets; ++target) {
             double sum = 0.0;
-            for (std::size_t comp = 0; comp < components; ++comp) {
+            for (std::size_t comp = 0; comp < resolved; ++comp) {
                 sum += model.rotations_r[idx(feature, components, comp)] *
                        model.y_loadings_q[idx(target, components, comp)];
             }
@@ -1382,6 +2016,31 @@ enum class CanonicalWeightSolver {
         x_weights_old = x_weights;
     }
 
+    if (targets > 1U) {
+        // Unless certified, the X weights are checked against the reference
+        // dominant pair of X_k'Y_k (kIterateAcceptanceFactor) and replaced by
+        // it (left and right singular vectors) when the iteration did not
+        // converge or stopped away from it.
+        std::vector<double> covariance;
+        cross_covariance(xk, yk, rows, features, targets, covariance);
+        const double acceptance = kIterateAcceptanceFactor * std::sqrt(cfg.tol);
+        if (!converged || !dominant_direction_certified(covariance, features, targets, x_weights,
+                                                        true, 1.0, acceptance)) {
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            const n4m_status_t status =
+                reference_dominant_pair(ctx, covariance, features, targets, cfg.max_iter,
+                                        cfg.tol, component, reference_left, reference_right);
+            if (status != N4M_OK) {
+                return status;
+            }
+            if (!converged || direction_distance(x_weights, reference_left) > acceptance) {
+                x_weights = std::move(reference_left);
+                y_weights = std::move(reference_right);
+                converged = true;
+            }
+        }
+    }
     if (!converged) {
         ctx.set_errorf("canonical NIPALS iteration failed to converge at component %llu",
                        ull(component));
@@ -1432,7 +2091,7 @@ enum class CanonicalWeightSolver {
         0.0,
         covariance.data(), targets);
     return dominant_svd_pair(ctx, covariance, features, targets,
-                             cfg.max_iter, cfg.tol,
+                             cfg.max_iter, cfg.tol, GramEigenSolver::kJacobi,
                              component, x_weights, y_weights);
 }
 
@@ -1575,7 +2234,7 @@ enum class CanonicalWeightSolver {
         }
     }
 
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, a);
     if (status != N4M_OK) {
         return status;
     }
@@ -1646,6 +2305,8 @@ n4m_status_t fit_pls_regression_nipals(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    std::vector<double> covariance_ss;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -1655,7 +2316,18 @@ n4m_status_t fit_pls_regression_nipals(
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
+    std::vector<char> masked;
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
+        // Whether the component is resolved is decided on the intact
+        // residuals. scikit-learn then zeroes every Y column whose residual
+        // is below 10 eps everywhere; that mask is applied only while the
+        // remaining columns keep the cross-covariance resolved, since many
+        // such columns can carry a resolved covariance together.
+        cross_covariance_column_squared_norms(xk, yk, n, p, q, covariance_ss);
+        masked.assign(q, 0);
+        double total_ss = 0.0;
+        double kept_ss = 0.0;
         for (std::size_t target = 0; target < q; ++target) {
             bool all_close_zero = true;
             for (std::size_t row = 0; row < n; ++row) {
@@ -1664,15 +2336,30 @@ n4m_status_t fit_pls_regression_nipals(
                     break;
                 }
             }
-            if (all_close_zero) {
-                for (std::size_t row = 0; row < n; ++row) {
-                    yk[idx(row, q, target)] = 0.0;
+            masked[target] = all_close_zero ? 1 : 0;
+            total_ss += covariance_ss[target];
+            if (!all_close_zero) {
+                kept_ss += covariance_ss[target];
+            }
+        }
+        if (!(std::sqrt(total_ss) > resolution)) {
+            resolved = comp;
+            break;
+        }
+        if (std::sqrt(kept_ss) > resolution) {
+            for (std::size_t target = 0; target < q; ++target) {
+                if (masked[target] != 0) {
+                    for (std::size_t row = 0; row < n; ++row) {
+                        yk[idx(row, q, target)] = 0.0;
+                    }
+                    covariance_ss[target] = 0.0;
                 }
             }
         }
 
+        // scikit-learn starts from the first Y column with an entry above eps.
         std::size_t initial_target = q;
-        for (std::size_t target = 0; target < q; ++target) {
+        for (std::size_t target = 0; target < q && initial_target == q; ++target) {
             for (std::size_t row = 0; row < n; ++row) {
                 if (std::fabs(yk[idx(row, q, target)]) >
                     std::numeric_limits<double>::epsilon()) {
@@ -1680,14 +2367,8 @@ n4m_status_t fit_pls_regression_nipals(
                     break;
                 }
             }
-            if (initial_target != q) {
-                break;
-            }
         }
-        if (initial_target == q) {
-            ctx.set_errorf("Y residual became constant at component %llu", ull(comp));
-            return N4M_ERR_NUMERICAL_FAILURE;
-        }
+        initial_target = resolved_start_target(covariance_ss, resolution, initial_target);
 
         std::vector<double> y_score;
         resize_fill(y_score, n, 0.0);
@@ -1707,7 +2388,7 @@ n4m_status_t fit_pls_regression_nipals(
 
         for (std::int32_t iter = 0; iter < cfg.max_iter; ++iter) {
             const double y_score_ss = squared_norm(y_score);
-            if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_score_ss > 0.0)) {
                 ctx.set_errorf("Y score vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
@@ -1722,19 +2403,22 @@ n4m_status_t fit_pls_regression_nipals(
                 0.0,
                 x_weights.data());
 
+            // scikit-learn adds an absolute eps to the norm here and to the
+            // Y-score denominator below. With a resolved cross-covariance
+            // these quantities are nonzero, and the eps would distort the
+            // latent arrays whenever Y is much larger than X.
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
-            if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_weight_norm > 0.0)) {
                 ctx.set_errorf("X weights vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
-            const double x_weight_denom = x_weight_norm + std::numeric_limits<double>::epsilon();
             for (double& value : x_weights) {
-                value /= x_weight_denom;
+                value /= x_weight_norm;
             }
 
             matrix_vector_product(xk, n, p, x_weights, x_score);
             const double x_score_ss = squared_norm(x_score);
-            if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_score_ss > 0.0)) {
                 ctx.set_errorf("X score vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
@@ -1748,17 +2432,16 @@ n4m_status_t fit_pls_regression_nipals(
             }
 
             const double y_weight_ss = squared_norm(y_weights);
-            if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_weight_ss > 0.0)) {
                 ctx.set_errorf("Y weights vanished at component %llu", ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
-            const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
             for (std::size_t row = 0; row < n; ++row) {
                 double sum = 0.0;
                 for (std::size_t target = 0; target < q; ++target) {
                     sum += yk[idx(row, q, target)] * y_weights[target];
                 }
-                y_score[row] = sum / y_score_denom;
+                y_score[row] = sum / y_weight_ss;
             }
 
             double diff = 0.0;
@@ -1773,6 +2456,46 @@ n4m_status_t fit_pls_regression_nipals(
             x_weights_old = x_weights;
         }
 
+        if (q > 1U) {
+            // One target converges in one step; with several, the X weights
+            // are kept when certified, else checked against the reference
+            // dominant pair of X_k'Y_k (kIterateAcceptanceFactor) and
+            // replaced by it when the iteration did not converge or stopped
+            // away from it.
+            std::vector<double> covariance;
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            cross_covariance(xk, yk, n, p, q, covariance);
+            const double acceptance = kIterateAcceptanceFactor * std::sqrt(cfg.tol);
+            bool use_reference = false;
+            if (!converged || !dominant_direction_certified(covariance, p, q, x_weights, true,
+                                                            1.0, acceptance)) {
+                status = reference_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                                 comp, reference_left, reference_right);
+                if (status != N4M_OK) {
+                    return status;
+                }
+                use_reference =
+                    !converged || direction_distance(x_weights, reference_left) > acceptance;
+            }
+            if (use_reference) {
+                x_weights = std::move(reference_left);
+                matrix_vector_product(xk, n, p, x_weights, x_score);
+                const double x_score_ss = squared_norm(x_score);
+                if (!(x_score_ss > 0.0)) {
+                    ctx.set_errorf("X score vanished at component %llu", ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t target = 0; target < q; ++target) {
+                    double sum = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        sum += yk[idx(row, q, target)] * x_score[row];
+                    }
+                    y_weights[target] = sum / x_score_ss;
+                }
+                converged = true;
+            }
+        }
         if (!converged) {
             ctx.set_errorf("NIPALS power iteration failed to converge at component %llu",
                            ull(comp));
@@ -1801,13 +2524,13 @@ n4m_status_t fit_pls_regression_nipals(
         }
 
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("X score vanished after sign normalization at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
         const double y_weight_ss = squared_norm(y_weights);
-        if (y_weight_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(y_weight_ss > 0.0)) {
             ctx.set_errorf("Y weights vanished after sign normalization at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
@@ -1815,13 +2538,12 @@ n4m_status_t fit_pls_regression_nipals(
 
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
-        const double y_score_denom = y_weight_ss + std::numeric_limits<double>::epsilon();
         for (std::size_t row = 0; row < n; ++row) {
             double sum = 0.0;
             for (std::size_t target = 0; target < q; ++target) {
                 sum += yk[idx(row, q, target)] * y_weights[target];
             }
-            y_scores[row] = sum / y_score_denom;
+            y_scores[row] = sum / y_weight_ss;
         }
 
         std::vector<double> x_loadings;
@@ -1871,8 +2593,9 @@ n4m_status_t fit_pls_regression_nipals(
         }
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightUnits, resolution,
+                         null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -1985,7 +2708,7 @@ n4m_status_t fit_pls_svd(
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
-                                   comp, x_weights, y_weights);
+                                   GramEigenSolver::kJacobi, comp, x_weights, y_weights);
         if (status != N4M_OK) {
             return status;
         }
@@ -2228,7 +2951,8 @@ n4m_status_t fit_opls_nipals(
                     covariance.data(), q);
                 const n4m_status_t pair_status =
                     dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter,
-                                      cfg.tol, component, weights, y_weights);
+                                      cfg.tol, GramEigenSolver::kJacobi, component, weights,
+                                      y_weights);
                 if (pair_status != N4M_OK) {
                     return pair_status;
                 }
@@ -2470,6 +3194,8 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    std::vector<double> covariance_ss;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -2479,9 +3205,15 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
         std::vector<double> y_score;
         resize_fill(y_score, n, 0.0);
+        cross_covariance_column_squared_norms(xk, yk, n, p, q, covariance_ss);
+        if (!cross_covariance_resolved(covariance_ss, resolution)) {
+            resolved = comp;
+            break;
+        }
         if (q == 1U) {
             for (std::size_t row = 0; row < n; ++row) {
                 y_score[row] = yk[idx(row, q, 0)];
@@ -2500,11 +3232,12 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
                     initial_target = target;
                 }
             }
-            if (best_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(best_ss > 0.0)) {
                 ctx.set_errorf("orthogonal-scores Y residual became constant at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
+            initial_target = resolved_start_target(covariance_ss, resolution, initial_target);
             for (std::size_t row = 0; row < n; ++row) {
                 y_score[row] = yk[idx(row, q, initial_target)];
             }
@@ -2530,7 +3263,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
             }
 
             const double x_weight_norm = std::sqrt(squared_norm(x_weights));
-            if (x_weight_norm <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_weight_norm > 0.0)) {
                 ctx.set_errorf("orthogonal-scores X weights vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2541,7 +3274,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
 
             matrix_vector_product(xk, n, p, x_weights, x_score);
             const double x_score_ss = squared_norm(x_score);
-            if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(x_score_ss > 0.0)) {
                 ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2581,7 +3314,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
             }
 
             const double y_loading_ss = squared_norm(y_loadings);
-            if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_loading_ss > 0.0)) {
                 ctx.set_errorf("orthogonal-scores Y loadings vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2596,6 +3329,64 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
             x_score_old = x_score;
         }
 
+        if (q > 1U) {
+            // The X scores are kept when certified, else checked against
+            // those of the reference dominant pair of X_k'Y_k
+            // (kIterateAcceptanceFactor, nominal step tol on the relative
+            // score changes) and replaced when the iteration did not converge
+            // or stopped away from it.
+            std::vector<double> covariance;
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            std::vector<double> reference_score;
+            cross_covariance(xk, yk, n, p, q, covariance);
+            const double acceptance = kIterateAcceptanceFactor * cfg.tol;
+            bool use_reference = false;
+            if (!converged ||
+                !dominant_direction_certified(covariance, p, q, x_weights, true,
+                                              score_amplification(xk, x_weights, x_score),
+                                              acceptance)) {
+                status = reference_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                                 comp, reference_left, reference_right);
+                if (status != N4M_OK) {
+                    return status;
+                }
+                matrix_vector_product(xk, n, p, reference_left, reference_score);
+                use_reference =
+                    !converged || direction_distance(x_score, reference_score) > acceptance;
+            }
+            if (use_reference) {
+                x_weights = std::move(reference_left);
+                x_score = std::move(reference_score);
+                const double x_score_ss = squared_norm(x_score);
+                if (!(x_score_ss > 0.0)) {
+                    ctx.set_errorf("orthogonal-scores X score vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t target = 0; target < q; ++target) {
+                    double sum = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        sum += yk[idx(row, q, target)] * (x_score[row] / x_score_ss);
+                    }
+                    y_loadings[target] = sum;
+                }
+                const double y_loading_ss = squared_norm(y_loadings);
+                if (!(y_loading_ss > 0.0)) {
+                    ctx.set_errorf("orthogonal-scores Y loadings vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t row = 0; row < n; ++row) {
+                    double sum = 0.0;
+                    for (std::size_t target = 0; target < q; ++target) {
+                        sum += yk[idx(row, q, target)] * y_loadings[target];
+                    }
+                    y_score[row] = sum / y_loading_ss;
+                }
+                converged = true;
+            }
+        }
         if (!converged) {
             ctx.set_errorf("orthogonal-scores iteration failed to converge at component %llu",
                            ull(comp));
@@ -2603,7 +3394,7 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
         }
 
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("orthogonal-scores X score vanished after convergence at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
@@ -2670,8 +3461,9 @@ n4m_status_t fit_pls_regression_orthogonal_scores(
     }
 
     unit_scaling.restore(*model, scores_t, y_scores_u,
-                         q == 1U ? kUnitWeightRawYScoreUnits : kUnitWeightUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+                         q == 1U ? kUnitWeightRawYScoreUnits : kUnitWeightUnits, resolution,
+                         null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -2738,6 +3530,8 @@ n4m_status_t fit_pls_regression_kernel(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    std::vector<double> covariance_ss;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -2747,9 +3541,13 @@ n4m_status_t fit_pls_regression_kernel(
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
+        // The first Y column with an entry above eps is the usual start
+        // column; whether the component is resolved is decided from the
+        // cross-covariance alone (columns below eps can carry a resolved one).
         std::size_t initial_target = q;
-        for (std::size_t target = 0; target < q; ++target) {
+        for (std::size_t target = 0; target < q && initial_target == q; ++target) {
             for (std::size_t row = 0; row < n; ++row) {
                 if (std::fabs(yk[idx(row, q, target)]) >
                     std::numeric_limits<double>::epsilon()) {
@@ -2757,28 +3555,13 @@ n4m_status_t fit_pls_regression_kernel(
                     break;
                 }
             }
-            if (initial_target != q) {
-                break;
-            }
         }
-        if (initial_target == q) {
-            ctx.set_errorf("kernel PLS Y residual became constant at component %llu",
-                           ull(comp));
-            return N4M_ERR_NUMERICAL_FAILURE;
+        cross_covariance_column_squared_norms(xk, yk, n, p, q, covariance_ss);
+        if (!cross_covariance_resolved(covariance_ss, resolution)) {
+            resolved = comp;
+            break;
         }
-
-        std::vector<double> kernel;
-        resize_fill(kernel, n * n, 0.0);
-        for (std::size_t row = 0; row < n; ++row) {
-            for (std::size_t col = row; col < n; ++col) {
-                double sum = 0.0;
-                for (std::size_t feature = 0; feature < p; ++feature) {
-                    sum += xk[idx(row, p, feature)] * xk[idx(col, p, feature)];
-                }
-                kernel[idx(row, n, col)] = sum;
-                kernel[idx(col, n, row)] = sum;
-            }
-        }
+        initial_target = resolved_start_target(covariance_ss, resolution, initial_target);
 
         std::vector<double> y_score;
         resize_fill(y_score, n, 0.0);
@@ -2798,23 +3581,27 @@ n4m_status_t fit_pls_regression_kernel(
 
         for (std::int32_t iter = 0; iter < cfg.max_iter; ++iter) {
             const double y_score_ss = squared_norm(y_score);
-            if (y_score_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_score_ss > 0.0)) {
                 ctx.set_errorf("kernel PLS Y score vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
 
-            std::vector<double> raw_score;
-            resize_fill(raw_score, n, 0.0);
-            for (std::size_t row = 0; row < n; ++row) {
+            // Raw score X X'u / u'u, formed as X (X'u / u'u) rather than with
+            // the n x n kernel X X': the kernel squares the dynamic range of
+            // X and rounds away columns below ~2^-26 of the largest one, and
+            // the X weights below are X'u / u'u anyway.
+            for (std::size_t feature = 0; feature < p; ++feature) {
                 double sum = 0.0;
-                for (std::size_t col = 0; col < n; ++col) {
-                    sum += kernel[idx(row, n, col)] * y_score[col];
+                for (std::size_t row = 0; row < n; ++row) {
+                    sum += xk[idx(row, p, feature)] * y_score[row];
                 }
-                raw_score[row] = sum / y_score_ss;
+                x_weights[feature] = sum / y_score_ss;
             }
+            std::vector<double> raw_score;
+            matrix_vector_product(xk, n, p, x_weights, raw_score);
             const double raw_score_norm = std::sqrt(squared_norm(raw_score));
-            if (raw_score_norm <= std::numeric_limits<double>::epsilon()) {
+            if (!(raw_score_norm > 0.0)) {
                 ctx.set_errorf("kernel PLS X score vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2822,13 +3609,8 @@ n4m_status_t fit_pls_regression_kernel(
             for (std::size_t row = 0; row < n; ++row) {
                 x_score[row] = raw_score[row] / raw_score_norm;
             }
-
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                double sum = 0.0;
-                for (std::size_t row = 0; row < n; ++row) {
-                    sum += xk[idx(row, p, feature)] * y_score[row];
-                }
-                x_weights[feature] = (sum / y_score_ss) / raw_score_norm;
+            for (double& value : x_weights) {
+                value /= raw_score_norm;
             }
 
             const double x_score_ss = squared_norm(x_score);
@@ -2847,7 +3629,7 @@ n4m_status_t fit_pls_regression_kernel(
             }
 
             const double y_loading_ss = squared_norm(y_loadings);
-            if (y_loading_ss <= std::numeric_limits<double>::epsilon()) {
+            if (!(y_loading_ss > 0.0)) {
                 ctx.set_errorf("kernel PLS Y loadings vanished at component %llu",
                                ull(comp));
                 return N4M_ERR_NUMERICAL_FAILURE;
@@ -2877,6 +3659,60 @@ n4m_status_t fit_pls_regression_kernel(
             x_score_old = x_score;
         }
 
+        if (q > 1U) {
+            // The unit X scores are kept when certified, else checked against
+            // those of the reference dominant pair of X_k'Y_k
+            // (kIterateAcceptanceFactor) and replaced when the iteration did
+            // not converge or stopped away from it.
+            std::vector<double> covariance;
+            std::vector<double> reference_left;
+            std::vector<double> reference_right;
+            std::vector<double> reference_score;
+            cross_covariance(xk, yk, n, p, q, covariance);
+            const double acceptance = kIterateAcceptanceFactor * std::sqrt(cfg.tol);
+            bool use_reference = false;
+            if (!converged ||
+                !dominant_direction_certified(covariance, p, q, x_weights, true,
+                                              score_amplification(xk, x_weights, x_score),
+                                              acceptance)) {
+                status = reference_dominant_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
+                                                 comp, reference_left, reference_right);
+                if (status != N4M_OK) {
+                    return status;
+                }
+                matrix_vector_product(xk, n, p, reference_left, reference_score);
+                use_reference =
+                    !converged || direction_distance(x_score, reference_score) > acceptance;
+            }
+            if (use_reference) {
+                const double score_norm = std::sqrt(squared_norm(reference_score));
+                if (!(score_norm > 0.0)) {
+                    ctx.set_errorf("kernel PLS X score vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                for (std::size_t row = 0; row < n; ++row) {
+                    x_score[row] = reference_score[row] / score_norm;
+                }
+                for (std::size_t feature = 0; feature < p; ++feature) {
+                    x_weights[feature] = reference_left[feature] / score_norm;
+                }
+                const double x_score_ss = squared_norm(x_score);
+                for (std::size_t target = 0; target < q; ++target) {
+                    double sum = 0.0;
+                    for (std::size_t row = 0; row < n; ++row) {
+                        sum += yk[idx(row, q, target)] * x_score[row];
+                    }
+                    y_loadings[target] = sum / x_score_ss;
+                }
+                if (!(squared_norm(y_loadings) > 0.0)) {
+                    ctx.set_errorf("kernel PLS Y loadings vanished at component %llu",
+                                   ull(comp));
+                    return N4M_ERR_NUMERICAL_FAILURE;
+                }
+                converged = true;
+            }
+        }
         if (!converged) {
             ctx.set_errorf("kernel PLS iteration failed to converge at component %llu",
                            ull(comp));
@@ -2918,15 +3754,15 @@ n4m_status_t fit_pls_regression_kernel(
 
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
+        // Nonzero: checked on the same (possibly sign-flipped) loadings in
+        // the last iteration.
         const double y_loading_ss = squared_norm(y_loadings);
-        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-            for (std::size_t row = 0; row < n; ++row) {
-                double sum = 0.0;
-                for (std::size_t target = 0; target < q; ++target) {
-                    sum += yk[idx(row, q, target)] * y_loadings[target];
-                }
-                y_scores[row] = sum / y_loading_ss;
+        for (std::size_t row = 0; row < n; ++row) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                sum += yk[idx(row, q, target)] * y_loadings[target];
             }
+            y_scores[row] = sum / y_loading_ss;
         }
 
         N4M_PARALLEL_FOR_STATIC
@@ -2952,8 +3788,9 @@ n4m_status_t fit_pls_regression_kernel(
         }
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitScoreUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitScoreUnits, resolution,
+                         null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -3020,6 +3857,7 @@ n4m_status_t fit_pls_regression_svd(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3029,6 +3867,7 @@ n4m_status_t fit_pls_regression_svd(
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
         std::vector<double> covariance;
         resize_fill(covariance, p * q, 0.0);
@@ -3042,10 +3881,16 @@ n4m_status_t fit_pls_regression_svd(
             }
         }
 
+        double covariance_resolution = resolution;
+        if (!rescale_resolved_covariance(covariance, covariance_resolution)) {
+            resolved = comp;
+            break;
+        }
+
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
-                                   comp, x_weights, y_weights);
+                                   GramEigenSolver::kJacobi, comp, x_weights, y_weights);
         if (status != N4M_OK) {
             return status;
         }
@@ -3053,7 +3898,7 @@ n4m_status_t fit_pls_regression_svd(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("SVD X score vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3120,8 +3965,9 @@ n4m_status_t fit_pls_regression_svd(
         }
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits,
+                         resolution, null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -3188,6 +4034,7 @@ n4m_status_t fit_pls_regression_power(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3197,6 +4044,7 @@ n4m_status_t fit_pls_regression_power(
     resize_fill(scores_t, n * a, 0.0);
     resize_fill(y_scores_u, n * a, 0.0);
 
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
         std::vector<double> covariance;
         resize_fill(covariance, p * q, 0.0);
@@ -3210,6 +4058,12 @@ n4m_status_t fit_pls_regression_power(
             }
         }
 
+        double covariance_resolution = resolution;
+        if (!rescale_resolved_covariance(covariance, covariance_resolution)) {
+            resolved = comp;
+            break;
+        }
+
         std::vector<double> x_weights;
         std::vector<double> y_weights;
         status = dominant_svd_pair_power(ctx, covariance, p, q, cfg.max_iter, cfg.tol,
@@ -3221,7 +4075,7 @@ n4m_status_t fit_pls_regression_power(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("power PLS X score vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3288,8 +4142,9 @@ n4m_status_t fit_pls_regression_power(
         }
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits,
+                         resolution, null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -3356,6 +4211,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3366,6 +4222,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
     resize_fill(y_scores_u, n * a, 0.0);
 
     const std::uint64_t seed = ctx.seed();
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
         std::vector<double> covariance;
         resize_fill(covariance, p * q, 0.0);
@@ -3377,6 +4234,12 @@ n4m_status_t fit_pls_regression_randomized_svd(
                 }
                 covariance[idx(feature, q, target)] = sum;
             }
+        }
+
+        double covariance_resolution = resolution;
+        if (!rescale_resolved_covariance(covariance, covariance_resolution)) {
+            resolved = comp;
+            break;
         }
 
         std::vector<double> x_weights;
@@ -3391,7 +4254,7 @@ n4m_status_t fit_pls_regression_randomized_svd(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, x_weights, x_score);
         const double x_score_ss = squared_norm(x_score);
-        if (x_score_ss <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_ss > 0.0)) {
             ctx.set_errorf("randomized SVD PLS X score vanished at component %llu",
                            ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
@@ -3460,8 +4323,9 @@ n4m_status_t fit_pls_regression_randomized_svd(
         }
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightRawYScoreUnits,
+                         resolution, null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -3605,19 +4469,33 @@ n4m_status_t fit_pcr_svd(
     // weights_w == loadings_p == V[:, i] in closed form because each
     // singular vector is orthonormal and the per-component deflation reduces
     // to the identity in the right-singular-vector basis.
+    //
+    // Equal singular values only define their subspace: the directions are
+    // then the deterministic basis of n4m_svd_compact (fixed rotation order,
+    // stable sort, canonical sign), as documented in n4m.h.
+    //
+    // The SVD resolves each singular value to an absolute accuracy of about
+    // (n + p) eps sigma_max. A direction above that bound is kept, however
+    // small relative to sigma_max. At or below it the direction is not
+    // resolved (it may not exist, e.g. beyond the rank of X): the component
+    // and every later one (the singular values are sorted) are published as
+    // null components, with zero W, P, Q, R, T and U columns, no contribution
+    // to the coefficients, and flagged unresolved below.
+    const double sigma_resolution =
+        static_cast<double>(n + p) * std::numeric_limits<double>::epsilon() * svd_s[0];
     std::vector<double> direction(p, 0.0);
     std::vector<double> directions;
     std::vector<double> eigenvalues;
     resize_fill(directions, p * a, 0.0);
     resize_fill(eigenvalues, a, 0.0);
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
         const double sigma = svd_s[comp];
-        const double eigenvalue = sigma * sigma;  // ||Xc v||^2 = sigma^2
-        if (!(eigenvalue > std::numeric_limits<double>::epsilon())) {
-            ctx.set_errorf("PCR X covariance vanished at component %llu",
-                           ull(comp));
-            return N4M_ERR_NUMERICAL_FAILURE;
+        if (!(sigma > sigma_resolution)) {
+            resolved = comp;
+            break;
         }
+        const double eigenvalue = sigma * sigma;  // ||Xc v||^2 = sigma^2
         for (std::size_t feature = 0; feature < p; ++feature) {
             direction[feature] = svd_vt[idx(comp, p, feature)];
         }
@@ -3646,10 +4524,31 @@ n4m_status_t fit_pcr_svd(
         scores_t.data(), a,
         0.0,
         model->y_loadings_q.data(), a);
-    for (std::size_t comp = 0; comp < a; ++comp) {
+    for (std::size_t comp = 0; comp < resolved; ++comp) {
         const double inv_score_ss = 1.0 / eigenvalues[comp];
         for (std::size_t target = 0; target < q; ++target) {
             model->y_loadings_q[idx(target, a, comp)] *= inv_score_ss;
+        }
+    }
+
+    // Y't = sigma^2 q is resolved when it exceeds its rounding, about
+    // (n + p) eps ||Y||_F sigma_max (the scores t = X v carry an absolute
+    // error of about (n + p) eps sigma_max). At or below that bound the
+    // component is flagged unresolved: q is then known only to that absolute
+    // accuracy (it may be exactly zero, or merely too small to resolve), and
+    // u = Y q / q'q, which divides by q'q, is not computed (its column stays
+    // zero). The flag is not a claim that Y is uncorrelated with the score.
+    // A null component (unresolved X direction) has q = 0 and is flagged too.
+    const double y_cross_resolution = sigma_resolution * std::sqrt(squared_norm(ys));
+    std::vector<double> unresolved(a, 0.0);
+    std::vector<double> y_loading_ss(a, 0.0);
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        for (std::size_t target = 0; target < q; ++target) {
+            const double value = model->y_loadings_q[idx(target, a, comp)];
+            y_loading_ss[comp] += value * value;
+        }
+        if (!(std::sqrt(y_loading_ss[comp]) * eigenvalues[comp] > y_cross_resolution)) {
+            unresolved[comp] = 1.0;
         }
     }
 
@@ -3658,13 +4557,8 @@ n4m_status_t fit_pcr_svd(
         std::vector<double> scaled_y_loadings;
         resize_fill(scaled_y_loadings, q * a, 0.0);
         for (std::size_t comp = 0; comp < a; ++comp) {
-            double y_loading_ss = 0.0;
-            for (std::size_t target = 0; target < q; ++target) {
-                const double value = model->y_loadings_q[idx(target, a, comp)];
-                y_loading_ss += value * value;
-            }
-            if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-                const double inv = 1.0 / y_loading_ss;
+            if (unresolved[comp] == 0.0) {
+                const double inv = 1.0 / y_loading_ss[comp];
                 for (std::size_t target = 0; target < q; ++target) {
                     scaled_y_loadings[idx(target, a, comp)] =
                         model->y_loadings_q[idx(target, a, comp)] * inv;
@@ -3681,8 +4575,9 @@ n4m_status_t fit_pcr_svd(
             y_scores_u.data(), a);
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitWeightUnits, y_cross_resolution,
+                         std::move(unresolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -3749,6 +4644,9 @@ n4m_status_t fit_pls_regression_simpls(
     center_scale_in_place(y_original, n, q, cfg.center_y != 0, cfg.scale_y != 0,
                           model->y_mean, model->y_scale, yk);
     const UnitScaling unit_scaling(xk, yk);
+    const double resolution = cross_covariance_resolution(xk, yk, n, a);
+    // Tracks the deflated covariance, which rescale_resolved_covariance rescales.
+    double covariance_resolution = resolution;
 
     resize_fill(model->weights_w, p * a, 0.0);
     resize_fill(model->loadings_p, p * a, 0.0);
@@ -3774,7 +4672,12 @@ n4m_status_t fit_pls_regression_simpls(
     std::vector<double> basis_v;
     resize_fill(basis_v, p * a, 0.0);
 
+    std::size_t resolved = a;
     for (std::size_t comp = 0; comp < a; ++comp) {
+        if (!rescale_resolved_covariance(covariance, covariance_resolution)) {
+            resolved = comp;
+            break;
+        }
         std::vector<double> direction;
         status = dominant_left_singular_direction(ctx, covariance, p, q, cfg.max_iter,
                                                   cfg.tol, comp, direction);
@@ -3785,7 +4688,7 @@ n4m_status_t fit_pls_regression_simpls(
         std::vector<double> x_score;
         matrix_vector_product(xk, n, p, direction, x_score);
         const double x_score_norm = std::sqrt(squared_norm(x_score));
-        if (x_score_norm <= std::numeric_limits<double>::epsilon()) {
+        if (!(x_score_norm > 0.0)) {
             ctx.set_errorf("SIMPLS X score vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3841,7 +4744,7 @@ n4m_status_t fit_pls_regression_simpls(
             }
         }
         const double v_norm = std::sqrt(squared_norm(v));
-        if (v_norm <= std::numeric_limits<double>::epsilon()) {
+        if (!(v_norm > 0.0)) {
             ctx.set_errorf("SIMPLS deflation basis vanished at component %llu", ull(comp));
             return N4M_ERR_NUMERICAL_FAILURE;
         }
@@ -3849,17 +4752,21 @@ n4m_status_t fit_pls_regression_simpls(
             value /= v_norm;
         }
 
+        // Y't = C_0' r / ||X r|| = C_k' r / ||X r|| (r lies in the deflated
+        // covariance's column space), nonzero for a resolved C_k.
         std::vector<double> y_scores;
         resize_fill(y_scores, n, 0.0);
         const double y_loading_ss = squared_norm(y_loadings);
-        if (y_loading_ss > std::numeric_limits<double>::epsilon()) {
-            for (std::size_t row = 0; row < n; ++row) {
-                double sum = 0.0;
-                for (std::size_t target = 0; target < q; ++target) {
-                    sum += yk[idx(row, q, target)] * y_loadings[target];
-                }
-                y_scores[row] = sum / y_loading_ss;
+        if (!(y_loading_ss > 0.0)) {
+            ctx.set_errorf("SIMPLS Y loadings vanished at component %llu", ull(comp));
+            return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        for (std::size_t row = 0; row < n; ++row) {
+            double sum = 0.0;
+            for (std::size_t target = 0; target < q; ++target) {
+                sum += yk[idx(row, q, target)] * y_loadings[target];
             }
+            y_scores[row] = sum / y_loading_ss;
         }
 
         for (std::size_t feature = 0; feature < p; ++feature) {
@@ -3892,8 +4799,9 @@ n4m_status_t fit_pls_regression_simpls(
         }
     }
 
-    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitScoreUnits);
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    unit_scaling.restore(*model, scores_t, y_scores_u, kUnitScoreUnits, resolution,
+                         null_component_flags(a, resolved));
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, resolved);
     if (status != N4M_OK) {
         return status;
     }
@@ -4178,7 +5086,7 @@ static n4m_status_t fit_di_pls_legacy(Context& ctx,
         }
     }
 
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, a);
     if (status != N4M_OK) return status;
 
     if (cfg.store_scores != 0) {
@@ -4188,243 +5096,6 @@ static n4m_status_t fit_di_pls_legacy(Context& ctx,
 
     out_model = std::move(model);
     ctx.clear_error();
-    return N4M_OK;
-}
-
-// Householder tridiagonalization of a symmetric (p x p) matrix in place.
-// On entry `A` is row-major symmetric. On exit:
-//   * `diag[i]` = tridiagonal diagonal
-//   * `subd[i]` = subdiagonal between row i and row i+1 (length p - 1)
-//   * `Q` (row-major p x p) accumulates the orthogonal transform such
-//     that `A_original = Q * T * Q^T` where `T` is tridiagonal.
-//
-// Uses the standard Golub-Van Loan algorithm 8.3.1: at each step build a
-// Householder reflector that zeros entries below the subdiagonal in column
-// `k`, apply it to the trailing submatrix, and accumulate into `Q`.
-// Complexity: ~4/3 p^3 flops (vs Jacobi's ~5 p^3 per sweep).
-static void householder_tridiag(std::vector<double>& A,
-                                 std::size_t p,
-                                 std::vector<double>& diag,
-                                 std::vector<double>& subd,
-                                 std::vector<double>& Q) {
-    diag.assign(p, 0.0);
-    subd.assign(p > 0 ? p - 1 : 0, 0.0);
-    Q.assign(p * p, 0.0);
-    for (std::size_t i = 0; i < p; ++i) Q[idx(i, p, i)] = 1.0;
-    if (p <= 1U) {
-        if (p == 1U) diag[0] = A[0];
-        return;
-    }
-
-    std::vector<double> v(p, 0.0);
-    std::vector<double> w(p, 0.0);
-    for (std::size_t k = 0; k + 2U <= p; ++k) {
-        const std::size_t m = p - k - 1;  // length of vector below A[k, k]
-        // Compute alpha = -sign(A[k+1, k]) * ||A[k+1:p, k]||
-        double sigma = 0.0;
-        for (std::size_t i = k + 1; i < p; ++i) {
-            const double x = A[idx(i, p, k)];
-            sigma += x * x;
-        }
-        const double sub = A[idx(k + 1, p, k)];
-        if (sigma <= std::numeric_limits<double>::min()) {
-            // Already tridiagonal at this column; skip.
-            continue;
-        }
-        const double norm_x = std::sqrt(sigma);
-        const double alpha = (sub >= 0.0 ? -norm_x : norm_x);
-        // v = x - alpha*e_1
-        std::fill(v.begin(), v.end(), 0.0);
-        for (std::size_t i = k + 1; i < p; ++i) {
-            v[i] = A[idx(i, p, k)];
-        }
-        v[k + 1] -= alpha;
-        // ||v||^2 = 2 * (sigma - alpha * sub)
-        const double vtv = 2.0 * (sigma - alpha * sub);
-        if (vtv <= std::numeric_limits<double>::min()) continue;
-        const double beta = 2.0 / vtv;
-
-        // Apply H = I - beta * v v^T from both sides:
-        //   A := H * A * H
-        // Compute p_vec = beta * A * v   (only lower trailing p - k - 1 block
-        // matters; but since A is dense symmetric we work over the whole
-        // trailing block A[k+1:p, k+1:p] for now). Actually since v is zero
-        // above index k, A * v only touches rows/cols k+1:p.
-        // 1. w = beta * A[k+1:p, k+1:p] * v[k+1:p]
-        std::fill(w.begin(), w.end(), 0.0);
-        for (std::size_t i = k + 1; i < p; ++i) {
-            double sum = 0.0;
-            for (std::size_t j = k + 1; j < p; ++j) {
-                sum += A[idx(i, p, j)] * v[j];
-            }
-            w[i] = beta * sum;
-        }
-        // 2. K = beta/2 * v^T * w
-        double k_val = 0.0;
-        for (std::size_t i = k + 1; i < p; ++i) {
-            k_val += v[i] * w[i];
-        }
-        k_val *= 0.5 * beta;
-        for (std::size_t i = k + 1; i < p; ++i) {
-            w[i] -= k_val * v[i];
-        }
-        // 3. A := A - v w^T - w v^T  (in trailing block)
-        for (std::size_t i = k + 1; i < p; ++i) {
-            const double vi = v[i];
-            const double wi = w[i];
-            for (std::size_t j = k + 1; j < p; ++j) {
-                A[idx(i, p, j)] -= vi * w[j] + wi * v[j];
-            }
-        }
-        // 4. Zero out below-subdiagonal entries in column k (and row k by
-        //    symmetry); record subdiagonal value.
-        A[idx(k + 1, p, k)] = alpha;
-        A[idx(k, p, k + 1)] = alpha;
-        for (std::size_t i = k + 2; i < p; ++i) {
-            A[idx(i, p, k)] = 0.0;
-            A[idx(k, p, i)] = 0.0;
-        }
-        // 5. Accumulate Q := Q * H = Q - (beta * Q * v) v^T
-        //    Compute u = Q * v (length p), then Q -= beta * u v^T.
-        std::fill(w.begin(), w.end(), 0.0);
-        for (std::size_t i = 0; i < p; ++i) {
-            double sum = 0.0;
-            for (std::size_t j = k + 1; j < p; ++j) {
-                sum += Q[idx(i, p, j)] * v[j];
-            }
-            w[i] = beta * sum;
-        }
-        for (std::size_t i = 0; i < p; ++i) {
-            const double wi = w[i];
-            for (std::size_t j = k + 1; j < p; ++j) {
-                Q[idx(i, p, j)] -= wi * v[j];
-            }
-        }
-        (void)m;
-    }
-    for (std::size_t i = 0; i < p; ++i) {
-        diag[i] = A[idx(i, p, i)];
-    }
-    for (std::size_t i = 0; i + 1 < p; ++i) {
-        subd[i] = A[idx(i + 1, p, i)];
-    }
-}
-
-// Symmetric tridiagonal QL with implicit Wilkinson shift (Numerical
-// Recipes `tqli`). Operates on the tridiagonal (`diag`, `subd`) produced
-// by `householder_tridiag`, accumulating Givens rotations into `Q`
-// (already initialized to the Householder transform) so that the final
-// `Q` columns are the eigenvectors of the original symmetric matrix.
-// On exit `diag` holds the eigenvalues (unsorted).
-//
-// `subd` is conceptually of length p-1 but the algorithm pads with a
-// trailing zero so subd[i] is accessed for i in [0, p-1]; in our storage
-// we keep subd at length p with subd[p-1] = 0.
-[[nodiscard]] static n4m_status_t symmetric_qr_tridiag(
-    ::n4m::core::Context& ctx,
-    std::vector<double>& diag,
-    std::vector<double>& subd,
-    std::vector<double>& Q,
-    std::size_t p,
-    double tol,
-    const char* label) {
-    if (p <= 1U) return N4M_OK;
-    // Pad subd to length p (treat the last subdiagonal as 0).
-    subd.resize(p, 0.0);
-    constexpr std::size_t kMaxIter = 30U;  // per-eigenvalue cap (NR)
-    const double safe_tol = std::max(tol, 1e-15);
-
-    for (std::size_t l = 0; l < p; ++l) {
-        std::size_t iter = 0;
-        std::size_t m = 0;
-        while (true) {
-            // Find m >= l with subd[m] negligible relative to the
-            // surrounding diagonals.
-            for (m = l; m + 1 < p; ++m) {
-                const double dd = std::fabs(diag[m]) + std::fabs(diag[m + 1]);
-                if (std::fabs(subd[m]) <= safe_tol * dd) {
-                    break;
-                }
-            }
-            if (m == l) break;
-            if (iter++ >= kMaxIter) {
-                ctx.set_errorf("%s symmetric QR failed to converge", label);
-                return N4M_ERR_CONVERGENCE_FAILED;
-            }
-            // Wilkinson shift from the trailing 2x2 starting at l.
-            double g = (diag[l + 1] - diag[l]) / (2.0 * subd[l]);
-            double r = std::hypot(g, 1.0);
-            const double sign_r = (g >= 0.0 ? 1.0 : -1.0);
-            g = diag[m] - diag[l] + subd[l] / (g + sign_r * r);
-            double s = 1.0;
-            double c = 1.0;
-            double pp = 0.0;
-            // Implicit QL sweep, walking from index m-1 down to l.
-            for (std::size_t ii = m; ii-- > l;) {
-                double f = s * subd[ii];
-                double b = c * subd[ii];
-                r = std::hypot(f, g);
-                subd[ii + 1] = r;
-                if (r == 0.0) {
-                    diag[ii + 1] -= pp;
-                    subd[m] = 0.0;
-                    break;
-                }
-                s = f / r;
-                c = g / r;
-                g = diag[ii + 1] - pp;
-                r = (diag[ii] - g) * s + 2.0 * c * b;
-                pp = s * r;
-                diag[ii + 1] = g + pp;
-                g = c * r - b;
-                // Accumulate rotation into eigenvector matrix Q.
-                for (std::size_t row = 0; row < p; ++row) {
-                    const double qi = Q[idx(row, p, ii + 1)];
-                    const double qj = Q[idx(row, p, ii)];
-                    Q[idx(row, p, ii + 1)] = s * qj + c * qi;
-                    Q[idx(row, p, ii)]     = c * qj - s * qi;
-                }
-                if (ii == l) break;  // bounded explicitly because ii is size_t
-            }
-            if (r == 0.0 && m > l) continue;
-            diag[l] -= pp;
-            subd[l] = g;
-            subd[m] = 0.0;
-        }
-    }
-    return N4M_OK;
-}
-
-// Full symmetric eigendecomposition: matrix -> (eigvals, eigvecs) such
-// that  matrix = eigvecs * diag(eigvals) * eigvecs^T. Composes Householder
-// tridiagonalization with implicit-shift symmetric QR; substantially
-// faster than cyclic Jacobi at p >= a few hundred where Jacobi's many
-// full-matrix sweeps dominate cost.
-[[nodiscard]] static n4m_status_t symmetric_eigh(
-    ::n4m::core::Context& ctx,
-    std::vector<double> matrix,
-    std::size_t p,
-    double tol,
-    const char* label,
-    std::vector<double>& eigvals_out,
-    std::vector<double>& eigvecs_out) {
-    eigvals_out.assign(p, 0.0);
-    eigvecs_out.assign(p * p, 0.0);
-    for (std::size_t i = 0; i < p; ++i) eigvecs_out[idx(i, p, i)] = 1.0;
-    if (p == 0U) return N4M_OK;
-    if (p == 1U) {
-        eigvals_out[0] = matrix[0];
-        return N4M_OK;
-    }
-
-    std::vector<double> diag;
-    std::vector<double> subd;
-    householder_tridiag(matrix, p, diag, subd, eigvecs_out);
-    const n4m_status_t status =
-        symmetric_qr_tridiag(ctx, diag, subd, eigvecs_out, p,
-                              std::max(tol, 1e-14), label);
-    if (status != N4M_OK) return status;
-    eigvals_out = std::move(diag);
     return N4M_OK;
 }
 
@@ -5067,7 +5738,7 @@ static n4m_status_t fit_pls_sparse_simpls_legacy(
         }
     }
 
-    status = compute_rotations_and_coefficients(ctx, *model, p, q, a);
+    status = compute_rotations_and_coefficients(ctx, *model, p, q, a, a);
     if (status != N4M_OK) return status;
 
     if (cfg.store_scores != 0) {
@@ -5774,6 +6445,16 @@ n4m_status_t model_array(Context& ctx,
                 return N4M_ERR_UNSUPPORTED;
             }
             out = make(model.n_samples, model.n_components, model.y_scores_u);
+            break;
+        case N4M_MODEL_COMPONENT_RESOLUTION:
+        case N4M_MODEL_UNRESOLVED_COMPONENTS:
+            if (model.component_resolution.empty()) {
+                ctx.set_error("component resolution is not recorded for this model");
+                return N4M_ERR_UNSUPPORTED;
+            }
+            out = which == N4M_MODEL_COMPONENT_RESOLUTION
+                ? make(1, 1, model.component_resolution)
+                : make(1, model.n_components, model.unresolved_components);
             break;
         default:
             ctx.set_errorf("invalid model array tag %d", static_cast<int>(which));

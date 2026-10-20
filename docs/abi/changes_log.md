@@ -1,11 +1,14 @@
 # ABI — Changes Log
 
-## 2026-10-16 — ABI 2.20.0: Preflight statistics, domain shift, variance components, cluster matching (released in 1.3.7)
+## 2026-10-16 — ABI 2.20.0: Preflight statistics, domain shift, variance components, cluster matching, PLS/PCR component resolution (released in 1.3.7)
 
-Twenty new caller-buffer operations; the 2.19 signatures are unchanged and
-no serialized format changes. Behaviour changes of 2.19 symbols are listed
-in the subsections (factor-association centring, HDBSCAN domain and buffer
-validation, SNV constant rows, PCA resolution) and in CHANGELOG 1.3.7.
+Twenty new caller-buffer operations and two new `n4m_model_array_t` tags;
+the 2.19 signatures are unchanged. One serialized format change: PLS/PCR
+models now write N4MM format 3 (component resolution section, last
+subsection); earlier readers reject it. Behaviour changes of 2.19 symbols are
+listed in the subsections (factor-association centring, HDBSCAN domain and
+buffer validation, SNV constant rows, PCA resolution, PLS/PCR component
+resolution and null components) and in CHANGELOG 1.3.7.
 
 Supported numerical domain D (lead rules 13 and 15, public macros
 `N4M_DOMAIN_MAX_MAGNITUDE_LOG2 = 256` and `N4M_DOMAIN_MAX_SPREAD_LOG2 = 32` in
@@ -558,6 +561,43 @@ error below 1e-12 against mpmath (n from 3 to 10^6, alpha from 1e-300 to
 1 - 2^-53); this is a measurement, not a proven bound,
 and it is not uniform in the rank (7.2e-12 at r = 127, alpha = 1e-100). At usual alpha
 (0.001 to 0.1, n <= 10^4) UCLs changed by at most 3.1e-11 relative.
+
+### PLS/PCR component resolution and N4MM format 3
+
+No new symbol and no signature change. `n4m_model_array_t` gains
+`N4M_MODEL_COMPONENT_RESOLUTION = 12` ((1, 1): the absolute X-Y
+cross-covariance resolution of the components, in centred/scaled X times Y
+units — (n + a) eps ||X||_F ||Y||_F for the PLS regression solvers and PLS-DA,
+(n + p) eps sigma_max(X) ||Y||_F for PCR) and
+`N4M_MODEL_UNRESOLVED_COMPONENTS = 13` ((1, n_components): 1.0 where a
+component's cross-covariance is not above it). One flag covers a component
+that is mathematically undefined (exact value zero) and one merely not
+resolved numerically (below the bound); neither is refused. Every PLS
+regression solver and PLS-DA publishes an unresolved component, and every
+later one, as a null component (zero W, P, Q, R, T, U columns, no
+contribution to the coefficients, which are those of the truncated model);
+these fits returned `N4M_ERR_NUMERICAL_FAILURE` before. PCR keeps a
+component whose X direction is resolved (Y loading kept, zero Y-score
+column, flagged) and publishes one whose X singular value is unresolved as
+a null component. Other models return `N4M_ERR_UNSUPPORTED` for both tags.
+
+`N4M_SERIALIZATION_FORMAT_VERSION_V3 = 3` (now
+`N4M_SERIALIZATION_FORMAT_VERSION`) is written for every model recording a
+component resolution: the eleven format-1 vectors, `[u64 1][f64 resolution]`,
+`[u64 n_components][f64 flags]`, `u32 pipeline_present`, the optional
+format-2 pipeline block, the checksum (`docs/architecture/serialization.md`).
+Formats 1 and 2 are still written byte for byte for the other models and
+still read; earlier readers reject format 3 with
+`N4M_ERR_VERSION_INCOMPATIBLE`. `n4m_serialization_inspect_model_v1` and
+`n4m_serialization_inspect_pipeline_v1` validate the new section and report
+the pipeline from its flag.
+
+`n4m_metrics_pls_diagnostics_compute` results gain the scalar
+`dmodx_reference_degenerate` (and `n_latent_directions`): 1 when
+`X_reference` is given and its residual norm sqrt(sum Q_ref) is not above
+(n_ref + n_features + k) eps ||X_ref||_F in model space; "dmodx" is then NaN
+on every row (the normalized distance is undefined; it used to divide by a
+substituted sigma_ref = 1), while "q" and "t2" are unchanged.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

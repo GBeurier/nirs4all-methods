@@ -199,28 +199,46 @@ n4m_status_t fit_pls_lda_head(Context& ctx,
         class_counts[static_cast<std::size_t>(labels[row])] += 1;
     }
 
-    std::vector<double> means(c * k, 0.0);
+    // The discriminant uses the score columns that are not identically zero.
+    // A null PLS component (flagged unresolved, zero rotation column) has a
+    // zero score column: it carries no information, and its zero row and
+    // column would make the pooled covariance singular. Its discriminant
+    // weights are zero, so the head is the one fitted on the resolved
+    // components, at the same column positions for prediction; with no
+    // nonzero column the decision is the log class prior.
+    std::vector<std::size_t> kept;
+    for (std::size_t comp = 0; comp < k; ++comp) {
+        for (std::size_t row = 0; row < n; ++row) {
+            if (scores[idx(row, k, comp)] != 0.0) {
+                kept.push_back(comp);
+                break;
+            }
+        }
+    }
+    const std::size_t m = kept.size();
+
+    std::vector<double> means(c * m, 0.0);
     for (std::size_t row = 0; row < n; ++row) {
         const auto cls = static_cast<std::size_t>(labels[row]);
-        for (std::size_t comp = 0; comp < k; ++comp) {
-            means[idx(cls, k, comp)] += scores[idx(row, k, comp)];
+        for (std::size_t a = 0; a < m; ++a) {
+            means[idx(cls, m, a)] += scores[idx(row, k, kept[a])];
         }
     }
     for (std::size_t cls = 0; cls < c; ++cls) {
         const double denom = static_cast<double>(class_counts[cls]);
-        for (std::size_t comp = 0; comp < k; ++comp) {
-            means[idx(cls, k, comp)] /= denom;
+        for (std::size_t a = 0; a < m; ++a) {
+            means[idx(cls, m, a)] /= denom;
         }
     }
 
-    std::vector<double> covariance(k * k, 0.0);
+    std::vector<double> covariance(m * m, 0.0);
     for (std::size_t row = 0; row < n; ++row) {
         const auto cls = static_cast<std::size_t>(labels[row]);
-        for (std::size_t a = 0; a < k; ++a) {
-            const double da = scores[idx(row, k, a)] - means[idx(cls, k, a)];
-            for (std::size_t b = 0; b < k; ++b) {
-                const double db = scores[idx(row, k, b)] - means[idx(cls, k, b)];
-                covariance[idx(a, k, b)] += da * db;
+        for (std::size_t a = 0; a < m; ++a) {
+            const double da = scores[idx(row, k, kept[a])] - means[idx(cls, m, a)];
+            for (std::size_t b = 0; b < m; ++b) {
+                const double db = scores[idx(row, k, kept[b])] - means[idx(cls, m, b)];
+                covariance[idx(a, m, b)] += da * db;
             }
         }
     }
@@ -230,7 +248,7 @@ n4m_status_t fit_pls_lda_head(Context& ctx,
     }
 
     std::vector<double> covariance_inv;
-    if (!invert_square(covariance, k, covariance_inv)) {
+    if (!invert_square(covariance, m, covariance_inv)) {
         ctx.set_error("failed to invert PLS-LDA pooled covariance");
         return N4M_ERR_NUMERICAL_FAILURE;
     }
@@ -240,16 +258,14 @@ n4m_status_t fit_pls_lda_head(Context& ctx,
     out.inv_means.assign(c * k, 0.0);
     out.constants.assign(c, 0.0);
     for (std::size_t cls = 0; cls < c; ++cls) {
-        for (std::size_t a = 0; a < k; ++a) {
-            double sum = 0.0;
-            for (std::size_t b = 0; b < k; ++b) {
-                sum += covariance_inv[idx(a, k, b)] * means[idx(cls, k, b)];
-            }
-            out.inv_means[idx(cls, k, a)] = sum;
-        }
         double quad = 0.0;
-        for (std::size_t a = 0; a < k; ++a) {
-            quad += means[idx(cls, k, a)] * out.inv_means[idx(cls, k, a)];
+        for (std::size_t a = 0; a < m; ++a) {
+            double sum = 0.0;
+            for (std::size_t b = 0; b < m; ++b) {
+                sum += covariance_inv[idx(a, m, b)] * means[idx(cls, m, b)];
+            }
+            out.inv_means[idx(cls, k, kept[a])] = sum;
+            quad += means[idx(cls, m, a)] * sum;
         }
         out.constants[cls] = -0.5 * quad +
             std::log(static_cast<double>(class_counts[cls]) / static_cast<double>(n));

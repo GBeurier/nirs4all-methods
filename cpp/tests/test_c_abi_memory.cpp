@@ -20,6 +20,7 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "harness.hpp"
@@ -389,7 +390,8 @@ void test_model_serialization_contract() {
     N4M_TEST_REQUIRE(n4m_serialization_inspect(
                          payload.data(), payload.size(), &format, &writer_major,
                          &writer_minor, &writer_patch) == N4M_OK);
-    N4M_TEST_REQUIRE(format == N4M_SERIALIZATION_FORMAT_VERSION_V1);
+    // A PLS fit records its component resolution, hence format 3.
+    N4M_TEST_REQUIRE(format == N4M_SERIALIZATION_FORMAT_VERSION_V3);
     N4M_TEST_REQUIRE(writer_major == n4m_get_abi_version_major());
     N4M_TEST_REQUIRE(writer_minor == n4m_get_abi_version_minor());
     N4M_TEST_REQUIRE(writer_patch == n4m_get_abi_version_patch());
@@ -398,7 +400,7 @@ void test_model_serialization_contract() {
     N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
                          payload.data(), payload.size(), &info) == N4M_OK);
     N4M_TEST_REQUIRE(info.schema_version == N4M_SERIALIZED_MODEL_INFO_SCHEMA_V1);
-    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION_V1);
+    N4M_TEST_REQUIRE(info.format_version == N4M_SERIALIZATION_FORMAT_VERSION_V3);
     N4M_TEST_REQUIRE(info.writer_abi_major == n4m_get_abi_version_major());
     N4M_TEST_REQUIRE(info.writer_abi_minor == n4m_get_abi_version_minor());
     N4M_TEST_REQUIRE(info.writer_abi_patch == n4m_get_abi_version_patch());
@@ -512,7 +514,59 @@ void test_model_serialization_contract() {
                      N4M_ERR_CORRUPT_BUFFER);
     N4M_TEST_REQUIRE(serialized_info_is_zero(info));
 
-    // In format 1 the writer ABI triple is provenance, not a strict load gate.
+    // Format 3 ends with [u64 1][f64 resolution][u64 a][a f64 flags]
+    // [u32 pipeline flag] before the checksum (a = 2 here). A valid checksum
+    // cannot hide an invalid resolution, flag or pipeline marker.
+    {
+        const std::size_t checksum_at = payload.size() - sizeof(std::uint64_t);
+        const std::size_t pipeline_flag_at = checksum_at - sizeof(std::uint32_t);
+        const std::size_t flags_at = pipeline_flag_at - 2U * sizeof(double);
+        const std::size_t resolution_at = flags_at - sizeof(std::uint64_t) - sizeof(double);
+        const auto f64_bits = [](double value) {
+            std::uint64_t bits = 0;
+            std::memcpy(&bits, &value, sizeof(bits));
+            return bits;
+        };
+        const std::pair<std::size_t, std::uint64_t> tampers[] = {
+            {resolution_at, f64_bits(-1.0)},
+            {resolution_at, f64_bits(std::numeric_limits<double>::infinity())},
+            {resolution_at, f64_bits(-0.0)},
+            {flags_at, f64_bits(0.5)},
+            {flags_at + sizeof(double), f64_bits(-0.0)},
+            {resolution_at - sizeof(std::uint64_t), 2U},
+            {flags_at - sizeof(std::uint64_t), 3U},
+        };
+        for (const auto& [offset, value] : tampers) {
+            std::vector<unsigned char> tampered = payload;
+            write_u64_le(tampered, offset, value);
+            write_u64_le(tampered, checksum_at, fnv1a64_prefix(tampered, checksum_at));
+            std::memset(&info, 0xa5, sizeof(info));
+            N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                                 tampered.data(), tampered.size(), &info) ==
+                             N4M_ERR_CORRUPT_BUFFER);
+            N4M_TEST_REQUIRE(serialized_info_is_zero(info));
+            N4M_TEST_REQUIRE(n4m_model_import_from_buffer(
+                                 f.ctx, tampered.data(), tampered.size(), &imported) ==
+                             N4M_ERR_CORRUPT_BUFFER);
+            N4M_TEST_REQUIRE(imported == nullptr);
+        }
+        std::vector<unsigned char> bad_pipeline_flag = payload;
+        write_u32_le(bad_pipeline_flag, pipeline_flag_at, 2U);
+        write_u64_le(bad_pipeline_flag, checksum_at,
+                     fnv1a64_prefix(bad_pipeline_flag, checksum_at));
+        N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                             bad_pipeline_flag.data(), bad_pipeline_flag.size(), &info) ==
+                         N4M_ERR_CORRUPT_BUFFER);
+        // A pipeline flag of 1 without the pipeline block is truncated.
+        write_u32_le(bad_pipeline_flag, pipeline_flag_at, 1U);
+        write_u64_le(bad_pipeline_flag, checksum_at,
+                     fnv1a64_prefix(bad_pipeline_flag, checksum_at));
+        N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(
+                             bad_pipeline_flag.data(), bad_pipeline_flag.size(), &info) ==
+                         N4M_ERR_CORRUPT_BUFFER);
+    }
+
+    // The writer ABI triple is provenance, not a strict load gate.
     // Mutating it requires a fresh FNV trailer so payload integrity still holds.
     std::vector<unsigned char> abi_skew = payload;
     const std::uint32_t different_major = writer_major ^ 1U;

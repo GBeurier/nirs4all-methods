@@ -490,6 +490,12 @@ void simple_simpls(std::vector<double> xk,
                    std::vector<double>* weights_w = nullptr) {
     coefficients.assign(p * q, 0.0);
     if (weights_w != nullptr) weights_w->assign(p * a, 0.0);
+    // A component is computed only while the deflated cross-covariance is
+    // above the rounding of X'Y, (n + a) eps ||X||_F ||Y||_F (the resolution
+    // of the qualified PLS solvers); the remaining tests are on exact zeros or
+    // relative to the quantity they guard, so the fit is scale-equivariant.
+    const double resolution = static_cast<double>(n + a) * std::numeric_limits<double>::epsilon() *
+                              std::sqrt(squared_norm(xk)) * std::sqrt(squared_norm(yk));
     std::vector<double> covariance(p * q, 0.0);
     for (std::size_t f = 0; f < p; ++f) {
         for (std::size_t target = 0; target < q; ++target) {
@@ -510,18 +516,19 @@ void simple_simpls(std::vector<double> xk,
         std::vector<double> w(p, 0.0);
         std::size_t best_col = 0;
         double best_col_norm = -1.0;
+        double covariance_ss = 0.0;
         for (std::size_t c = 0; c < q; ++c) {
             double s = 0.0;
             for (std::size_t r = 0; r < p; ++r) {
                 const double v = covariance[r * q + c];
                 s += v * v;
             }
+            covariance_ss += s;
             if (s > best_col_norm) { best_col_norm = s; best_col = c; }
         }
-        if (!(best_col_norm > 0.0)) break;
+        if (!(std::sqrt(covariance_ss) > resolution)) break;
         for (std::size_t r = 0; r < p; ++r) w[r] = covariance[r * q + best_col];
         double w_norm = std::sqrt(squared_norm(w));
-        if (w_norm < kEps) break;
         for (double& v : w) v /= w_norm;
         for (int iter = 0; iter < 100; ++iter) {
             std::vector<double> tmp(q, 0.0);
@@ -537,7 +544,7 @@ void simple_simpls(std::vector<double> xk,
                 }
             }
             double n_new = std::sqrt(squared_norm(w_new));
-            if (n_new < kEps) break;
+            if (!(n_new > 0.0)) break;
             for (double& v : w_new) v /= n_new;
             double change = 0.0;
             for (std::size_t r = 0; r < p; ++r) {
@@ -555,7 +562,7 @@ void simple_simpls(std::vector<double> xk,
             }
         }
         const double t_norm = std::sqrt(squared_norm(t));
-        if (t_norm < kEps) break;
+        if (!(t_norm > 0.0)) break;
         for (double& v : t) v /= t_norm;
         for (double& v : w) v /= t_norm;
         // x_loadings
@@ -583,8 +590,11 @@ void simple_simpls(std::vector<double> xk,
                 v[f] -= basis_v[f * a + prev] * proj;
             }
         }
+        // w is orthogonal to the previous basis (it lies in the range of the
+        // deflated covariance), so w'v = w'p = ||X w||^2 / t_norm > 0 and v is
+        // nonzero whenever t is: only an exact zero is tested.
         const double v_norm = std::sqrt(squared_norm(v));
-        if (v_norm < kEps) break;
+        if (!(v_norm > 0.0)) break;
         for (double& x : v) x /= v_norm;
         for (std::size_t f = 0; f < p; ++f) {
             W[f * a + comp] = w[f];
@@ -597,7 +607,7 @@ void simple_simpls(std::vector<double> xk,
         // b = u' t / t.t; using y_scores convention
         const double y_loading_ss = squared_norm(q_load);
         double b = 0.0;
-        if (y_loading_ss > kEps) {
+        if (y_loading_ss > 0.0) {
             for (std::size_t i = 0; i < n; ++i) {
                 double y_score = 0.0;
                 for (std::size_t target = 0; target < q; ++target) {
@@ -2753,6 +2763,27 @@ void predict_pls_glm(const PlsGlmResult& model, const n4m_matrix_view_t& X,
 
 // ---- PLS-QDA -----------------------------------------------------------
 
+namespace {
+
+// The latent directions of a PLS-QDA model: the components whose rotation
+// column is nonzero. A PLS-DA null component (flagged unresolved by the
+// solver) has a zero rotation column and carries no direction.
+std::vector<std::size_t> qda_directions(const PlsQdaResult& model, std::size_t p) {
+    const auto a = static_cast<std::size_t>(model.n_components);
+    std::vector<std::size_t> kept;
+    for (std::size_t comp = 0; comp < a; ++comp) {
+        for (std::size_t f = 0; f < p; ++f) {
+            if (model.rotations_r[f * a + comp] != 0.0) {
+                kept.push_back(comp);
+                break;
+            }
+        }
+    }
+    return kept;
+}
+
+}  // namespace
+
 n4m_status_t pls_qda_decision(Context& ctx,
                                const PlsQdaResult& model,
                                const n4m_matrix_view_t& X,
@@ -2765,25 +2796,29 @@ n4m_status_t pls_qda_decision(Context& ctx,
         ctx.set_error("X width does not match the PLS-QDA model");
         return N4M_ERR_SHAPE_MISMATCH;
     }
-    // Cholesky factor and log-determinant of every class covariance.
-    std::vector<double> chol(q * a * a, 0.0);
+    // Cholesky factor and log-determinant of every class covariance on the m
+    // latent directions (the rows and columns of null components are zero
+    // and left out).
+    const std::vector<std::size_t> kept = qda_directions(model, p);
+    const std::size_t m = kept.size();
+    std::vector<double> chol(q * m * m, 0.0);
     std::vector<double> log_det(q, 0.0);
     for (std::size_t c = 0; c < q; ++c) {
         const double* cov = model.class_covariances.data() + c * a * a;
-        double* L = chol.data() + c * a * a;
-        for (std::size_t r = 0; r < a; ++r) {
+        double* L = chol.data() + c * m * m;
+        for (std::size_t r = 0; r < m; ++r) {
             for (std::size_t col = 0; col <= r; ++col) {
-                double sum = cov[r * a + col];
-                for (std::size_t t = 0; t < col; ++t) sum -= L[r * a + t] * L[col * a + t];
+                double sum = cov[kept[r] * a + kept[col]];
+                for (std::size_t t = 0; t < col; ++t) sum -= L[r * m + t] * L[col * m + t];
                 if (r == col) {
                     if (!(sum > 0.0)) {
                         ctx.set_error("a PLS-QDA class covariance is not positive definite");
                         return N4M_ERR_NUMERICAL_FAILURE;
                     }
-                    L[r * a + r] = std::sqrt(sum);
-                    log_det[c] += 2.0 * std::log(L[r * a + r]);
+                    L[r * m + r] = std::sqrt(sum);
+                    log_det[c] += 2.0 * std::log(L[r * m + r]);
                 } else {
-                    L[r * a + col] = sum / L[col * a + col];
+                    L[r * m + col] = sum / L[col * m + col];
                 }
             }
         }
@@ -2792,24 +2827,24 @@ n4m_status_t pls_qda_decision(Context& ctx,
     n4m_status_t status = copy_matrix(ctx, X, "X", X_buf);
     if (status != N4M_OK) return status;
     decision.assign(n * q, 0.0);
-    std::vector<double> scores(a, 0.0);
-    std::vector<double> z(a, 0.0);
+    std::vector<double> scores(m, 0.0);
+    std::vector<double> z(m, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t comp = 0; comp < a; ++comp) {
+        for (std::size_t r = 0; r < m; ++r) {
             double s = 0.0;
             for (std::size_t f = 0; f < p; ++f) {
-                s += (X_buf[i * p + f] - model.x_mean[f]) * model.rotations_r[f * a + comp];
+                s += (X_buf[i * p + f] - model.x_mean[f]) * model.rotations_r[f * a + kept[r]];
             }
-            scores[comp] = s;
+            scores[r] = s;
         }
         for (std::size_t c = 0; c < q; ++c) {
-            const double* L = chol.data() + c * a * a;
+            const double* L = chol.data() + c * m * m;
             // Forward substitution L z = s - mu_c; the Mahalanobis term is |z|^2.
             double norm2 = 0.0;
-            for (std::size_t r = 0; r < a; ++r) {
-                double v = scores[r] - model.class_means[c * a + r];
-                for (std::size_t t = 0; t < r; ++t) v -= L[r * a + t] * z[t];
-                z[r] = v / L[r * a + r];
+            for (std::size_t r = 0; r < m; ++r) {
+                double v = scores[r] - model.class_means[c * a + kept[r]];
+                for (std::size_t t = 0; t < r; ++t) v -= L[r * m + t] * z[t];
+                z[r] = v / L[r * m + r];
                 norm2 += z[r] * z[r];
             }
             decision[i * q + c] = -0.5 * (norm2 + log_det[c]) + model.log_class_priors[c];
@@ -2838,8 +2873,6 @@ n4m_status_t fit_pls_qda(Context& ctx,
     for (auto lbl : y_labels)
         if (lbl > max_label) max_label = lbl;
     const std::size_t n_classes = static_cast<std::size_t>(max_label) + 1;
-    column_means(X_buf, n, p, out.x_mean);
-    subtract_means(X_buf, n, p, out.x_mean);
     std::vector<double> Yv(n * n_classes, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
         Yv[i * n_classes + static_cast<std::size_t>(y_labels[i])] = 1.0;
@@ -2847,16 +2880,51 @@ n4m_status_t fit_pls_qda(Context& ctx,
     const std::size_t a = std::min<std::size_t>(
         static_cast<std::size_t>(cfg.n_components),
         std::min(n - 1, p));
-    std::vector<double> coefs;
-    std::vector<double> W;
-    simple_simpls(X_buf, Yv, n, p, n_classes, a, coefs, &W);
-    // Project X onto latent space.
+    // The latent space is that of the qualified PLS-DA SIMPLS solver on the
+    // one-hot labels (centred X, unscaled): unit-norm scores t = (x - x_mean) R,
+    // so the class covariances below do not depend on the units of X, and a
+    // component whose X-Y cross-covariance is not resolved is a null
+    // component (zero rotation column, flagged by the solver) that the QDA
+    // head leaves out. Only n_components is taken from `cfg`.
+    std::vector<double> rotations(p * a, 0.0);
+    out.x_mean.assign(p, 0.0);
+    column_means(X_buf, n, p, out.x_mean);
+    if (a > 0) {
+        Config pls_cfg;
+        pls_cfg.algorithm = N4M_ALGO_PLS_DA;
+        pls_cfg.solver = N4M_SOLVER_SIMPLS;
+        pls_cfg.deflation = N4M_DEFLATION_REGRESSION;
+        pls_cfg.n_components = static_cast<std::int32_t>(a);
+        pls_cfg.center_x = 1;
+        pls_cfg.scale_x = 0;
+        pls_cfg.center_y = 1;
+        pls_cfg.scale_y = 0;
+        n4m_matrix_view_t Y{};
+        Y.data = Yv.data();
+        Y.rows = X.rows;
+        Y.cols = static_cast<std::int64_t>(n_classes);
+        Y.row_stride = Y.cols;
+        Y.col_stride = 1;
+        Y.dtype = N4M_DTYPE_F64;
+        std::unique_ptr<Model> pls_model;
+        status = fit_model(ctx, pls_cfg, X, Y, pls_model);
+        if (status != N4M_OK) return status;
+        rotations = pls_model->rotations_r;
+        out.x_mean = pls_model->x_mean;
+    }
+    subtract_means(X_buf, n, p, out.x_mean);
+    out.rotations_r = std::move(rotations);
+    out.n_classes = static_cast<std::int32_t>(n_classes);
+    out.n_components = static_cast<std::int32_t>(a);
+    const std::vector<std::size_t> kept = qda_directions(out, p);
+    // Scores on the latent directions; null components keep zero columns and
+    // zero class means and covariance rows / columns.
     std::vector<double> scores(n * a, 0.0);
     for (std::size_t i = 0; i < n; ++i) {
-        for (std::size_t comp = 0; comp < a; ++comp) {
+        for (const std::size_t comp : kept) {
             double s = 0.0;
             for (std::size_t f = 0; f < p; ++f) {
-                s += X_buf[i * p + f] * W[f * a + comp];
+                s += X_buf[i * p + f] * out.rotations_r[f * a + comp];
             }
             scores[i * a + comp] = s;
         }
@@ -2908,9 +2976,6 @@ n4m_status_t fit_pls_qda(Context& ctx,
             }
         }
     }
-    out.n_classes = static_cast<std::int32_t>(n_classes);
-    out.n_components = static_cast<std::int32_t>(a);
-    out.rotations_r = std::move(W);
     ctx.clear_error();
     return N4M_OK;
 }
