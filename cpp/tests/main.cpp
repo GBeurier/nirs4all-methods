@@ -100,6 +100,10 @@ void register_models_pls_tests(n4m_testing::Runner& r);
 // through the dedicated public n4m_*_fit ABI live in test_models_extra.cpp.
 void register_models_extra_tests(n4m_testing::Runner& r);
 
+// Consumers of PLS / PCR models with null (unresolved) components live in
+// test_pls_null_components.cpp.
+void register_pls_null_component_tests(n4m_testing::Runner& r);
+
 // Adversarial C-ABI boundary / memory-ownership tests live in
 // test_c_abi_memory.cpp.
 void register_c_abi_memory_tests(n4m_testing::Runner& r);
@@ -229,6 +233,7 @@ int main() {
     register_augmenters_edge_splines_random_tests(r);
     register_models_pls_tests(r);
     register_models_extra_tests(r);
+    register_pls_null_component_tests(r);
     register_c_abi_memory_tests(r);
     register_threading_tests(r);
     register_moments_tests(r);

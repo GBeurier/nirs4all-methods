@@ -247,6 +247,8 @@ N4M_API n4m_status_t n4m_metrics_approximate_press_compute(
  *   int "q_alarms"   (length n_monitor)
  *   int "any_alarms" (length n_monitor)
  *   scalar "t2_threshold", scalar "q_threshold", scalar "alpha"
+ * T² and Q are those of n4m_metrics_pls_diagnostics_compute (model X
+ * space, latent directions only).
  */
 N4M_API n4m_status_t n4m_metrics_pls_monitoring_run(
     n4m_context_t* ctx,
@@ -274,16 +276,28 @@ N4M_API n4m_status_t n4m_metrics_one_se_rule_compute(
 
 /* PLS diagnostics (§9). Computes Hotelling T², Q residuals (SPE) and
  * DModX from a fitted model and a design matrix X. When `X_reference`
- * is NULL, score variances and sigma_train fall back to the model's
- * stored training scores — this requires `cfg.store_scores = 1` at fit
- * time. When `X_reference` is non-NULL, its rows define the reference
- * score distribution.
+ * is NULL, score variances fall back to the model's stored training
+ * scores — this requires `cfg.store_scores = 1` at fit time — and DModX
+ * is not normalized. When `X_reference` is non-NULL, its rows define the
+ * reference score distribution and the DModX normalization.
+ *
+ * Rows are mapped into the model's X space as n4m_model_transform maps
+ * them (fitted pipeline, then x_mean / x_scale), so autoscaled models are
+ * handled. The statistics use the model's k latent directions: the
+ * components with a nonzero rotation column. A PLS component flagged in
+ * N4M_MODEL_UNRESOLVED_COMPONENTS is a null component without X direction;
+ * a PCR component flagged only for its Y side keeps its X direction. A
+ * model with null components therefore has the diagnostics of the model
+ * truncated to its resolved components: T² sums over the k directions (0
+ * for every row when k = 0), and DModX uses n_features - k (and
+ * n_reference - k - 1) degrees of freedom.
  *
  * The result contains:
  *   "t2"     (1 x n_samples) — Hotelling T² statistic per row
  *   "q"      (1 x n_samples) — squared reconstruction residual per row
  *   "dmodx"  (1 x n_samples) — distance-to-model X per row
- *   scalar "n_components", scalar "n_features"
+ *   scalar "n_components", scalar "n_latent_directions" (k),
+ *   scalar "n_features"
  */
 N4M_API n4m_status_t n4m_metrics_pls_diagnostics_compute(
     n4m_context_t* ctx,

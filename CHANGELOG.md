@@ -103,6 +103,30 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- PLS diagnostics (`n4m_metrics_pls_diagnostics_compute`) and monitoring
+  (`n4m_metrics_pls_monitoring_run`) accept models with null components.
+  Hotelling T2 required a positive reference variance on every component,
+  so with a = (-3,-1,1,3), b = (1,-3,3,-1), X = [a, a, b], Y = a, two
+  components (centred, unscaled) it refused the whole result ("Hotelling T2
+  reference variance is zero at component 1"), and DModX used
+  n_features - n_components degrees of freedom (a factor sqrt 2 too large
+  without reference). T2 now sums over the model's latent directions, the
+  components with a nonzero rotation column: a PLS component flagged
+  unresolved is a null component without X direction, while a PCR component
+  flagged only for its Y side keeps its resolved X direction. DModX uses
+  n_features - k and n_reference - k - 1 degrees of freedom for k latent
+  directions; with k = 0 (no resolved component) T2 is 0 on every row. A
+  model with null components now has exactly the diagnostics of the model
+  truncated to its resolved components. The result gains the scalar
+  `n_latent_directions` (k).
+- PLS diagnostics and monitoring now map the rows into the model's X space
+  as `n4m_model_transform` does (fitted SNV/Savitzky-Golay pipeline, then
+  x_mean and x_scale). They used to project the centred but unscaled rows
+  onto rotations fitted on autoscaled X, so with `scale_x = 1` (the default)
+  T2 and DModX were wrong (X = [a, 2 b], Y = a, one component: T2 = a^2
+  instead of 3 a^2 / 20) and Q mixed raw and scaled units. Unscaled models
+  without pipeline are unchanged up to rounding.
+
 - Power-type PLS iterations no longer fail, or stop on a wrong direction,
   when the two leading singular values of X_k'Y_k are close. NIPALS,
   canonical NIPALS, orthogonal scores, kernel, wide kernel, power, randomized
