@@ -103,6 +103,19 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- PLS-LDA (`n4m_estimators_pls_lda_fit` and the `pls_lda` classifier role)
+  fits its discriminant on the resolved PLS-DA components. With
+  a = (-3,-1,1,3), X = [a, a], classes (0, 0, 1, 1) and two components, the
+  null second component's zero score column made the pooled within-class
+  covariance singular (diag(4, 0) with NIPALS) and the fit was refused
+  ("failed to invert PLS-LDA pooled covariance"). Identically zero score
+  columns now get zero discriminant weights at their positions, so
+  decisions and predictions are bit-identical to the head fitted on the
+  resolved components (here log(1/2) - 1 -+ a_i); with no resolved
+  component the decision is the log class prior (prediction: most frequent
+  class, lowest id on ties). PLS-logistic (ridge-regularised Newton)
+  already gave the truncated fit with a zero coefficient; it is now tested.
+
 - PLS diagnostics (`n4m_metrics_pls_diagnostics_compute`) and monitoring
   (`n4m_metrics_pls_monitoring_run`) accept models with null components.
   Hotelling T2 required a positive reference variance on every component,
