@@ -865,7 +865,29 @@ N4M_API n4m_status_t n4m_model_transform_alloc(
     n4m_context_t* ctx, const n4m_model_t* model,
     const n4m_matrix_view_t* X, n4m_array_t** out_scores);
 
-/* Tagged accessor for fitted-model arrays. */
+/* Tagged accessor for fitted-model arrays.
+ *
+ * Component resolution (ABI 2.20). The PLS regression solvers (NIPALS,
+ * SIMPLS, orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD;
+ * also for N4M_ALGO_PLS_DA) and PCR publish N4M_MODEL_COMPONENT_RESOLUTION and
+ * N4M_MODEL_UNRESOLVED_COMPONENTS; other models return N4M_ERR_UNSUPPORTED
+ * for both, as do models imported from N4MM v1/v2 payloads. The resolution is
+ * one absolute bound, in the units of the centred (and, with autoscaling,
+ * scaled) X times Y, below which a component's X-Y cross-covariance cannot be
+ * told apart from rounding: (n + a) eps ||X||_F ||Y||_F on ||X_k'Y_k||_F for
+ * the PLS solvers, (n + p) eps sigma_max(X) ||Y||_F on ||Y't_k|| for PCR.
+ * A component is "unresolved" (flag 1.0) when its cross-covariance is not
+ * above that bound. Unresolved means not resolved numerically: the exact
+ * cross-covariance may be zero (the component's Y side is then mathematically
+ * undefined, e.g. u = Y q / q'q with q = 0) or merely smaller than the bound;
+ * the two cannot be distinguished in double precision, and an unresolved
+ * component must not be read as either. The PLS solvers never publish an
+ * unresolved component: they refuse the fit with N4M_ERR_NUMERICAL_FAILURE
+ * ("X-Y covariance is below its numerical resolution"), so their flags are
+ * all 0. PCR keeps the component (its X direction is resolved), publishes its
+ * Y loading q (accurate only to the bound divided by sigma_k^2 in absolute
+ * terms; it is not set to zero) and, with store_scores=1, a zero Y-score
+ * column. */
 typedef enum n4m_model_array_t {
     N4M_MODEL_COEFFICIENTS = 0,   /* (n_features, n_targets) */
     N4M_MODEL_INTERCEPT    = 1,   /* (n_targets,) */
@@ -878,11 +900,12 @@ typedef enum n4m_model_array_t {
     N4M_MODEL_Y_LOADINGS_Q = 8,
     N4M_MODEL_ROTATIONS_R  = 9,
     N4M_MODEL_SCORES_T     = 10,  /* optional — store_scores=1 */
-    N4M_MODEL_Y_SCORES_U   = 11   /* optional — store_scores=1. PCR leaves a
-                                   * component's column zero when its Y loading
-                                   * is below numerical resolution (Y
-                                   * uncorrelated with that X score: u = Y q /
-                                   * q'q undefined). */
+    N4M_MODEL_Y_SCORES_U   = 11,  /* optional — store_scores=1. The column of
+                                   * an unresolved component is zero (not
+                                   * computed; see above). */
+    N4M_MODEL_COMPONENT_RESOLUTION  = 12, /* (1, 1), ABI 2.20; see above */
+    N4M_MODEL_UNRESOLVED_COMPONENTS = 13  /* (1, n_components), 1.0 or 0.0,
+                                           * ABI 2.20; see above */
 } n4m_model_array_t;
 
 N4M_API n4m_status_t n4m_model_get_array(

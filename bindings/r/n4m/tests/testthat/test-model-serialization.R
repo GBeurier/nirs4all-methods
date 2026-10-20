@@ -8,7 +8,7 @@ test_that("N4MM round-trip preserves fitted predictions", {
   expect_type(bytes, "raw")
   expect_gt(length(bytes), 32L)
   info <- n4m_model_inspect(bytes)
-  expect_equal(info$format_version, 1)
+  expect_equal(info$format_version, 3)  # PLS fits record their component resolution
   expect_equal(info$writer_abi[1L], n4m_abi_version()[1L])
   restored <- n4m_model_import(bytes)
   expect_equal(attr(restored, "n_features"), ncol(x))
@@ -73,7 +73,7 @@ test_that("embedded SNV-Savitzky-Golay state predicts raw spectra and round-trip
   expect_identical(info$window_length, 5L)
   expect_identical(info$polyorder, 2L)
   expect_identical(info$raw_n_features, 13L)
-  expect_identical(descriptor$format_version, 2L)
+  expect_identical(descriptor$format_version, 3L)
   expect_identical(descriptor$solver, 1L)
   expect_identical(descriptor$n_components, 2L)
   expect_equal(n4m_predict(n4m_model_import(bytes), x),

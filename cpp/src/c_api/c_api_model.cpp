@@ -64,11 +64,17 @@ constexpr std::size_t kPipelineV2Bytes =
 
 [[nodiscard]] bool supported_model_format(std::uint32_t format) noexcept {
     return format == N4M_SERIALIZATION_FORMAT_VERSION_V1 ||
-           format == N4M_SERIALIZATION_FORMAT_VERSION_V2;
+           format == N4M_SERIALIZATION_FORMAT_VERSION_V2 ||
+           format == N4M_SERIALIZATION_FORMAT_VERSION_V3;
 }
 
+// Format 3 for a model that records its component resolution, else the
+// byte-stable format 1 (no pipeline) or 2 (pipeline).
 [[nodiscard]] std::uint32_t serialized_format(
     const ::n4m::core::Model& model) noexcept {
+    if (!model.component_resolution.empty()) {
+        return N4M_SERIALIZATION_FORMAT_VERSION_V3;
+    }
     return model.has_snv_savgol_pipeline
         ? N4M_SERIALIZATION_FORMAT_VERSION_V2
         : N4M_SERIALIZATION_FORMAT_VERSION_V1;
@@ -143,6 +149,14 @@ constexpr std::size_t kPipelineV2Bytes =
     if (!add_vector_size(total, model.rotations_r)) return false;
     if (!add_vector_size(total, model.scores_t)) return false;
     if (!add_vector_size(total, model.y_scores_u)) return false;
+    if (serialized_format(model) == N4M_SERIALIZATION_FORMAT_VERSION_V3) {
+        if (model.component_resolution.size() != 1U ||
+            model.unresolved_components.size() !=
+                static_cast<std::size_t>(model.n_components)) return false;
+        if (!add_vector_size(total, model.component_resolution)) return false;
+        if (!add_vector_size(total, model.unresolved_components)) return false;
+        if (!add_checked(total, sizeof(std::uint32_t))) return false;  // pipeline flag
+    }
     if (model.has_snv_savgol_pipeline &&
         !add_checked(total, kPipelineV2Bytes)) return false;
     if (!add_checked(total, sizeof(std::uint64_t))) return false;       // checksum
@@ -281,6 +295,48 @@ void write_vector(Writer& w, const std::vector<double>& values) noexcept {
             return false;
         }
     }
+    return true;
+}
+
+// Format-3 component-resolution section: one finite resolution >= +0, then
+// one flag (+0 or 1) per component, then the u32 pipeline-presence flag.
+// With null outputs it only validates (allocation-free inspection).
+[[nodiscard]] bool read_resolution_v3(Reader& r,
+                                      std::uint64_t n_components,
+                                      std::vector<double>* resolution,
+                                      std::vector<double>* unresolved,
+                                      bool& pipeline_present) {
+    pipeline_present = false;
+    std::uint64_t count = 0;
+    double value = 0.0;
+    if (!r.u64(count) || count != 1U || !r.f64(value) || !std::isfinite(value) ||
+        !(value >= 0.0) || std::signbit(value)) {
+        return false;
+    }
+    if (resolution != nullptr) {
+        resolution->assign(1, value);
+    }
+    if (!r.u64(count) || count != n_components ||
+        count > (r.size - r.pos) / sizeof(double)) {
+        return false;
+    }
+    if (unresolved != nullptr) {
+        unresolved->clear();
+        unresolved->reserve(static_cast<std::size_t>(count));
+    }
+    for (std::uint64_t i = 0; i < count; ++i) {
+        if (!r.f64(value) || !(value == 1.0 || (value == 0.0 && !std::signbit(value)))) {
+            return false;
+        }
+        if (unresolved != nullptr) {
+            unresolved->push_back(value);
+        }
+    }
+    std::uint32_t flag = 0;
+    if (!r.u32(flag) || (flag != 0U && flag != 1U)) {
+        return false;
+    }
+    pipeline_present = flag == 1U;
     return true;
 }
 
@@ -431,7 +487,12 @@ void write_pipeline_v2(Writer& w, const ::n4m::core::Model& model) noexcept {
     write_vector(w, model.rotations_r);
     write_vector(w, model.scores_t);
     write_vector(w, model.y_scores_u);
-    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2) {
+    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V3) {
+        write_vector(w, model.component_resolution);
+        write_vector(w, model.unresolved_components);
+        w.u32(model.has_snv_savgol_pipeline ? 1U : 0U);
+    }
+    if (model.has_snv_savgol_pipeline) {
         write_pipeline_v2(w, model);
     }
     if (!w.ok || w.pos + sizeof(std::uint64_t) > buffer_size) {
@@ -664,9 +725,13 @@ struct SerializedModelMetadata {
         !skip_vector(r, expected_scores)) {
         return N4M_ERR_CORRUPT_BUFFER;
     }
+    bool has_pipeline = format == N4M_SERIALIZATION_FORMAT_VERSION_V2;
+    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V3 &&
+        !read_resolution_v3(r, n_components, nullptr, nullptr, has_pipeline)) {
+        return N4M_ERR_CORRUPT_BUFFER;
+    }
     PipelineV2 pipeline;
-    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2 &&
-        !read_pipeline_v2(r, algorithm, n_features, pipeline)) {
+    if (has_pipeline && !read_pipeline_v2(r, algorithm, n_features, pipeline)) {
         return N4M_ERR_CORRUPT_BUFFER;
     }
     if (r.pos != r.size) {
@@ -803,9 +868,14 @@ struct SerializedModelMetadata {
         return false;
     }
 
+    bool has_pipeline = format == N4M_SERIALIZATION_FORMAT_VERSION_V2;
+    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V3 &&
+        !read_resolution_v3(r, n_components, &model->component_resolution,
+                            &model->unresolved_components, has_pipeline)) {
+        return false;
+    }
     PipelineV2 pipeline;
-    if (format == N4M_SERIALIZATION_FORMAT_VERSION_V2 &&
-        !read_pipeline_v2(r, algorithm, n_features, pipeline)) {
+    if (has_pipeline && !read_pipeline_v2(r, algorithm, n_features, pipeline)) {
         return false;
     }
     if (r.pos != r.size) {

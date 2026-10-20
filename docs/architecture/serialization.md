@@ -1,6 +1,6 @@
 # Fitted-model wire serialization
 
-The C ABI implements two backward-readable fitted-model wire versions behind:
+The C ABI implements three backward-readable fitted-model wire versions behind:
 
 - `n4m_model_export_size`
 - `n4m_model_export_to_buffer`
@@ -13,7 +13,7 @@ The format is little-endian and starts with:
 
 ```text
 magic[4] = "N4MM"
-u32 format_version = 1 or 2
+u32 format_version = 1, 2 or 3
 u32 writer_abi_major
 u32 writer_abi_minor
 u32 writer_abi_patch
@@ -27,11 +27,35 @@ failures with `N4M_ERR_CORRUPT_BUFFER`; unsupported format versions return
 `N4M_ERR_VERSION_INCOMPATIBLE`.
 
 Format 1 remains byte-for-byte unchanged and is still emitted for every model
-without a pipeline. Format 2 is emitted only for a PLS-regression model fitted
-with the exact `SNV(no params) -> Savitzky-Golay smooth(window, poly)` pipeline.
+without a pipeline that records no component resolution. Format 2 is emitted
+only for such a model fitted with the exact
+`SNV(no params) -> Savitzky-Golay smooth(window, poly)` pipeline. Format 3
+(ABI 2.20) is emitted for every model that records a component resolution:
+the PLS regression solvers (also for PLS-DA) and PCR fitted from 1.3.7 on,
+with or without the pipeline. After the eleven format-1 vectors it appends:
+
+```text
+u64 count = 1
+f64 component_resolution   # finite, >= +0 (X-Y cross-covariance resolution)
+u64 count = n_components
+f64 unresolved[n_components]  # each +0 or 1
+u32 pipeline_present       # 0 or 1
+[the format-2 pipeline block below when pipeline_present = 1]
+u64 fnv1a64 checksum
+```
+
+Imports and inspection reject other counts, values (negative, non-finite or
+-0 resolution; flags other than +0 and 1) and pipeline markers even when the
+checksum is recomputed. A model imported from format 1 or 2 has no recorded
+resolution: `N4M_MODEL_COMPONENT_RESOLUTION` and
+`N4M_MODEL_UNRESOLVED_COMPONENTS` then return `N4M_ERR_UNSUPPORTED`, and it
+re-exports as format 1 or 2. Readers before ABI 2.20 reject format 3 with
+`N4M_ERR_VERSION_INCOMPATIBLE`.
+
+The format-2 pipeline block (also used by format 3) follows.
 When the SG operator omits parameters, model-pipeline parsing uses the public
 nirs4all defaults `window=11` and `poly=3`; export always records them explicitly.
-After the eleven format-1 vectors it appends, in order:
+In format 2 it follows the eleven format-1 vectors directly:
 
 ```text
 u32 operator_count = 2
@@ -67,21 +91,24 @@ rejection.
 
 `N4MM` is a raw fitted-model payload. It has no canonical filename extension
 yet and is not the nirs4all `.n4a` pipeline bundle. The possible `.n4am`
-envelope remains a future contract and is not part of either N4MM version.
+envelope remains a future contract and is not part of any N4MM version.
 The FNV-1a trailer detects corruption; it is not a content-address or a
 training-data fingerprint.
 
 `n4m_serialization_inspect_model_v1` is the authoritative, allocation-free
 inspection gate for a complete fitted-model payload. It validates the header,
 supported format, checksum, algorithm/solver/deflation recipe, dimensions,
-flags, all eleven length-delimited array sections, the required format-2
-pipeline block when present, and exact end-of-payload
+flags, all eleven length-delimited array sections, the format-3
+component-resolution section, the pipeline block when present, and exact
+end-of-payload
 before filling `n4m_serialized_model_info_v1_t`. The output is zero on every
 failure. Its schema version is 1 and its capability bits are derived from the
 validated N4MM bytes:
 
 - native format-1 fitted models report `PREDICT | TRANSFORM`;
 - the bounded format-2 pipeline model reports `PREDICT | TRANSFORM | PIPELINE`;
+- format-3 models report `PREDICT | TRANSFORM`, plus `PIPELINE` when their
+  pipeline flag is set;
 - `N4M_ALGO_IMPORTED_LINEAR_PREDICTOR` reports `PREDICT | AFFINE` and never
   reports `TRANSFORM`.
 
@@ -92,8 +119,9 @@ not capability authorities.
 
 `n4m_serialization_inspect_pipeline_v1` is the additive ABI-2.5 plan
 attestation surface. The caller passes both a pointer and its allocation size;
-the current `n4m_serialized_pipeline_info_v1_t` is 96 bytes. Format 1 returns
-success with `present=0`. Format 2 returns `operator_count=2`, ordered kinds
+the current `n4m_serialized_pipeline_info_v1_t` is 96 bytes. Format 1, and
+format 3 without the pipeline flag, return success with `present=0`. Format 2,
+and format 3 with the flag, return `operator_count=2`, ordered kinds
 `N4M_OP_SNV` then `N4M_OP_SAVGOL_SMOOTH`, the versioned user semantic profile,
 SNV axis/mean/std/ddof, SG window/polynomial/derivative/delta/mode/cval, and
 separate raw/model feature widths. Both widths equal `n_features` because the
