@@ -62,6 +62,12 @@ class Model {
     std::vector<double> rotations_r;  // n_features x n_components
     std::vector<double> scores_t;     // n_samples x n_components, optional
     std::vector<double> y_scores_u;   // n_samples x n_components, optional
+    // Numerical resolution of the components' X-Y cross-covariance (one
+    // value, in centred/scaled X times Y units) and the per-component
+    // unresolved flags (1.0 or 0.0). Recorded by the PLS regression solvers
+    // and PCR; empty for the other models and for N4MM v1/v2 payloads.
+    std::vector<double> component_resolution;   // 1, optional
+    std::vector<double> unresolved_components;  // n_components, optional
 };
 
 [[nodiscard]] n4m_status_t fit_pls_regression_nipals(

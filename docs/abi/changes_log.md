@@ -1,5 +1,31 @@
 # ABI — Changes Log
 
+## 2026-10-20 — ABI 2.20.0 (addition): PLS/PCR component resolution, N4MM format 3 (to be released in 1.3.7)
+
+No new symbol and no signature change. `n4m_model_array_t` gains
+`N4M_MODEL_COMPONENT_RESOLUTION = 12` ((1, 1): the absolute X-Y
+cross-covariance resolution of the components, in centred/scaled X times Y
+units — (n + a) eps ||X||_F ||Y||_F for the PLS regression solvers and PLS-DA,
+(n + p) eps sigma_max(X) ||Y||_F for PCR) and
+`N4M_MODEL_UNRESOLVED_COMPONENTS = 13` ((1, n_components): 1.0 where a
+component's cross-covariance is not above it). Unresolved means not resolved
+numerically, not mathematically undefined: the exact value may be zero or
+merely below the bound. PLS solvers refuse an unresolved component
+(`N4M_ERR_NUMERICAL_FAILURE`), so their flags are 0; PCR keeps it, publishes
+its Y loading and a zero Y-score column, and flags it. Other models return
+`N4M_ERR_UNSUPPORTED` for both tags.
+
+`N4M_SERIALIZATION_FORMAT_VERSION_V3 = 3` (now
+`N4M_SERIALIZATION_FORMAT_VERSION`) is written for every model recording a
+component resolution: the eleven format-1 vectors, `[u64 1][f64 resolution]`,
+`[u64 n_components][f64 flags]`, `u32 pipeline_present`, the optional
+format-2 pipeline block, the checksum (`docs/architecture/serialization.md`).
+Formats 1 and 2 are still written byte for byte for the other models and
+still read; earlier readers reject format 3 with
+`N4M_ERR_VERSION_INCOMPATIBLE`. `n4m_serialization_inspect_model_v1` and
+`n4m_serialization_inspect_pipeline_v1` validate the new section and report
+the pipeline from its flag.
+
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 
 Add six caller-buffer operations in `n4m/metrics.h`. 2.18 symbols are unchanged

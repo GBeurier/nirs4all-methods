@@ -16,7 +16,7 @@ const relativeNear = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.max(1, Math.abs(expected)),
     `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 19, 0]);
+assert.deepEqual(abiVersion(), [2, 20, 0]);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);

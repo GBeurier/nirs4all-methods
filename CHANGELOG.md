@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI 2.20.0 additions (no new symbol, no signature change): two
+`n4m_model_array_t` tags and N4MM fitted-model format 3.
+
+### Added
+
+- Component resolution of PLS regression and PCR models (ABI 2.20).
+  `n4m_model_get_array(..., N4M_MODEL_COMPONENT_RESOLUTION)` returns (1, 1)
+  the absolute resolution below which a component's X-Y cross-covariance
+  cannot be told apart from rounding, in centred (scaled) X times Y units:
+  (n + a) eps ||X||_F ||Y||_F on ||X_k'Y_k||_F for every PLS regression
+  solver (and PLS-DA), (n + p) eps sigma_max(X) ||Y||_F on ||Y't_k|| for PCR.
+  `N4M_MODEL_UNRESOLVED_COMPONENTS` returns (1, n_components) flags, 1.0 for
+  a component whose cross-covariance is not above it. "Unresolved" means not
+  resolved numerically, which is distinct from mathematically undefined: the
+  exact cross-covariance may be zero (the component's Y side, e.g.
+  u = Y q / q'q with q = 0, is then undefined) or merely below the bound, and
+  double precision cannot tell them apart. PCR keeps such a component (its X
+  direction is resolved), publishes its Y loading (absolute accuracy only)
+  and a zero Y-score column, and now flags it: with a = (-3,-1,1,3),
+  b = (1,-3,3,-1), X = a, Y = b + 2^-50 a (one component, centred, unscaled)
+  the exact Y scores are 2^50 Y, but the cross-covariance 20 * 2^-50 is below
+  the resolution and the zero column used to be published without any
+  indication. The PLS solvers never publish an unresolved component (they
+  refuse it, as before), so their flags are all 0. Other models return
+  `N4M_ERR_UNSUPPORTED` for both tags. The values are kept by export/import
+  in N4MM format 3 (see Changed) and exposed by the JS/WASM
+  `NativeModel.getArray` / `componentResolution()` and `ModelArray` enum, and
+  by Python `pls4all.Model.component_resolution()`, `ModelArrayKind` and the
+  `component_resolution_` / `unresolved_components_` attributes of the
+  sklearn PLS regression and PCR wrappers.
+
+### Changed
+
+- N4MM fitted-model format 3 (`N4M_SERIALIZATION_FORMAT_VERSION_V3`, now the
+  current version) is written for every model that records a component
+  resolution, i.e. every PLS regression (PLS-DA) and PCR fit: the eleven
+  format-1 vectors, then the resolution, the per-component flags and an
+  explicit pipeline flag before the optional SNV/Savitzky-Golay block.
+  Models without a resolution (canonical PLS, PLS-SVD, OPLS, imported linear
+  predictors) keep formats 1 and 2 byte for byte, and formats 1 and 2 remain
+  readable (without a recorded resolution). Readers before ABI 2.20 reject
+  format 3 with `N4M_ERR_VERSION_INCOMPATIBLE`. The Rust binding accepts it.
+
 ### Fixed
 
 - PLS regression (`models.pls.pls_regression`, every solver: NIPALS, SIMPLS,
@@ -49,19 +92,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   ||X_k'Y_k||_F <= (n + a) eps ||X_0||_F ||Y_0||_F on the unit-scaled centred
   working matrices, and a PCR component only when its singular value is
   <= (n + p) eps sigma_max (the SVD resolution); above these bounds the
-  remaining guards act on unit vectors or exact zeros only. NIPALS, kernel
+  remaining guards act on unit vectors or exact zeros only (NIPALS keeps
+  scikit-learn's 10 eps residual mask only where it leaves the covariance
+  resolved; see below). NIPALS, kernel
   and orthogonal scores start the power iteration from a Y column whose
   covariance with X is resolved when their usual start column is not
   (previously a refusal). Kernel PLS forms its raw X scores as X (X'u)
   instead of through the n x n kernel X X', which rounded away X columns
   below ~2^-26 of the largest. PCR leaves the Y-score column of a component
   zero only when its Y loading is below the rounding of Y't, about
-  (n + p) eps ||Y||_F sigma_max: Y is then uncorrelated with that X score
-  within numerical resolution and u = Y q / q'q is undefined (documented on
-  `N4M_MODEL_Y_SCORES_U`). C++ and JS/WASM tests check these cases against
-  analytic W, P, Q, R, T, U, coefficients and predictions, on the fitted and
-  on the exported/imported model, and the rank-one X = [a, a] refusal of a
-  second component. No ABI or serialization format change.
+  (n + p) eps ||Y||_F sigma_max, and flags that component unresolved (see
+  Added). C++ and JS/WASM tests check these cases against analytic W, P, Q,
+  R, T, U, coefficients and predictions, on the fitted and on the
+  exported/imported model, and the rank-one X = [a, a] refusal of a second
+  component.
+- NIPALS and kernel / wide-kernel PLS decided that the Y residual was
+  constant from absolute thresholds before checking the cross-covariance:
+  NIPALS zeroed every Y column whose residual stayed below 10 eps
+  (scikit-learn's mask) and both refused when no residual entry exceeded
+  eps, although many such columns can carry a resolved covariance together.
+  With a, b as above, X = [a, b] and Y = a followed by 64 identical columns
+  2^-29 a + 2^-51 b (two components, centred, unscaled), the residual
+  columns after the first component are 2^-51 b, below the mask, while
+  ||X_1'Y_1||_F ~ 1.8e-14 exceeds the resolution ~ 9.4e-15; NIPALS refused
+  ("Y residual became constant at component 1"). With the unit vectors
+  (-1,-1,1,1), (-1,1,-1,1) and 100 columns 2^-29 a + 2^-52 b, no residual
+  entry exceeds eps and NIPALS and kernel PLS both refused. Both solvers now
+  decide whether a component is resolved on the intact residuals, apply the
+  mask only when the remaining columns keep the covariance resolved, and
+  start from the covariance-preferred column when no column exceeds eps:
+  every solver now returns the exact coefficients
+  [[1, 2^-29 ...], [0, 2^-51 ...]] and predictions = Y (NIPALS also its
+  analytic W, P, Q, T, U). The other solvers had no such pre-check. A
+  before/after bitwise sweep (3690 fits: random and structured X, Y with
+  1-5 targets, scales 2^-60..2^60, autoscaling on and off, every solver and
+  PCR) found no change of status, array or prediction.
 
 ## [1.3.6] - 2026-10-13
 

@@ -18,7 +18,7 @@
 #define N4M_N4M_VERSION_H
 
 #define N4M_ABI_VERSION_MAJOR 2
-#define N4M_ABI_VERSION_MINOR 19
+#define N4M_ABI_VERSION_MINOR 20
 #define N4M_ABI_VERSION_PATCH 0
 #define N4M_ABI_VERSION_INT  (N4M_ABI_VERSION_MAJOR * 10000 + \
                               N4M_ABI_VERSION_MINOR * 100   + \
@@ -36,11 +36,15 @@
 #define N4M_ERROR_BUFFER_BYTES 4096
 
 /* Serialization magic + format versions. Format 1 remains the byte-stable
- * raw-model payload. Format 2 adds the bounded SNV -> SG model-pipeline block;
- * writers continue to emit format 1 for models without that pipeline. */
+ * raw-model payload. Format 2 adds the bounded SNV -> SG model-pipeline block.
+ * Format 3 (ABI 2.20) adds the component resolution and unresolved flags of
+ * the PLS regression solvers and PCR, then an explicit pipeline flag; writers
+ * emit it for every model recording a component resolution and keep format 1
+ * or 2 for the others. */
 #define N4M_SERIALIZATION_MAGIC             "N4MM"
 #define N4M_SERIALIZATION_FORMAT_VERSION_V1 1u
 #define N4M_SERIALIZATION_FORMAT_VERSION_V2 2u
-#define N4M_SERIALIZATION_FORMAT_VERSION    N4M_SERIALIZATION_FORMAT_VERSION_V2
+#define N4M_SERIALIZATION_FORMAT_VERSION_V3 3u
+#define N4M_SERIALIZATION_FORMAT_VERSION    N4M_SERIALIZATION_FORMAT_VERSION_V3
 
 #endif /* N4M_N4M_VERSION_H */
