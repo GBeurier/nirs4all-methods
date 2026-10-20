@@ -4343,6 +4343,8 @@ N4M_API n4m_status_t n4m_feature_selection_t2_select(
                             static_cast<double>(res.n_targets));
         handle->set_scalar("n_components",
                             static_cast<double>(res.n_components));
+        handle->set_scalar("n_latent_directions",
+                            static_cast<double>(res.n_latent_directions));
         handle->set_scalar("n_alphas",
                             static_cast<double>(res.n_alphas));
         handle->set_scalar("min_selected",

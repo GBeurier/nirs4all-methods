@@ -390,6 +390,85 @@ void test_lda_no_direction() {
         throw std::runtime_error("pls-lda no direction: predictions");
 }
 
+struct T2Selection {
+    std::vector<double> t2, ucl, rmse;
+    std::vector<std::int64_t> mask;
+    double directions{0.0};
+};
+
+T2Selection t2_select(std::vector<double> x, std::vector<double> y, std::int32_t components,
+                      const std::vector<double>& alphas) {
+    n4m_context_t* ctx = nullptr;
+    n4m_config_t* cfg = nullptr;
+    n4m_validation_plan_t* plan = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, components) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_validation_plan_create(&plan) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_validation_plan_set_n_samples(plan, 4) == N4M_OK);
+    for (std::int64_t fold = 0; fold < 4; ++fold) {
+        std::vector<std::int64_t> train;
+        for (std::int64_t i = 0; i < 4; ++i)
+            if (i != fold) train.push_back(i);
+        N4M_TEST_REQUIRE(n4m_validation_plan_add_fold(plan, train.data(), 3, &fold, 1) == N4M_OK);
+    }
+    const n4m_matrix_view_t xv = view(x, 4, 4);
+    const n4m_matrix_view_t yv = view(y, 4, 1);
+    n4m_method_result_t* result = nullptr;
+    const n4m_status_t st = n4m_feature_selection_t2_select(
+        ctx, cfg, &xv, &yv, plan, alphas.data(), static_cast<std::int64_t>(alphas.size()),
+        2, &result);
+    if (st != N4M_OK) {
+        const std::string message = n4m_context_last_error(ctx);
+        n4m_validation_plan_destroy(plan);
+        n4m_config_destroy(cfg);
+        n4m_context_destroy(ctx);
+        throw std::runtime_error("T2 selection refused: " + message);
+    }
+    T2Selection out;
+    out.t2 = result_matrix(result, "t2_scores");
+    out.ucl = result_matrix(result, "ucl_by_alpha");
+    out.rmse = result_matrix(result, "rmse_by_alpha");
+    out.directions = result_scalar(result, "n_latent_directions");
+    const std::int64_t* mask = nullptr;
+    std::int64_t size = 0;
+    N4M_TEST_REQUIRE(n4m_method_result_get_int64_vector(result, "selected_mask", &mask, &size) ==
+                     N4M_OK);
+    out.mask.assign(mask, mask + size);
+    n4m_method_result_destroy(result);
+    n4m_validation_plan_destroy(plan);
+    n4m_config_destroy(cfg);
+    n4m_context_destroy(ctx);
+    return out;
+}
+
+// T2 variable selection on X = [a, 2 a, 3 a, 4 a], Y = a, two components:
+// the second weight column is zero (null component) and the weight
+// covariance was refused as singular (N4M_ERR_INVALID_ARGUMENT). With the
+// one direction w = (1, 2, 3, 4) / sqrt 30 (variance 1 / 18 over the four
+// weights): T2 = (1.35, 0.15, 0.15, 1.35), and the limit
+// (p - 1)^2 / p Beta_{1-alpha}(1/2, 1) = 2.25 (1 - alpha)^2 (the CDF of
+// Beta(1/2, 1) is sqrt x), rounded to 0.01: 2.03 at alpha = 0.05, 1.82 at
+// 0.1. Everything (T2, limits, masks, CV RMSE; min_selected = 2) equals
+// the one-component selection.
+void test_t2_selection_null_component() {
+    std::vector<double> x(16), y(4);
+    for (std::size_t i = 0; i < 4; ++i) {
+        for (std::size_t j = 0; j < 4; ++j) x[i * 4 + j] = static_cast<double>(j + 1) * kA[i];
+        y[i] = kA[i];
+    }
+    const std::vector<double> alphas = {0.05, 0.1};
+    const T2Selection two = t2_select(x, y, 2, alphas);
+    const T2Selection one = t2_select(x, y, 1, alphas);
+    expect_close("t2 selection scores", two.t2, {1.35, 0.15, 0.15, 1.35});
+    expect_close("t2 selection limits", two.ucl, {2.03, 1.82});
+    if (two.directions != 1.0) throw std::runtime_error("t2 selection: n_latent_directions != 1");
+    if (two.t2 != one.t2 || two.ucl != one.ucl || two.rmse != one.rmse || two.mask != one.mask)
+        throw std::runtime_error("t2 selection differs from the one-component selection");
+}
+
 }  // namespace
 
 void register_pls_null_component_tests(n4m_testing::Runner& r) {
@@ -400,4 +479,5 @@ void register_pls_null_component_tests(n4m_testing::Runner& r) {
     r.run("pls_null_components/diagnostics_autoscaled", test_diagnostics_autoscaled);
     r.run("pls_null_components/score_heads", test_score_heads_null_component);
     r.run("pls_null_components/lda_no_direction", test_lda_no_direction);
+    r.run("pls_null_components/t2_selection", test_t2_selection_null_component);
 }

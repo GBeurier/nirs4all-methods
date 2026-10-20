@@ -251,7 +251,13 @@ N4M_API n4m_status_t n4m_feature_selection_bve_select(
     n4m_method_result_t** out_result);
 
 /* T2-PLS (Phase 5l). `alpha_thresholds` is an array of `n_alphas` α values
- * in (0, 1). */
+ * in (0, 1). The weight T2 uses the m components with a nonzero weight
+ * column (scalar "n_latent_directions"; null PLS components flagged in
+ * N4M_MODEL_UNRESOLVED_COMPONENTS are excluded), with the limit
+ * (p - 1)^2 / p Beta_{1-α}(m / 2, (p - m - 1) / 2): both equal those of the
+ * model truncated to its resolved components; with m = 0 every T2 and limit
+ * is 0. The beta quantile inverts the small tail in logarithms, so α close
+ * to 0 or to 1 keeps its relative accuracy. */
 N4M_API n4m_status_t n4m_feature_selection_t2_select(
     n4m_context_t* ctx,
     const n4m_config_t* cfg,

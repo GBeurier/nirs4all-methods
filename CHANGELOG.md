@@ -103,6 +103,34 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- T2-PLS variable selection (`n4m_feature_selection_t2_select`) works on
+  models with null components. With a = (-3,-1,1,3), X = [a, 2a, 3a, 4a],
+  Y = a and two components, the zero second weight column made the weight
+  covariance singular and the selection returned `N4M_ERR_INVALID_ARGUMENT`.
+  The weight T2 now uses the m components with a nonzero weight column and
+  the limit (p - 1)^2 / p Beta_{1-alpha}(m / 2, (p - m - 1) / 2), so scores,
+  limits, masks and CV RMSE equal those of the model truncated to its
+  resolved components (here T2 = (1.35, 0.15, 0.15, 1.35), limit
+  2.25 (1 - alpha)^2); with m = 0 every T2 and limit is 0. The result gains
+  the scalar `n_latent_directions`. Its singularity test was an absolute
+  1e-14 on the pivots of the weight covariance, whose scale follows the
+  solver (W ~ 1 / ||X|| for SIMPLS): SIMPLS on unscaled X of magnitude
+  ~2^18 or more was refused; the test is now relative to the largest
+  diagonal entry. A before/after sweep (150 random selections x NIPALS,
+  SIMPLS, alpha 0.001-0.75) is bit-identical on the 249 that ran before; the
+  7 refused ones (SIMPLS, X ~ 2^18-2^20) now run.
+- The T2-PLS selection limit inverted the Beta CDF against 1 - alpha by
+  bisection on [0, 1] with lgamma and a complement: 1 - alpha rounding to 1
+  made the quantile ~1 (alpha = 1e-20, Beta(1, 50): 0.6019 expected), and the
+  small lower tail was lost for alpha close to 1. As for the Hotelling T2
+  outlier limit, the small tail (upper for alpha <= 1/2, lower otherwise) is
+  now inverted in logarithms on the odds x / (1 - x), with a Lanczos ln B
+  free of large cancellations and a continued fraction that reports
+  non-convergence (`N4M_ERR_NUMERICAL_FAILURE`), by bisection on the normal
+  doubles with midpoint lo + (hi - lo) / 2. Internal tests check
+  Beta(1, b) and Beta(a, 1) closed forms to 1e-12 relative for alpha from
+  1e-300 to 1 - 2^-40 and shapes 0.5 to 5000.
+
 - PLS-LDA (`n4m_estimators_pls_lda_fit` and the `pls_lda` classifier role)
   fits its discriminant on the resolved PLS-DA components. With
   a = (-3,-1,1,3), X = [a, a], classes (0, 0, 1, 1) and two components, the

@@ -165,6 +165,10 @@ int run_internal_sweep_tests();
 // HPO exception/retry transaction safety lives in test_internal_optimization.cpp.
 int run_internal_optimization_tests();
 
+// Beta upper quantile of the T2-PLS selection limit lives in
+// test_internal_beta_quantile.cpp.
+int run_internal_beta_quantile_tests();
+
 int main() {
     test_bounded();
     test_integers();
@@ -176,6 +180,7 @@ int main() {
     g_failures += run_internal_sweep_tests();
     g_failures += run_internal_optimization_tests();
     g_failures += run_internal_linalg_tests();
+    g_failures += run_internal_beta_quantile_tests();
     if (g_failures == 0) {
         std::printf("=== n4m_internal_tests: all RNG choice/bounded parity OK ===\n");
         return 0;
