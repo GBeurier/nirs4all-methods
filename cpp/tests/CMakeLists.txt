@@ -77,6 +77,7 @@ endif()
 add_test(NAME n4m_tests COMMAND n4m_tests)
 add_executable(n4m_preflight_tests test_preflight.cpp)
 target_link_libraries(n4m_preflight_tests PRIVATE n4m_c)
+target_include_directories(n4m_preflight_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/src)
 add_test(NAME n4m_preflight_tests COMMAND n4m_preflight_tests)
 add_executable(n4m_distributions_tests test_distributions.cpp
                ${PROJECT_SOURCE_DIR}/cpp/src/core/common/distributions.cpp)

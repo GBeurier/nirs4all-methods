@@ -116,14 +116,23 @@ N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
     uint8_t* mask_out, n4m_filter_stats_t* stats_out);
 
 /* ---------- 20.3 Multivariate outlier statistics ---------------------- */
-/* Hotelling T² on the leading PCA directions of the column-centred X.
+/* Hotelling T² on the leading PCA directions of the column-centred X
+ * (corrected two-pass mean: a constant column centres to exact zeros).
  * Only resolved directions are used: sigma_j > 16 * max(n,p) * DBL_EPSILON
  * * sigma_1 (the SVD's absolute accuracy). With r <= n_components such
  * directions, T² sums over the leading r and the UCL uses r degrees of
  * freedom: r (n-1)(n+1) / (n (n-r)) * F^{-1}(1 - alpha; r, n - r). A
  * rank-deficient X (e.g. a column that is an exact combination of others)
  * therefore gets r < n_components; r = 0 (constant X) gives T² = 0 and
- * UCL = 0. */
+ * UCL = 0. T²_i = (n-1) * sum_{j<r} U_ij^2 (equal to sum t_ij^2 / lambda_j,
+ * without forming sigma_j^2), exactly invariant under power-of-two scaling
+ * of X. The UCL is solved directly from its beta tail, inverting the small
+ * tail (upper for alpha <= 0.5, lower above, so alpha close to 1 is exact)
+ * without a beta argument rounded through 1 - x or an overflowing product;
+ * measured relative error below 1e-12 on the sampled grid, not uniform
+ * in the rank (7.2e-12 at r = 127, alpha = 1e-100). A UCL that is not a finite normal
+ * double (extreme alpha only, e.g. n = 3, r = 1, alpha < 7.4e-309) is
+ * N4M_ERR_NUMERICAL_FAILURE. Requires rows >= cols. */
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
                                             int32_t n_components,
                                             double alpha,
@@ -135,6 +144,35 @@ N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2_resolved(
     n4m_matrix_view_t X, int32_t n_components, double alpha, double* t2_per_sample,
     int64_t n_samples, double* ucl_out, int32_t* rank_used);
+/* Q residuals (squared prediction error) of the column-centred X (same
+ * corrected two-pass centring as Hotelling T²) outside its leading
+ * n_components PCA directions, and the Jackson-Mudholkar UCL from the
+ * residual eigenvalue moments theta_1..3 and the upper normal quantile at
+ * alpha. Requires rows >= cols.
+ *  - Computed at one power-of-two scale (max |Xc| in [0.5, 1)) and rescaled:
+ *    the moments cannot overflow or underflow, and scaling X by 2^s scales
+ *    every Q and the UCL by exactly 4^s.
+ *  - Unresolved residual subspace: when no residual singular value is above
+ *    16 * max(n,p) * DBL_EPSILON * sigma_1 (n_components = cols, constant X,
+ *    or numerical rank <= n_components), the reconstructed residual is
+ *    rounding noise and Q = 0 and UCL = 0 exactly. UCL = 0 occurs only in
+ *    that state; otherwise the UCL is a positive normal double.
+ *  - Accuracy is absolute: Q_i is computed from the explicit residual and is
+ *    rounding noise at or below (16 * max(n,p) * DBL_EPSILON * sigma_1)^2.
+ *    The quantile approximation has a relative error of about 1.15e-9.
+ *  - The Jackson-Mudholkar limit uses the signed h0 = 1 - 2 theta_1 theta_3 /
+ *    (3 theta_2^2): for h0 < 0, (Q / theta_1)^h0 decreases with Q and the
+ *    upper quantile of Q is the LOWER quantile of the approximating normal
+ *    (Nomikos & MacGregor 1995, appendix B), continuous through h0 = 0.
+ *  - N4M_ERR_NUMERICAL_FAILURE (never 0, Inf or NaN with N4M_OK) when a Q
+ *    above that noise level or the UCL is not a finite normal double, or
+ *    when the Jackson-Mudholkar base is not positive: the approximation then
+ *    has no alpha-quantile. The base is always positive when h0 * ca >= 0
+ *    (ca the upper normal quantile) and when h0 < 0 with alpha >=
+ *    1 - Phi(sqrt 2) ~ 0.0786; it can be non-positive only for h0 > 0 with
+ *    alpha > 0.5, or h0 < 0 with alpha < 0.0786 (uneven residual spectra,
+ *    e.g. one residual eigenvalue 36.5 next to 159 equal to 1 at alpha =
+ *    0.01). */
 N4M_API n4m_status_t n4m_outlier_detection_q_residuals(n4m_matrix_view_t X,
                                            int32_t n_components,
                                            double alpha,

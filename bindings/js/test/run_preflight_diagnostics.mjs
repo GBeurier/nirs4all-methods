@@ -13,7 +13,7 @@ import {
     statsVarianceComponentsReml, statsVarianceComponentsIntervals,
     ppCreate, ppTransform, ppDestroy, preflightSnv,
     clusterJaccardMatrix, linearSumAssignment,
-    randomMultivariateNormal, randomPermutations, getModule, makeMatrixView, Context, HotellingT2,
+    randomMultivariateNormal, randomPermutations, getModule, makeMatrixView, Context, HotellingT2, QResiduals,
 } from "../dist/index.js";
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-9,
@@ -1373,5 +1373,260 @@ assert.throws(() => preflightPca({data: new Float64Array([1, 2]), rows: 2, cols:
     [5439, 417, 4113, 4599].forEach((num, i) =>
         assert.ok(Math.abs(out.t2.data[i] - num / 2428) <= 1e-12));
     assert.ok(Math.abs(out.ucl - 71.25) <= 1e-9);
+}
+
+// Review b8fix4 P0-1 / P1 (mirrors pca_completion_tests in
+// cpp/tests/test_preflight.cpp): the unresolved loading rows of a wide input
+// are a Householder completion, unit and orthogonal to the resolved rows.
+// X = I_8 (k = 8) used to publish a last loading of norm 0.354, and X = 0
+// (320 x 320, k = 320) took about 10 s through canonical-vector retries.
+for (const [n, kind] of [[4, "identity"], [8, "identity"], [320, "identity"], [320, "zero"],
+                         [320, "half"]]) {
+    const x = new Float64Array(n * n);
+    let rank = 0;
+    if (kind === "identity") { for (let i = 0; i < n; ++i) x[i * n + i] = 1; rank = n - 1; }
+    if (kind === "half") {
+        for (let i = 0; i < n / 2; ++i) { x[i * n + i] = 1; x[(n / 2 + i) * n + i] = -1; }
+        rank = n / 2;
+    }
+    const started = performance.now();
+    const r = preflightPca({data: x, rows: n, cols: n}, n);
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 5000, `${kind} ${n}: ${elapsed} ms`);
+    const v = kind === "identity" ? 1 / (n - 1) : 2 / (n - 1);
+    for (let a = 0; a < n; ++a) {
+        if (a < rank) {
+            assert.equal(r.unresolved[a], 0, `${kind} ${n} component ${a}`);
+            relativeNearTol(r.eigenvalues[a], v);
+        } else {
+            assert.equal(r.unresolved[a], 1, `${kind} ${n} component ${a}`);
+            assert.equal(r.eigenvalues[a], 0);
+        }
+    }
+    for (let a = 0; a < n; ++a) for (let b = 0; b <= a; ++b) {
+        let dot = 0;
+        for (let j = 0; j < n; ++j) dot += r.loadings.data[a * n + j] * r.loadings.data[b * n + j];
+        assert.ok(Math.abs(dot - (a === b ? 1 : 0)) <= 1e-12, `${kind} ${n} rows ${a},${b}`);
+    }
+}
+// Graded wide input (12 x 16, column j scaled by 10^(-d j / 11)): the rows
+// Xc^T u / sigma of the weakest resolved components drifted up to 5e-5 from
+// orthonormality before their re-orthonormalisation.
+for (const d of [3, 5, 6, 7]) {
+    const n = 12, p = 16;
+    const x = new Array(n * p).fill(0);
+    for (let i = 0; i < n; ++i) for (let j = 0; j < n; ++j) {
+        x[i * p + j] = (1.5 + Math.sin(1 + 0.7 * i * j + 0.3 * i * i + 1.3 * j)) * 10 ** (-d * j / 11);
+    }
+    const r = pcaOf(x, n, p, n);
+    for (let a = 0; a < n; ++a) for (let b = 0; b <= a; ++b) {
+        let dot = 0;
+        for (let j = 0; j < p; ++j) dot += r.loadings.data[a * p + j] * r.loadings.data[b * p + j];
+        assert.ok(Math.abs(dot - (a === b ? 1 : 0)) <= 1e-12, `graded ${d}: rows ${a},${b}`);
+    }
+}
+// The budget is a guaranteed bound over every pass and live buffer, with the
+// QL iteration at its ceiling (mirrors pca_budget_tests): 700 x 700 with
+// k = 700 (3.2e9 long-double product equivalents) is refused before
+// allocating.
+assert.equal(statusOf(new Array(700 * 700).fill(1), 700, 700, 700), UNSUPPORTED);
+// Non-dyadic constant columns centre to exact zeros at every scale; a
+// varying column i * s next to them keeps its variance s^2 n (n+1) / 12.
+for (const s of [1, 3, 1e-7, 1e7, 0.1]) {
+    for (const n of [3, 10, 101]) {
+        const x = [];
+        for (let i = 0; i < n; ++i) x.push(0.1 * s, s / 3, -2.7e-3 * s, 12345.678 * s);
+        const r = pcaOf(x, n, 4, 3);
+        assert.deepEqual(Array.from(r.eigenvalues), [0, 0, 0]);
+        assert.deepEqual(Array.from(r.fullMoments), [0, 0]);
+        assert.ok(r.scores.data.every((v) => v === 0));
+        for (let i = 0; i < n; ++i) x[4 * i + 2] = i * s;
+        const m = pcaOf(x, n, 4, 3);
+        relativeNearTol(m.eigenvalues[0], s * s * n * (n + 1) / 12);
+        assert.equal(m.eigenvalues[1], 0);
+        assert.equal(m.eigenvalues[2], 0);
+        assert.ok(Math.abs(m.loadings.data[2] - 1) <= 1e-15);
+        for (const j of [0, 1, 3]) assert.equal(m.loadings.data[j], 0);
+    }
+}
+
+// Review b8fix4 P0-2 (mirrors test_hotelling_t2_constant_columns): a
+// non-dyadic constant column centres to exact zeros (ten values 0.1, k = 1
+// used to give rank 1, T² = 0.9 and UCL 5.63).
+for (const n of [3, 10, 101, 1000]) {
+    for (const c of [0.1, 1 / 3, -2.7e-7, 12345.678, 314159.26535]) {
+        for (const s of [1, 3, 1e-7, 1e7, 2 ** 60]) {
+            const out = new HotellingT2({n_components: 1, alpha: 0.05})
+                .run({data: new Float64Array(n).fill(c * s), rows: n, cols: 1});
+            assert.equal(out.n_components_used, 0, `${n} x ${c * s}`);
+            assert.equal(out.ucl, 0);
+            assert.ok(out.t2.data.every((v) => v === 0));
+        }
+    }
+}
+for (const n of [10, 101]) {
+    for (const s of [1, 3, 1e-7, 1e7, 2 ** 60]) {
+        const data = new Float64Array(3 * n);
+        for (let i = 0; i < n; ++i) data.set([0.1 * s, i * s, -s / 3], 3 * i);
+        const out = new HotellingT2({n_components: 2, alpha: 0.05}).run({data, rows: n, cols: 3});
+        assert.equal(out.n_components_used, 1);
+        for (let i = 0; i < n; ++i) {
+            const z = i - (n - 1) / 2;
+            const ref = 12 * z * z / (n * (n + 1));
+            assert.ok(Math.abs(out.t2.data[i] - ref) <= 1e-12 * Math.max(1, ref), `${n} ${s} ${i}`);
+        }
+    }
+}
+// Review b8fix5 (mirrors test_q_residuals_scaling and
+// test_q_residuals_constant_columns in cpp/tests/test_metrics.cpp). The
+// orthogonal centred columns of [[2,1],[2,-1],[-2,1],[-2,-1]] with k = 1 leave
+// the second one as residual: Q_i = 4^s, one residual eigenvalue
+// 4^(s+1) / 3, Jackson-Mudholkar UCL lambda (7/9 + ca sqrt(2) / 3)^3 (ca from
+// SciPy norm.isf). The moments used to overflow at 2^200 and underflow at
+// 2^-200, publishing UCL 0 with status OK.
+const NUMERICAL_FAILURE = 7;
+const qOf = (data, rows, cols, k, alpha = 0.05) =>
+    new QResiduals({n_components: k, alpha}).run({data: new Float64Array(data), rows, cols});
+const qStatus = (data, rows, cols, k, alpha = 0.05) => {
+    try { qOf(data, rows, cols, k, alpha); return 0; } catch (e) { return e.status; }
+};
+const jmSingle = (lambda, ca) => lambda * (7 / 9 + ca * Math.SQRT2 / 3) ** 3;
+const relClose = (got, want, tol) => assert.ok(Math.abs(got - want) <= tol * Math.abs(want),
+    `${got} != ${want}`);
+const qBase = [2, 1, 2, -1, -2, 1, -2, -1];
+const q0 = qOf(qBase, 4, 2, 1);
+assert.deepEqual(Array.from(q0.q.data), [1, 1, 1, 1]);
+relClose(q0.ucl, jmSingle(4 / 3, 1.6448536269514729), 1e-8);
+for (const s of [-511, -400, -256, -200, -100, 1, 100, 200, 256, 400, 510]) {
+    const f = pow2(s);
+    const r = qOf(qBase.map((v) => v * f), 4, 2, 1);
+    r.q.data.forEach((v) => assert.equal(v, pow2(2 * s)));
+    assert.equal(r.ucl, q0.ucl * pow2(2 * s), `scale 2^${s}`);
+}
+relClose(qOf(qBase.map((v) => v * pow2(200)), 4, 2, 1).ucl, 1.29001e121, 1e-5);
+for (const s of [511, 600, -512, -600]) {
+    assert.equal(qStatus(qBase.map((v) => v * pow2(s)), 4, 2, 1), NUMERICAL_FAILURE, `2^${s}`);
+}
+for (const [alpha, ca, tol] of [[0.5, 0, 1e-15], [0.9, -1.2815515655446004, 5e-8],
+                                [1e-20, 9.262340089798409, 1e-8]]) {
+    relClose(qOf(qBase, 4, 2, 1, alpha).ucl, jmSingle(4 / 3, ca), tol);
+}
+assert.equal(qStatus(qBase, 4, 2, 1, 0.99), NUMERICAL_FAILURE);
+// Constant columns centre to exact zeros; an unresolved residual subspace
+// gives Q = 0 and UCL = 0 exactly (ten rows of 0.1 used to give Q = 1.9e-65).
+for (const n of [3, 10, 101]) {
+    for (const p of [1, 2]) {
+        for (const c of [0.1, 1 / 3, -2.7e-7, 12345.678]) {
+            for (const s of [1, 3, 1e-7, 1e7, 2 ** 60, pow2(-200), pow2(200)]) {
+                const r = qOf(new Array(n * p).fill(c * s), n, p, 1);
+                assert.equal(r.ucl, 0, `${n} x ${p} of ${c * s}`);
+                assert.ok(r.q.data.every((v) => v === 0));
+            }
+        }
+    }
+}
+{
+    const a = [3, 1, -1, -3], b = [1, -1, -1, 1];
+    for (const s of [1, 3, 1e-7, 1e7, 2 ** 60, pow2(-200), pow2(200)]) {
+        for (const offset of [0, 0.1, 12345.678]) {
+            const x = [];
+            for (let i = 0; i < 4; ++i) x.push(0.1 * s, (a[i] + offset) * s, -s / 3, (b[i] + offset) * s);
+            const r = qOf(x, 4, 4, 1);
+            const tol = offset === 0 ? 1e-15 : 1e-9;
+            r.q.data.forEach((v) => relClose(v, s * s, tol));
+            relClose(r.ucl, jmSingle(4 * s * s / 3, 1.6448536269514729), 1e-8);
+            const full = qOf(x, 4, 4, 2);
+            assert.equal(full.ucl, 0);
+            assert.ok(full.q.data.every((v) => v === 0));
+        }
+    }
+}
+// Hotelling T² is exactly scale-invariant (no sigma^2: NaN beyond 2^512
+// before) and its F quantile has no fixed bracket: n = 3, r = 1 gives
+// UCL = 4/3 * 2 (1-alpha)^2 / (alpha (2-alpha)) in closed form (the former
+// [1e-10, 1e12] bracket returned about 1.1e12 for alpha = 1e-14).
+{
+    const hBase = [1, 0.5, 2, -1, 4, 3];
+    const h0 = new HotellingT2({n_components: 1, alpha: 0.05}).run({data: new Float64Array(hBase), rows: 3, cols: 2});
+    for (const s of [-1000, -600, -200, 200, 600, 1000]) {
+        const h = new HotellingT2({n_components: 1, alpha: 0.05})
+            .run({data: new Float64Array(hBase.map((v) => v * pow2(s))), rows: 3, cols: 2});
+        assert.deepEqual(Array.from(h.t2.data), Array.from(h0.t2.data), `2^${s}`);
+        assert.equal(h.ucl, h0.ucl);
+    }
+    for (const alpha of [0.05, 1e-6, 1e-14, 1e-300]) {
+        const h = new HotellingT2({n_components: 1, alpha}).run({data: new Float64Array([1, 2, 3]), rows: 3, cols: 1});
+        relClose(h.ucl, 4 / 3 * 2 * (1 - alpha) ** 2 / (alpha * (2 - alpha)), 1e-8);
+        relClose(h.t2.data[0], 1, 1e-15);
+        assert.equal(h.t2.data[1], 0);
+        relClose(h.t2.data[2], 1, 1e-15);
+    }
+}
+// Review b8fix6 P0-1 (mirrors test_q_residuals_negative_h0): for h0 < 0 the
+// upper quantile of Q maps to the lower quantile of (Q / theta_1)^h0. Columns
+// 1..14 of the Sylvester H_16 times [2, 1, 1/4 x 12], k = 1 (h0 = -0.0676)
+// gave UCL 0.365 and flagged every Q_i = 1.75. mpmath references of the
+// signed-h0 Jackson-Mudholkar limit on the exact residual eigenvalues.
+{
+    const hadamard = (n) => {
+        let h = [[1]];
+        while (h.length < n) h = [...h.map((r) => [...r, ...r]), ...h.map((r) => [...r, ...r.map((v) => -v)])];
+        return h;
+    };
+    const scaledH = (n, scales) => {
+        const h = hadamard(n), x = [];
+        for (let i = 0; i < n; ++i) scales.forEach((c, j) => x.push(h[i][j + 1] * c));
+        return x;
+    };
+    const astra = [2, 1, ...new Array(12).fill(0.25)];
+    for (const [alpha, ref] of [[0.05, 5.2294583820033547], [0.01, 9.6906288186272182],
+                                [0.9, 0.47906393402987125]]) {
+        const r = qOf(scaledH(16, astra), 16, 14, 1, alpha);
+        relClose(r.ucl, ref, 5e-9);
+        r.q.data.forEach((v) => relClose(v, 1.75, 1e-14));
+    }
+    let previous = 0;
+    for (const [c, ref] of [[4.5, 6.3099963890565998], [4.53125, 6.3814368019494924],
+                            [4.5390625, 6.3993694611641446], [5, 7.5091436613414903]]) {
+        const ucl = qOf(scaledH(16, [2, c / 4, ...new Array(12).fill(0.25)]), 16, 14, 1).ucl;
+        relClose(ucl, ref, 5e-9);
+        assert.ok(ucl > previous);
+        previous = ucl;
+    }
+    const wide = scaledH(32, [8, 3.25, ...new Array(22).fill(1)]);
+    assert.equal(qStatus(wide, 32, 24, 1, 1e-6), NUMERICAL_FAILURE);
+    relClose(qOf(wide, 32, 24, 1, 0.05).ucl, 71.914193025598727, 5e-9);
+    relClose(qOf(wide, 32, 24, 1, 0.1).ucl, 56.312036502701673, 5e-9);
+}
+// Review b8fix6 P0-2 / P1 (mirrors test_hotelling_t2_quantile_tails): the
+// small tail is inverted, so alpha = 1 - 2^-30 gives the closed-form F_{1,2}
+// UCL 2.312964635e-18 (2.96e-16 before) and flags the central T²; alpha =
+// 1e-308 gives 1.333e308 (refused before); a UCL above DBL_MAX is refused.
+{
+    const hOf = (data, rows, cols, k, alpha) =>
+        new HotellingT2({n_components: k, alpha}).run({data: new Float64Array(data), rows, cols});
+    const hStatus = (data, rows, cols, k, alpha) => {
+        try { hOf(data, rows, cols, k, alpha); return 0; } catch (e) { return e.status; }
+    };
+    const tiny = [0.05, 0.3, 1e-6, 1e-100, 1e-300, 1e-308];
+    const oneMinus = [0.5, 0.1, 2 ** -30, 2 ** -40, 2 ** -53];
+    for (const alpha of tiny) {
+        const b = 1 - alpha;
+        relClose(hOf([1, 2, 3], 3, 1, 1, alpha).ucl, 4 / 3 * (2 * b * b / (alpha * (1 + b))), 1e-12);
+    }
+    for (const beta of oneMinus) {
+        const h = hOf([-1, 2 ** -28, 1], 3, 1, 1, 1 - beta);
+        relClose(h.ucl, 4 / 3 * (2 * beta * beta / ((1 - beta) * (1 + beta))), 1e-12);
+        if (beta === 2 ** -30) {
+            relClose(h.ucl, 2.312964634635743e-18, 1e-12);
+            relClose(h.t2.data[1], 6.167905692361981e-18, 1e-9);
+            assert.ok(h.t2.data[1] > h.ucl);
+        }
+    }
+    for (const alpha of [7e-309, 5e-324]) assert.equal(hStatus([1, 2, 3], 3, 1, 1, alpha), NUMERICAL_FAILURE);
+    const x24 = [1, 1, 1, -1, 1, 0, -1, 1, -1, -1, -1, 0];
+    const f24 = (logAlpha) => 2 * Math.expm1(-0.5 * logAlpha);
+    for (const alpha of tiny) relClose(hOf(x24, 6, 2, 2, alpha).ucl, 35 / 12 * f24(Math.log(alpha)), 1e-12);
+    for (const beta of oneMinus) relClose(hOf(x24, 6, 2, 2, 1 - beta).ucl, 35 / 12 * f24(Math.log1p(-beta)), 1e-12);
 }
 console.log("JS/WASM Preflight diagnostics passed");

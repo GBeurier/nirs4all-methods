@@ -432,9 +432,11 @@ surface). No model-state serialization format changes.
   it with `N4M_ERR_UNSUPPORTED`. Inside D it centres with compensated sums,
   ignores constant columns, and is exact under power-of-two scaling.
   Variances carry an absolute error of order `max(n,p) * eps * lambda_max`
-  (no relative accuracy is claimed); components not above the conservative
+  (no relative accuracy is claimed); components not above the operational
   threshold `16 * max(n,p) * eps * lambda_max` are unresolved and published
-  as 0.
+  as 0. The header separates that threshold from the total error bound,
+  which adds a worst-case Gram accumulation term `L * u * trace(C)` (L = p
+  for the row-side Gram) that the threshold does not include.
 - The Jacobi convergence threshold no longer underflows for weak column pairs
   (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
   `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
@@ -470,6 +472,90 @@ surface). No model-state serialization format changes.
 - Hotelling T² uses only resolved directions and computes its UCL with the
   rank actually used. Before, an exactly collinear column gave a
   rounding-level direction that T² amplified (2.998 instead of 4113/2428).
+- Hotelling T² centres with a corrected two-pass mean. The plain rounded
+  mean left the same offset on every observation, a spurious direction the
+  rank selection kept: ten observations of a constant column 0.1 with k = 1
+  gave rank 1, T² = 0.9 and UCL 5.63 instead of rank 0, T² 0 and UCL 0.
+  Constant columns now centre to exact zeros. Full-rank results change at
+  the rounding level of the centring; no fixed bound on that change is
+  claimed (a review measured up to 1.59e-9 relative on a 101 x 3 matrix
+  translated by 10^6, where the new values are the closer ones to an
+  extended-precision reference: error 3.5e-13 against 2.5e-9 before).
+- Hotelling T² is evaluated as `(n-1) * sum_j U_ij^2`, without forming
+  sigma_j^2: inputs of magnitude about 2^512 and above gave NaN with
+  `N4M_OK`; T² is now exactly invariant under power-of-two scaling. The F
+  quantile is the root of the upper tail on a bracket grown by factors of
+  two. The former fixed bracket [1e-10, 1e12] silently capped larger
+  quantiles (n = 3, r = 1, alpha = 1e-14: UCL 1.47e12 instead of 1.33e14),
+  and a UCL that is not a finite normal double is now
+  `N4M_ERR_NUMERICAL_FAILURE`.
+- Q residuals (`n4m_outlier_detection_q_residuals`) share the Hotelling
+  centring and compute Q and the Jackson-Mudholkar UCL at one power-of-two
+  scale, rescaled at the end. The residual moments used to overflow or
+  underflow: `2^200 * [[2,1],[2,-1],[-2,1],[-2,-1]]`, k = 1, gave the
+  correct Q_i = 2^400 but UCL 0 with `N4M_OK` instead of 1.29001e121 (same
+  at 2^-200), turning every observation into an exceedance. Q and the UCL
+  now scale exactly by 4^s with X scaled by 2^s. When no residual direction
+  is resolved (n_components = cols, constant X, numerical rank <=
+  n_components) Q and the UCL are exactly 0, the only case with UCL 0 (ten
+  rows of 0.1 gave Q = 1.9e-65 next to UCL 0). The upper normal quantile
+  takes alpha directly (alpha = 1e-20 gave UCL 0). Unrepresentable results
+  and a non-positive Jackson-Mudholkar base (alpha > 0.5 only, formerly UCL
+  0) return `N4M_ERR_NUMERICAL_FAILURE`. Tested against analytic
+  single-eigenvalue limits and an mpmath oracle on CPU and WASM.
+- Q residuals: the Jackson-Mudholkar UCL uses the signed h0. For h0 < 0,
+  `(Q / theta_1)^h0` decreases with Q, so the upper quantile of Q is the
+  lower quantile of the approximating normal (Nomikos & MacGregor 1995,
+  appendix B); `|h0| * A` kept the upper one. Columns 1..14 of the Sylvester
+  H_16 times `[2, 1, 1/4 x 12]`, k = 1, alpha = 0.05 (h0 = -0.0676) gave UCL
+  0.365 instead of 5.229, flagging all 16 observations with `N4M_OK`. The
+  limit is continuous through h0 = 0; h0 > 0 results are unchanged. A
+  non-positive base, possible only for h0 > 0 with alpha > 0.5 or h0 < 0 with
+  alpha < 1 - Phi(sqrt 2) ~ 0.0786, means the approximation has no
+  alpha-quantile: `N4M_ERR_NUMERICAL_FAILURE` (documented, with the
+  conditions, in `n4m/outlier_detection.h`).
+- Hotelling T²: the UCL is solved directly from its beta tail, inverting the
+  small tail (lower for alpha > 0.5) in logarithms. A small quantile went
+  through a beta argument that rounds to 1: `X = [-1, 2^-28, 1]`, alpha =
+  1 - 2^-30, gave UCL 2.96e-16 instead of 2.312964635e-18 and missed the
+  central T² (6.17e-18). The bracket saturates at DBL_MAX: alpha = 1e-308,
+  `X = [1, 2, 3]`, returns 1.333e308 instead of `N4M_ERR_NUMERICAL_FAILURE`.
+  Log-gamma (Lanczos, 1e-15) and log-beta are more accurate and the
+  continued fraction fails explicitly instead of truncating; measured
+  relative error below 1e-12 against mpmath up to n = 10^6 on the sampled
+  grid; not uniform in the rank (7.2e-12 at r = 127, alpha = 1e-100).
+  Tested against
+  the closed forms of F(1,2) and F(2,4) at both extremes, on CPU and WASM.
+  No other outlier or Preflight kernel inverts a distribution by bisection
+  (the x-outlier and MCD chi-square cut-offs are fixed Wilson-Hilferty
+  values; Preflight p-values are permutation counts).
+- Preflight PCA loadings of a wide input (n <= p): the resolved rows
+  `Xc^T u / sigma` are re-orthonormalised (modified Gram-Schmidt applied
+  twice; they drifted up to 5e-5 from orthonormality near the resolution),
+  and the unresolved rows complete them by Householder QR, so every row is a
+  unit vector orthogonal to the others. The former canonical-vector
+  Gram-Schmidt kept a candidate only above norm 0.5 and otherwise published
+  the last one unnormalised (`X = I_8`, k = 8: last loading of norm 0.354),
+  and retried every canonical vector for each row (Θ(n^4): `X = 0`,
+  320 x 320, k = 320 took about 10 s in WASM).
+- The preflight PCA checks two guaranteed bounds before allocating, listed
+  pass by pass in `cpp/src/core/diagnostics/preflight_pca_budget.hpp`. Work
+  counts every long-double multiply-add (sum of squares, Gram, projections)
+  and every double pass at 1/16, with the QL iteration at the solver's
+  ceiling (30 s sweeps), against 2.4e9. Memory counts every buffer live at
+  the peak against 1 GiB. These are bounds, not cost estimates (a square
+  s x s input typically costs about 1.1 s^3 against a bound of 8 s^3). The
+  former estimate omitted the sum of squares and the column exponents and
+  took two QL sweeps per eigenvalue: n = 3, p = 26e6, k = 1 was accepted
+  although it needs 1.144 GB, and is now refused. Every Preflight-sized
+  request (at most 10^7 cells, k <= 10) that Methods 1.3.6 accepted is still
+  accepted (enumerated in the tests); 700 x 700 with k = 700 is refused.
+  The limit is a working bound on the computation, not a browser performance
+  qualification: review measurements of the WebAssembly kernel alone (`-O3`,
+  Node 22 / V8, Intel i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s
+  for 600 x 600, k = 600 (outside the Preflight profile k <= 10). A browser
+  profile needs its own execution budget (p50/p95 timings, inter-module
+  copies, cumulative memory) before qualification.
 
 ## [1.3.6] - 2026-10-13
 
