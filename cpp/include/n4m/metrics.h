@@ -27,26 +27,46 @@ extern "C" {
  * double) is eigendecomposed by a converged symmetric QL solver, for every
  * n, p and k; there is no randomized or iteration-limited approximation,
  * and truncation only selects the leading k components.
- * Accuracy (absolute only): eigenvalues carry an absolute error of order
- * max(n,p) * DBL_EPSILON * lambda_max, as for any backward-stable
- * eigensolver; no relative accuracy is claimed for smaller variances. Where
- * long double is double (MSVC, Apple arm64), the Gram accumulation can add
- * up to n * DBL_EPSILON * trace(C) in the worst case. The conservative
- * threshold resolution = 16 * max(n,p) * DBL_EPSILON * lambda_max separates
- * resolved components from unresolved ones: a component whose variance is
- * not above it is published with eigenvalue and scores 0 (its loading row
- * stays a unit vector). Resolved eigenvalues, the resolution and both
- * moments are normal doubles. This 2.19 entry point cannot flag unresolved
- * components; n4m_preflight_pca_compute_resolved (ABI 2.20) returns the
- * resolution and the per-component flags. */
+ * Accuracy (absolute only; no relative accuracy is claimed for smaller
+ * variances). Two quantities are distinct:
+ *  - the operational threshold resolution = 16 * max(n,p) * DBL_EPSILON *
+ *    lambda_max. A component whose variance is not above it is unresolved
+ *    and published with eigenvalue and scores 0. The factor 16 is a margin
+ *    over the eigensolver's backward error (of order max(n,p) * DBL_EPSILON
+ *    * lambda_max), which also absorbs the rounding of the Gram entries to
+ *    double (at most DBL_EPSILON / 2 * sqrt(min(n,p)) * lambda_max);
+ *  - the total error bound, which adds the accumulation of the Gram entries:
+ *    at most L * u * trace(C), with L the length of each inner product (p
+ *    for the row-side Gram used when n <= p, n for the column-side Gram
+ *    otherwise) and u the unit roundoff of long double (2^-64 for x87
+ *    extended precision, 2^-113 for binary128 as in WebAssembly, DBL_EPSILON
+ *    / 2 where long double is double: MSVC, Apple arm64). This worst-case
+ *    term is not part of resolution and can exceed it for high-rank spectra
+ *    (typical accumulation errors grow like sqrt(L) * u), so a variance
+ *    within it of the threshold has no guaranteed classification.
+ * Loadings: every row, unresolved ones included, is a unit vector, and the
+ * rows are mutually orthogonal to working precision. For n <= p the rows
+ * Xc^T u / sigma of resolved components (which lose orthonormality as sigma
+ * nears the resolution) are re-orthonormalised by modified Gram-Schmidt
+ * applied twice, and unresolved rows complete them by Householder QR; for
+ * n > p the rows are the Gram eigenvectors.
+ * Budget: N4M_ERR_UNSUPPORTED before allocating when the work exceeds 250
+ * million long-double products (Gram s(s+1)/2 * l and projections k s l,
+ * s = min(n,p), l = max(n,p), plus the double-precision eigendecomposition
+ * 6 s^3 and loading re-orthonormalisation and completion 3 k^2 l counted at
+ * 1/16 each) or the working buffers exceed 1 GiB.
+ * Resolved eigenvalues, the resolution and both moments are normal doubles.
+ * This 2.19 entry point cannot flag unresolved components;
+ * n4m_preflight_pca_compute_resolved (ABI 2.20) returns the resolution and
+ * the per-component flags. */
 N4M_API n4m_status_t n4m_preflight_pca_compute(
     n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
     const n4m_matrix_view_t* scores, const n4m_matrix_view_t* loadings,
     double* eigenvalues, double* full_moments);
 
 /* ABI 2.20. n4m_preflight_pca_compute with its accuracy contract made
- * explicit: resolution (one element) receives the conservative absolute
- * accuracy threshold 16 * max(n,p) * DBL_EPSILON * lambda_max, and unresolved
+ * explicit: resolution (one element) receives the operational absolute
+ * threshold 16 * max(n,p) * DBL_EPSILON * lambda_max, and unresolved
  * (k bytes) receives 1 for a component whose variance is not above it
  * (published as 0, with zero scores) and 0 otherwise. Callers must not count
  * unresolved components as numerical rank or read their variance as a

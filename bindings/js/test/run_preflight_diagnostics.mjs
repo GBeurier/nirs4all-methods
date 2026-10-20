@@ -340,4 +340,106 @@ assert.throws(() => preflightPca({data: new Float64Array([1, 2]), rows: 2, cols:
         assert.ok(Math.abs(out.t2.data[i] - num / 2428) <= 1e-12));
     assert.ok(Math.abs(out.ucl - 71.25) <= 1e-9);
 }
+
+// Review b8fix4 P0-1 / P1 (mirrors pca_completion_tests in
+// cpp/tests/test_preflight.cpp): the unresolved loading rows of a wide input
+// are a Householder completion, unit and orthogonal to the resolved rows.
+// X = I_8 (k = 8) used to publish a last loading of norm 0.354, and X = 0
+// (320 x 320, k = 320) took about 10 s through canonical-vector retries.
+for (const [n, kind] of [[4, "identity"], [8, "identity"], [320, "identity"], [320, "zero"],
+                         [320, "half"]]) {
+    const x = new Float64Array(n * n);
+    let rank = 0;
+    if (kind === "identity") { for (let i = 0; i < n; ++i) x[i * n + i] = 1; rank = n - 1; }
+    if (kind === "half") {
+        for (let i = 0; i < n / 2; ++i) { x[i * n + i] = 1; x[(n / 2 + i) * n + i] = -1; }
+        rank = n / 2;
+    }
+    const started = performance.now();
+    const r = preflightPca({data: x, rows: n, cols: n}, n);
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 5000, `${kind} ${n}: ${elapsed} ms`);
+    const v = kind === "identity" ? 1 / (n - 1) : 2 / (n - 1);
+    for (let a = 0; a < n; ++a) {
+        if (a < rank) {
+            assert.equal(r.unresolved[a], 0, `${kind} ${n} component ${a}`);
+            relativeNearTol(r.eigenvalues[a], v);
+        } else {
+            assert.equal(r.unresolved[a], 1, `${kind} ${n} component ${a}`);
+            assert.equal(r.eigenvalues[a], 0);
+        }
+    }
+    for (let a = 0; a < n; ++a) for (let b = 0; b <= a; ++b) {
+        let dot = 0;
+        for (let j = 0; j < n; ++j) dot += r.loadings.data[a * n + j] * r.loadings.data[b * n + j];
+        assert.ok(Math.abs(dot - (a === b ? 1 : 0)) <= 1e-12, `${kind} ${n} rows ${a},${b}`);
+    }
+}
+// Graded wide input (12 x 16, column j scaled by 10^(-d j / 11)): the rows
+// Xc^T u / sigma of the weakest resolved components drifted up to 5e-5 from
+// orthonormality before their re-orthonormalisation.
+for (const d of [3, 5, 6, 7]) {
+    const n = 12, p = 16;
+    const x = new Array(n * p).fill(0);
+    for (let i = 0; i < n; ++i) for (let j = 0; j < n; ++j) {
+        x[i * p + j] = (1.5 + Math.sin(1 + 0.7 * i * j + 0.3 * i * i + 1.3 * j)) * 10 ** (-d * j / 11);
+    }
+    const r = pcaOf(x, n, p, n);
+    for (let a = 0; a < n; ++a) for (let b = 0; b <= a; ++b) {
+        let dot = 0;
+        for (let j = 0; j < p; ++j) dot += r.loadings.data[a * p + j] * r.loadings.data[b * p + j];
+        assert.ok(Math.abs(dot - (a === b ? 1 : 0)) <= 1e-12, `graded ${d}: rows ${a},${b}`);
+    }
+}
+// The budget counts Gram, projections, decomposition and completion: 600 x 600
+// with k = 600 (4.3e8 long-double product equivalents; the former Gram-only
+// count accepted it) is refused before allocating.
+assert.equal(statusOf(new Array(600 * 600).fill(1), 600, 600, 600), UNSUPPORTED);
+// Non-dyadic constant columns centre to exact zeros at every scale; a
+// varying column i * s next to them keeps its variance s^2 n (n+1) / 12.
+for (const s of [1, 3, 1e-7, 1e7, 0.1]) {
+    for (const n of [3, 10, 101]) {
+        const x = [];
+        for (let i = 0; i < n; ++i) x.push(0.1 * s, s / 3, -2.7e-3 * s, 12345.678 * s);
+        const r = pcaOf(x, n, 4, 3);
+        assert.deepEqual(Array.from(r.eigenvalues), [0, 0, 0]);
+        assert.deepEqual(Array.from(r.fullMoments), [0, 0]);
+        assert.ok(r.scores.data.every((v) => v === 0));
+        for (let i = 0; i < n; ++i) x[4 * i + 2] = i * s;
+        const m = pcaOf(x, n, 4, 3);
+        relativeNearTol(m.eigenvalues[0], s * s * n * (n + 1) / 12);
+        assert.equal(m.eigenvalues[1], 0);
+        assert.equal(m.eigenvalues[2], 0);
+        assert.ok(Math.abs(m.loadings.data[2] - 1) <= 1e-15);
+        for (const j of [0, 1, 3]) assert.equal(m.loadings.data[j], 0);
+    }
+}
+
+// Review b8fix4 P0-2 (mirrors test_hotelling_t2_constant_columns): a
+// non-dyadic constant column centres to exact zeros (ten values 0.1, k = 1
+// used to give rank 1, T² = 0.9 and UCL 5.63).
+for (const n of [3, 10, 101, 1000]) {
+    for (const c of [0.1, 1 / 3, -2.7e-7, 12345.678, 314159.26535]) {
+        for (const s of [1, 3, 1e-7, 1e7, 2 ** 60]) {
+            const out = new HotellingT2({n_components: 1, alpha: 0.05})
+                .run({data: new Float64Array(n).fill(c * s), rows: n, cols: 1});
+            assert.equal(out.n_components_used, 0, `${n} x ${c * s}`);
+            assert.equal(out.ucl, 0);
+            assert.ok(out.t2.data.every((v) => v === 0));
+        }
+    }
+}
+for (const n of [10, 101]) {
+    for (const s of [1, 3, 1e-7, 1e7, 2 ** 60]) {
+        const data = new Float64Array(3 * n);
+        for (let i = 0; i < n; ++i) data.set([0.1 * s, i * s, -s / 3], 3 * i);
+        const out = new HotellingT2({n_components: 2, alpha: 0.05}).run({data, rows: n, cols: 3});
+        assert.equal(out.n_components_used, 1);
+        for (let i = 0; i < n; ++i) {
+            const z = i - (n - 1) / 2;
+            const ref = 12 * z * z / (n * (n + 1));
+            assert.ok(Math.abs(out.t2.data[i] - ref) <= 1e-12 * Math.max(1, ref), `${n} ${s} ${i}`);
+        }
+    }
+}
 console.log("JS/WASM Preflight diagnostics passed");

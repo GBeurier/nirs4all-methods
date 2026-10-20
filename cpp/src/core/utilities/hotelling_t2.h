@@ -3,7 +3,8 @@
  * Hotelling T² statistic on the PCA-reduced score space.
  *
  * For a (n_samples x n_features) matrix X:
- *   1. Centre by column means.
+ *   1. Centre by column means (corrected two-pass: constant columns centre
+ *      to exact zeros).
  *   2. Compute the thin SVD of the centred matrix: Xc = U Σ V^T.
  *   3. Take the first k = n_components columns of T = U Σ as the scores.
  *   4. Eigenvalues of the sample covariance are λ_j = σ_j² / (n_samples - 1).

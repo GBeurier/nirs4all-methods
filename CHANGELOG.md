@@ -41,9 +41,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   it with `N4M_ERR_UNSUPPORTED`. Inside D it centres with compensated sums,
   ignores constant columns, and is exact under power-of-two scaling.
   Variances carry an absolute error of order `max(n,p) * eps * lambda_max`
-  (no relative accuracy is claimed); components not above the conservative
+  (no relative accuracy is claimed); components not above the operational
   threshold `16 * max(n,p) * eps * lambda_max` are unresolved and published
-  as 0.
+  as 0. The header separates that threshold from the total error bound,
+  which adds a worst-case Gram accumulation term `L * u * trace(C)` (L = p
+  for the row-side Gram) that the threshold does not include.
 - The Jacobi convergence threshold no longer underflows for weak column pairs
   (`sqrt(alpha) * sqrt(beta)` when `alpha * beta` is subnormal). Inputs such as
   `B_6(2^-50) (x) [[1,3/4],[1/2,1]]` previously exhausted the 60 sweeps
@@ -58,6 +60,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Hotelling T² uses only resolved directions and computes its UCL with the
   rank actually used. Before, an exactly collinear column gave a
   rounding-level direction that T² amplified (2.998 instead of 4113/2428).
+- Hotelling T² centres with a corrected two-pass mean. The plain rounded
+  mean left the same offset on every observation, a spurious direction the
+  rank selection kept: ten observations of a constant column 0.1 with k = 1
+  gave rank 1, T² = 0.9 and UCL 5.63 instead of rank 0, T² 0 and UCL 0.
+  Constant columns now centre to exact zeros. Full-rank results change at
+  the rounding level of the centring (relative change <= 2e-10 over 200
+  random full-rank cases, the new values being the closer ones to an
+  extended-precision centring).
+- Preflight PCA loadings of a wide input (n <= p): the resolved rows
+  `Xc^T u / sigma` are re-orthonormalised (modified Gram-Schmidt applied
+  twice; they drifted up to 5e-5 from orthonormality near the resolution),
+  and the unresolved rows complete them by Householder QR, so every row is a
+  unit vector orthogonal to the others. The former canonical-vector
+  Gram-Schmidt kept a candidate only above norm 0.5 and otherwise published
+  the last one unnormalised (`X = I_8`, k = 8: last loading of norm 0.354),
+  and retried every canonical vector for each row (Θ(n^4): `X = 0`,
+  320 x 320, k = 320 took about 10 s in WASM).
+- The preflight PCA budget counts the whole computation before allocating:
+  Gram and projections in long-double products, eigendecomposition and
+  loading orthonormalisation at 1/16 per double operation (250 million in total), plus a
+  1 GiB buffer limit. Every Preflight-sized request (at most 10^7 cells,
+  k <= 10) that the former Gram-only count accepted is still accepted; large
+  k on large inputs (600 x 600, k = 600) is now refused.
 
 ### Added
 

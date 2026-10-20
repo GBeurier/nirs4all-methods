@@ -150,7 +150,16 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
     const int64_t p = cols;
     const int32_t k = n_components;
 
-    /* Centre by column means. */
+    /* Centre by column means, corrected two-pass: subtract the rounded mean
+     * m, then the mean r of the residuals x - m. A plain rounded mean leaves
+     * the same offset (up to n eps |mean|) on every observation, i.e. a
+     * spurious direction along the ones vector that the rank selection
+     * below cannot tell from data (a constant column 0.1 gave rank 1 and
+     * T² = (n-1)/n everywhere). With the correction the offset falls to
+     * O(n eps) of the column's centred variation, under the resolution
+     * threshold, and a constant column centres to exact zeros: x - m is
+     * exact (Sterbenz) and the same for every row, so r equals it (its n
+     * partial sums are exact for n < 2^26). */
     double* Xc = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
     if (Xc == NULL) return N4M_ERR_OUT_OF_MEMORY;
     memcpy(Xc, X, (size_t)n * (size_t)p * sizeof(double));
@@ -160,8 +169,14 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
             s += Xc[(size_t)i * (size_t)p + (size_t)j];
         }
         const double m = s / (double)n;
+        double sr = 0.0;
         for (int64_t i = 0; i < n; ++i) {
             Xc[(size_t)i * (size_t)p + (size_t)j] -= m;
+            sr += Xc[(size_t)i * (size_t)p + (size_t)j];
+        }
+        const double r = sr / (double)n;
+        for (int64_t i = 0; i < n; ++i) {
+            Xc[(size_t)i * (size_t)p + (size_t)j] -= r;
         }
     }
 

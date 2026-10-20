@@ -287,6 +287,108 @@ static void pca_solver_class_tests(n4m_context_t* ctx) {
     }
 }
 
+// Review b8fix4 P0-1 / P1: the unresolved loading rows of a wide input are a
+// Householder completion of the resolved rows. Before, X = I_8 (k = 8)
+// published a last loading of norm 0.354, and X = 0 (320 x 320, k = 320)
+// cost Theta(n^4) through canonical-vector retries. Centred I_n has
+// covariance (I - J/n)/(n-1): n-1 variances 1/(n-1) and one zero.
+static void require_orthonormal_rows(const std::vector<double>& ld, int32_t k, int64_t p) {
+    for (int32_t a=0;a<k;++a) for (int32_t b=0;b<=a;++b) {
+        double dot=0.0;
+        for (int64_t j=0;j<p;++j)
+            dot+=ld[static_cast<size_t>(a*p+j)]*ld[static_cast<size_t>(b*p+j)];
+        REQUIRE(std::abs(dot-(a==b?1.0:0.0))<=1e-12);
+    }
+}
+static void pca_completion_tests(n4m_context_t* ctx) {
+    struct Case { int64_t n; int kind; };  // 0: I_n, 1: zero, 2: [I_{n/2} 0; -I_{n/2} 0]
+    for (const Case c : {Case{4,0}, Case{8,0}, Case{320,0}, Case{320,1}, Case{320,2}}) {
+        const int64_t n=c.n, p=c.n; const auto k=static_cast<int32_t>(n);
+        std::vector<double> x(static_cast<size_t>(n*p),0.0);
+        int64_t rank=0;
+        if (c.kind==0) { for (int64_t i=0;i<n;++i) x[static_cast<size_t>(i*p+i)]=1.0; rank=n-1; }
+        if (c.kind==2) {
+            for (int64_t i=0;i<n/2;++i) {
+                x[static_cast<size_t>(i*p+i)]=1.0;
+                x[static_cast<size_t>((n/2+i)*p+i)]=-1.0;
+            }
+            rank=n/2;
+        }
+        std::vector<double> sc(static_cast<size_t>(n*k)), ld(static_cast<size_t>(k*p)),
+            ev(static_cast<size_t>(k)), mom(2);
+        std::vector<uint8_t> flag(static_cast<size_t>(k),9);
+        double res=-1.0;
+        auto X=view(x.data(),n,p), S=view(sc.data(),n,k), L=view(ld.data(),k,p);
+        REQUIRE(n4m_preflight_pca_compute_resolved(ctx,&X,k,&S,&L,ev.data(),mom.data(),&res,
+                                                   flag.data())==N4M_OK);
+        const double var=c.kind==0 ? 1.0/static_cast<double>(n-1) : 2.0/static_cast<double>(n-1);
+        for (int32_t a=0;a<k;++a) {
+            const auto ua=static_cast<size_t>(a);
+            if (a<rank) REQUIRE(flag[ua]==0 && rel_close(ev[ua],var,1e-12));
+            else REQUIRE(flag[ua]==1 && ev[ua]==0.0);
+        }
+        require_orthonormal_rows(ld,k,p);
+    }
+    // Graded wide input (12 x 16, column j scaled by 10^(-d j / 11)): the
+    // rows Xc^T u / sigma of the weakest resolved components drifted up to
+    // 5e-5 from orthonormality before their re-orthonormalisation.
+    for (const double d : {3.0, 5.0, 6.0, 7.0}) {
+        const int64_t n=12, p=16; const int32_t k=12;
+        std::vector<double> x(static_cast<size_t>(n*p),0.0);
+        for (int64_t i=0;i<n;++i) for (int64_t j=0;j<n;++j) {
+            const double di=static_cast<double>(i), dj=static_cast<double>(j);
+            x[static_cast<size_t>(i*p+j)]=(1.5+std::sin(1.0+0.7*di*dj+0.3*di*di+1.3*dj))*
+                                          std::pow(10.0,-d*dj/11.0);
+        }
+        const PcaRun r=run_pca(ctx,x,n,p,k);
+        REQUIRE(r.status==N4M_OK);
+        require_orthonormal_rows(r.loadings,k,p);
+    }
+}
+
+// Budget (review b8fix4 P1): Gram, projections, eigendecomposition and
+// completion are counted before allocating. 600 x 600 with k = 600 counts
+// 4.3e8 long-double product equivalents (refused); the former Gram-only
+// count (2.16e8) accepted it.
+static void pca_budget_tests(n4m_context_t* ctx) {
+    const int64_t n=600, p=600; const int32_t k=600;
+    std::vector<double> x(static_cast<size_t>(n*p),1.0), sc(static_cast<size_t>(n*k)),
+        ld(static_cast<size_t>(k*p)), ev(static_cast<size_t>(k)), mom(2);
+    auto X=view(x.data(),n,p), S=view(sc.data(),n,k), L=view(ld.data(),k,p);
+    REQUIRE(n4m_preflight_pca_compute(ctx,&X,k,&S,&L,ev.data(),mom.data())==N4M_ERR_UNSUPPORTED);
+}
+
+// Constant columns, non-dyadic and rescaled, centre to exact zeros in the
+// preflight PCA (the Hotelling centring defect of review b8fix4 P0-2 does not
+// occur here): an all-constant X has no variance at all, and constant columns
+// next to a varying one leave its variance and loading untouched.
+static void pca_constant_column_tests(n4m_context_t* ctx) {
+    for (const double s : {1.0, 3.0, 1e-7, 1e7, 0.1}) {
+        for (const int64_t n : {int64_t{3}, int64_t{10}, int64_t{101}}) {
+            const int64_t p=4; const int32_t k=3;
+            std::vector<double> x(static_cast<size_t>(n*p));
+            for (int64_t i=0;i<n;++i) {
+                x[static_cast<size_t>(i*p)]=0.1*s;
+                x[static_cast<size_t>(i*p+1)]=s/3.0;
+                x[static_cast<size_t>(i*p+2)]=-2.7e-3*s;
+                x[static_cast<size_t>(i*p+3)]=12345.678*s;
+            }
+            PcaRun r=run_pca(ctx,x,n,p,k);
+            REQUIRE(r.status==N4M_OK && r.moments[0]==0.0 && r.moments[1]==0.0);
+            for (double e : r.eigen) REQUIRE(e==0.0);
+            for (double v : r.scores) REQUIRE(v==0.0);
+            // Column 2 becomes i * s: variance s^2 n (n+1) / 12.
+            for (int64_t i=0;i<n;++i) x[static_cast<size_t>(i*p+2)]=static_cast<double>(i)*s;
+            r=run_pca(ctx,x,n,p,k);
+            const double var=s*s*static_cast<double>(n)*static_cast<double>(n+1)/12.0;
+            REQUIRE(r.status==N4M_OK && rel_close(r.eigen[0],var,1e-12));
+            REQUIRE(r.eigen[1]==0.0 && r.eigen[2]==0.0);
+            REQUIRE(std::abs(r.loadings[2]-1.0)<=1e-15);
+            REQUIRE(r.loadings[0]==0.0 && r.loadings[1]==0.0 && r.loadings[3]==0.0);
+        }
+    }
+}
+
 // Review b8fix3 P0-2: k is validated before any allocation (k = INT_MAX on
 // a 2 x 1 matrix used to request ~2 GiB, outside the exception barrier).
 static void pca_component_count_tests(n4m_context_t* ctx) {
@@ -346,6 +448,9 @@ int main() {
         pca_resolution_tests(ctx);
         pca_solver_class_tests(ctx);
         pca_component_count_tests(ctx);
+        pca_completion_tests(ctx);
+        pca_budget_tests(ctx);
+        pca_constant_column_tests(ctx);
         // Weak decoupled variance: [A; -A; 26 zero rows], A = [[1,0,0],
         // [0,1e-9,0],[0,1e-9,1e-9]]. The second variance (NumPy 2.2.6:
         // 1.689e-19, i.e. 2.6e-18 lambda_1) is below the resolution (rule 14):
