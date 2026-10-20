@@ -1764,8 +1764,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Declared numerical domain: finite values, every nonzero $|x|$ in $[2^{-256}, 2^{256}]$ and "
         "a spread $\\max|x|/\\min_{x\\ne0}|x|\\le 2^{32}$ per vector; outside it the kernel "
         "returns `N4M_ERR_UNSUPPORTED`. RMSE and MAE have relative errors of order $n\\varepsilon$, "
-        "$R^2$ an absolute error of order $n\\varepsilon(1+SSE/SST)$; $R^2$ is NaN (undefined) "
-        "when $y$ is constant.",
+        "$R^2$ an absolute error of order $n\\varepsilon(1+SSE/SST)$. $R^2$ is published as a "
+        "significand times a power of two, so a ratio $SSE/SST\\ge 2^{999}$ (possible inside the "
+        "domain) is reported scaled rather than as $-\\infty$; it is NaN (undefined) when $y$ is "
+        "constant.",
         "The ABI-2 symbol `n4m_stats_regression_scores` in `n4m/metrics.h` is implemented in "
         "`cpp/src/c_api/c_api_preflight.cpp` and wrapped in JS/WASM by `statsRegressionScores`. "
         "`cpp/tests/test_group_means.cpp` checks exact dyadic scores, scale sweeps, a $2^{52}$ "
