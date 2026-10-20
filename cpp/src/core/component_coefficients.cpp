@@ -109,7 +109,24 @@ n4m_status_t compute_regression_coefficients_by_component(Context& ctx,
         const auto a = static_cast<std::size_t>(model.n_components);
         out.assign(a * p * q, 0.0);
 
-        for (std::size_t prefix = 1U; prefix <= a; ++prefix) {
+        // Null components (zero weight column: an unresolved PLS component or
+        // an unresolved PCR X direction, always trailing) do not contribute:
+        // a prefix that includes them has the coefficients of its resolved
+        // components.
+        std::size_t resolved = 0;
+        while (resolved < a) {
+            bool null_column = true;
+            for (std::size_t feature = 0; feature < p && null_column; ++feature) {
+                null_column = model.weights_w[idx(feature, a, resolved)] == 0.0;
+            }
+            if (null_column) break;
+            ++resolved;
+        }
+
+        for (std::size_t full_prefix = 1U; full_prefix <= a; ++full_prefix) {
+            const std::size_t prefix = std::min(full_prefix, resolved);
+            const std::size_t block = (full_prefix - 1U) * p * q;
+            if (prefix == 0U) continue;
             std::vector<double> ptw;
             resize_fill(ptw, prefix * prefix, 0.0);
             for (std::size_t row_comp = 0; row_comp < prefix; ++row_comp) {
@@ -130,7 +147,6 @@ n4m_status_t compute_regression_coefficients_by_component(Context& ctx,
                 return N4M_ERR_NUMERICAL_FAILURE;
             }
 
-            const std::size_t block = (prefix - 1U) * p * q;
             for (std::size_t feature = 0; feature < p; ++feature) {
                 for (std::size_t target = 0; target < q; ++target) {
                     double coefficient = 0.0;

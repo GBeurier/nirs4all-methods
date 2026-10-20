@@ -877,17 +877,34 @@ N4M_API n4m_status_t n4m_model_transform_alloc(
  * told apart from rounding: (n + a) eps ||X||_F ||Y||_F on ||X_k'Y_k||_F for
  * the PLS solvers, (n + p) eps sigma_max(X) ||Y||_F on ||Y't_k|| for PCR.
  * A component is "unresolved" (flag 1.0) when its cross-covariance is not
- * above that bound. Unresolved means not resolved numerically: the exact
- * cross-covariance may be zero (the component's Y side is then mathematically
- * undefined, e.g. u = Y q / q'q with q = 0) or merely smaller than the bound;
- * the two cannot be distinguished in double precision, and an unresolved
- * component must not be read as either. The PLS solvers never publish an
- * unresolved component: they refuse the fit with N4M_ERR_NUMERICAL_FAILURE
- * ("X-Y covariance is below its numerical resolution"), so their flags are
- * all 0. PCR keeps the component (its X direction is resolved), publishes its
- * Y loading q (accurate only to the bound divided by sigma_k^2 in absolute
- * terms; it is not set to zero) and, with store_scores=1, a zero Y-score
- * column. */
+ * above that bound. Two cases are covered by one flag, and the flag is not a
+ * claim about either: the component may be mathematically undefined (its
+ * exact cross-covariance is zero, e.g. a component beyond the rank of X or a
+ * Y uncorrelated with X, so its direction or its Y side u = Y q / q'q does
+ * not exist), or merely not resolved numerically (the exact value is nonzero
+ * but smaller than the bound). Double precision cannot tell them apart, and
+ * an unresolved component must not be read as an exact zero or as a real
+ * covariance. No fit inside the supported domain is refused for this reason.
+ *
+ * PLS convention (every PLS regression solver and PLS-DA, identical across
+ * solvers): an unresolved component is published as a null component. Its
+ * W, P, Q and R columns and, with store_scores=1, its T and U columns are
+ * exactly zero; it does not contribute to the coefficients, which are those
+ * of the model truncated to the resolved components (all zero, and
+ * predictions equal to the Y mean, when none is resolved). Its deflation
+ * leaves the residuals unchanged, so every later component is unresolved and
+ * null as well: the flags are 0 for the leading resolved components and 1
+ * for the rest.
+ *
+ * PCR convention: a component whose X singular value is resolved
+ * (sigma_k > (n + p) eps sigma_max) keeps its X direction (W = P = v_k, R,
+ * T = X v_k) and its Y loading q (accurate only to the bound divided by
+ * sigma_k^2 in absolute terms; it is not set to zero, so it contributes to
+ * the coefficients); when its ||Y't_k|| is not above the resolution it is
+ * flagged and, with store_scores=1, its Y-score column is zero. A component
+ * whose X singular value is not resolved (e.g. beyond the rank of X) has no
+ * resolved direction: it and every later one are published as null
+ * components, exactly as for PLS, and flagged. */
 typedef enum n4m_model_array_t {
     N4M_MODEL_COEFFICIENTS = 0,   /* (n_features, n_targets) */
     N4M_MODEL_INTERCEPT    = 1,   /* (n_targets,) */
@@ -901,11 +918,16 @@ typedef enum n4m_model_array_t {
     N4M_MODEL_ROTATIONS_R  = 9,
     N4M_MODEL_SCORES_T     = 10,  /* optional — store_scores=1 */
     N4M_MODEL_Y_SCORES_U   = 11,  /* optional — store_scores=1. The column of
-                                   * an unresolved component is zero (not
-                                   * computed; see above). */
+                                   * an unresolved component is zero (see
+                                   * above). */
     N4M_MODEL_COMPONENT_RESOLUTION  = 12, /* (1, 1), ABI 2.20; see above */
     N4M_MODEL_UNRESOLVED_COMPONENTS = 13  /* (1, n_components), 1.0 or 0.0,
-                                           * ABI 2.20; see above */
+                                           * ABI 2.20: 1.0 for an unresolved
+                                           * component (not resolved
+                                           * numerically or mathematically
+                                           * undefined); PLS publishes it as a
+                                           * null component, PCR keeps a
+                                           * resolved X direction. See above. */
 } n4m_model_array_t;
 
 N4M_API n4m_status_t n4m_model_get_array(
