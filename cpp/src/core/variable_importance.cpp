@@ -15,8 +15,6 @@
 
 namespace {
 
-constexpr double kEps = std::numeric_limits<double>::epsilon();
-
 [[nodiscard]] std::size_t idx(std::size_t row, std::size_t cols, std::size_t col) noexcept {
     return row * cols + col;
 }
@@ -96,6 +94,34 @@ constexpr double kEps = std::numeric_limits<double>::epsilon();
     return N4M_OK;
 }
 
+// Euclidean norm of a strided sequence, accumulated on values divided by
+// their largest magnitude, so that it neither underflows nor overflows for
+// any finite input whose norm is representable. 0 exactly for an all-zero
+// sequence.
+template <typename Value>
+[[nodiscard]] double scaled_norm(std::size_t count, Value value) {
+    double largest = 0.0;
+    for (std::size_t i = 0; i < count; ++i) {
+        largest = std::max(largest, std::fabs(value(i)));
+    }
+    if (!(largest > 0.0)) {
+        return 0.0;
+    }
+    double sum = 0.0;
+    for (std::size_t i = 0; i < count; ++i) {
+        const double scaled = value(i) / largest;
+        sum += scaled * scaled;
+    }
+    return largest * std::sqrt(sum);
+}
+
+// A component flagged in N4M_MODEL_UNRESOLVED_COMPONENTS: a PLS null
+// component, or a PCR component whose Y side is not resolved.
+[[nodiscard]] bool flagged_unresolved(const ::n4m::core::Model& model, std::size_t comp) {
+    return comp < model.unresolved_components.size() &&
+           model.unresolved_components[comp] != 0.0;
+}
+
 }  // namespace
 
 namespace n4m::core {
@@ -119,53 +145,55 @@ n4m_status_t compute_vip_scores(Context& ctx,
         const auto q = static_cast<std::size_t>(model.n_targets);
         const auto a = static_cast<std::size_t>(model.n_components);
 
-        std::vector<double> component_ssy(a, 0.0);
-        std::vector<double> weights_col_ss(a, 0.0);
-        double total_ssy = 0.0;
+        // VIP_j = sqrt(p sum_a SSY_a (w_ja / ||w_a||)^2 / sum_a SSY_a), with
+        // SSY_a = ||t_a||^2 ||q_a||^2 (R plsVarSel::VIP, which normalises each
+        // weight column to unit sum of squares: NIPALS weights are unit
+        // vectors already, SIMPLS stores R = W / ||X w||). Only the ratios
+        // SSY_a / sum SSY and w_ja / ||w_a|| matter, so they are formed from
+        // scaled norms: s_a = ||t_a|| ||q_a|| (the norm of the Y part the
+        // component explains, representable inside the supported domain) and
+        // SSY_a / sum SSY = (s_a / s_max)^2 / sum (s_b / s_max)^2. No
+        // magnitude threshold is applied; a null component (flagged
+        // unresolved, or with an exactly zero weight, score or Y-loading
+        // column) does not contribute.
+        std::vector<double> explained(a, 0.0);
+        std::vector<double> weight_norm(a, 0.0);
+        double largest = 0.0;
         for (std::size_t comp = 0; comp < a; ++comp) {
-            double tss = 0.0;
-            for (std::size_t row = 0; row < n; ++row) {
-                const double value = model.scores_t[idx(row, a, comp)];
-                tss += value * value;
+            weight_norm[comp] = scaled_norm(
+                p, [&](std::size_t f) { return model.weights_w[idx(f, a, comp)]; });
+            if (flagged_unresolved(model, comp) || weight_norm[comp] == 0.0) {
+                continue;
             }
-            double qss = 0.0;
-            for (std::size_t target = 0; target < q; ++target) {
-                const double value = model.y_loadings_q[idx(target, a, comp)];
-                qss += value * value;
-            }
-            double wss = 0.0;
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                const double w = model.weights_w[idx(feature, a, comp)];
-                wss += w * w;
-            }
-            component_ssy[comp] = tss * qss;
-            // R `plsVarSel::VIP` normalises each weight column to unit
-            // sum-of-squares (WW = W*W / colSums(W*W)) before mixing with
-            // the per-component Y-variance proxy. NIPALS naturally yields
-            // unit-norm weight columns so the normalisation is a no-op,
-            // but SIMPLS stores R = W / ||X w|| (||R_a|| != 1), so without
-            // this rescale the VIP ranking diverges from R when the SIMPLS
-            // solver is used.
-            weights_col_ss[comp] = wss;
-            total_ssy += component_ssy[comp];
+            const double t_norm = scaled_norm(
+                n, [&](std::size_t row) { return model.scores_t[idx(row, a, comp)]; });
+            const double q_norm = scaled_norm(
+                q, [&](std::size_t target) { return model.y_loadings_q[idx(target, a, comp)]; });
+            explained[comp] = t_norm * q_norm;
+            largest = std::max(largest, explained[comp]);
         }
-        if (total_ssy <= kEps) {
-            ctx.set_error("Y variance explained by components vanished while computing VIP");
+        if (!(largest > 0.0)) {
+            ctx.set_error("no resolved component explains Y: VIP is undefined");
             return N4M_ERR_NUMERICAL_FAILURE;
+        }
+        double total = 0.0;
+        for (std::size_t comp = 0; comp < a; ++comp) {
+            explained[comp] /= largest;
+            explained[comp] *= explained[comp];
+            total += explained[comp];
         }
 
         out.assign(p, 0.0);
         for (std::size_t feature = 0; feature < p; ++feature) {
             double weighted = 0.0;
             for (std::size_t comp = 0; comp < a; ++comp) {
-                const double wss = weights_col_ss[comp];
-                if (wss <= kEps) {
+                if (explained[comp] == 0.0) {
                     continue;
                 }
-                const double w = model.weights_w[idx(feature, a, comp)];
-                weighted += component_ssy[comp] * (w * w) / wss;
+                const double w = model.weights_w[idx(feature, a, comp)] / weight_norm[comp];
+                weighted += explained[comp] * (w * w);
             }
-            out[feature] = std::sqrt(static_cast<double>(p) * weighted / total_ssy);
+            out[feature] = std::sqrt(static_cast<double>(p) * weighted / total);
         }
 
         ctx.clear_error();
@@ -204,36 +232,64 @@ n4m_status_t compute_selectivity_ratio(Context& ctx,
         const auto p = static_cast<std::size_t>(model.n_features);
         const auto a = static_cast<std::size_t>(model.n_components);
 
-        std::vector<double> explained(p, 0.0);
-        std::vector<double> residual(p, 0.0);
+        // SR_j = ||T P_j'||^2 / ||x_j - T P_j'||^2 on the model-space column
+        // x_j = (X_j - x_mean_j) / x_scale_j. The ratio does not depend on the
+        // units of x_j: both sums are accumulated on the column divided by the
+        // exact power of two of its largest magnitude, then divided, with no
+        // floor on the residual. A column reconstructed exactly (residual 0)
+        // has SR = +inf when it carries explained variation and SR = 0 when
+        // it is identically zero in model space (nothing to explain).
+        std::vector<double> x_model(n * p, 0.0);
+        std::vector<double> column_max(p, 0.0);
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
-                double x_scaled = read_value(X, row, feature);
-                if (!std::isfinite(x_scaled)) {
+                const double value = read_value(X, row, feature);
+                if (!std::isfinite(value)) {
                     ctx.set_errorf("X contains NaN or Inf at row %llu col %llu",
                                    ull(row),
                                    ull(feature));
                     out.clear();
                     return N4M_ERR_INVALID_ARGUMENT;
                 }
-                x_scaled -= model.x_mean[feature];
-                x_scaled /= model.x_scale[feature];
+                const double x_scaled = (value - model.x_mean[feature]) / model.x_scale[feature];
+                x_model[idx(row, p, feature)] = x_scaled;
+                column_max[feature] = std::max(column_max[feature], std::fabs(x_scaled));
+            }
+        }
+        std::vector<int> column_exponent(p, 0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            if (column_max[feature] > 0.0) {
+                column_exponent[feature] = std::ilogb(column_max[feature]);
+            }
+        }
 
+        std::vector<double> explained(p, 0.0);
+        std::vector<double> residual(p, 0.0);
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
                 double reconstructed = 0.0;
                 for (std::size_t comp = 0; comp < a; ++comp) {
                     reconstructed +=
                         model.scores_t[idx(row, a, comp)] *
                         model.loadings_p[idx(feature, a, comp)];
                 }
-                explained[feature] += reconstructed * reconstructed;
-                const double error = x_scaled - reconstructed;
+                const int e = column_exponent[feature];
+                const double fitted = std::ldexp(reconstructed, -e);
+                const double error = std::ldexp(x_model[idx(row, p, feature)] - reconstructed, -e);
+                explained[feature] += fitted * fitted;
                 residual[feature] += error * error;
             }
         }
 
         out.assign(p, 0.0);
         for (std::size_t feature = 0; feature < p; ++feature) {
-            out[feature] = explained[feature] / std::max(residual[feature], kEps);
+            if (residual[feature] > 0.0) {
+                out[feature] = explained[feature] / residual[feature];
+            } else {
+                out[feature] = explained[feature] > 0.0
+                                   ? std::numeric_limits<double>::infinity()
+                                   : 0.0;
+            }
         }
 
         ctx.clear_error();
