@@ -1579,7 +1579,8 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "the same input as both PCA fit and scored set. The finite-sample F limit assumes the "
         "classical approximately normal model. The measured relative error of the UCL is below "
         "$10^{-12}$ against mpmath references ($n$ up to $10^6$, $\\alpha$ from $10^{-300}$ to "
-        "$1-2^{-53}$), not a proven bound. A UCL that is not a finite normal double (only for "
+        "$1-2^{-53}$), not a proven bound and not uniform in the rank: columns 1–127 of $H_{128}$ "
+        "with $k=127$ and $\\alpha=10^{-100}$ give $7.2\\times10^{-12}$. A UCL that is not a finite normal double (only for "
         "extreme $\\alpha$, e.g. $n=3$, $r=1$, $\\alpha<7.4\\times10^{-309}$) returns "
         "`N4M_ERR_NUMERICAL_FAILURE`.",
         "`n4m.outlier_detection.hotelling_t2` wraps the stateless ABI-2 symbol "

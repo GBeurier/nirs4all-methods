@@ -129,7 +129,8 @@ N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
  * of X. The UCL is solved directly from its beta tail, inverting the small
  * tail (upper for alpha <= 0.5, lower above, so alpha close to 1 is exact)
  * without a beta argument rounded through 1 - x or an overflowing product;
- * measured relative error below 1e-12. A UCL that is not a finite normal
+ * measured relative error below 1e-12 on the sampled grid, not uniform
+ * in the rank (7.2e-12 at r = 127, alpha = 1e-100). A UCL that is not a finite normal
  * double (extreme alpha only, e.g. n = 3, r = 1, alpha < 7.4e-309) is
  * N4M_ERR_NUMERICAL_FAILURE. Requires rows >= cols. */
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
