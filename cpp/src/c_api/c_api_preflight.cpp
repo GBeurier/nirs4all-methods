@@ -687,10 +687,45 @@ size_t extend_basis(std::vector<std::vector<double>>& basis, std::vector<double>
     return 1;
 }
 
+// Square root of a positive double-double: one Newton step from the double
+// root (relative error about 2^-104).
+DD dd_sqrt(DD a) noexcept {
+    const double s = std::sqrt(a.hi);
+    const DD r = dd_add(a, dd_neg(dd_mul(DD{s, 0.0}, s)));
+    return dd_add(DD{s, 0.0}, r.hi / (2.0 * s));
+}
+
+DD dd_dot(const std::vector<DD>& a, const std::vector<DD>& b) noexcept {
+    DD s;
+    for (size_t i = 0; i < a.size(); ++i) s = dd_add(s, dd_mul(a[i], b[i]));
+    return s;
+}
+
+// extend_basis in double-double (same order, reorthogonalization and
+// dependence tolerance): the basis then spans the design to about 2^-100,
+// whatever the width of long double.
+size_t extend_basis(std::vector<std::vector<DD>>& basis, const std::vector<double>& candidate) {
+    std::vector<DD> v(candidate.size());
+    for (size_t i = 0; i < v.size(); ++i) v[i] = {candidate[i], 0.0};
+    const DD norm0 = dd_dot(v, v);
+    if (!(norm0.hi > 0.0)) return 0;
+    for (int pass = 0; pass < 2; ++pass)
+        for (const auto& q : basis) {
+            const DD dot = dd_dot(q, v);
+            for (size_t i = 0; i < v.size(); ++i) v[i] = dd_add(v[i], dd_neg(dd_mul(dot, q[i])));
+        }
+    const DD norm = dd_dot(v, v);
+    if (!(norm.hi > 1e-18 * norm0.hi)) return 0;
+    const DD length = dd_sqrt(norm);
+    for (DD& x : v) x = dd_div(x, length);
+    basis.push_back(std::move(v));
+    return 1;
+}
+
 // Appends the indicator columns of dense codes (levels 0..count-1) one at a
 // time; returns the rank increment.
-size_t extend_with_indicators(std::vector<std::vector<double>>& basis,
-                              const std::vector<int64_t>& dense, size_t levels) {
+template <class Basis>
+size_t extend_with_indicators(Basis& basis, const std::vector<int64_t>& dense, size_t levels) {
     size_t added = 0;
     for (size_t l = 0; l < levels; ++l) {
         std::vector<double> col(dense.size(), 0.0);
@@ -723,6 +758,29 @@ std::pair<long double, long double> project(const std::vector<std::vector<double
     long double residual = 0.0L;
     for (double v : work) residual += ld(v) * ld(v);
     return {tail, residual};
+}
+
+// Residuals of the columns of y (n x k) off a double-double orthonormal
+// basis, every operation in double-double (modified Gram-Schmidt order),
+// rounded once to double: a residual far below a large fitted part keeps
+// its low bits. Returns the squared norm of the coefficients.
+long double project_off(const std::vector<std::vector<DD>>& basis, const std::vector<double>& y,
+                        size_t k, std::vector<double>& residual) {
+    const size_t n = y.size() / k;
+    std::vector<DD> work(y.size());
+    for (size_t i = 0; i < y.size(); ++i) work[i] = {y[i], 0.0};
+    long double model = 0.0L;
+    for (const auto& q : basis)
+        for (size_t j = 0; j < k; ++j) {
+            DD dot;
+            for (size_t i = 0; i < n; ++i) dot = dd_add(dot, dd_mul(q[i], work[i * k + j]));
+            model += ld(dot.hi) * ld(dot.hi);
+            for (size_t i = 0; i < n; ++i)
+                work[i * k + j] = dd_add(work[i * k + j], dd_neg(dd_mul(dot, q[i])));
+        }
+    residual.resize(y.size());
+    for (size_t i = 0; i < y.size(); ++i) residual[i] = work[i].hi;
+    return model;
 }
 
 constexpr long double max_energy_work = 2500000000.0L;
@@ -2549,27 +2607,35 @@ N4M_API n4m_status_t n4m_stats_permanova(
         if (!centred_rows(*X, y, exponent, range_ss))
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMANOVA input");
         // Stratum means, total and between-strata SS, within-strata centred
-        // rows; every sum of squares is a sum of squared terms.
-        std::vector<long double> smean(s * kk, 0.0L);
+        // rows; every sum of squares is a sum of squared terms. The stratum
+        // means are double-double, so a within-strata row far below a large
+        // between-strata offset keeps its low bits whatever the width of long
+        // double (a mean rounded to double would shift every row of its
+        // stratum by about DBL_EPSILON times the offset).
+        std::vector<DD> smean(s * kk);
         for (size_t i = 0; i < nn; ++i)
-            for (size_t j = 0; j < kk; ++j)
-                smean[static_cast<size_t>(stratum[i]) * kk + j] += ld(y[i * kk + j]);
+            for (size_t j = 0; j < kk; ++j) {
+                DD& m = smean[static_cast<size_t>(stratum[i]) * kk + j];
+                m = dd_add(m, y[i * kk + j]);
+            }
         for (size_t g = 0; g < s; ++g)
             for (size_t j = 0; j < kk; ++j)
-                smean[g * kk + j] /= static_cast<long double>(stratum_n[g]);
+                smean[g * kk + j] = dd_div(smean[g * kk + j], static_cast<double>(stratum_n[g]));
         long double ss_total = 0.0L, ss_strata = 0.0L, within = 0.0L;
         std::vector<double> xw(nn * kk);
         for (size_t i = 0; i < nn; ++i)
             for (size_t j = 0; j < kk; ++j) {
-                const long double w = ld(y[i * kk + j]) - smean[static_cast<size_t>(stratum[i]) * kk + j];
+                const double w =
+                    dd_add(dd_neg(smean[static_cast<size_t>(stratum[i]) * kk + j]), y[i * kk + j]).hi;
                 ss_total += ld(y[i * kk + j]) * ld(y[i * kk + j]);
-                within += w * w;
-                xw[i * kk + j] = static_cast<double>(w);
+                within += ld(w) * ld(w);
+                xw[i * kk + j] = w;
             }
         for (size_t g = 0; g < s; ++g)
-            for (size_t j = 0; j < kk; ++j)
-                ss_strata += static_cast<long double>(stratum_n[g]) * smean[g * kk + j] *
-                             smean[g * kk + j];
+            for (size_t j = 0; j < kk; ++j) {
+                const long double m = ld(smean[g * kk + j].hi) + ld(smean[g * kk + j].lo);
+                ss_strata += static_cast<long double>(stratum_n[g]) * m * m;
+            }
         // Occupied (stratum, level) cells and their counts.
         std::vector<std::pair<int64_t, int64_t>> cell(nn);
         for (size_t i = 0; i < nn; ++i) cell[i] = {stratum[i], level[i]};
@@ -2777,24 +2843,29 @@ N4M_API n4m_status_t n4m_stats_permanova_freedman_lane(
             return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "nonfinite PERMANOVA input");
         // Reduced design: intercept and the indicators of every condition
         // factor (additive main effects, no interaction); full design adds the
-        // term indicators. Numerical ranks (Gram-Schmidt, 1e-9 relative).
-        std::vector<std::vector<double>> basis;
-        size_t rank_reduced = extend_basis(basis, std::vector<double>(nn, 1.0));
+        // term indicators. Numerical ranks (Gram-Schmidt, 1e-9 relative). The
+        // reduced basis is built in double-double: a basis rounded to double
+        // spans the reduced design only to DBL_EPSILON, which would leave
+        // about DBL_EPSILON times a large between-condition offset in every
+        // reduced-model residual.
+        std::vector<std::vector<DD>> reduced_basis;
+        size_t rank_reduced = extend_basis(reduced_basis, std::vector<double>(nn, 1.0));
         for (size_t c = 0; c < nc; ++c)
-            rank_reduced += extend_with_indicators(basis, condition_dense[c], condition_levels[c]);
+            rank_reduced +=
+                extend_with_indicators(reduced_basis, condition_dense[c], condition_levels[c]);
+        std::vector<std::vector<double>> basis(rank_reduced, std::vector<double>(nn));
+        for (size_t b = 0; b < rank_reduced; ++b)
+            for (size_t i = 0; i < nn; ++i) basis[b][i] = reduced_basis[b][i].hi;
         const size_t df_term = extend_with_indicators(basis, term_dense, term_counts.size());
         const size_t rank_full = rank_reduced + df_term;
         const int64_t df_res = n - static_cast<int64_t>(rank_full);
-        // Reduced-model residuals e, projected off the reduced design twice
-        // (the second pass removes what rounding left of large fitted columns,
-        // "twice is enough"); y is centred, so the intercept projection is
-        // zero. The term and residual SS then come from one projection of e
-        // on the full basis, and the partial R^2 denominator is their sum.
-        const std::vector<std::vector<double>> reduced_basis(
-            basis.begin(), basis.begin() + static_cast<std::ptrdiff_t>(rank_reduced));
+        // Reduced-model residuals e, projected off the reduced design in
+        // double-double, so e is accurate relative to itself, not to the
+        // fitted part. The term and residual SS then come from one projection
+        // of e on the full basis (double; e holds no large component), and
+        // the partial R^2 denominator is their sum.
         std::vector<double> e, scratch;
-        const long double ss_reduced = project(reduced_basis, 0, y, kk, scratch).first;
-        project(reduced_basis, 0, scratch, kk, e);
+        const long double ss_reduced = project_off(reduced_basis, y, kk, e);
         long double ss_total = 0.0L;
         for (double v : y) ss_total += ld(v) * ld(v);
         const auto [ss_term, ss_res] = project(basis, rank_reduced, e, kk, scratch);

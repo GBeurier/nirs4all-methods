@@ -682,12 +682,19 @@ void test_pls_qda_rank_and_scale() {
             const std::vector<double> covariances = result_matrix(result, "class_covariances");
             const std::vector<double> rotations = result_matrix(result, "rotations_r");
             const double sign = rotations[0] > 0.0 ? 1.0 : -1.0;
-            std::vector<double> want_means(2 * a, 0.0), want_cov(2 * a * a, 0.0), want_rot(2 * a, 0.0);
+            // Per class: the value of the first component, zeros for the null
+            // one (built by appending: GCC 15 -O3 -Wnull-dereference flagged
+            // indexed writes into these vectors).
+            std::vector<double> want_means, want_cov, want_rot;
+            const double rot = sign * std::ldexp(1.0, -e) / (2.0 * std::sqrt(S));
             for (std::size_t c = 0; c < 2; ++c) {
-                want_means[c * a] = sign * (mean[c] - 0.125) / std::sqrt(S);
-                want_cov[c * a * a] = var[c] / S;
+                want_means.push_back(sign * (mean[c] - 0.125) / std::sqrt(S));
+                want_means.resize((c + 1) * a, 0.0);
+                want_cov.push_back(var[c] / S);
+                want_cov.resize((c + 1) * a * a, 0.0);
+                want_rot.push_back(rot);
+                want_rot.resize((c + 1) * a, 0.0);
             }
-            want_rot[0] = want_rot[a] = sign * std::ldexp(1.0, -e) / (2.0 * std::sqrt(S));
             expect_close(where + " class means", means, want_means);
             expect_close(where + " class covariances", covariances, want_cov);
             expect_close(where + " rotations", rotations, want_rot, kTol * std::ldexp(1.0, -e));

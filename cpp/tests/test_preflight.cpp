@@ -753,20 +753,20 @@ int main() {
         {
             const int64_t big = 65536;
             std::vector<int64_t> codes(static_cast<size_t>(big));
-            std::vector<double> classes(static_cast<size_t>(big));
+            std::vector<double> big_classes(static_cast<size_t>(big));
             for (int64_t i = 0; i < big; ++i) {
                 codes[static_cast<size_t>(i)] = i;
-                classes[static_cast<size_t>(i)] = static_cast<double>(i);
+                big_classes[static_cast<size_t>(i)] = static_cast<double>(i);
             }
-            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),classes.data(),big,1,
+            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),big_classes.data(),big,1,
                         100000,exact)==N4M_ERR_UNSUPPORTED);
-            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),big,1,0,1,
+            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),big_classes.data(),big,1,0,1,
                         assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             // Continuous: no table; 65536! arrangements exceed the cap.
-            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),classes.data(),big,0,
+            REQUIRE(n4m_stats_factor_association_exact(ctx,codes.data(),big_classes.data(),big,0,
                         100000,exact)==N4M_ERR_UNSUPPORTED);
             // Within the table budget, the Monte Carlo work budget still refuses.
-            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),classes.data(),3000,1,999,1,
+            REQUIRE(n4m_preflight_factor_association(ctx,codes.data(),big_classes.data(),3000,1,999,1,
                         assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
         }
         // Supported numerical domain D (rules 13 and 15): finite, nonzero |x|
@@ -890,8 +890,8 @@ int main() {
             REQUIRE(n4m_preflight_factor_association(ctx,f3,denorm,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             REQUIRE(n4m_preflight_factor_association(ctx,f3,wide,3,0,0,1,assoc,perm_counts)==N4M_ERR_UNSUPPORTED);
             // Truly zero within-level variance: F undefined (NaN), status OK.
-            double flat[3]={5.0,5.0,7.0};
-            REQUIRE(n4m_preflight_factor_association(ctx,f3,flat,3,0,0,1,assoc,perm_counts)==N4M_OK);
+            double flat_level[3]={5.0,5.0,7.0};
+            REQUIRE(n4m_preflight_factor_association(ctx,f3,flat_level,3,0,0,1,assoc,perm_counts)==N4M_OK);
             REQUIRE(rel(assoc[0],1.0) && std::isnan(assoc[1]));
             // Near-zero effect: {0, 2} | {d, 2+d}, d = 2^-20: eta^2 =
             // d^2/(4+d^2), F = d^2/2 (rational references).
@@ -1116,8 +1116,8 @@ int main() {
             double sx[20]={0.1,0.1,0.1,0.1, lo,0,-lo,0, hi,0,-hi,0, 1,2,3,4,
                            off,off,off,off+256};
             double so[20]={}, sb[5]={};
-            auto SX=view(sx,5,4), SO=view(so,5,4);
-            REQUIRE(n4m_preflight_snv_compute(ctx,&SX,nullptr,5,&SO,sb)==N4M_OK);
+            auto SX=view(sx,5,4), SOV=view(so,5,4);
+            REQUIRE(n4m_preflight_snv_compute(ctx,&SX,nullptr,5,&SOV,sb)==N4M_OK);
             for (int j=0;j<4;++j) REQUIRE(so[j]==0.0);
             REQUIRE(sb[0]==0.0);
             for (int i : {1,2}) {
@@ -1162,18 +1162,18 @@ int main() {
             double go[12], gb[4];
             auto GX=view(gx.data(),gn,3), GO=view(go,4,3);
             REQUIRE(n4m_preflight_snv_compute(ctx,&GX,gid.data(),4,&GO,gb)==N4M_OK);
-            const double mu=7.0/3.0, sd=std::sqrt(((1-mu)*(1-mu)+(2-mu)*(2-mu)+(4-mu)*(4-mu))/3.0);
+            const double mu=7.0/3.0, group_sd=std::sqrt(((1-mu)*(1-mu)+(2-mu)*(2-mu)+(4-mu)*(4-mu))/3.0);
             for (int g=0;g<4;++g) {
                 REQUIRE(gb[g]>0.0 && gb[g]<1e-14);
                 int j=0;
                 for (double v : {1.0,2.0,4.0}) {
-                    REQUIRE(std::abs(go[g*3+j]-(v-mu)/sd)<=gb[g]+4e-16*std::abs((v-mu)/sd));
+                    REQUIRE(std::abs(go[g*3+j]-(v-mu)/group_sd)<=gb[g]+4e-16*std::abs((v-mu)/group_sd));
                     ++j;
                 }
             }
             int64_t badgid[2]={0,2};
-            double two[4]={1,2,3,5}, tout[4]={};
-            auto TX=view(two,2,2), TO=view(tout,2,2);
+            double two_rows[4]={1,2,3,5}, tout[4]={};
+            auto TX=view(two_rows,2,2), TO=view(tout,2,2);
             REQUIRE(n4m_preflight_snv_compute(ctx,&TX,badgid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);
             int64_t onegid[2]={0,0};
             REQUIRE(n4m_preflight_snv_compute(ctx,&TX,onegid,2,&TO,gb)==N4M_ERR_INVALID_ARGUMENT);

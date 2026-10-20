@@ -4,7 +4,7 @@ _Namespace_: **`n4m.stats`** · _Fully-qualified_: `n4m.stats.regression_scores`
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_stats_regression_scores`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L827). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_stats_regression_scores`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/metrics.h#L832). Use the linked public header for the exact signature, configuration, and result handles.
 
 **R:** no current source-verified entry point was found for this catalog method.
 

@@ -51,7 +51,9 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "input contract requires at least one observed packed row. Nonfinite output is refused.",
         "The native utilities.ragged_summary procedure uses the existing n4m_procedure_run "
         "ABI. cpp/src/core/estimator/procedures.cpp accumulates means and squared deviations "
-        "in extended precision and checks the resulting double features. Python/R/JS/Rust "
+        "by Welford updates in double on each channel prescaled by an exact power of two, so "
+        "no intermediate overflows for finite input on any platform, and checks the resulting "
+        "double features. Python/R/JS/Rust "
         "bindings marshal typed parameters and matrices without recomputing statistics. "
         "Independent NumPy population reductions and malformed-boundary cases qualify it.",
         _REPO + "cpp/include/n4m/estimator.h; "

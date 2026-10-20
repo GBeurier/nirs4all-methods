@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -45,7 +46,7 @@ struct Data {
             const double b = std::cos(0.23 * static_cast<double>(i * i % 17));
             const double t = static_cast<double>(j) / kCols;
             return a * std::exp(-8.0 * (t - 0.3) * (t - 0.3)) +
-                   b * std::exp(-10.0 * (t - 0.7) * (t - 0.7)) + 0.05 * std::sin(i * 1.7 + j);
+                   b * std::exp(-10.0 * (t - 0.7) * (t - 0.7)) + 0.05 * std::sin(static_cast<double>(i) * 1.7 + static_cast<double>(j));
         };
         for (int64_t i = 0; i < kTrain + kTest; ++i) {
             std::vector<double>& x = i < kTrain ? x_train : x_test;
@@ -55,7 +56,7 @@ struct Data {
                 x.push_back(v);
                 y += (j % 3 == 0 ? 1.5 : -0.4) * v;
             }
-            if (i < kTrain) y_train.push_back(y + 0.01 * std::sin(3.1 * i));
+            if (i < kTrain) y_train.push_back(y + 0.01 * std::sin(3.1 * static_cast<double>(i)));
         }
         for (int64_t i = 0; i < kTrain; ++i) {
             for (int64_t j = 0; j < kCols; ++j) x_target.push_back(spectrum(i + 101, j) + 0.2);
@@ -1040,14 +1041,15 @@ void test_bounded_parameters(n4m_context_t* ctx, Inputs& in) {
         double fitted;   // value set before the fit (NaN: default)
         double mutated;  // value written into the payload
     };
+    const double nan = std::numeric_limits<double>::quiet_NaN();
     const Case cases[] = {
-        {"models.classification.pls_qda", "n_components", NAN, 1},
-        {"preprocessing.feature_selection.flexible_pca", "n_components", NAN, 2.0},
-        {"preprocessing.wavelets.wavelet_svd", "n_components", NAN, 2.0},
+        {"models.classification.pls_qda", "n_components", nan, 1},
+        {"preprocessing.feature_selection.flexible_pca", "n_components", nan, 2.0},
+        {"preprocessing.wavelets.wavelet_svd", "n_components", nan, 2.0},
         {"preprocessing.orthogonalization.osc", "n_components", 2, 1},
-        {"preprocessing.orthogonalization.osc", "scale", NAN, 0},
+        {"preprocessing.orthogonalization.osc", "scale", nan, 0},
         {"filters.high_leverage", "absolute_threshold", 0.5, 0.25},
-        {"filters.high_leverage", "center", NAN, 0},
+        {"filters.high_leverage", "center", nan, 0},
         {"selection.vip_spa", "top_k", 4, 1},
         {"selection.cars", "min_features", 4, 12},
         {"selection.uve", "min_features", 4, 12},
