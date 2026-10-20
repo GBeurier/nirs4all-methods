@@ -103,6 +103,36 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Fixed
 
+- VIP and the selectivity ratio (`n4m_feature_selection_variable_select_rank`
+  methods 0 and 2, also used by VIP-SPA) no longer depend on the units of X
+  and Y. With a = (-3,-1,1,3), b = (1,-3,3,-1), centred, unscaled, one
+  component: VIP skipped every weight column whose sum of squares was below
+  eps, so SIMPLS (whose stored weights scale as 1 / ||X||) on X = 2^30 [a, b],
+  Y = a returned VIP (0, 0) with status OK instead of (sqrt 2, 0) (same at
+  2^254), and it refused NIPALS on X = [a, b], Y = 2^-30 a ("Y variance
+  explained by components vanished") because sum_a ||t_a||^2 ||q_a||^2 was
+  below eps. The selectivity ratio divided by max(residual, eps): with
+  X = s [a + b, a - b], Y = a (explained and residual sums both 20 s^2, ratio
+  1) it returned 0.078125 at s = 2^-30 and ~6.7e-138 at s = 2^-256. VIP now
+  forms SSY_a / sum SSY and w_ja / ||w_a|| from scaled norms with no
+  threshold and leaves out only components that are flagged unresolved or
+  have an exactly zero weight, score or Y-loading column (refusal only when
+  none remains: VIP undefined). The selectivity ratio divides the two sums
+  accumulated on the column scaled by the exact power of two of its largest
+  value; an exactly zero residual gives +inf (0 for a column that is zero in
+  model space), as documented in `feature_selection.h`. A before/after sweep
+  (300 random fits x NIPALS, SIMPLS, kernel, SVD, PCR, VIP and SR, 3000
+  rankings): 90 VIP refusals now succeed; 71 VIP results that were all zero
+  and 15 that dropped components with small SIMPLS/kernel weights are now
+  correct; 545 SR results that hit the floor change (residual below eps, e.g.
+  scaled data or as many components as the rank of X); every other VIP moves
+  by <= 6e-16 relative and every other SR by <= 5e-14 (residual just below
+  eps) or not at all. C++ and JS/WASM tests: VIP (sqrt 2, 0) for
+  X = 2^e [a, b], Y = 2^f a, e in {0, 30, 254, -200}, f in {0, -30, -200, 200};
+  (sqrt 1.6, sqrt 0.4) for Y = 2^f [2 a, b] with two components; (1, 1) for
+  X = [a, a] with a null second component; SR (1, 1) for s = 2^e,
+  e in {0, -30, -256, 30, 250} (every PLS solver); SR (+inf, 0) for NIPALS on
+  X = [a, 0].
 - T2-PLS variable selection (`n4m_feature_selection_t2_select`) works on
   models with null components. With a = (-3,-1,1,3), X = [a, 2a, 3a, 4a],
   Y = a and two components, the zero second weight column made the weight

@@ -54,7 +54,23 @@ N4M_API n4m_status_t n4m_feature_selection_interval_generator_is_fitted(
     const n4m_interval_generator_handle_t* handle, int* out_fitted);
 
 /* VIP / coefficient-magnitude / selectivity-ratio rankers (Phase 5a). Method
- * enum: 0=VIP, 1=coefficient magnitude, 2=selectivity ratio. */
+ * enum: 0=VIP, 1=coefficient magnitude, 2=selectivity ratio. Result:
+ * "scores" (1 x n_features), int64 "selected_indices" (top_k by descending
+ * score, lowest index on ties), scalars "n_features", "top_k", "method".
+ *
+ * VIP and the selectivity ratio need store_scores = 1 at fit time and do not
+ * depend on the units of X or Y (no magnitude threshold is applied).
+ *   VIP_j = sqrt(p sum_a SSY_a (w_ja / ||w_a||)^2 / sum_a SSY_a), with
+ *   SSY_a = ||t_a||^2 ||q_a||^2, over the components that are not flagged in
+ *   N4M_MODEL_UNRESOLVED_COMPONENTS and have nonzero weight, score and
+ *   Y-loading columns; N4M_ERR_NUMERICAL_FAILURE when no such component
+ *   remains (VIP undefined).
+ *   SR_j = ||T P_j'||^2 / ||x_j - T P_j'||^2 on the model-space column x_j
+ *   (X_j centred and scaled as at fit time); +inf when the residual is
+ *   exactly zero and the explained part is not, 0 when the column is
+ *   identically zero in model space. When the residual is only rounding
+ *   (e.g. as many components as the rank of X), SR is correspondingly large
+ *   but not meaningful beyond "fully explained". */
 N4M_API n4m_status_t n4m_feature_selection_variable_select_rank(
     n4m_context_t* ctx,
     const n4m_model_t* model,

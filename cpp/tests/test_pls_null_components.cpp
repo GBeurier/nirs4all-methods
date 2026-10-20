@@ -2,8 +2,9 @@
 //
 // Consumers of fitted PLS / PCR models with null components (components
 // flagged in N4M_MODEL_UNRESOLVED_COMPONENTS with zero W, P, R, T columns):
-// the PLS diagnostics and monitoring, the PLS-LDA / PLS-logistic heads and
-// the T2 variable selection. Every expected value is written down
+// the PLS diagnostics and monitoring, the PLS-LDA / PLS-logistic heads, the
+// T2 variable selection, and the scale invariance of VIP and the selectivity
+// ratio. Every expected value is written down
 // analytically with the centred, orthogonal a = (-3, -1, 1, 3),
 // b = (1, -3, 3, -1) (a'a = b'b = 20, a'b = 0), and the statistics of a model
 // with null components are compared with those of the model truncated to its
@@ -469,6 +470,115 @@ void test_t2_selection_null_component() {
         throw std::runtime_error("t2 selection differs from the one-component selection");
 }
 
+// Variable-importance scores (method 0 = VIP, 2 = selectivity ratio) of a
+// fitted model on its training X; the status is returned, the scores in `out`.
+n4m_status_t variable_scores(const Fit& f, std::vector<double> x, std::int64_t p,
+                             std::int32_t method, std::vector<double>& out) {
+    const n4m_matrix_view_t xv = view(x, 4, p);
+    n4m_method_result_t* result = nullptr;
+    const n4m_status_t st =
+        n4m_feature_selection_variable_select_rank(f.ctx, f.model, &xv, method, 1, &result);
+    if (st == N4M_OK) {
+        out = result_matrix(result, "scores");
+        n4m_method_result_destroy(result);
+    }
+    return st;
+}
+
+// VIP is invariant to the units of X and Y. X = 2^e [a, b], Y = 2^f a, one
+// component: w = (1, 0) for every solver (SIMPLS stores w / ||X w||, of
+// magnitude 2^-e), VIP = (sqrt 2, 0). The weight-norm and explained-variance
+// tests were absolute eps: SIMPLS returned (0, 0) from e = 30 on (also at
+// 2^254), NIPALS refused Y = 2^-30 a ("Y variance explained by components
+// vanished"). X = 2^e [a, b], Y = 2^f [2 a, b], two components:
+// SSY = (||t||^2 ||q||^2) = (80, 20) 2^2f, VIP = (sqrt 1.6, sqrt 0.4).
+// X = [a, a], Y = a, two components (null second component, flagged): the
+// VIP of the one-component model, (1, 1). Randomized SVD stops on its
+// default tolerance (weights within ~1e-9 here), hence its 1e-8 margin.
+void test_vip_scale_invariance() {
+    const double r2 = std::sqrt(2.0);
+    for (const auto& s : kSolvers) {
+        const double margin = s.solver == N4M_SOLVER_RANDOMIZED_SVD ? 1e-8 : kTol;
+        for (const int e : {0, 30, 254, -200}) {
+            for (const int f : {0, -30, -200, 200}) {
+                std::vector<double> x(8), y(4), y2(8);
+                for (std::size_t i = 0; i < 4; ++i) {
+                    x[i * 2] = std::ldexp(kA[i], e);
+                    x[i * 2 + 1] = std::ldexp(kB[i], e);
+                    y[i] = std::ldexp(kA[i], f);
+                    y2[i * 2] = std::ldexp(2.0 * kA[i], f);
+                    y2[i * 2 + 1] = std::ldexp(kB[i], f);
+                }
+                const std::string where = std::string(s.tag) + " VIP X = 2^" + std::to_string(e) +
+                                          " [a, b], Y = 2^" + std::to_string(f);
+                Fit one, two;
+                fit(one, N4M_ALGO_PLS_REGRESSION, s.solver, x, 2, y, 1, 1);
+                std::vector<double> vip;
+                if (variable_scores(one, x, 2, 0, vip) != N4M_OK)
+                    throw std::runtime_error(where + " a: refused: " + n4m_context_last_error(one.ctx));
+                expect_close(where + " a", vip, {r2, 0.0}, margin);
+                fit(two, N4M_ALGO_PLS_REGRESSION, s.solver, x, 2, y2, 2, 2);
+                if (variable_scores(two, x, 2, 0, vip) != N4M_OK)
+                    throw std::runtime_error(where + " [2a, b]: refused: " +
+                                             n4m_context_last_error(two.ctx));
+                expect_close(where + " [2a, b]", vip, {std::sqrt(1.6), std::sqrt(0.4)}, margin);
+            }
+        }
+        std::vector<double> x(8), y(4);
+        for (std::size_t i = 0; i < 4; ++i) {
+            x[i * 2] = x[i * 2 + 1] = kA[i];
+            y[i] = kA[i];
+        }
+        Fit two;
+        fit(two, N4M_ALGO_PLS_REGRESSION, s.solver, x, 2, y, 1, 2);
+        if (model_array(two, N4M_MODEL_UNRESOLVED_COMPONENTS) != std::vector<double>{0.0, 1.0})
+            throw std::runtime_error(std::string(s.tag) + " VIP [a, a]: expected a null component");
+        std::vector<double> vip;
+        N4M_TEST_REQUIRE(variable_scores(two, x, 2, 0, vip) == N4M_OK);
+        expect_close(std::string(s.tag) + " VIP X = [a, a]", vip, {1.0, 1.0});
+    }
+}
+
+// The selectivity ratio is invariant to the units of X. X = s [a + b, a - b],
+// Y = a, one component: t = s sqrt 2 a, T P' = s [a, a], so the explained
+// and residual sums are both 20 s^2 and SR = (1, 1) for every s != 0. The
+// residual was floored at eps: (0.078125, 0.078125) at s = 2^-30, ~6.7e-138
+// at s = 2^-256. A residual that is exactly zero is published explicitly:
+// NIPALS on X = [a, 0], Y = a reconstructs the first column exactly
+// (w = p = (1, 0), t = a), SR = +inf; the second column is identically
+// zero, SR = 0 (nothing to explain).
+void test_selectivity_ratio_scale_invariance() {
+    for (const auto& s : kSolvers) {
+        for (const int e : {0, -30, -256, 30, 250}) {
+            std::vector<double> x(8), y(4);
+            for (std::size_t i = 0; i < 4; ++i) {
+                x[i * 2] = std::ldexp(kA[i] + kB[i], e);
+                x[i * 2 + 1] = std::ldexp(kA[i] - kB[i], e);
+                y[i] = kA[i];
+            }
+            const std::string where =
+                std::string(s.tag) + " SR X = 2^" + std::to_string(e) + " [a + b, a - b]";
+            Fit f;
+            fit(f, N4M_ALGO_PLS_REGRESSION, s.solver, x, 2, y, 1, 1);
+            std::vector<double> sr;
+            if (variable_scores(f, x, 2, 2, sr) != N4M_OK)
+                throw std::runtime_error(where + ": refused: " + n4m_context_last_error(f.ctx));
+            expect_close(where, sr, {1.0, 1.0}, 1e-11);
+        }
+    }
+    std::vector<double> x(8, 0.0), y(4);
+    for (std::size_t i = 0; i < 4; ++i) {
+        x[i * 2] = kA[i];
+        y[i] = kA[i];
+    }
+    Fit f;
+    fit(f, N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS, x, 2, y, 1, 1);
+    std::vector<double> sr;
+    N4M_TEST_REQUIRE(variable_scores(f, x, 2, 2, sr) == N4M_OK);
+    if (!(sr.size() == 2 && std::isinf(sr[0]) && sr[0] > 0.0 && sr[1] == 0.0))
+        throw std::runtime_error("SR X = [a, 0]: expected (+inf, 0)");
+}
+
 }  // namespace
 
 void register_pls_null_component_tests(n4m_testing::Runner& r) {
@@ -480,4 +590,7 @@ void register_pls_null_component_tests(n4m_testing::Runner& r) {
     r.run("pls_null_components/score_heads", test_score_heads_null_component);
     r.run("pls_null_components/lda_no_direction", test_lda_no_direction);
     r.run("pls_null_components/t2_selection", test_t2_selection_null_component);
+    r.run("pls_null_components/vip_scale_invariance", test_vip_scale_invariance);
+    r.run("pls_null_components/selectivity_ratio_scale_invariance",
+          test_selectivity_ratio_scale_invariance);
 }
