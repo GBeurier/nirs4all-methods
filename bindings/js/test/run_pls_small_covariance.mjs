@@ -41,6 +41,9 @@
 //      [[1, 2^-29 ...], [0, 2^-51 ...]], predictions = Y, every solver.
 //  (8) X = [a, b], Y = [a, 100 x (2^-29 a + 2^-52 b)]: no residual entry
 //      above eps (NIPALS and kernel refused); same coefficients pattern.
+//  (9) X = [a3, b3], Y = [a3 + d b3, d a3 + b3], d = 2^-12, 2^-20, 2^-30:
+//      close leading singular values 20 (1 +- d); every solver and PLS-DA
+//      returns the dominant direction (1, 1) / sqrt 2 (see below).
 
 import assert from "node:assert/strict";
 import * as n4m from "../dist/index.js";
@@ -326,6 +329,36 @@ for (const [va, vb, copies, e, sigmaMax] of [[a3, b3, 64, 51, sqrt20], [a, b, 10
             }
         }
         ++cases;
+    }
+}
+// (9) close leading singular values: X = [a3, b3], Y = [a3 + d b3, d a3 + b3],
+// d = 2^-e, one component; X'Y = 20 [[1, d], [d, 1]], singular values
+// 20 (1 +- d). SIMPLS failed to converge and NIPALS, kernel, power and
+// randomized SVD stopped on the weights (1, 0). With s = 1/sqrt 2,
+// h = (1 + d) / 2: coefficients h, predictions h (a3 + b3); unit X weights:
+// W = P = R = (s, s), T = s (a3 + b3), Q = (1 + d) s (1, 1), U = s (a3 + b3)
+// (u = Y q / q'q) or (1 + d) s (a3 + b3) (unit Y weights); unit-norm X
+// scores: W = R = (1, 1)/sqrt 40, T = U = (a3 + b3)/sqrt 40,
+// P = sqrt 10 (1, 1), Q = (1 + d) sqrt 10 (1, 1). PLS-DA too.
+for (const e of [12, 20, 30]) {
+    const d = p2(-e), h = (1 + d) / 2, s = Math.SQRT1_2, r40 = 1 / Math.sqrt(40), r10 = Math.sqrt(10);
+    const x = a3.flatMap((v, i) => [v, b3[i]]);
+    const y = a3.flatMap((v, i) => [v + d * b3[i], d * v + b3[i]]);
+    const ab = combine3(1, 1);
+    for (const s0 of SOLVERS) {
+        const [tag, algorithm, solver, unitScores, rawY] = s0;
+        if (algorithm === PCR) continue;  // X'X = 20 I: PCR is undetermined
+        const want = unitScores
+            ? [[h, h, h, h], [r40, r40], [r10, r10], [(1 + d) * r10, (1 + d) * r10], [r40, r40],
+               ab.map((v) => r40 * v), ab.map((v) => r40 * v)]
+            : [[h, h, h, h], [s, s], [s, s], [(1 + d) * s, (1 + d) * s], [s, s], ab.map((v) => s * v),
+               ab.map((v) => (rawY && solver !== 2 ? (1 + d) * s : s) * v)];
+        want.push(resolution(PLS, x, 2, y, 1), [0], ab.flatMap((v) => [h * v, h * v]));
+        for (const [label, alg] of [["", PLS], [" (PLS-DA)", PLS_DA]]) {
+            check(`${tag}${label} X = [a3, b3], Y = [a3 + 2^-${e} b3, 2^-${e} a3 + b3]`,
+                  fit([tag, alg, solver], x, 2, y, 1, 2), want);
+            ++cases;
+        }
     }
 }
 // Models without a component resolution (here canonical PLS) refuse the
