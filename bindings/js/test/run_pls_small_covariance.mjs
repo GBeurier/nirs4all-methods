@@ -17,8 +17,10 @@
 //  (4) X = [a, 2^-32 b], Y = b, one component: PLS coefficients (0, 2^32),
 //      predictions = Y; PCR keeps direction a (Q = 0, coefficients 0, U = 0:
 //      u = Y q / q'q is undefined).
-//  (3) X = [a, a]: the second component does not exist and is refused with
-//      N4M_ERR_NUMERICAL_FAILURE.
+//  (3) X = [a, a], Y = a + b, two components: the second component does not
+//      exist; every solver publishes it as a null component flagged
+//      unresolved (zero W, P, Q, R, T, U columns), coefficients (1/2, 1/2),
+//      predictions = a.
 // Every fit also publishes its component resolution ((n + a) eps ||X|| ||Y||
 // for PLS, (n + p) eps sigma_max ||Y|| for PCR) and per-component unresolved
 // flags, checked on the fitted model, on the imported one and through
@@ -28,7 +30,8 @@
 //  (5) X = a3, Y = b3 + 2^-50 a3: exactly Q = 2^-50 and U = 2^50 Y, but the
 //      cross-covariance 20 2^-50 is below the PCR resolution: PCR flags the
 //      component unresolved (U column zero, Q = 2^-50, coefficient 2^-50);
-//      every PLS solver refuses.
+//      every PLS solver (and PLS-DA) publishes a null component flagged
+//      unresolved: all latent arrays 0, coefficient 0, predictions = Y mean.
 //  (6) X = [2 a3, b3], Y = [a3 + 2^-48 b3, 3 a3 - 2^-48 b3], PCR, two
 //      components: Q = [[1/2, 2^-48], [3/2, -2^-48]], the second unresolved,
 //      U = [Y q1 / q1'q1, 0].
@@ -48,9 +51,8 @@ const M = n4m.getModule();
 const cc = (name, args) => M.ccall(name, "number", args.map(() => "number"), args);
 const ok = (status, what) => assert.equal(status, 0, `${what} failed with status ${status}`);
 
-const NUMERICAL_FAILURE = 7;
 const UNSUPPORTED = 10;
-const PLS = 0, PCR = 10;
+const PLS = 0, PLS_DA = 3, PCR = 10;
 const SOLVERS = [
     // tag, algorithm, solver, unit-norm X scores, U = y for one target
     ["nipals", PLS, 0, false, false],
@@ -184,6 +186,18 @@ function check(where, result, want) {
                      `${where}: NativeModel unresolved flags`);
 }
 
+// Every column `comp` of W, P, R (p x a), Q (q x a), T, U (4 x a) is +0.
+function expectNullComponent(where, result, components, comp, p, q = 1) {
+    [p, p, q, p, 4, 4].forEach((rows, k) => {
+        const values = result.fitted[k + 1];
+        assert.equal(values.length, rows * components, `${where}: ${ARRAYS[k + 1][1]} size`);
+        for (let row = 0; row < rows; ++row) {
+            assert.ok(Object.is(values[row * components + comp], 0),
+                      `${where}: ${ARRAYS[k + 1][1]} column ${comp} of the null component`);
+        }
+    });
+}
+
 // Expected resolution (n = 4): PLS (n + a) eps ||X|| ||Y||, PCR
 // (n + p) eps sigma_max ||Y||.
 const resolution = (algorithm, x, p, y, components, sigmaMax) =>
@@ -240,26 +254,34 @@ for (const e of [25, 30]) {
         ++cases;
     }
 }
-// (3) rank-one X: the second component is refused explicitly.
+// (3) rank-one X: the second component is a flagged null component.
 {
-    const x = a.flatMap((v) => [v, v]);
+    const x = a.flatMap((v) => [v, v]), y = combine(1, 1);
     for (const s of SOLVERS) {
-        assert.equal(fit(s, x, 2, combine(1, 1), 2).status, NUMERICAL_FAILURE,
-            `${s[0]} X = [a, a]: second component not refused`);
+        const where = `${s[0]} X = [a, a], Y = a + b`;
+        const result = fit(s, x, 2, y, 2);
+        check(where, result, [[0.5, 0.5], undefined, undefined, undefined, undefined, undefined, undefined,
+                              resolution(s[1], x, 2, y, 2, Math.sqrt(8)), [0, 1], combine(1, 0)]);
+        expectNullComponent(where, result, 2, 1, 2);
         ++cases;
     }
 }
 const a3 = [-3, -1, 1, 3], b3 = [1, -3, 3, -1];
 const combine3 = (ca, cb) => a3.map((v, i) => ca * v + cb * b3[i]);
 const sqrt20 = Math.sqrt(20);
-// (5) unresolved PCR component; PLS refuses.
+// (5) unresolved PCR component (kept); PLS and PLS-DA publish a null component.
 {
     const x = combine3(1, 0), y = combine3(p2(-50), 1);
     for (const s of SOLVERS) {
         const [tag, algorithm] = s;
         const result = fit(s, x, 1, y, 1);
         if (algorithm !== PCR) {
-            assert.equal(result.status, NUMERICAL_FAILURE, `${tag} X = a3, Y = b3 + 2^-50 a3: not refused`);
+            const zeros = [0, 0, 0, 0];
+            const want = [[0], [0], [0], [0], [0], zeros, zeros, resolution(PLS, x, 1, y, 1), [1], zeros];
+            for (const [label, run] of [["", result], [" (PLS-DA)", fit([tag, PLS_DA, s[2]], x, 1, y, 1)]]) {
+                check(`${tag} X = a3, Y = b3 + 2^-50 a3${label}`, run, want);
+                expectNullComponent(`${tag}${label}`, run, 1, 0, 1);
+            }
         } else {
             check(`${tag} X = a3, Y = b3 + 2^-50 a3`, result,
                   [[p2(-50)], [1], [1], [p2(-50)], [1], x, [0, 0, 0, 0],

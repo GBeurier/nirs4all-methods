@@ -12,8 +12,11 @@ export interface ComponentResolution {
      *  Y units, shared by every component. */
     resolution: number;
     /** Per component: true when its cross-covariance is not above the
-     *  resolution. Not resolved numerically: the exact value may be zero
-     *  (Y side mathematically undefined) or merely below the bound. */
+     *  resolution, whether mathematically undefined (exact value zero) or
+     *  merely not resolved numerically (below the bound). PLS publishes such
+     *  a component, and every later one, as a null component (zero latent
+     *  columns, no contribution to the coefficients); PCR keeps a resolved
+     *  X direction (n4m.h, N4M_MODEL_UNRESOLVED_COMPONENTS). */
     unresolved: boolean[];
 }
 

@@ -377,9 +377,11 @@ class Model:
         The PLS regression solvers and PCR record one absolute resolution of
         the components' X-Y cross-covariance (centred, scaled X times Y
         units) and a boolean flag per component that is ``True`` when that
-        cross-covariance is not above it. Unresolved means not resolved
-        numerically: the exact value may be zero (the component's Y side is
-        then mathematically undefined) or merely below the bound. Returns
+        cross-covariance is not above it, whether it is mathematically
+        undefined (exact value zero) or merely not resolved numerically
+        (below the bound). PLS publishes such a component, and every later
+        one, as a null component (zero latent columns, no contribution to the
+        coefficients); PCR keeps a resolved X direction. Returns
         ``None`` for models that do not record it (other algorithms, N4MM
         v1/v2 payloads).
         """
