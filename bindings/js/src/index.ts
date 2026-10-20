@@ -40,7 +40,7 @@ export {
     type PpOperator,
 } from "./preprocessing.js";
 export { MethodResult } from "./methodResult.js";
-export { NativeModel } from "./nativeModel.js";
+export { NativeModel, type ComponentResolution } from "./nativeModel.js";
 export { NativeEstimator, NativeMethod, NativeProcedure, manifest, methodClass, type Augmenter, type Classifier, type FitInputs, type Fold, type ParamType, type ParamValue, type ProbabilisticClassifier, type Procedure, type ProcedureOutput, type Regressor, type SampleFilter, type Selector, type Splitter, type TargetMixingAugmenter, type Transformer } from "./estimatorRoles.js";
 export * from "./estimatorRolesGenerated.js";
 export { RolePipeline, type ClassLabel, type PipelineRole, type RolePipelineState, type RolePipelineStepInfo, type RoleStep } from "./rolePipeline.js";
@@ -74,6 +74,7 @@ export {
     Algorithm,
     Solver,
     Deflation,
+    ModelArray,
     N4mError,
     type Matrix,
 } from "./types.js";
