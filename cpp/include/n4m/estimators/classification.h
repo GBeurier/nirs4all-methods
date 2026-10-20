@@ -27,7 +27,15 @@ N4M_API n4m_status_t n4m_estimators_sparse_pls_da_fit(
     n4m_method_result_t** out_result);
 
 /* PLS-QDA (§5). Quadratic discriminant analysis on PLS scores.
- * `y_labels` is a length-n_samples buffer of non-negative class IDs.
+ * `y_labels` is a length-n_samples buffer of non-negative class IDs. The
+ * scores are those of the PLS-DA SIMPLS solver on the one-hot labels
+ * (centred, unscaled X; only cfg's n_components is used): unit-norm
+ * t = (x - x_mean) R, independent of the units of X. A null PLS-DA component
+ * (flagged unresolved, e.g. beyond the rank of X) has a zero rotation column
+ * and zero class-mean and covariance rows / columns, and the discriminant
+ * uses the resolved components only (log class priors when none is). A
+ * class covariance that is singular on the resolved components is refused
+ * (N4M_ERR_NUMERICAL_FAILURE).
  * The result contains:
  *   "class_means"        (n_classes x n_components)
  *   "class_covariances"  (n_classes x (n_components * n_components))

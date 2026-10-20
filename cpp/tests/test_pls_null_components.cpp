@@ -634,6 +634,70 @@ void test_dmodx_degenerate_reference() {
     }
 }
 
+// PLS-QDA on X = 2^e [x, x], x = (-4, -3, -2, -1, 1, 2, 3, 5), classes
+// (0, 0, 1, 0, 1, 1, 0, 1), one and two components. X has rank one: the
+// scores are t = +-(x - 1/8) / sqrt S with S = ||x - 1/8||^2 = 68.875, and a
+// second component does not exist (a flagged null component of the PLS-DA
+// solver). With m_c and SS_c the class mean and sum of squares of x
+// (m = (-1.25, 1.5), SS = (28.75, 25)) and v_c = SS_c / 3, the decision is
+//   -0.5 ((x_i - m_c)^2 / v_c + log(v_c / S)) + log(1/2),
+// the class means +-(m_c - 1/8) / sqrt S, the class variances v_c / S (zero
+// rows and columns for the null component) for every e, and the rotations
+// +-2^-e (1, 1) / (2 sqrt S). Two components were refused (the
+// second class-covariance pivot was rounding noise), and after X 2^-50 one
+// component too (the old kernel's absolute 1e-12 thresholds stopped before
+// the first component).
+void test_pls_qda_rank_and_scale() {
+    const double xs[8] = {-4.0, -3.0, -2.0, -1.0, 1.0, 2.0, 3.0, 5.0};
+    const std::int32_t labels[8] = {0, 0, 1, 0, 1, 1, 0, 1};
+    const double S = 68.875;
+    const double mean[2] = {-1.25, 1.5};
+    const double var[2] = {28.75 / 3.0, 25.0 / 3.0};
+    std::vector<double> decision(16);
+    for (std::size_t i = 0; i < 8; ++i) {
+        for (std::size_t c = 0; c < 2; ++c) {
+            const double d = xs[i] - mean[c];
+            decision[i * 2 + c] = -0.5 * (d * d / var[c] + std::log(var[c] / S)) + std::log(0.5);
+        }
+    }
+    for (const int e : {0, -50, 50, -200, 250}) {
+        for (const std::int32_t components : {1, 2}) {
+            const std::string where = "PLS-QDA X = 2^" + std::to_string(e) + " [x, x], " +
+                                      std::to_string(components) + " component(s)";
+            std::vector<double> x(16);
+            for (std::size_t i = 0; i < 8; ++i) x[i * 2] = x[i * 2 + 1] = std::ldexp(xs[i], e);
+            n4m_context_t* ctx = nullptr;
+            n4m_config_t* cfg = nullptr;
+            N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, components) == N4M_OK);
+            const n4m_matrix_view_t xv = view(x, 8, 2);
+            n4m_method_result_t* result = nullptr;
+            const n4m_status_t st = n4m_estimators_pls_qda_fit(ctx, cfg, &xv, labels, 8, &result);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": refused: " + n4m_context_last_error(ctx));
+            expect_close(where + " decision", result_matrix(result, "predictions"), decision);
+            const std::size_t a = static_cast<std::size_t>(components);
+            const std::vector<double> means = result_matrix(result, "class_means");
+            const std::vector<double> covariances = result_matrix(result, "class_covariances");
+            const std::vector<double> rotations = result_matrix(result, "rotations_r");
+            const double sign = rotations[0] > 0.0 ? 1.0 : -1.0;
+            std::vector<double> want_means(2 * a, 0.0), want_cov(2 * a * a, 0.0), want_rot(2 * a, 0.0);
+            for (std::size_t c = 0; c < 2; ++c) {
+                want_means[c * a] = sign * (mean[c] - 0.125) / std::sqrt(S);
+                want_cov[c * a * a] = var[c] / S;
+            }
+            want_rot[0] = want_rot[a] = sign * std::ldexp(1.0, -e) / (2.0 * std::sqrt(S));
+            expect_close(where + " class means", means, want_means);
+            expect_close(where + " class covariances", covariances, want_cov);
+            expect_close(where + " rotations", rotations, want_rot, kTol * std::ldexp(1.0, -e));
+            n4m_method_result_destroy(result);
+            n4m_config_destroy(cfg);
+            n4m_context_destroy(ctx);
+        }
+    }
+}
+
 }  // namespace
 
 void register_pls_null_component_tests(n4m_testing::Runner& r) {
@@ -649,4 +713,5 @@ void register_pls_null_component_tests(n4m_testing::Runner& r) {
     r.run("pls_null_components/selectivity_ratio_scale_invariance",
           test_selectivity_ratio_scale_invariance);
     r.run("pls_null_components/dmodx_degenerate_reference", test_dmodx_degenerate_reference);
+    r.run("pls_null_components/pls_qda_rank_and_scale", test_pls_qda_rank_and_scale);
 }
