@@ -9,6 +9,7 @@
 // nothing: their state is the input width alone.
 
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <new>
@@ -44,7 +45,7 @@ n4m_status_t standard_scale_fit(StandardScaleState* state, const double* values,
     }
     // Translation before the shared population arithmetic preserves exact
     // constants and avoids summing a large common offset repeatedly.
-    std::vector<double> anchor(centered.begin(), centered.begin() + cols);
+    std::vector<double> anchor(centered.begin(), centered.begin() + static_cast<std::ptrdiff_t>(cols));
     for (std::int64_t row = 0; row < rows; ++row) {
         for (std::int64_t col = 0; col < cols; ++col) {
             centered[static_cast<std::size_t>(row * cols + col)] -= anchor[static_cast<std::size_t>(col)];

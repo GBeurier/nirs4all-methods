@@ -37,7 +37,7 @@ Summaries discard detailed temporal ordering and cannot replace a sequence model
 
 ### Implementation
 
-The native utilities.ragged_summary procedure uses the existing n4m_procedure_run ABI. cpp/src/core/estimator/procedures.cpp accumulates means and squared deviations in extended precision and checks the resulting double features. Python/R/JS/Rust bindings marshal typed parameters and matrices without recomputing statistics. Independent NumPy population reductions and malformed-boundary cases qualify it.
+The native utilities.ragged_summary procedure uses the existing n4m_procedure_run ABI. cpp/src/core/estimator/procedures.cpp accumulates means and squared deviations by Welford updates in double on each channel prescaled by an exact power of two, so no intermediate overflows for finite input on any platform, and checks the resulting double features. Python/R/JS/Rust bindings marshal typed parameters and matrices without recomputing statistics. Independent NumPy population reductions and malformed-boundary cases qualify it.
 
 ### Sources and provenance
 

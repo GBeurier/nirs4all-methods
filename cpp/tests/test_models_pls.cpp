@@ -750,7 +750,7 @@ void expect_fit(const std::string& where, const AnalyticArrays& fitted,
 // solver's accumulation order).
 long double frobenius(const std::vector<double>& v) {
     long double ss = 0.0L;
-    for (double x : v) ss += static_cast<long double>(x) * x;
+    for (double x : v) ss += static_cast<long double>(x) * static_cast<long double>(x);
     return std::sqrt(ss);
 }
 
@@ -759,7 +759,7 @@ long double frobenius(const std::vector<double>& v) {
 std::vector<double> expected_resolution(const AnalyticSolver& s, const std::vector<double>& x,
                                         int p, const std::vector<double>& y, int components,
                                         long double sigma_max) {
-    const long double eps = std::numeric_limits<double>::epsilon();
+    const long double eps = static_cast<long double>(std::numeric_limits<double>::epsilon());
     const long double value = s.algorithm == N4M_ALGO_PCR
                                   ? (4 + p) * eps * sigma_max * frobenius(y)
                                   : (4 + components) * eps * frobenius(x) * frobenius(y);
@@ -1228,7 +1228,8 @@ void test_pls_close_singular_values() {
                 want.arrays[5] = t;
                 want.arrays[6] = u;
                 want.predictions = predictions;
-                want.resolution = expected_resolution(run, x, 2, y, 1, 20.0L * (1.0L + d));
+                want.resolution = expected_resolution(
+                    run, x, 2, y, 1, 20.0L * (1.0L + static_cast<long double>(d)));
                 want.unresolved = {0.0};
                 expect_fit(where, fitted, restored, want);
             }

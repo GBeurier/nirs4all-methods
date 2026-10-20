@@ -552,6 +552,35 @@ void offset_strata_case(n4m_context_t* ctx) {
     }
 }
 
+// 1.3.8: an offset stratum whose mean is not a double. X = [c, c+1, c+3, 1,
+// 2, 3, 4, 6], strata B = [0 0 0 1 1 1 1 1], term A = [0 1 1 0 0 1 1 1]:
+// the centred X is exact, the stratum means (thirds, fifths) are not. Rational
+// oracle of the additive model strata + term, independent of c: SS_A =
+// 5041/420, SS_res = 209/28, F = 5041/627, partial R^2 = 5041/8176. A
+// stratum mean or a reduced-model basis rounded to double shifted the rows
+// by about DBL_EPSILON c (relative error 5e-11 on x86, 7e-9 where long
+// double is double, at c = 2^31).
+void inexact_strata_mean_case(n4m_context_t* ctx) {
+    int64_t term[8] = {0, 1, 1, 0, 0, 1, 1, 1}, strata[8] = {0, 0, 0, 1, 1, 1, 1, 1};
+    int64_t counts[2];
+    const double ss_a = 5041.0 / 420.0, ss_res = 209.0 / 28.0, f = 5041.0 / 627.0,
+                 r2 = 5041.0 / 8176.0;
+    for (int e : {0, 20, 31}) {
+        const double c = std::ldexp(1.0, e);
+        double x[8] = {c, c + 1, c + 3, 1, 2, 3, 4, 6};
+        auto X = view(x, 8, 1);
+        Permanova r{};
+        REQUIRE(permanova(ctx, X, term, strata, 0, 1, r) == N4M_OK && g_exp == 0);
+        REQUIRE(rel_near(r.v[2], ss_a) && rel_near(r.v[3], ss_res) && rel_near(r.v[6], f));
+        REQUIRE(rel_near(r.v[5], r2) && r.v[14] == 0.0);
+        double fl[14];
+        REQUIRE(n4m_stats_permanova_freedman_lane(ctx, &X, term, strata, 1, 0, 1, fl, counts,
+                                                  &g_exp) == N4M_OK && g_exp == 0);
+        REQUIRE(rel_near(fl[2], ss_a) && rel_near(fl[3], ss_res) && rel_near(fl[6], f));
+        REQUIRE(rel_near(fl[5], r2) && fl[13] == 0.0);
+    }
+}
+
 // Round 5 P0-3: F is published whenever the residual SS is positive; the
 // error estimate only flags it. (a) 16 rows, columns A in {-1, +1} and
 // 2^-31 r (r alternating +-1 in each A group; spread 2^31, inside D):
@@ -726,6 +755,7 @@ int main() {
         cancellation_case(ctx);
         dyadic_case(ctx);
         offset_strata_case(ctx);
+        inexact_strata_mean_case(ctx);
         resolution_case(ctx);
         size_limits(ctx);
 

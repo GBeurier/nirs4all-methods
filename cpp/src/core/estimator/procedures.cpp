@@ -812,19 +812,29 @@ n4m_status_t run_ragged_summary(n4m_context_t* ctx, const Params& params, const 
         const auto count = end - start;
         auto* output = features.data() + sample * width;
         for (std::int64_t col = 0; col < X.cols; ++col) {
-            long double mean = 0.0L, m2 = 0.0L;
+            const auto* column = static_cast<const double*>(X.data) + col * X.col_stride;
             double lo = 0.0, hi = 0.0;
             for (auto row = start; row < end; ++row) {
-                const double value = static_cast<const double*>(X.data)[row * X.row_stride + col * X.col_stride];
+                const double value = column[row * X.row_stride];
                 if (!std::isfinite(value)) return invalid("present packed observations must be finite");
                 if (row == start) lo = hi = value;
                 else { lo = std::min(lo, value); hi = std::max(hi, value); }
-                const long double delta = static_cast<long double>(value) - mean;
-                mean += delta / static_cast<long double>(row - start + 1);
-                m2 += delta * (static_cast<long double>(value) - mean);
             }
-            output[static_cast<std::size_t>(4 * col)] = static_cast<double>(mean);
-            output[static_cast<std::size_t>(4 * col + 1)] = static_cast<double>(std::sqrt(std::max(0.0L, m2 / static_cast<long double>(count))));
+            // Welford updates in double on the channel prescaled by the exact
+            // power of two 2^-e bounding max |x|: deltas stay below 2 in
+            // magnitude, so no intermediate overflows for any finite input,
+            // whatever the width of long double.
+            int e = 0;
+            std::frexp(std::max(std::abs(lo), std::abs(hi)), &e);
+            double mean = 0.0, m2 = 0.0;
+            for (auto row = start; row < end; ++row) {
+                const double value = std::ldexp(column[row * X.row_stride], -e);
+                const double delta = value - mean;
+                mean += delta / static_cast<double>(row - start + 1);
+                m2 += delta * (value - mean);
+            }
+            output[static_cast<std::size_t>(4 * col)] = std::ldexp(mean, e);
+            output[static_cast<std::size_t>(4 * col + 1)] = std::ldexp(std::sqrt(std::max(0.0, m2 / static_cast<double>(count))), e);
             output[static_cast<std::size_t>(4 * col + 2)] = lo;
             output[static_cast<std::size_t>(4 * col + 3)] = hi;
         }

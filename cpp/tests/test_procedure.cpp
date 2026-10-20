@@ -1095,6 +1095,34 @@ void test_entry_points(n4m_context_t* ctx) {
     CHECK(out.p == nullptr);
 }
 
+// 1.3.8: one sequence [1e308, -1e308]. The Welford deltas (2e308) overflowed
+// in double where long double is double (MSVC, Apple arm64) and the call was
+// refused; mean 0, population std 1e308, min -1e308 and max 1e308 are finite.
+void test_ragged_summary_extremes(n4m_context_t* ctx) {
+    current_ = "ragged summary extremes";
+    int32_t index = -1;
+    CHECK(n4m_method_find("utilities.ragged_summary", &index) == N4M_OK);
+    n4m_params_t* params = nullptr;
+    CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+    const int64_t offsets[2] = {0, 2};
+    CHECK(n4m_params_set_int_array(params, "offsets", offsets, 2) == N4M_OK);
+    const double x[2] = {1e308, -1e308};
+    const n4m_matrix_view_t X = view(x, 2, 1);
+    n4m_fit_inputs_v1_t in{};
+    in.struct_size = sizeof(in);
+    in.X = &X;
+    ResultPtr out;
+    const n4m_status_t st = n4m_procedure_run(ctx, index, params, &in, &out.p);
+    n4m_params_destroy(params);
+    CHECK(st == N4M_OK);
+    const double* f = nullptr;
+    int64_t rows = 0, cols = 0;
+    CHECK(n4m_method_result_get_double_matrix(out.p, "features", &f, &rows, &cols) == N4M_OK);
+    CHECK(rows == 1 && cols == 7);
+    CHECK(f[0] == 0.0 && std::abs(f[1] - 1e308) <= 2e-15 * 1e308 && f[2] == -1e308 &&
+          f[3] == 1e308);
+}
+
 }  // namespace
 
 int main() {
@@ -1111,6 +1139,7 @@ int main() {
     };
     const Inputs inputs;
     guarded([&] { test_entry_points(ctx); });
+    guarded([&] { test_ragged_summary_extremes(ctx); });
     int32_t estimator_index = -1;
     n4m_method_find("models.pls.pls_regression", &estimator_index);
     int32_t count = 0;

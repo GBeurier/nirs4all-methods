@@ -552,8 +552,12 @@ N4M_API n4m_status_t n4m_stats_bh_adjust(
  * which the spread bound keeps below about n 2^-20 times the smallest nonzero
  * |x|. Every sum of squares is a sum of squared terms (residuals are
  * projected explicitly, never obtained as a difference of totals)
- * accumulated in long double, and F and all ratios are formed in the scaled
- * unit; for a well-conditioned design the relative error of a sum of
+ * accumulated in long double (no wider than double on MSVC or Apple arm64,
+ * and the bounds below assume only double). The stratum means and the
+ * Freedman-Lane reduced-model residuals are computed in double-double on
+ * every platform, so a large between-strata (or between-condition) offset
+ * does not round the within-strata rows. F and all ratios are formed in the
+ * scaled unit; for a well-conditioned design the relative error of a sum of
  * squares is about c n DBL_EPSILON and its absolute error about c n
  * DBL_EPSILON times the raw sum of squares. A pseudo-F is NaN (undefined, no
  * test) only when its residual SS is exactly zero. Otherwise it is published
@@ -606,8 +610,9 @@ N4M_API n4m_status_t n4m_stats_permanova(
  * df_term = rank(full) - rank(reduced), 0 when the term is aliased with the
  * conditions; df_residual = n - rank(full). pseudo-F =
  * (SS_term/df_term)/(SS_residual/df_residual), SS_term = SS(full) -
- * SS(reduced). The reduced-model residuals are projected off the reduced
- * design twice; SS_term and SS_residual come from one projection of them on
+ * SS(reduced). The reduced-model residuals are projected off a
+ * double-double orthonormal basis of the reduced design (double-double
+ * arithmetic); SS_term and SS_residual come from one projection of them on
  * the full design, so the partial R^2 is SS_term/(SS_term + SS_residual).
  * Monte Carlo test (n_permutations > 0 and a defined pseudo-F):
  * PCG64 as numpy.random.default_rng(seed); the b-th draw perm =
