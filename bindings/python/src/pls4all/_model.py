@@ -70,6 +70,10 @@ class ModelArrayKind(IntEnum):
     ROTATIONS_R = 9
     SCORES_T = 10
     Y_SCORES_U = 11
+    #: ABI 2.20, (1, 1): X-Y cross-covariance resolution of the components.
+    COMPONENT_RESOLUTION = 12
+    #: ABI 2.20, (1, n_components): 1.0 for a numerically unresolved component.
+    UNRESOLVED_COMPONENTS = 13
 
 
 SERIALIZED_MODEL_CAPABILITY_PREDICT = 1 << 0
@@ -367,13 +371,34 @@ class Model:
         finally:
             wrapper.close()
 
+    def component_resolution(self, ctx: Context) -> tuple[float, np.ndarray] | None:
+        """Component resolution and unresolved flags, or ``None``.
+
+        The PLS regression solvers and PCR record one absolute resolution of
+        the components' X-Y cross-covariance (centred, scaled X times Y
+        units) and a boolean flag per component that is ``True`` when that
+        cross-covariance is not above it. Unresolved means not resolved
+        numerically: the exact value may be zero (the component's Y side is
+        then mathematically undefined) or merely below the bound. Returns
+        ``None`` for models that do not record it (other algorithms, N4MM
+        v1/v2 payloads).
+        """
+        try:
+            resolution = self.get_array(ctx, ModelArrayKind.COMPONENT_RESOLUTION)
+        except Pls4allError as exc:
+            if exc.status == Status.ERR_UNSUPPORTED:
+                return None
+            raise
+        flags = self.get_array(ctx, ModelArrayKind.UNRESOLVED_COMPONENTS)
+        return float(resolution[0, 0]), flags.ravel() != 0.0
+
     @property
     def coefficients(self) -> np.ndarray:
         with Context() as ctx:
             return self.get_array(ctx, ModelArrayKind.COEFFICIENTS)
 
     def to_bytes(self) -> bytes:
-        """Serialize the fitted model to an N4MM v1 or v2 buffer.
+        """Serialize the fitted model to an N4MM v1, v2 or v3 buffer.
 
         This is a raw fitted-model payload, not a nirs4all ``.n4a`` pipeline
         bundle. The raw payload does not currently have a canonical filename
@@ -397,7 +422,7 @@ class Model:
         """Deserialize an N4MM buffer produced by :meth:`to_bytes`.
 
         Corrupt buffers and unsupported wire-format versions fail. The current
-        v1/v2 importer accepts writer ABI differences and records a
+        v1/v2/v3 importer accepts writer ABI differences and records a
         compatibility warning on ``ctx`` instead of rejecting the payload.
         """
         if not payload:
