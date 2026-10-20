@@ -1460,7 +1460,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "guaranteed work bound (QL iteration at its ceiling) exceeds 2.4 billion long-double "
         "product equivalents or whose live buffers exceed 1 GiB, and permutation tests above "
         "250 million operations, return `N4M_ERR_UNSUPPORTED`; "
-        "neighbor and pair searches are exhaustive and quadratic in rows.",
+        "neighbor and pair searches are exhaustive and quadratic in rows. The PCA limit is a "
+        "working bound, not a browser performance qualification: the WebAssembly kernel alone "
+        "(Node 22, i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s for 600 x 600, "
+        "k = 600.",
         "The ABI-2 symbols `n4m_preflight_{pca_compute,repeatability_compute,summary_compute,"
         "nearest_neighbors,local_contrast,noise_proxy_compute,pairs_within_tolerance,"
         "factor_association}` in `n4m/metrics.h` are implemented in "
@@ -1565,15 +1568,20 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "$\\sigma_j > 16\\max(n,p)\\,\\varepsilon\\,\\sigma_1$; with $r\\le k$ of them, "
         "$T_i^2=\\sum_{j=1}^r t_{ij}^2/\\lambda_j=(n-1)\\sum_{j=1}^r u_{ij}^2$, evaluated in the "
         "second, scale-invariant form. The upper control limit is "
-        "$r(n-1)(n+1)/[n(n-r)]\\,F_{1-\\alpha}(r,n-r)$, with the F quantile obtained by bisection "
-        "on the upper tail of the regularized incomplete beta function; $r=0$ gives $T^2=0$ and "
+        "$r(n-1)(n+1)/[n(n-r)]\\,F_{1-\\alpha}(r,n-r)$, solved directly in the UCL $G$: with "
+        "$\\kappa=(n^2-1)/n$, $G/(\\kappa+G)$ follows a Beta$(r/2,(n-r)/2)$ law whose small tail "
+        "(upper for $\\alpha\\le 0.5$, lower otherwise) is evaluated in logarithms from "
+        "$G/\\kappa$ and inverted by bisection on the normal doubles; $r=0$ gives $T^2=0$ and "
         "UCL $0$.",
         "Flagging multivariate score-space extremes directly from a calibration matrix when no "
         "PLS model object is involved.",
         "The implementation requires `rows >= cols`, $k< n$, finite dense F64 data, and treats "
         "the same input as both PCA fit and scored set. The finite-sample F limit assumes the "
-        "classical approximately normal model. A UCL that is not a finite normal double (only "
-        "for extreme $\\alpha$) returns `N4M_ERR_NUMERICAL_FAILURE`.",
+        "classical approximately normal model. The measured relative error of the UCL is below "
+        "$10^{-12}$ against mpmath references ($n$ up to $10^6$, $\\alpha$ from $10^{-300}$ to "
+        "$1-2^{-53}$), not a proven bound. A UCL that is not a finite normal double (only for "
+        "extreme $\\alpha$, e.g. $n=3$, $r=1$, $\\alpha<7.4\\times10^{-309}$) returns "
+        "`N4M_ERR_NUMERICAL_FAILURE`.",
         "`n4m.outlier_detection.hotelling_t2` wraps the stateless ABI-2 symbol "
         "`n4m_outlier_detection_hotelling_t2`; SVD, statistic, and UCL are in "
         "`cpp/src/core/utilities/hotelling_t2.c`.",
@@ -1590,7 +1598,12 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "compact SVD, the first $k$ components reconstruct each row. $Q_i=\\|x_i-\\hat "
         "x_i\\|_2^2$. The upper limit uses the Jackson–Mudholkar moment approximation from "
         "residual eigenvalue sums $\\theta_1,\\theta_2,\\theta_3$ and the upper standard-normal "
-        "quantile at $\\alpha$. Everything runs at one power-of-two scale and is rescaled at the "
+        "quantile $c_\\alpha$ at $\\alpha$, with the signed "
+        "$h_0=1-2\\theta_1\\theta_3/(3\\theta_2^2)$: $\\theta_1[1+c_\\alpha h_0\\sqrt{2\\theta_2}/"
+        "\\theta_1+\\theta_2h_0(h_0-1)/\\theta_1^2]^{1/h_0}$. For $h_0<0$, $(Q/\\theta_1)^{h_0}$ "
+        "decreases with Q, so the upper quantile of Q is the lower quantile of the approximating "
+        "normal (Nomikos & MacGregor 1995, appendix B); the limit is continuous through $h_0=0$. "
+        "Everything runs at one power-of-two scale and is rescaled at the "
         "end, so the moments cannot overflow or underflow, and scaling X by $2^s$ scales Q and "
         "the UCL by exactly $4^s$.",
         "Detecting observations whose variation lies outside a retained PCA subspace, "
@@ -1599,8 +1612,14 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "residual direction is resolved ($k=p$, constant X, or numerical rank at most $k$), Q "
         "and the UCL are exactly 0, a documented state rather than a measurement; Q values at "
         "or below $(16\\max(n,p)\\,\\varepsilon\\,\\sigma_1)^2$ are rounding noise. Values that are "
-        "not representable, or a non-positive Jackson–Mudholkar base (possible only for "
-        "$\\alpha>0.5$), return `N4M_ERR_NUMERICAL_FAILURE`. The Jackson–Mudholkar approximation "
+        "not representable, or a non-positive Jackson–Mudholkar base, return "
+        "`N4M_ERR_NUMERICAL_FAILURE`: the approximation then has no $\\alpha$-quantile. The base "
+        "is always positive when $h_0c_\\alpha\\ge0$, and when $h_0<0$ with "
+        "$\\alpha\\ge1-\\Phi(\\sqrt2)\\approx0.0786$; it can be non-positive for $h_0>0$ with "
+        "$\\alpha>0.5$, or for $h_0<0$ with a smaller $\\alpha$ (uneven residual spectra, e.g. "
+        "one residual eigenvalue 36.5 next to 159 equal to 1 at $\\alpha=0.01$). The "
+        "normal-quantile approximation has a relative error of about $1.15\\times10^{-9}$. "
+        "The Jackson–Mudholkar approximation "
         "can be poor for small samples, nonnormal residuals, or near-degenerate residual "
         "eigenvalues.",
         "`n4m.outlier_detection.q_residuals` wraps "

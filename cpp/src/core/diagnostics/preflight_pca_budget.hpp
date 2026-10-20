@@ -30,6 +30,14 @@
 // accepted: their worst case under this bound is 658 x 658, k = 1, 2.33e9
 // (enumerated in cpp/tests/test_preflight.cpp).
 //
+// The limit is a working bound on the computation, not a browser performance
+// qualification. Review measurements of the WebAssembly kernel alone (-O3,
+// Node 22 / V8, Intel i9-12900K, deterministic integer matrices): 658 x 658,
+// k = 1 (the worst accepted Preflight shape above), 6.27 s; 600 x 600,
+// k = 600 (outside the Preflight profile, k <= 10), 12.48 s. A browser
+// profile needs its own execution budget (p50/p95 timings, inter-module
+// copies, cumulative memory) before it can be called qualified.
+//
 // Memory: the doubles simultaneously live at the peak, all counted together
 // (an upper bound of the peak): the centred copy n p, the column exponents p
 // ints, the Gram matrix, the eigenvectors and the eigensolver's work copy

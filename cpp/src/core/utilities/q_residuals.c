@@ -187,14 +187,27 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
     /* Jackson-Mudholkar UCL from the residual eigenvalues, in the scaled
      * space: sigma_1 <= sqrt(n p), and sigma_k > tol >= 16 eps because
      * sigma_1 >= max|Xc| >= 0.5, so theta_1..3 and theta_2^2 are normal
-     * doubles. With A = ca sqrt(2 theta_2) / theta_1 and B = theta_2 /
-     * theta_1^2, the base of the power is 1 + g, g = |h0| A + h0 (h0 - 1) B,
-     * and base^(1/h0) = exp(log1p(g) / h0) keeps its accuracy as h0 nears 0
-     * (h0 = 0 exactly takes the limit h0 -> 0+, exp(A - B)). For alpha <= 0.5
-     * (ca >= 0), g > -1 always (h0 <= 1/3, B <= 1, and |h0| B <= 2/3 when
-     * h0 < 0), and the exponent stays within [-(A + 2), A]; a larger alpha can
-     * make the base non-positive, where the approximation has no value:
-     * explicit N4M_ERR_NUMERICAL_FAILURE instead of the former 0. */
+     * doubles. Y = (Q / theta_1)^h0 is approximately normal with mean
+     * 1 + h0 (h0 - 1) B and standard deviation |h0| sqrt(2 B), B = theta_2 /
+     * theta_1^2. Y increases with Q when h0 > 0 and decreases when h0 < 0, so
+     * the upper alpha-quantile of Q maps to the upper quantile of Y for h0 > 0
+     * and to the lower one for h0 < 0; both are 1 + g with
+     *     g = h0 C,  C = A + (h0 - 1) B,  A = ca sqrt(2 theta_2) / theta_1
+     * (Jackson & Mudholkar 1979; Nomikos & MacGregor 1995, appendix B). The
+     * former |h0| A kept the upper quantile of Y for h0 < 0 (a 14-column
+     * Hadamard example with h0 = -0.0676 gave 0.365 instead of 5.229).
+     * base^(1/h0) = exp(log1p(h0 C) / h0) tends to exp(C) = exp(A - B) as h0
+     * tends to 0 from either side (h0 = 0 takes that limit).
+     * The base 1 + g is positive whenever h0 ca >= 0 (for h0 > 0, h0 <= 1/3
+     * and B <= 1 give g >= h0 (h0 - 1) B >= -2/9; for h0 < 0 both terms are
+     * >= 0) and whenever h0 < 0 with ca <= sqrt(2), i.e. alpha >=
+     * 1 - Phi(sqrt(2)) ~ 0.0786 (1 + g >= (1 - |h0| sqrt(B))^2 + |h0| B).
+     * It can be non-positive only for h0 > 0 with alpha > 0.5, or h0 < 0
+     * with alpha < 0.0786 (e.g. residual eigenvalues 3.25^2 and 22 times 1,
+     * h0 = -0.46, at alpha = 1e-6): the approximating normal then puts more
+     * than alpha below Y = 0 (Q beyond every finite value), the approximation
+     * has no alpha-quantile, and the result is an
+     * explicit N4M_ERR_NUMERICAL_FAILURE. */
     if (st == N4M_OK) {
         const double inv_nm1 = 1.0 / (double)(n - 1);
         double theta1 = 0.0, theta2 = 0.0, theta3 = 0.0;
@@ -207,12 +220,12 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
         const double h0 = 1.0 - (2.0 * theta1 * theta3) / (3.0 * theta2 * theta2);
         const double A = inv_norm_upper_ref(alpha) * sqrt(2.0 * theta2) / theta1;
         const double B = theta2 / (theta1 * theta1);
+        const double C = A + (h0 - 1.0) * B;
         double ucl_scaled = 0.0;
         if (h0 == 0.0) {
-            ucl_scaled = theta1 * exp(A - B);
-        } else {
-            const double g = fabs(h0) * A + h0 * (h0 - 1.0) * B;
-            if (g > -1.0) ucl_scaled = theta1 * exp(log1p(g) / h0);
+            ucl_scaled = theta1 * exp(C);
+        } else if (h0 * C > -1.0) {
+            ucl_scaled = theta1 * exp(log1p(h0 * C) / h0);
         }
         st = (ucl_scaled > 0.0) ? unscale(ucl_scaled, 2 * e, 0.0, ucl_out)
                                 : N4M_ERR_NUMERICAL_FAILURE;

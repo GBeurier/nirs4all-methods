@@ -63,7 +63,9 @@ extern "C" {
  * Gram, eigenvectors and solver copy 3 s^2, loadings and their Householder
  * copy 2 k p, scores n k, vectors); limit 1 GiB. Every shape a Preflight
  * request can produce (n p <= 10^7, k <= 10) that Methods 1.3.6 accepted is
- * accepted.
+ * accepted. The limit is a working bound, not a browser performance
+ * qualification (WASM kernel alone, Node 22, i9-12900K: 658 x 658, k = 1,
+ * 6.27 s; 600 x 600, k = 600, 12.48 s).
  * Resolved eigenvalues, the resolution and both moments are normal doubles.
  * This 2.19 entry point cannot flag unresolved components;
  * n4m_preflight_pca_compute_resolved (ABI 2.20) returns the resolution and

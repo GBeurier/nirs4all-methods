@@ -73,6 +73,12 @@ the column exponents) accepted n = 3, p = 26e6, k = 1, which needs 1.144 GB.
 Every shape a Preflight request can produce (at most 10^7 cells, k <= 10)
 that Methods 1.3.6 or that estimate accepted is still accepted (enumerated in
 `cpp/tests/test_preflight.cpp`; the worst is 658 x 658, k = 1, at 2.33e9).
+The limit is a working bound on the computation, not a browser performance
+qualification: review measurements of the WebAssembly kernel alone (`-O3`,
+Node 22 / V8, Intel i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s
+for 600 x 600, k = 600 (outside the Preflight profile k <= 10). A browser
+profile needs its own execution budget (p50/p95 timings, inter-module copies,
+cumulative memory) before qualification.
 
 `n4m_outlier_detection_hotelling_t2_resolved` is
 `n4m_outlier_detection_hotelling_t2` plus `rank_used` (one `int32_t`). Both
@@ -114,6 +120,37 @@ to give UCL 0 through 1 - alpha = 1). A Q above the noise level or a UCL that
 is not a finite normal double, and a non-positive Jackson-Mudholkar base
 (possible only for alpha > 0.5, formerly UCL 0), return
 `N4M_ERR_NUMERICAL_FAILURE`.
+
+Review b8fix6 (signatures unchanged). The Q-residual UCL now uses the signed
+h0 of Jackson-Mudholkar: for h0 < 0, (Q / theta_1)^h0 decreases with Q, so the
+upper quantile of Q is the lower quantile of the approximating normal
+(Nomikos & MacGregor 1995, appendix B). The former `|h0| * A` kept the upper
+one: columns 1..14 of the Sylvester H_16 times `[2, 1, 1/4 x 12]`, k = 1,
+alpha = 0.05 (h0 = -0.0676) gave UCL 0.365 instead of 5.229 and flagged all
+16 observations. The limit is evaluated as `theta_1 exp(log1p(h0 C) / h0)`,
+continuous through h0 = 0. Results with h0 > 0 are unchanged. The base is
+always positive when `h0 * ca >= 0` and when h0 < 0 with alpha >=
+1 - Phi(sqrt 2) ~ 0.0786; otherwise (h0 > 0 with alpha > 0.5, or h0 < 0 with a
+smaller alpha on uneven residual spectra) it can be non-positive, the
+approximation has no alpha-quantile, and the status is
+`N4M_ERR_NUMERICAL_FAILURE`.
+
+The Hotelling UCL G is solved directly: `G / (kappa + G)`, kappa =
+`(n^2 - 1) / n`, follows Beta(r/2, (n-r)/2), whose small tail (upper for
+alpha <= 0.5, lower above, where 1 - alpha is exact) is evaluated in
+logarithms from G / kappa and inverted by bisection on the normal doubles.
+Before, the upper tail went through `d2 / (d2 + d1 F)`, which rounds to 1 for
+a small quantile: `X = [-1, 2^-28, 1]`, alpha = 1 - 2^-30, gave UCL 2.96e-16
+instead of the closed-form 2.312964635e-18 (F(1,2)), and the central T²
+(6.17e-18) was not flagged. The bracket now saturates at DBL_MAX and
+bisects with `lo + (hi - lo) / 2`: `X = [1, 2, 3]`, alpha = 1e-308, returns
+1.333e308 instead of `N4M_ERR_NUMERICAL_FAILURE`; a UCL above DBL_MAX is
+still refused. ln Gamma uses a 1e-15 Lanczos approximation and ln B(a, b)
+cancels its large terms analytically, and the continued fraction reports
+non-convergence instead of returning a truncated value. Measured relative
+error below 1e-12 against mpmath (n from 3 to 10^6, alpha from 1e-300 to
+1 - 2^-53); this is a measurement, not a proven bound. At usual alpha
+(0.001 to 0.1, n <= 10^4) UCLs changed by at most 3.1e-11 relative.
 
 ## 2026-10-13 — ABI 2.19.0: clustering and Preflight diagnostics (released in 1.3.6)
 

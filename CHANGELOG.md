@@ -91,6 +91,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   and a non-positive Jackson-Mudholkar base (alpha > 0.5 only, formerly UCL
   0) return `N4M_ERR_NUMERICAL_FAILURE`. Tested against analytic
   single-eigenvalue limits and an mpmath oracle on CPU and WASM.
+- Q residuals: the Jackson-Mudholkar UCL uses the signed h0. For h0 < 0,
+  `(Q / theta_1)^h0` decreases with Q, so the upper quantile of Q is the
+  lower quantile of the approximating normal (Nomikos & MacGregor 1995,
+  appendix B); `|h0| * A` kept the upper one. Columns 1..14 of the Sylvester
+  H_16 times `[2, 1, 1/4 x 12]`, k = 1, alpha = 0.05 (h0 = -0.0676) gave UCL
+  0.365 instead of 5.229, flagging all 16 observations with `N4M_OK`. The
+  limit is continuous through h0 = 0; h0 > 0 results are unchanged. A
+  non-positive base, possible only for h0 > 0 with alpha > 0.5 or h0 < 0 with
+  alpha < 1 - Phi(sqrt 2) ~ 0.0786, means the approximation has no
+  alpha-quantile: `N4M_ERR_NUMERICAL_FAILURE` (documented, with the
+  conditions, in `n4m/outlier_detection.h`).
+- Hotelling T²: the UCL is solved directly from its beta tail, inverting the
+  small tail (lower for alpha > 0.5) in logarithms. A small quantile went
+  through a beta argument that rounds to 1: `X = [-1, 2^-28, 1]`, alpha =
+  1 - 2^-30, gave UCL 2.96e-16 instead of 2.312964635e-18 and missed the
+  central T² (6.17e-18). The bracket saturates at DBL_MAX: alpha = 1e-308,
+  `X = [1, 2, 3]`, returns 1.333e308 instead of `N4M_ERR_NUMERICAL_FAILURE`.
+  Log-gamma (Lanczos, 1e-15) and log-beta are more accurate and the
+  continued fraction fails explicitly instead of truncating; measured
+  relative error below 1e-12 against mpmath up to n = 10^6. Tested against
+  the closed forms of F(1,2) and F(2,4) at both extremes, on CPU and WASM.
+  No other outlier or Preflight kernel inverts a distribution by bisection
+  (the x-outlier and MCD chi-square cut-offs are fixed Wilson-Hilferty
+  values; Preflight p-values are permutation counts).
 - Preflight PCA loadings of a wide input (n <= p): the resolved rows
   `Xc^T u / sigma` are re-orthonormalised (modified Gram-Schmidt applied
   twice; they drifted up to 5e-5 from orthonormality near the resolution),
@@ -112,6 +136,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   although it needs 1.144 GB, and is now refused. Every Preflight-sized
   request (at most 10^7 cells, k <= 10) that Methods 1.3.6 accepted is still
   accepted (enumerated in the tests); 700 x 700 with k = 700 is refused.
+  The limit is a working bound on the computation, not a browser performance
+  qualification: review measurements of the WebAssembly kernel alone (`-O3`,
+  Node 22 / V8, Intel i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s
+  for 600 x 600, k = 600 (outside the Preflight profile k <= 10). A browser
+  profile needs its own execution budget (p50/p95 timings, inter-module
+  copies, cumulative memory) before qualification.
 
 ### Added
 
