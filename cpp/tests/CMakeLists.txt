@@ -21,6 +21,7 @@ add_executable(n4m_tests
     test_metrics.cpp
     test_models_pls.cpp
     test_models_extra.cpp
+    test_pls_null_components.cpp
     test_moments.cpp
     test_ridge.cpp
     test_sweep.cpp

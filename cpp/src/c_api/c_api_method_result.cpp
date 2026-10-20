@@ -3031,6 +3031,8 @@ N4M_API n4m_status_t n4m_metrics_pls_diagnostics_compute(
         handle->set_double_matrix("dmodx", std::move(dmodx), 1, n);
         handle->set_scalar("n_components",
                             static_cast<double>(m.n_components));
+        handle->set_scalar("n_latent_directions",
+                            static_cast<double>(::n4m::core::pls_latent_directions(m)));
         handle->set_scalar("n_features",
                             static_cast<double>(m.n_features));
         *out_result = handle.release();
