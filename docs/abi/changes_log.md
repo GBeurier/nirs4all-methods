@@ -1,5 +1,17 @@
 # ABI — Changes Log
 
+## 2026-10-20 — ABI 2.20.0 unchanged: precision where long double is double (released in 1.3.8)
+
+No symbol or signature change. `n4m_stats_permanova` computes its stratum
+means, and `n4m_stats_permanova_freedman_lane` its reduced-design basis and
+reduced-model residuals, in double-double instead of relying on the x87
+`long double`; the residuals are no longer projected twice. On MSVC and Apple
+arm64 (`long double` == `double`) a large between-strata offset inside D
+(2^31) left about `DBL_EPSILON` times the offset in the within-strata rows.
+The `utilities.ragged_summary` procedure accumulates in double on an exact
+power-of-two prescale, so finite extremes such as `[1e308, -1e308]` no
+longer overflow there.
+
 ## 2026-10-16 — ABI 2.20.0: Preflight statistics, domain shift, variance components, cluster matching, PLS/PCR component resolution (released in 1.3.7)
 
 Twenty new caller-buffer operations and two new `n4m_model_array_t` tags;
