@@ -294,12 +294,18 @@ n4m_status_t pls_path(Context& ctx, Vec z, Vec y, std::size_t n, std::size_t p, 
     // A high-component numerical breakdown must not discard valid shorter
     // prefixes. Retry only on numerical failure, keeping every usable prefix
     // in the original CV grid (the remaining entries receive infinity).
+    // Unresolved components are published as trailing null components; only
+    // the resolved prefixes are usable.
     for (; cfg.n_components > 0; --cfg.n_components) {
         auto status = fit_model(ctx, cfg, xv, yv, model);
         if (status == N4M_OK) {
+            const auto& flags = model->unresolved_components;
+            const auto resolved = static_cast<int>(
+                std::find(flags.begin(), flags.end(), 1.0) - flags.begin());
+            if (resolved == 0) return N4M_ERR_NUMERICAL_FAILURE;
             status = compute_regression_coefficients_by_component(ctx, *model, result.coefficients);
             if (status == N4M_OK) {
-                result.count = model->n_components;
+                result.count = resolved;
                 out = std::move(result);
                 return N4M_OK;
             }

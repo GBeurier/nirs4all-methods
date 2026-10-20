@@ -602,7 +602,9 @@ void test_pls_scale_equivariance() {
 //      sigma^2. PCR: W = P = R = I, T = [2^30 a, b], Q = (2^-30, 1),
 //      U = [2^30 Y, Y].
 //  (3) X = [a, a], Y = a + b, two components: the second component does not
-//      exist (X has rank 1) and must be refused explicitly.
+//      exist (X has rank 1). Every solver publishes it as a null component
+//      flagged unresolved (zero W, P, Q, R, T, U columns): coefficients
+//      (1/2, 1/2) of the one-component model, predictions = a.
 // Every fit also publishes its component resolution, (n + a) eps ||X||_F
 // ||Y||_F for the PLS solvers and (n + p) eps sigma_max ||Y||_F for PCR, and
 // per-component unresolved flags; every fit is exported and re-imported and
@@ -769,6 +771,25 @@ std::vector<double> combine(double ca, double cb) {
     return out;
 }
 
+// Every latent column `comp` (W, P, R: p x a; Q: q x a; T, U: 4 x a) of a
+// fitted model is exactly zero (a null component).
+void expect_null_component(const std::string& where, const AnalyticArrays& fitted,
+                           std::size_t a, std::size_t comp, std::size_t p, std::size_t q = 1) {
+    const std::size_t rows[7] = {0, p, p, q, p, 4, 4};
+    for (std::size_t i = 1; i < 7; ++i) {
+        const std::vector<double>& values = fitted.arrays[i];
+        if (values.size() != rows[i] * a)
+            throw std::runtime_error(where + ": " + kSweepArrayNames[i] + " has the wrong size");
+        for (std::size_t row = 0; row < rows[i]; ++row) {
+            const double value = values[row * a + comp];
+            if (value != 0.0 || std::signbit(value))
+                throw std::runtime_error(where + ": " + kSweepArrayNames[i] + " column " +
+                                         std::to_string(comp) + " of the null component is " +
+                                         std::to_string(value));
+        }
+    }
+}
+
 void test_pls_small_covariance_analytic() {
     // (1) one feature, Y nearly orthogonal to X.
     for (const int e : {25, 30}) {
@@ -901,17 +922,24 @@ void test_pls_small_covariance_analytic() {
         }
     }
 
-    // (3) rank-one X: the second component is unresolved and refused.
+    // (3) rank-one X: the second component is a flagged null component.
     {
         std::vector<double> x(8);
         for (std::size_t i = 0; i < 4; ++i) x[i * 2] = x[i * 2 + 1] = kVecA[i];
+        const std::vector<double> y = combine(1.0, 1.0);
         for (const AnalyticSolver& s : kAnalyticSolvers) {
-            AnalyticArrays fitted, restored;
-            const n4m_status_t st = fit_analytic(s, x, 2, combine(1.0, 1.0), 2, fitted, restored);
-            if (st != N4M_ERR_NUMERICAL_FAILURE)
-                throw std::runtime_error(std::string(s.tag) +
-                                         " X = [a, a]: second component not refused (status " +
-                                         std::to_string(st) + ")");
+            const std::string where = std::string(s.tag) + " X = [a, a], Y = a + b";
+            AnalyticArrays fitted, restored, want;
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored);
+            if (st != N4M_OK)
+                throw std::runtime_error(where + ": fit refused with status " +
+                                         std::to_string(st));
+            want.arrays[0] = {0.5, 0.5};
+            want.predictions = combine(1.0, 0.0);
+            want.resolution = expected_resolution(s, x, 2, y, 2, std::sqrt(8.0L));
+            want.unresolved = {0.0, 1.0};
+            expect_fit(where, fitted, restored, want);
+            expect_null_component(where, fitted, 2, 1, 2);
         }
     }
 }
@@ -923,7 +951,9 @@ void test_pls_small_covariance_analytic() {
 //      exceed the PCR resolution 5 eps sqrt(20) ||Y|| ~ 2.2e-14: PCR keeps
 //      the component (W = P = R = 1, T = a, Q = 2^-50, coefficient 2^-50),
 //      flags it unresolved and leaves its U column zero. The PLS
-//      cross-covariance is unresolved as well, and every PLS solver refuses.
+//      cross-covariance is unresolved as well: every PLS solver (and PLS-DA)
+//      publishes a null component flagged unresolved (W = P = Q = R = 0,
+//      T = U = 0), coefficient 0, predictions = the Y mean (0).
 //  (6) X = [2 a, b], Y = [a + 2^-48 b, 3 a - 2^-48 b] (exactly
 //      representable, as are all its products and partial sums), two PCR
 //      components: W = P = R = I, T = X, Q = [[1/2, 2^-48], [3/2, -2^-48]],
@@ -964,13 +994,28 @@ void test_pls_unresolved_components() {
             const std::string where = std::string(s.tag) + " X = a, Y = b + 2^-50 a";
             AnalyticArrays fitted, restored, want;
             const n4m_status_t st = fit_analytic(s, x, 1, y, 1, fitted, restored);
-            if (s.algorithm != N4M_ALGO_PCR) {
-                if (st != N4M_ERR_NUMERICAL_FAILURE)
-                    throw std::runtime_error(where + ": unresolved PLS component not refused");
-                continue;
-            }
             if (st != N4M_OK)
                 throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
+            want.resolution = expected_resolution(s, x, 1, y, 1, sqrt20);
+            want.unresolved = {1.0};
+            if (s.algorithm != N4M_ALGO_PCR) {
+                const std::vector<double> zeros = {0.0, 0.0, 0.0, 0.0};
+                want.arrays[0] = {0.0};
+                for (std::size_t i = 1; i < 5; ++i) want.arrays[i] = {0.0};
+                want.arrays[5] = zeros;
+                want.arrays[6] = zeros;
+                want.predictions = zeros;
+                expect_fit(where, fitted, restored, want);
+                expect_null_component(where, fitted, 1, 0, 1);
+                // PLS-DA runs the same solvers.
+                AnalyticSolver da = s;
+                da.algorithm = N4M_ALGO_PLS_DA;
+                AnalyticArrays da_fitted, da_restored;
+                if (fit_analytic(da, x, 1, y, 1, da_fitted, da_restored) != N4M_OK)
+                    throw std::runtime_error(where + ": PLS-DA fit refused");
+                expect_fit(where + " (PLS-DA)", da_fitted, da_restored, want);
+                continue;
+            }
             want.arrays[0] = {std::ldexp(1.0, -50)};
             want.arrays[1] = {1.0};
             want.arrays[2] = {1.0};
@@ -979,8 +1024,6 @@ void test_pls_unresolved_components() {
             want.arrays[5] = x;
             want.arrays[6] = {0.0, 0.0, 0.0, 0.0};
             want.predictions = combine3(std::ldexp(1.0, -50), 0.0);
-            want.resolution = expected_resolution(s, x, 1, y, 1, sqrt20);
-            want.unresolved = {1.0};
             expect_fit(where, fitted, restored, want);
         }
     }
@@ -1018,13 +1061,13 @@ void test_pls_unresolved_components() {
     }
     // (7)
     {
-        constexpr std::int64_t q = 65;
+        constexpr std::size_t q = 65;
         std::vector<double> x(8), y(4 * q);
         for (std::size_t i = 0; i < 4; ++i) {
             x[i * 2] = kVecA3[i];
             x[i * 2 + 1] = kVecB3[i];
             y[i * q] = kVecA3[i];
-            for (std::int64_t t = 1; t < q; ++t)
+            for (std::size_t t = 1; t < q; ++t)
                 y[i * q + t] = std::ldexp(kVecA3[i], -29) + std::ldexp(kVecB3[i], -51);
         }
         std::vector<double> coefficients(2 * q), y_loadings(q * 2), u(8);
@@ -1032,7 +1075,7 @@ void test_pls_unresolved_components() {
         coefficients[q] = 0.0;
         y_loadings[0] = 1.0;
         y_loadings[1] = 0.0;
-        for (std::int64_t t = 1; t < q; ++t) {
+        for (std::size_t t = 1; t < q; ++t) {
             coefficients[t] = std::ldexp(1.0, -29);
             coefficients[q + t] = std::ldexp(1.0, -51);
             y_loadings[t * 2] = std::ldexp(1.0, -29);
@@ -1046,7 +1089,7 @@ void test_pls_unresolved_components() {
         for (const AnalyticSolver& s : kAnalyticSolvers) {
             const std::string where = std::string(s.tag) + " X = [a, b], Y = [a, 64 x (2^-29 a + 2^-51 b)]";
             AnalyticArrays fitted, restored, want;
-            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored, q);
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored, static_cast<std::int64_t>(q));
             if (st != N4M_OK)
                 throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
             if (s.solver == N4M_SOLVER_NIPALS) {
@@ -1067,10 +1110,10 @@ void test_pls_unresolved_components() {
             want.unresolved = {0.0, 0.0};
             expect_fit(where, fitted, restored, want);
             const std::vector<double>& got = fitted.arrays[0];
-            for (std::int64_t t = 0; t < q; ++t) {
+            for (std::size_t t = 0; t < q; ++t) {
                 const double column = std::max(std::fabs(coefficients[t]),
                                                std::fabs(coefficients[q + t]));
-                for (std::int64_t f = 0; f < 2; ++f) {
+                for (std::size_t f = 0; f < 2; ++f) {
                     const std::size_t k = static_cast<std::size_t>(f * q + t);
                     if (!(std::fabs(got[k] - coefficients[k]) <= kAnalyticTol * column))
                         throw std::runtime_error(where + ": coefficient (" + std::to_string(f) +
@@ -1081,17 +1124,17 @@ void test_pls_unresolved_components() {
     }
     // (8)
     {
-        constexpr std::int64_t q = 101;
+        constexpr std::size_t q = 101;
         std::vector<double> x(8), y(4 * q), coefficients(2 * q, 0.0);
         for (std::size_t i = 0; i < 4; ++i) {
             x[i * 2] = kVecA[i];
             x[i * 2 + 1] = kVecB[i];
             y[i * q] = kVecA[i];
-            for (std::int64_t t = 1; t < q; ++t)
+            for (std::size_t t = 1; t < q; ++t)
                 y[i * q + t] = std::ldexp(kVecA[i], -29) + std::ldexp(kVecB[i], -52);
         }
         coefficients[0] = 1.0;
-        for (std::int64_t t = 1; t < q; ++t) {
+        for (std::size_t t = 1; t < q; ++t) {
             coefficients[t] = std::ldexp(1.0, -29);
             coefficients[q + t] = std::ldexp(1.0, -52);
         }
@@ -1099,7 +1142,7 @@ void test_pls_unresolved_components() {
             const std::string where = std::string(s.tag) +
                                       " X = [a, b], Y = [a, 100 x (2^-29 a + 2^-52 b)]";
             AnalyticArrays fitted, restored, want;
-            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored, q);
+            const n4m_status_t st = fit_analytic(s, x, 2, y, 2, fitted, restored, static_cast<std::int64_t>(q));
             if (st != N4M_OK)
                 throw std::runtime_error(where + ": fit refused with status " + std::to_string(st));
             want.arrays[0] = coefficients;
