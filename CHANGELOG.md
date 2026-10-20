@@ -18,18 +18,18 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   (n + a) eps ||X||_F ||Y||_F on ||X_k'Y_k||_F for every PLS regression
   solver (and PLS-DA), (n + p) eps sigma_max(X) ||Y||_F on ||Y't_k|| for PCR.
   `N4M_MODEL_UNRESOLVED_COMPONENTS` returns (1, n_components) flags, 1.0 for
-  a component whose cross-covariance is not above it. "Unresolved" means not
-  resolved numerically, which is distinct from mathematically undefined: the
-  exact cross-covariance may be zero (the component's Y side, e.g.
-  u = Y q / q'q with q = 0, is then undefined) or merely below the bound, and
-  double precision cannot tell them apart. PCR keeps such a component (its X
-  direction is resolved), publishes its Y loading (absolute accuracy only)
-  and a zero Y-score column, and now flags it: with a = (-3,-1,1,3),
-  b = (1,-3,3,-1), X = a, Y = b + 2^-50 a (one component, centred, unscaled)
-  the exact Y scores are 2^50 Y, but the cross-covariance 20 * 2^-50 is below
-  the resolution and the zero column used to be published without any
-  indication. The PLS solvers never publish an unresolved component (they
-  refuse it, as before), so their flags are all 0. Other models return
+  a component whose cross-covariance is not above it. One flag covers two
+  cases that double precision cannot tell apart: a component that is
+  mathematically undefined (exact cross-covariance zero, e.g. beyond the rank
+  of X, or u = Y q / q'q with q = 0) and one that is merely not resolved
+  numerically (nonzero but below the bound). Neither is refused any more
+  inside the supported domain (see Changed for the PLS convention). PCR
+  keeps a component whose X direction is resolved, publishes its Y loading
+  (absolute accuracy only) and a zero Y-score column, and now flags it: with
+  a = (-3,-1,1,3), b = (1,-3,3,-1), X = a, Y = b + 2^-50 a (one component,
+  centred, unscaled) the exact Y scores are 2^50 Y, but the cross-covariance
+  20 * 2^-50 is below the resolution and the zero column used to be
+  published without any indication. Other models return
   `N4M_ERR_UNSUPPORTED` for both tags. The values are kept by export/import
   in N4MM format 3 (see Changed) and exposed by the JS/WASM
   `NativeModel.getArray` / `componentResolution()` and `ModelArray` enum, and
@@ -39,6 +39,41 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
 
 ### Changed
 
+- Unresolved PLS components are published as flagged null components
+  instead of being refused. For every PLS regression solver (NIPALS, SIMPLS,
+  orthogonal scores, kernel, wide kernel, SVD, power, randomized SVD) and
+  PLS-DA, with one convention across solvers: a component whose X-Y
+  cross-covariance is not above the published resolution (not resolved
+  numerically, or mathematically undefined) has exactly zero W, P, Q, R and
+  (with store_scores=1) T and U columns, does not contribute to the
+  coefficients, and is flagged in `N4M_MODEL_UNRESOLVED_COMPONENTS`. Its
+  deflation leaves the residuals unchanged, so every later component is null
+  and flagged too (the solver stops there); the coefficients are those of
+  the model truncated to the resolved components, bit for bit, and all zero
+  with predictions equal to the Y mean when none is resolved. Previously the
+  fit returned `N4M_ERR_NUMERICAL_FAILURE` ("X-Y covariance is below its
+  numerical resolution"). With X = a, Y = b + 2^-50 a (a, b as above), NIPALS
+  and every other PLS solver now return one null component, coefficient 0,
+  predictions = the Y mean; with X = [a, a] and two components, the second
+  component is null and the coefficients are those of the one-component
+  model. PCR keeps its convention for a component whose X direction is
+  resolved (direction, Y loading and coefficients kept, Y-score column zero,
+  flagged); a component whose X singular value is not resolved (beyond the
+  rank of X), which PCR also refused, is now a flagged null component, like
+  every later one. Requests that are invalid (e.g. more components than
+  min(n - 1, p)) and inputs outside the supported numerical domain are still
+  refused. `n4m_model_coefficients_by_component` returns the truncated
+  coefficients for prefixes that include null components, and the
+  FastAOM-PLS CV path still scores only the resolved prefixes (the others
+  remain infinite, as when the fit was refused). A before/after bitwise sweep
+  (3690 fits, see Fixed) found no change of array or prediction on any fit
+  that succeeded before; the 298 fits that were refused (35 per PLS solver:
+  20 with more components than the rank of X, 6 with Y exactly in the span
+  of X, 9 with X columns scaled over up to 2^60 whose remaining covariance
+  falls below the absolute resolution; 18 PCR, all beyond the rank of X)
+  now return flagged null components after the resolved prefix, whose
+  coefficients, latent arrays and predictions are bit-identical to a fit
+  with the resolved number of components.
 - N4MM fitted-model format 3 (`N4M_SERIALIZATION_FORMAT_VERSION_V3`, now the
   current version) is written for every model that records a component
   resolution, i.e. every PLS regression (PLS-DA) and PCR fit: the eleven
@@ -48,6 +83,23 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   predictors) keep formats 1 and 2 byte for byte, and formats 1 and 2 remain
   readable (without a recorded resolution). Readers before ABI 2.20 reject
   format 3 with `N4M_ERR_VERSION_INCOMPATIBLE`. The Rust binding accepts it.
+
+### Compatibility
+
+- N4MM version 3: consumers that validate the N4MM byte version of a stored
+  model must accept 3 when moving to Methods >= 1.3.7, because every PLS
+  regression, PLS-DA and PCR model is now exported as format 3. This
+  includes the nirs4all-core V2/V3 archive contracts, whose `format_version`
+  field declares the N4MM payload version and is compared with the version
+  read from the bytes at replay: a new PLS/PCR model declared as 3 is
+  rejected by validators that only allow 1 or 2, and declaring 1 or 2 fails
+  the comparison with the bytes. Formats 1 and 2 are unchanged for the
+  other models.
+- PLS fits that used to fail with `N4M_ERR_NUMERICAL_FAILURE` on an
+  unresolved component now succeed with flagged null components (see
+  Changed). Callers that relied on that refusal (e.g. to find the usable
+  rank by retrying with fewer components) should read
+  `N4M_MODEL_UNRESOLVED_COMPONENTS` instead.
 
 ### Fixed
 
@@ -104,8 +156,8 @@ ABI 2.20.0 additions (no new symbol, no signature change): two
   (n + p) eps ||Y||_F sigma_max, and flags that component unresolved (see
   Added). C++ and JS/WASM tests check these cases against analytic W, P, Q,
   R, T, U, coefficients and predictions, on the fitted and on the
-  exported/imported model, and the rank-one X = [a, a] refusal of a second
-  component.
+  exported/imported model, and the rank-one X = [a, a] second component
+  (now a flagged null component, see Changed).
 - NIPALS and kernel / wide-kernel PLS decided that the Y residual was
   constant from absolute thresholds before checking the cross-covariance:
   NIPALS zeroed every Y column whose residual stayed below 10 eps
