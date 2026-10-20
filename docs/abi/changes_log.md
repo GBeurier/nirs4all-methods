@@ -475,6 +475,10 @@ the column exponents) accepted n = 3, p = 26e6, k = 1, which needs 1.144 GB.
 Every shape a Preflight request can produce (at most 10^7 cells, k <= 10)
 that Methods 1.3.6 or that estimate accepted is still accepted (enumerated in
 `cpp/tests/test_preflight.cpp`; the worst is 658 x 658, k = 1, at 2.33e9).
+The conservation covers only those previously admissible shapes: the profile
+alone is not sufficient, and every request must also satisfy the work and
+memory bounds (for example 1000 x 1000 with k = 10 is refused by the work
+bound).
 The limit is a working bound on the computation, not a browser performance
 qualification: review measurements of the WebAssembly kernel alone (`-O3`,
 Node 22 / V8, Intel i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s

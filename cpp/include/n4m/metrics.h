@@ -78,8 +78,10 @@ extern "C" {
  * Memory: every buffer live at the peak (centred copy n p, column exponents,
  * Gram, eigenvectors and solver copy 3 s^2, loadings and their Householder
  * copy 2 k p, scores n k, vectors); limit 1 GiB. Every shape a Preflight
- * request can produce (n p <= 10^7, k <= 10) that Methods 1.3.6 accepted is
- * accepted. The limit is a working bound, not a browser performance
+ * request can produce (n p <= 10^7, k <= 10) that Methods 1.3.6 or the
+ * former estimate accepted is still accepted; any other request must also
+ * satisfy both bounds (1000 x 1000 with k = 10 is refused by the work
+ * bound). The limit is a working bound, not a browser performance
  * qualification (WASM kernel alone, Node 22, i9-12900K: 658 x 658, k = 1,
  * 6.27 s; 600 x 600, k = 600, 12.48 s).
  * Resolved eigenvalues, the resolution and both moments are normal doubles.
