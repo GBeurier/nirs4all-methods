@@ -73,6 +73,41 @@ fn canonical_dir(path: PathBuf, label: &str) -> PathBuf {
     if !path.is_dir() {
         panic!("{label} must name a directory, got {}", path.display());
     }
+    compiler_directory(path)
+}
+
+// Windows canonicalize returns verbatim paths (\\?\C:\...). MSVC's /I
+// handling cannot resolve headers through that prefix, even for short paths.
+// Preserve the resolved directory while using the ordinary compiler spelling.
+#[cfg(windows)]
+fn compiler_directory(path: PathBuf) -> PathBuf {
+    use std::path::{Component, Prefix};
+
+    let mut components = path.components();
+    let mut normalized = match components.next() {
+        Some(Component::Prefix(prefix)) => match prefix.kind() {
+            Prefix::VerbatimDisk(drive) => PathBuf::from(format!("{}:\\", drive as char)),
+            Prefix::VerbatimUNC(server, share) => {
+                let mut root = std::ffi::OsString::from("\\\\");
+                root.push(server);
+                root.push("\\");
+                root.push(share);
+                PathBuf::from(root)
+            }
+            _ => return path,
+        },
+        _ => return path,
+    };
+    for component in components {
+        if !matches!(component, Component::RootDir) {
+            normalized.push(component.as_os_str());
+        }
+    }
+    normalized
+}
+
+#[cfg(not(windows))]
+fn compiler_directory(path: PathBuf) -> PathBuf {
     path
 }
 
