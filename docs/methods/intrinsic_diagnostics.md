@@ -21,8 +21,9 @@ publication are separate facts.
 
 ## Frozen reference PCA
 
-The Python role constructors use the existing optional sklearn binding extra:
-`pip install "nirs4all-methods[sklearn]"`. The native C ABI itself does not require sklearn.
+The Python role constructors require the scikit-learn interface package:
+`pip install nirs4all-methods scikit-learn`. The published distribution does not
+declare a `sklearn` extra. The native C ABI itself does not require scikit-learn.
 
 ```python
 import numpy as np
