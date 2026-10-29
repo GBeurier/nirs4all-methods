@@ -814,6 +814,21 @@ const std::int64_t kDefault_diagnostics_approximate_press_max_components[] = {10
 const ParamSpec kParams_diagnostics_approximate_press[] = {
     {"max_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_approximate_press_max_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_diagnostics_local_density_valid_mask[] = {0};
+const std::int64_t kDefault_diagnostics_local_density_mode[] = {0};
+const char* const kChoices_diagnostics_local_density_mode[] = {"training", "novelty"};
+const std::int64_t kDefault_diagnostics_local_density_n_neighbors[] = {20};
+const ParamSpec kParams_diagnostics_local_density[] = {
+    {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_local_density_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+    {"mode", N4M_METHOD_PARAM_ENUM, true, kDefault_diagnostics_local_density_mode, nullptr, 1, kNaN, kNaN, kChoices_diagnostics_local_density_mode, 2, false, false},
+    {"n_neighbors", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_local_density_n_neighbors, nullptr, 1, 1.0, 2147483647.0, nullptr, 0, false, false},
+};
+const std::int64_t kDefault_diagnostics_pca_reference_qc_valid_mask[] = {0};
+const std::int64_t kDefault_diagnostics_pca_reference_qc_n_components[] = {5};
+const ParamSpec kParams_diagnostics_pca_reference_qc[] = {
+    {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_pca_reference_qc_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_pca_reference_qc_n_components, nullptr, 1, 1.0, 2147483647.0, nullptr, 0, false, false},
+};
 const std::int64_t kDefault_diagnostics_pls_diagnostics_n_components[] = {2};
 const std::int64_t kDefault_diagnostics_pls_diagnostics_center_x[] = {1};
 const std::int64_t kDefault_diagnostics_pls_diagnostics_scale_x[] = {1};
@@ -839,6 +854,36 @@ const ParamSpec kParams_diagnostics_pls_monitoring[] = {
     {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
     {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_diagnostics_pls_monitoring_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
     {"alpha", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_pls_monitoring_alpha, 1, 0.0, 1.0, nullptr, 0, false, false},
+};
+const std::int64_t kDefault_diagnostics_spectral_events_qc_valid_mask[] = {0};
+const std::int64_t kDefault_diagnostics_spectral_events_qc_axis_basis[] = {0};
+const char* const kChoices_diagnostics_spectral_events_qc_axis_basis[] = {"index", "physical"};
+const double kDefault_diagnostics_spectral_events_qc_axis_values[] = {0};
+const double kDefault_diagnostics_spectral_events_qc_outlier_threshold[] = {8.0};
+const double kDefault_diagnostics_spectral_events_qc_clip_lower[] = {kNaN};
+const double kDefault_diagnostics_spectral_events_qc_clip_upper[] = {kNaN};
+const double kDefault_diagnostics_spectral_events_qc_clip_tolerance[] = {0.0};
+const ParamSpec kParams_diagnostics_spectral_events_qc[] = {
+    {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_spectral_events_qc_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+    {"axis_basis", N4M_METHOD_PARAM_ENUM, true, kDefault_diagnostics_spectral_events_qc_axis_basis, nullptr, 1, kNaN, kNaN, kChoices_diagnostics_spectral_events_qc_axis_basis, 2, false, false},
+    {"axis_values", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_diagnostics_spectral_events_qc_axis_values, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"outlier_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_spectral_events_qc_outlier_threshold, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"clip_lower", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_spectral_events_qc_clip_lower, 1, kNaN, kNaN, nullptr, 0, true, false},
+    {"clip_upper", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_spectral_events_qc_clip_upper, 1, kNaN, kNaN, nullptr, 0, true, false},
+    {"clip_tolerance", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_spectral_events_qc_clip_tolerance, 1, 0.0, kNaN, nullptr, 0, false, false},
+};
+const std::int64_t kDefault_diagnostics_spectral_noise_proxy_valid_mask[] = {0};
+const ParamSpec kParams_diagnostics_spectral_noise_proxy[] = {
+    {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_spectral_noise_proxy_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+};
+const std::int64_t kDefault_diagnostics_spectral_reference_qc_valid_mask[] = {0};
+const std::int64_t kDefault_diagnostics_spectral_reference_qc_reference_mode[] = {0};
+const char* const kChoices_diagnostics_spectral_reference_qc_reference_mode[] = {"dataset_mean", "supplied"};
+const std::int64_t kDefault_diagnostics_spectral_reference_qc_reference_valid_mask[] = {0};
+const ParamSpec kParams_diagnostics_spectral_reference_qc[] = {
+    {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_spectral_reference_qc_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+    {"reference_mode", N4M_METHOD_PARAM_ENUM, true, kDefault_diagnostics_spectral_reference_qc_reference_mode, nullptr, 1, kNaN, kNaN, kChoices_diagnostics_spectral_reference_qc_reference_mode, 2, false, false},
+    {"reference_valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_spectral_reference_qc_reference_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
 };
 const double kDefault_filters_correlation_threshold[] = {0.0};
 const std::int64_t kDefault_filters_correlation_top_k[] = {-1};
@@ -2088,10 +2133,15 @@ const MethodSpec kMethods[] = {
     {"augmentation.wavelength.wavelength_shift", "n4m.augmentation.wavelength.wavelength_shift", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_wavelength_wavelength_shift, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_wavelength_shift},
     {"augmentation.wavelength.wavelength_stretch", "n4m.augmentation.wavelength.wavelength_stretch", N4M_METHOD_PROCEDURE, N4M_ROLE_AUGMENTER, kParams_augmentation_wavelength_wavelength_stretch, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_aug_wavelength_stretch},
     {"diagnostics.approximate_press", "n4m.metrics.scoring.approximate_press", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_approximate_press, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_approximate_press},
+    {"diagnostics.local_density", "n4m.diagnostics.local_density", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_local_density, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE}, "", nullptr, &run_local_density},
     {"diagnostics.model_selection", "n4m.metrics.scoring.one_se_rule", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, nullptr, 0, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_one_se_rule},
+    {"diagnostics.pca_reference_qc", "n4m.diagnostics.pca_reference_qc", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_pca_reference_qc, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "", nullptr, &run_pca_reference_qc},
     {"diagnostics.pls_diagnostics", "n4m.metrics.diagnostics.pls_diagnostics", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_pls_diagnostics, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_pls_diagnostics},
     {"diagnostics.pls_monitoring", "n4m.metrics.diagnostics.pls_monitoring", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_pls_monitoring, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE}, "", nullptr, &run_pls_monitoring},
     {"diagnostics.regression_metrics", "n4m.metrics.scoring.regression_metrics", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, nullptr, 0, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_regression_metrics},
+    {"diagnostics.spectral_events_qc", "n4m.diagnostics.spectral_events_qc", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_events_qc, 7, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_spectral_events_qc},
+    {"diagnostics.spectral_noise_proxy", "n4m.diagnostics.spectral_noise_proxy", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_noise_proxy, 1, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_spectral_noise_proxy},
+    {"diagnostics.spectral_reference_qc", "n4m.diagnostics.spectral_reference_qc", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_reference_qc, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE}, "", nullptr, &run_spectral_reference_qc},
     {"filters.correlation", "n4m.feature_selection.filter.correlation", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_filters_correlation, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_correlation, nullptr},
     {"filters.high_leverage", "n4m.outlier_detection.high_leverage", N4M_METHOD_ESTIMATOR, N4M_ROLE_SAMPLE_FILTER, kParams_filters_high_leverage, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "leverage_model", &make_filter_high_leverage, nullptr},
     {"filters.spectral_quality", "n4m.outlier_detection.spectral_quality", N4M_METHOD_ESTIMATOR, N4M_ROLE_SAMPLE_FILTER, kParams_filters_spectral_quality, 6, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_filter_spectral_quality, nullptr},

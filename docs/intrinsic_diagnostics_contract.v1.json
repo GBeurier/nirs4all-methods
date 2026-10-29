@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "contract_id": "n4m.intrinsic_diagnostics.v1",
+  "status": "native_python_r_wasm_octave_qualified_windows_pending",
+  "transport": {
+    "abi": "existing generic procedure ABI >=2.20; capability discovered by method_id, not ABI alone",
+    "entrypoint": "n4m_procedure_run",
+    "X": "query n x p; finite doubles, zero-filled masked cells",
+    "X_target": "optional reference 1 x p for spectral_reference_qc supplied mode; training n_ref x p for local_density novelty mode",
+    "parameters": "typed existing int/double/bool/enum/int_array/double_array",
+    "no_new_per_binding_algorithm_registry": true,
+    "category": "utility",
+    "kind": "procedure",
+    "roles": [
+      "generic"
+    ],
+    "js_reference_field": "XTarget"
+  },
+  "status_codes": {
+    "0": "computed",
+    "1": "insufficient_data",
+    "2": "zero_norm",
+    "3": "degenerate_reference",
+    "4": "undefined_numerical_domain",
+    "5": "missing_physical_parameter",
+    "6": "not_requested"
+  },
+  "output_convention": {
+    "protocol_version": "scalar = 1",
+    "n_rows": "scalar n",
+    "row_signal": {
+      "<signal>_values": "finite double matrix m x 1, omitted when m=0",
+      "<signal>_rows": "integer vector m of original query row indices, omitted when m=0",
+      "<signal>_status": "integer vector n with one status code per query row"
+    },
+    "aggregate": {
+      "<signal>_median": "scalar, absent when no eligible observations",
+      "<signal>_p95": "scalar, absent when no eligible observations",
+      "<signal>_n": "scalar eligible observation count",
+      "<signal>_aggregate_status": "integer vector length1"
+    },
+    "quantiles": "Hyndman-Fan type7: linear interpolation at (m-1)*q, no nonfinite observations",
+    "missing_values": "absence plus explicit status; never NaN, infinity, numeric placeholder or missing-to-zero conversion"
+  },
+  "shared_parameters": {
+    "valid_mask": {
+      "kind": "int_array",
+      "shape": "n*p row-major",
+      "default": "all valid",
+      "values": [
+        0,
+        1
+      ]
+    },
+    "axis_values": {
+      "kind": "double_array",
+      "shape": "p",
+      "meaning": "actual axis values in declared unit; no implicit wavelength assumption"
+    }
+  },
+  "methods": {
+    "diagnostics.spectral_reference_qc": {
+      "signals": [
+        "rms",
+        "sam",
+        "affine_offset",
+        "affine_gain",
+        "affine_abs_offset",
+        "affine_abs_gain_delta",
+        "affine_residual_rms"
+      ],
+      "protocol_id": "spectral-reference-pairwise-valid.v1",
+      "parameters": {
+        "reference_mode": {
+          "kind": "enum",
+          "values": [
+            "dataset_mean",
+            "supplied"
+          ],
+          "default": "dataset_mean"
+        },
+        "reference_valid_mask": {
+          "kind": "int_array",
+          "shape": "p",
+          "default": "all valid for supplied reference"
+        }
+      },
+      "reference": "dataset_mean computed natively per feature over valid query cells; supplied uses X_target and never fits to query",
+      "extra_outputs": {
+        "reference": "finite reference values matrix 1 x p with zero only at explicitly invalid coordinates",
+        "reference_valid_mask": "integer vector p",
+        "reference_counts": "integer vector p; dataset mean eligible observation counts, supplied validity indicators",
+        "common_valid_counts": "integer vector n"
+      },
+      "formulae": {
+        "rms": "sqrt(mean((x-reference)^2)) on common valid coordinates, needs >=1",
+        "sam": "acos(clamp(dot(x,r)/(norm(x)*norm(r)),-1,1)) radians, needs >=2 common and nonzero norms",
+        "affine": "OLS x=offset+gain*reference on common coordinates, needs >=2 common and positive centered reference sum of squares",
+        "affine_residual_rms": "sqrt(mean((x-offset-gain*reference)^2)), denominator common count, not count-2",
+        "affine_abs_offset": "abs(offset)",
+        "affine_abs_gain_delta": "abs(gain-1)"
+      },
+      "legacy_equivalence": "matches Datasets reference_similarity on complete finite matrices; masked protocol excludes cells and never performs legacy column imputation"
+    },
+    "diagnostics.spectral_events_qc": {
+      "signals": [
+        "jump_count",
+        "jump_fraction",
+        "spike_count",
+        "spike_fraction",
+        "declared_clip_count",
+        "declared_clip_fraction"
+      ],
+      "protocol_id": "spectral-events-declared-axis.v1",
+      "parameters": {
+        "axis_basis": {
+          "kind": "enum",
+          "values": [
+            "index",
+            "physical"
+          ],
+          "default": "index"
+        },
+        "outlier_threshold": {
+          "kind": "double",
+          "default": 8.0,
+          "constraint": ">0"
+        },
+        "clip_lower": {
+          "kind": "double",
+          "optional": true
+        },
+        "clip_upper": {
+          "kind": "double",
+          "optional": true
+        },
+        "clip_tolerance": {
+          "kind": "double",
+          "default": 0.0,
+          "constraint": ">=0"
+        }
+      },
+      "formulae": {
+        "index": "first differences x[j+1]-x[j]; second differences x[j+2]-2*x[j+1]+x[j]",
+        "physical": "first difference divided by signed axis gap; second derivative 2*(slope[j+1]-slope[j])/(axis[j+2]-axis[j]); axis strictly monotonic ascending or descending",
+        "events": "per row and derivative order: abs(d-median(d)) > threshold*scale; scale=1.4826*MAD; when MAD=0 use sample std(ddof1); all-constant yields computed zero; fewer than3 eligible differences unavailable",
+        "mask": "only adjacent valid pairs/triples; never bridge masked holes",
+        "fraction": "events divided by eligible adjacent pairs/triples with valid statistic; counts and denominators native",
+        "declared_clip": "valid x<=lower+tolerance or x>=upper-tolerance, at least one bound required; no bound means status5; two bounds require lower<upper"
+      },
+      "extra_outputs": {
+        "jump_eligible_counts": "integer vector n",
+        "spike_eligible_counts": "integer vector n",
+        "clip_eligible_counts": "integer vector n",
+        "observed_extrema_occupancy_fraction": "native scalar descriptive proxy across all valid cells",
+        "observed_extrema_occupancy_count": "native scalar",
+        "observed_extrema_occupancy_n": "native scalar",
+        "observed_extrema_occupancy_status": "integer vector length1",
+        "global_jump_count": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_jump_fraction": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_jump_eligible": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_spike_count": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_spike_fraction": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_spike_eligible": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_declared_clip_count": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_declared_clip_fraction": "native scalar plus status integer vector length1; pooled only rows with computed statistic",
+        "global_declared_clip_eligible": "native scalar plus status integer vector length1; pooled only rows with computed statistic"
+      },
+      "extrema_proxy": "lo/hi observed valid dataset extrema, epsilon=max(1e-12,max(abs(lo),abs(hi))*1e-8); occupancy=within epsilon of lo or hi; NOT physical clipping",
+      "legacy_equivalence": "index mode equals Datasets artefact differences on complete matrices with sufficient features; valid denominator differs explicitly when masks/missing cells occur"
+    },
+    "diagnostics.spectral_noise_proxy": {
+      "signals": [
+        "noise_sigma",
+        "signal_mean_abs",
+        "signal_noise_ratio",
+        "signal_noise_db"
+      ],
+      "protocol_id": "spectral-second-difference-mad-index.v1",
+      "parameters": {},
+      "formulae": {
+        "noise_sigma": "median(abs(diff2 - median(diff2)))*1.4826/sqrt(6), per row on eligible valid triples",
+        "signal_mean_abs": "per row mean(abs(valid X))",
+        "signal_noise_ratio": "per row signal_mean_abs/noise_sigma only when both positive",
+        "signal_noise_db": "20*log10(signal_noise_ratio), finite only",
+        "global_noise_sigma": "median eligible per-row noise_sigma",
+        "global_signal_mean_abs": "mean(abs(X)) over all valid dataset cells",
+        "global_signal_noise_ratio": "global_signal_mean_abs/global_noise_sigma when both positive",
+        "global_signal_noise_db": "20*log10(global_signal_noise_ratio)"
+      },
+      "extra_outputs": {
+        "global_noise_sigma": "native finite scalar plus global_noise_sigma_status integer vector length1",
+        "global_signal_mean_abs": "native finite scalar plus global_signal_mean_abs_status integer vector length1",
+        "global_signal_noise_ratio": "native finite scalar plus global_signal_noise_ratio_status integer vector length1",
+        "global_signal_noise_db": "native finite scalar plus global_signal_noise_db_status integer vector length1"
+      },
+      "interpretation": "descriptive index-space high frequency proxy; not instrumental SNR, not physical-axis derivative, not existing SG band_noise",
+      "legacy_equivalence": "matches Datasets spectral_noise global noise_rms/snr/snr_db on identical complete data; bandwise fields remain separately inventoried until implemented"
+    },
+    "diagnostics.local_density": {
+      "signals": [
+        "lof"
+      ],
+      "protocol_id": "euclidean-fixed-k-lof.v1",
+      "parameters": {
+        "mode": {
+          "kind": "enum",
+          "values": [
+            "training",
+            "novelty"
+          ],
+          "default": "training"
+        },
+        "n_neighbors": {
+          "kind": "int",
+          "default": 20,
+          "constraint": ">=1"
+        }
+      },
+      "formulae": {
+        "kernel": "reuse native vendored LOF; expose native training scores from fitted density, not novelty scoring on training rows",
+        "training": "reference=X; exclude each row itself from kNN; effective k=min(requested,n_ref-1)",
+        "novelty": "reference=X_target; query X never fitted; effective k=min(requested,n_ref-1), the fitted training neighborhood",
+        "ties": "stable fixed-k neighbour ordering, not all-distance-tie expansion",
+        "degenerate_density": "nonfinite/undefined density yields status4, no arbitrary finite replacement"
+      },
+      "mask_policy": "all valid finite rectangular data required; no silent imputation or distance over inconsistent coordinate subsets",
+      "extra_outputs": {
+        "effective_neighbors": "scalar",
+        "reference_rows": "scalar"
+      },
+      "interpretation": "outlier density ratio, not calibrated anomaly probability or possible physical cause"
+    },
+    "diagnostics.pca_reference_qc": {
+      "protocol_id": "pca-train-reference-exact-native.v1",
+      "inputs": {
+        "X": "complete finite query n*p",
+        "X_target": "complete finite reference n_ref*p, n_ref>=2; only fitting population"
+      },
+      "parameters": {
+        "n_components": {
+          "kind": "int",
+          "default": 5,
+          "min": 1,
+          "max": "min(n_ref-1,p)"
+        }
+      },
+      "signals": [
+        "pca_q",
+        "pca_t2",
+        "reference_q",
+        "reference_t2"
+      ],
+      "outputs": {
+        "reference_mean": "1*p matrix",
+        "loadings": "k*p matrix",
+        "eigenvalues": "1*k ddof1 eigenvalues from native train scores",
+        "reference_scores": "n_ref*k matrix",
+        "scores": "n*k matrix",
+        "resolved_components": "integer vector k, lambda>16*max(n_ref,p)*eps*lambda1",
+        "effective_components": "scalar",
+        "eigenvalue_resolution": "scalar",
+        "solver_code": "1=exact native Gram/Jacobi",
+        "exact_full_moments_status": "integer vector[6], not requested; never replaced by truncated moments"
+      },
+      "normalization": "column-centering on train only; no automatic scaling or imputation; query never changes fit",
+      "q": "squared residual norm after reconstructing resolved retained components only",
+      "t2": "sum(score^2/eigenvalue) for resolved retained components, status3 when none",
+      "budgets": "Existing preflight_pca_budget whole-computation ceiling, plus query/output passes and buffers: 2.4billion long-double multiply-add equivalents including eigensolver ceiling,1GiB simultaneous buffers,50million cells, checked before allocations.",
+      "solver_reuse": "existing FlexiblePCA fitted representation and existing exact dual Gram/Jacobi kernels; no alternative PCA implementation; existing FlexiblePCA randomized default remains unchanged"
+    }
+  },
+  "candidate_project_version": "1.3.10"
+}

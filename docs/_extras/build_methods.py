@@ -132,6 +132,8 @@ try:
 except ImportError:  # pragma: no cover - permits partial contributor checkouts
     _AOM_SCIENCE = {}
 
+from scientific_intrinsic import SCIENTIFIC_CONTENT as _INTRINSIC_SCIENCE
+
 SCIENTIFIC_FIELDS = (
     "title", "paper", "principle", "use_cases", "limitations",
     "implementation", "provenance",
@@ -230,6 +232,7 @@ def scientific_content() -> dict[str, dict[str, str]]:
             if stem not in _SUPERSEDED_SCIENCE_RECORDS
         }),
         ("scientific_aom", _AOM_SCIENCE),
+        ("scientific_intrinsic", _INTRINSIC_SCIENCE),
     )
     merged: dict[str, dict[str, str]] = {}
     for source_name, records in sources:

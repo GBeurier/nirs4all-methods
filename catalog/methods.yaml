@@ -14143,3 +14143,285 @@ methods:
       - n4m_decomposition_spectral_export_affine
     legacy_ids:
       - preprocessing.feature_selection.spectral_encoding
+  - method_id: "diagnostics.spectral_reference_qc"
+    family: "utilities"
+    category: "utilities"
+    subcategory: "spectral_diagnostics"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_procedure_run"
+    tu:
+      - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    parity:
+      fixtures: []
+      tolerance_row: "spectral_diagnostics_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.spectral_reference_qc"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "SpectralReferenceQc"
+        legacy_aliases: []
+      r:
+        function: "n4m_spectral_reference_qc"
+        legacy_aliases: []
+    publications: []
+    notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+    namespace: "diagnostics"
+    leaf: "spectral_reference_qc"
+    fq_name: "n4m.diagnostics.spectral_reference_qc"
+    c_surface:
+      - "n4m_procedure_run"
+    estimator:
+      kind: procedure
+      adapter: spectral_reference_qc
+      roles: [generic]
+      inputs:
+        target_domain: optional
+      params:
+        - name: valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+        - name: reference_mode
+          type: enum
+          default: dataset_mean
+          choices: [dataset_mean, supplied]
+        - name: reference_valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+  - method_id: "diagnostics.spectral_events_qc"
+    family: "utilities"
+    category: "utilities"
+    subcategory: "spectral_diagnostics"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_procedure_run"
+    tu:
+      - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    parity:
+      fixtures: []
+      tolerance_row: "spectral_diagnostics_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.spectral_events_qc"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "SpectralEventsQc"
+        legacy_aliases: []
+      r:
+        function: "n4m_spectral_events_qc"
+        legacy_aliases: []
+    publications: []
+    notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+    namespace: "diagnostics"
+    leaf: "spectral_events_qc"
+    fq_name: "n4m.diagnostics.spectral_events_qc"
+    c_surface:
+      - "n4m_procedure_run"
+    estimator:
+      kind: procedure
+      adapter: spectral_events_qc
+      roles: [generic]
+      params:
+        - name: valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+        - name: axis_basis
+          type: enum
+          default: index
+          choices: [index, physical]
+        - name: axis_values
+          type: double_array
+          default: []
+        - name: outlier_threshold
+          type: double
+          default: 8.0
+          min: 0
+        - name: clip_lower
+          type: double
+          default: nan
+          optional: true
+        - name: clip_upper
+          type: double
+          default: nan
+          optional: true
+        - name: clip_tolerance
+          type: double
+          default: 0.0
+          min: 0
+  - method_id: "diagnostics.spectral_noise_proxy"
+    family: "utilities"
+    category: "utilities"
+    subcategory: "spectral_diagnostics"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_procedure_run"
+    tu:
+      - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    parity:
+      fixtures: []
+      tolerance_row: "spectral_diagnostics_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.spectral_noise_proxy"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "SpectralNoiseProxy"
+        legacy_aliases: []
+      r:
+        function: "n4m_spectral_noise_proxy"
+        legacy_aliases: []
+    publications: []
+    notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+    namespace: "diagnostics"
+    leaf: "spectral_noise_proxy"
+    fq_name: "n4m.diagnostics.spectral_noise_proxy"
+    c_surface:
+      - "n4m_procedure_run"
+    estimator:
+      kind: procedure
+      adapter: spectral_noise_proxy
+      roles: [generic]
+      params:
+        - name: valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+  - method_id: "diagnostics.local_density"
+    family: "utilities"
+    category: "utilities"
+    subcategory: "spectral_diagnostics"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_procedure_run"
+    tu:
+      - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    parity:
+      fixtures: []
+      tolerance_row: "spectral_diagnostics_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.local_density"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "LocalDensity"
+        legacy_aliases: []
+      r:
+        function: "n4m_local_density"
+        legacy_aliases: []
+    publications: []
+    notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+    namespace: "diagnostics"
+    leaf: "local_density"
+    fq_name: "n4m.diagnostics.local_density"
+    c_surface:
+      - "n4m_procedure_run"
+    estimator:
+      kind: procedure
+      adapter: local_density
+      roles: [generic]
+      inputs:
+        target_domain: optional
+      params:
+        - name: valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+        - name: mode
+          type: enum
+          default: training
+          choices: [training, novelty]
+        - name: n_neighbors
+          type: int
+          default: 20
+          min: 1
+          max: 2147483647
+  - method_id: "diagnostics.pca_reference_qc"
+    family: "utilities"
+    category: "utilities"
+    subcategory: "spectral_diagnostics"
+    since_abi: "2.20.0"
+    abi_symbols:
+      - "n4m_procedure_run"
+    tu:
+      - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    parity:
+      fixtures: []
+      tolerance_row: "spectral_diagnostics_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.pca_reference_qc"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "PCAReferenceQc"
+        legacy_aliases: []
+      r:
+        function: "n4m_pca_reference_qc"
+        legacy_aliases: []
+    publications: []
+    notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+    namespace: "diagnostics"
+    leaf: "pca_reference_qc"
+    fq_name: "n4m.diagnostics.pca_reference_qc"
+    c_surface:
+      - "n4m_procedure_run"
+    estimator:
+      kind: procedure
+      adapter: pca_reference_qc
+      roles: [generic]
+      inputs:
+        target_domain: required
+      params:
+        - name: valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+        - name: n_components
+          type: int
+          default: 5
+          min: 1
+          max: 2147483647

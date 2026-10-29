@@ -56,6 +56,9 @@ benchmarks/overview
 benchmarks/cross_binding
 benchmarks/cross_binding_threads
 benchmarks/methodology
+benchmarks/representative_nirs_pca
+datasets_kernel_reuse_inventory
+diagnostics_reuse
 landing/dashboard
 bibliography
 methods/index

@@ -59,10 +59,15 @@
 \alias{n4m_wavelength_shift}
 \alias{n4m_wavelength_stretch}
 \alias{n4m_approximate_press}
+\alias{n4m_local_density}
 \alias{n4m_model_selection}
+\alias{n4m_pca_reference_qc}
 \alias{n4m_pls_diagnostics}
 \alias{n4m_pls_monitoring}
 \alias{n4m_regression_metrics}
+\alias{n4m_spectral_events_qc}
+\alias{n4m_spectral_noise_proxy}
+\alias{n4m_spectral_reference_qc}
 \alias{n4m_correlation}
 \alias{n4m_high_leverage}
 \alias{n4m_spectral_quality}
@@ -271,10 +276,15 @@ n4m_local_warp(n_control_points = 5L, max_shift = 1.0, seed = NULL)
 n4m_wavelength_shift(shift_lo = -1.0, shift_hi = 1.0, seed = NULL)
 n4m_wavelength_stretch(stretch_lo = 0.99, stretch_hi = 1.01, seed = NULL)
 n4m_approximate_press(max_components = 10L)
+n4m_local_density(valid_mask = c(), mode = "training", n_neighbors = 20L)
 n4m_model_selection()
+n4m_pca_reference_qc(valid_mask = c(), n_components = 5L)
 n4m_pls_diagnostics(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
 n4m_pls_monitoring(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE, alpha = 0.05)
 n4m_regression_metrics()
+n4m_spectral_events_qc(valid_mask = c(), axis_basis = "index", axis_values = c(), outlier_threshold = 8.0, clip_lower = NULL, clip_upper = NULL, clip_tolerance = 0.0)
+n4m_spectral_noise_proxy(valid_mask = c())
+n4m_spectral_reference_qc(valid_mask = c(), reference_mode = "dataset_mean", reference_valid_mask = c())
 n4m_correlation(threshold = 0.0, top_k = -1L)
 n4m_high_leverage(method = "hat", threshold_multiplier = 2.0, absolute_threshold = NULL, n_components = 0L, center = TRUE)
 n4m_spectral_quality(max_nan_ratio = 0.1, max_zero_ratio = 0.5, min_variance = 1e-08, max_value = NULL, min_value = NULL, check_inf = TRUE)
@@ -446,6 +456,8 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{auto_offset}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{aw_high}{Native parameter (double); defaults come from the n4m manifest.}
 \item{aw_low}{Native parameter (double); defaults come from the n4m manifest.}
+\item{axis_basis}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{axis_values}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{b_high}{Native parameter (double); defaults come from the n4m manifest.}
 \item{b_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base}{Native parameter (double); defaults come from the n4m manifest.}
@@ -464,7 +476,10 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{chain_offsets}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{chain_params}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{check_inf}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{clip_lower}{Native parameter (double); defaults come from the n4m manifest.}
 \item{clip_negative}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{clip_tolerance}{Native parameter (double); defaults come from the n4m manifest.}
+\item{clip_upper}{Native parameter (double); defaults come from the n4m manifest.}
 \item{coef0}{Native parameter (double); defaults come from the n4m manifest.}
 \item{coeff_max}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{coeff_min}{Native parameter (double_array); defaults come from the n4m manifest.}
@@ -638,6 +653,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{operator_range_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{operator_range_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{order}{Native parameter (int); defaults come from the n4m manifest.}
+\item{outlier_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{overall_strength}{Native parameter (double); defaults come from the n4m manifest.}
 \item{p}{Native parameter (double); defaults come from the n4m manifest.}
 \item{p_range}{Native parameter (double); defaults come from the n4m manifest.}
@@ -664,7 +680,9 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{rank_method}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{ratio_kept}{Native parameter (double); defaults come from the n4m manifest.}
 \item{reference}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{reference_mode}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{reference_size_um}{Native parameter (double); defaults come from the n4m manifest.}
+\item{reference_valid_mask}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{reference_water_activity}{Native parameter (double); defaults come from the n4m manifest.}
 \item{region_specific}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{regularizer}{Native parameter (double); defaults come from the n4m manifest.}
@@ -738,6 +756,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{use_size_range}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{use_temp_range}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{v_max}{Native parameter (double); defaults come from the n4m manifest.}
+\item{valid_mask}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{variation_scope}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{vip_threshold}{Native parameter (double); defaults come from the n4m manifest.}
 \item{vote_threshold}{Native parameter (double); defaults come from the n4m manifest.}
@@ -826,10 +845,15 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_wavelength_shift}: \code{augmentation.wavelength.wavelength_shift} (augmenter)
 \item \code{n4m_wavelength_stretch}: \code{augmentation.wavelength.wavelength_stretch} (augmenter)
 \item \code{n4m_approximate_press}: \code{diagnostics.approximate_press} (generic)
+\item \code{n4m_local_density}: \code{diagnostics.local_density} (generic)
 \item \code{n4m_model_selection}: \code{diagnostics.model_selection} (generic)
+\item \code{n4m_pca_reference_qc}: \code{diagnostics.pca_reference_qc} (generic)
 \item \code{n4m_pls_diagnostics}: \code{diagnostics.pls_diagnostics} (generic)
 \item \code{n4m_pls_monitoring}: \code{diagnostics.pls_monitoring} (generic)
 \item \code{n4m_regression_metrics}: \code{diagnostics.regression_metrics} (generic)
+\item \code{n4m_spectral_events_qc}: \code{diagnostics.spectral_events_qc} (generic)
+\item \code{n4m_spectral_noise_proxy}: \code{diagnostics.spectral_noise_proxy} (generic)
+\item \code{n4m_spectral_reference_qc}: \code{diagnostics.spectral_reference_qc} (generic)
 \item \code{n4m_correlation}: \code{filters.correlation} (selector)
 \item \code{n4m_high_leverage}: \code{filters.high_leverage} (sample_filter)
 \item \code{n4m_spectral_quality}: \code{filters.spectral_quality} (sample_filter)

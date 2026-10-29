@@ -2254,6 +2254,36 @@ export class ApproximatePress extends NativeProcedure implements Procedure {
 }
 NativeMethod.register("diagnostics.approximate_press", ApproximatePress);
 
+/** Parameters of LocalDensity; unset values take the native defaults. */
+export interface LocalDensityParams {
+    /** Default []. */
+    valid_mask?: number[];
+    /** Default "training". */
+    mode?: "training" | "novelty";
+    /** Default 20. */
+    n_neighbors?: number;
+}
+
+/** Native `diagnostics.local_density` (generic). */
+export class LocalDensity extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.local_density";
+    readonly paramTypes = {
+        valid_mask: "int_array",
+        mode: "enum",
+        n_neighbors: "int",
+    } as const;
+
+    constructor(params: LocalDensityParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.local_density", LocalDensity);
+
 /** Parameters of ModelSelection; unset values take the native defaults. */
 export interface ModelSelectionParams {
 }
@@ -2274,6 +2304,33 @@ export class ModelSelection extends NativeProcedure implements Procedure {
     }
 }
 NativeMethod.register("diagnostics.model_selection", ModelSelection);
+
+/** Parameters of PCAReferenceQc; unset values take the native defaults. */
+export interface PCAReferenceQcParams {
+    /** Default []. */
+    valid_mask?: number[];
+    /** Default 5. */
+    n_components?: number;
+}
+
+/** Native `diagnostics.pca_reference_qc` (generic). Required inputs: target_domain. */
+export class PCAReferenceQc extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.pca_reference_qc";
+    readonly paramTypes = {
+        valid_mask: "int_array",
+        n_components: "int",
+    } as const;
+
+    constructor(params: PCAReferenceQcParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.pca_reference_qc", PCAReferenceQc);
 
 /** Parameters of PLSDiagnostics; unset values take the native defaults. */
 export interface PLSDiagnosticsParams {
@@ -2370,6 +2427,102 @@ export class RegressionMetrics extends NativeProcedure implements Procedure {
     }
 }
 NativeMethod.register("diagnostics.regression_metrics", RegressionMetrics);
+
+/** Parameters of SpectralEventsQc; unset values take the native defaults. */
+export interface SpectralEventsQcParams {
+    /** Default []. */
+    valid_mask?: number[];
+    /** Default "index". */
+    axis_basis?: "index" | "physical";
+    /** Default []. */
+    axis_values?: number[];
+    /** Default 8. */
+    outlier_threshold?: number;
+    /** Optional: unset by default. */
+    clip_lower?: number;
+    /** Optional: unset by default. */
+    clip_upper?: number;
+    /** Default 0. */
+    clip_tolerance?: number;
+}
+
+/** Native `diagnostics.spectral_events_qc` (generic). */
+export class SpectralEventsQc extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.spectral_events_qc";
+    readonly paramTypes = {
+        valid_mask: "int_array",
+        axis_basis: "enum",
+        axis_values: "double_array",
+        outlier_threshold: "double",
+        clip_lower: "double",
+        clip_upper: "double",
+        clip_tolerance: "double",
+    } as const;
+
+    constructor(params: SpectralEventsQcParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.spectral_events_qc", SpectralEventsQc);
+
+/** Parameters of SpectralNoiseProxy; unset values take the native defaults. */
+export interface SpectralNoiseProxyParams {
+    /** Default []. */
+    valid_mask?: number[];
+}
+
+/** Native `diagnostics.spectral_noise_proxy` (generic). */
+export class SpectralNoiseProxy extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.spectral_noise_proxy";
+    readonly paramTypes = {
+        valid_mask: "int_array",
+    } as const;
+
+    constructor(params: SpectralNoiseProxyParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.spectral_noise_proxy", SpectralNoiseProxy);
+
+/** Parameters of SpectralReferenceQc; unset values take the native defaults. */
+export interface SpectralReferenceQcParams {
+    /** Default []. */
+    valid_mask?: number[];
+    /** Default "dataset_mean". */
+    reference_mode?: "dataset_mean" | "supplied";
+    /** Default []. */
+    reference_valid_mask?: number[];
+}
+
+/** Native `diagnostics.spectral_reference_qc` (generic). */
+export class SpectralReferenceQc extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.spectral_reference_qc";
+    readonly paramTypes = {
+        valid_mask: "int_array",
+        reference_mode: "enum",
+        reference_valid_mask: "int_array",
+    } as const;
+
+    constructor(params: SpectralReferenceQcParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.spectral_reference_qc", SpectralReferenceQc);
 
 /** Parameters of CorrelationFilter; unset values take the native defaults. */
 export interface CorrelationFilterParams {

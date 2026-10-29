@@ -1,5 +1,19 @@
 # Shared diagnostics and frozen PCA references
 
+Current completion adds five generic diagnostic procedures in candidate1.3.10,
+using ABI2.20 without exported symbol or serialized-state changes. See the
+[complete protocol and cross-binding recipe](methods/intrinsic_diagnostics.md),
+[61-function reuse inventory](datasets_kernel_reuse_inventory.md) and
+[real-matrix benchmark](benchmarks/representative_nirs_pca.md).
+
+The retained section below records the 1.3.8/1.3.9 baseline audit. Its identified
+caller-reference/spike/clip gaps are superseded by the explicitly versioned new
+procedures above; its historical synthetic timing is not the representative
+benchmark or a publication claim.
+
+## Historical baseline audit
+
+
 Verified against source `748ee444` (Methods 1.3.8, ABI 2.20) plus the local
 wide-matrix T²/Q correction. A source capability and an installed binary's
 availability are separate facts. No release is implied by this local audit.

@@ -61,7 +61,10 @@ testthat::test_that("every manifest estimator has a generated R constructor", {
                             c(vapply(fx$cases, `[[`, "", "method_id"),
                               vapply(fx$procedures, `[[`, "", "method_id"),
                               "preprocessing.scaling.standard_scale",
-                              "utilities.ragged_summary"))
+                              "utilities.ragged_summary",
+                              "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
+                              "diagnostics.spectral_noise_proxy", "diagnostics.local_density",
+                              "diagnostics.pca_reference_qc"))
 })
 
 testthat::test_that("StandardScale fits population moments on training rows only", {

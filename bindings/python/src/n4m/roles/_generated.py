@@ -1991,6 +1991,34 @@ class ApproximatePress(NativeProcedure):
         self.max_components = max_components
 
 
+class LocalDensity(NativeProcedure):
+    """Native ``diagnostics.local_density`` (generic)."""
+
+    _method_id = "diagnostics.local_density"
+    _param_types: ClassVar[dict[str, str]] = {
+        "valid_mask": "int_array",
+        "mode": "enum",
+        "n_neighbors": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "mode": (
+            "training",
+            "novelty",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        valid_mask=(),
+        mode="training",
+        n_neighbors=20,
+    ) -> None:
+        self.valid_mask = valid_mask
+        self.mode = mode
+        self.n_neighbors = n_neighbors
+
+
 class ModelSelection(NativeProcedure):
     """Native ``diagnostics.model_selection`` (generic)."""
 
@@ -1999,6 +2027,28 @@ class ModelSelection(NativeProcedure):
 
     def __init__(self) -> None:
         pass
+
+
+class PCAReferenceQc(NativeProcedure):
+    """Native ``diagnostics.pca_reference_qc`` (generic).
+
+    Required fit inputs: target_domain.
+    """
+
+    _method_id = "diagnostics.pca_reference_qc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "valid_mask": "int_array",
+        "n_components": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        valid_mask=(),
+        n_components=5,
+    ) -> None:
+        self.valid_mask = valid_mask
+        self.n_components = n_components
 
 
 class PLSDiagnostics(NativeProcedure):
@@ -2071,6 +2121,90 @@ class RegressionMetrics(NativeProcedure):
 
     def __init__(self) -> None:
         pass
+
+
+class SpectralEventsQc(NativeProcedure):
+    """Native ``diagnostics.spectral_events_qc`` (generic)."""
+
+    _method_id = "diagnostics.spectral_events_qc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "valid_mask": "int_array",
+        "axis_basis": "enum",
+        "axis_values": "double_array",
+        "outlier_threshold": "double",
+        "clip_lower": "double",
+        "clip_upper": "double",
+        "clip_tolerance": "double",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "axis_basis": (
+            "index",
+            "physical",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        valid_mask=(),
+        axis_basis="index",
+        axis_values=(),
+        outlier_threshold=8,
+        clip_lower=None,
+        clip_upper=None,
+        clip_tolerance=0,
+    ) -> None:
+        self.valid_mask = valid_mask
+        self.axis_basis = axis_basis
+        self.axis_values = axis_values
+        self.outlier_threshold = outlier_threshold
+        self.clip_lower = clip_lower
+        self.clip_upper = clip_upper
+        self.clip_tolerance = clip_tolerance
+
+
+class SpectralNoiseProxy(NativeProcedure):
+    """Native ``diagnostics.spectral_noise_proxy`` (generic)."""
+
+    _method_id = "diagnostics.spectral_noise_proxy"
+    _param_types: ClassVar[dict[str, str]] = {
+        "valid_mask": "int_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        valid_mask=(),
+    ) -> None:
+        self.valid_mask = valid_mask
+
+
+class SpectralReferenceQc(NativeProcedure):
+    """Native ``diagnostics.spectral_reference_qc`` (generic)."""
+
+    _method_id = "diagnostics.spectral_reference_qc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "valid_mask": "int_array",
+        "reference_mode": "enum",
+        "reference_valid_mask": "int_array",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "reference_mode": (
+            "dataset_mean",
+            "supplied",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        valid_mask=(),
+        reference_mode="dataset_mean",
+        reference_valid_mask=(),
+    ) -> None:
+        self.valid_mask = valid_mask
+        self.reference_mode = reference_mode
+        self.reference_valid_mask = reference_valid_mask
 
 
 class CorrelationFilter(NativeSelector):
@@ -5732,6 +5866,7 @@ __all__ = [
     "LinearStackCompress",
     "LocalCentering",
     "LocalClip",
+    "LocalDensity",
     "LocalMixup",
     "LocalWarp",
     "LocalizedMSC",
@@ -5747,6 +5882,7 @@ __all__ = [
     "Normalize",
     "NorrisWilliams",
     "OnPLS",
+    "PCAReferenceQc",
     "PLSCox",
     "PLSDiagnostics",
     "PLSLogistic",
@@ -5791,7 +5927,10 @@ __all__ = [
     "SlopeBiasCorrection",
     "SparsePLSDA",
     "SparseSIMPLS",
+    "SpectralEventsQc",
+    "SpectralNoiseProxy",
     "SpectralQualityFilter",
+    "SpectralReferenceQc",
     "SpikeNoise",
     "SplineCurveSimplification",
     "SplineSmoothing",
