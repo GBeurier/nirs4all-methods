@@ -118,6 +118,12 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_multimodal_pipeline_import_from_buffer,
     n4m_status_t (*)(n4m_context_t*, const n4m_multimodal_recipe_v1_t*, const void*, size_t, n4m_multimodal_pipeline_t**)),
     "n4m_multimodal_pipeline_import_from_buffer signature drifted");
 
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_get_abi_version_major, uint32_t (*)(void)),
+               "n4m_get_abi_version_major signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_get_abi_version_minor, uint32_t (*)(void)),
+               "n4m_get_abi_version_minor signature drifted");
+_Static_assert(N4M_RUST_SIGNATURE_IS(n4m_get_abi_version_patch, uint32_t (*)(void)),
+               "n4m_get_abi_version_patch signature drifted");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_check_abi_compatibility,
                                      n4m_status_t (*)(uint32_t, uint32_t)),
                "n4m_check_abi_compatibility signature drifted");

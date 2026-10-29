@@ -16,7 +16,8 @@ released with its owner. `Config` + `Model::fit` call `n4m_model_fit` directly.
 uses caller-owned row-major storage (`n4m_model_predict`); `Model::predict`
 uses core-owned storage (`n4m_model_predict_alloc`) and copies it before
 calling `n4m_array_free`. `Model::export_n4mm`/`import_n4mm` own N4MM bytes, and
-`inspect_n4mm` accepts raw-model v1 and bounded SNV/SG pipeline v2 payloads;
+`inspect_n4mm` accepts raw-model v1, bounded SNV/SG pipeline v2 and
+component-resolution v3 payloads (including its explicit pipeline flag);
 `SerializedModelInfo::pipeline` is a typed optional descriptor containing the
 validated operator order, versioned row-wise SNV ddof-0 and SG-interp semantic
 profile, canonical SG parameters, raw/model widths and stable FNV-1a-64 plan
@@ -213,6 +214,7 @@ directory. Before creating a `Context`, select the exact shared-library file:
 
 ```rust
 n4m::configure_library("/absolute/path/to/libn4m.so.2")?;
+let actual_abi = n4m::runtime_abi_version()?;
 let context = n4m::Context::new()?;
 ```
 

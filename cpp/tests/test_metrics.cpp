@@ -760,6 +760,47 @@ void verify_q_residuals_parity() {
     }
 }
 
+// Padding with constant spectral bands changes neither covariance geometry nor
+// any calibration statistic. It turns a tall problem into a genuinely wide
+// one and catches compact-SVD stride/buffer mistakes without a second kernel.
+void test_wide_pca_diagnostics_constant_band_parity() {
+    const int64_t n = 42, p = 3, wide_p = 240;
+    std::vector<double> narrow(static_cast<size_t>(n * p));
+    std::vector<double> wide(static_cast<size_t>(n * wide_p), 0.0);
+    for (int64_t i = 0; i < n; ++i) {
+        const double row[3] = {double(i % 7 - 3), double(i % 5 - 2), double(i % 11 - 5)};
+        for (int64_t j = 0; j < p; ++j)
+            wide[static_cast<size_t>(i * wide_p + j)] =
+                narrow[static_cast<size_t>(i * p + j)] = row[j];
+    }
+    const auto X = make_rowmajor_view(narrow.data(), n, p);
+    const auto W = make_rowmajor_view(wide.data(), n, wide_p);
+    std::vector<double> t(static_cast<size_t>(n)), wt(t.size()), q(t.size()), wq(t.size());
+    double t_ucl = 0.0, wt_ucl = 0.0, q_ucl = 0.0, wq_ucl = 0.0;
+    int32_t rank = -1, wide_rank = -1;
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(X, 2, 0.05,
+                        t.data(), n, &t_ucl, &rank) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(W, 2, 0.05,
+                        wt.data(), n, &wt_ucl, &wide_rank) == N4M_OK);
+    N4M_TEST_REQUIRE(rank == wide_rank && rank == 2);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_q_residuals(X, 2, 0.05, q.data(), n, &q_ucl) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_q_residuals(W, 2, 0.05, wq.data(), n, &wq_ucl) == N4M_OK);
+    for (size_t i = 0; i < t.size(); ++i) {
+        N4M_TEST_REQUIRE(std::abs(t[i] - wt[i]) < 1e-9);
+        N4M_TEST_REQUIRE(std::abs(q[i] - wq[i]) < 1e-9);
+    }
+    N4M_TEST_REQUIRE(std::abs(t_ucl - wt_ucl) < 1e-9);
+    N4M_TEST_REQUIRE(std::abs(q_ucl - wq_ucl) < 1e-9);
+    // Wide constant input has a genuinely empty resolved subspace.
+    std::fill(wide.begin(), wide.end(), 0.1);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_hotelling_t2_resolved(W, 2, 0.05,
+                        wt.data(), n, &wt_ucl, &wide_rank) == N4M_OK);
+    N4M_TEST_REQUIRE(wide_rank == 0 && wt_ucl == 0.0);
+    N4M_TEST_REQUIRE(n4m_outlier_detection_q_residuals(W, 2, 0.05, wq.data(), n, &wq_ucl) == N4M_OK);
+    N4M_TEST_REQUIRE(wq_ucl == 0.0);
+    for (size_t i = 0; i < wt.size(); ++i) N4M_TEST_REQUIRE(wt[i] == 0.0 && wq[i] == 0.0);
+}
+
 }  // namespace
 
 void register_metrics_tests(n4m_testing::Runner& r);
@@ -776,6 +817,7 @@ void register_metrics_tests(n4m_testing::Runner& r) {
     r.run("q_residuals_scaling",           test_q_residuals_scaling);
     r.run("q_residuals_constant_columns",  test_q_residuals_constant_columns);
     r.run("q_residuals_negative_h0",       test_q_residuals_negative_h0);
+    r.run("wide_pca_diagnostics_constant_band_parity", test_wide_pca_diagnostics_constant_band_parity);
     r.run("metrics_parity",                verify_metrics_parity);
     r.run("hotelling_t2_parity",           verify_hotelling_t2_parity);
     r.run("q_residuals_parity",            verify_q_residuals_parity);

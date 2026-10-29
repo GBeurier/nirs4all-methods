@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: CECILL-2.1
 #include "n4m/metrics.h"
+#include "n4m/decomposition.h"
+#include <chrono>
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -466,6 +468,39 @@ static void pca_component_count_tests(n4m_context_t* ctx) {
     REQUIRE(n4m_preflight_pca_compute(ctx,&X,1,&S,&L,ev,mom)==N4M_OK);
 }
 
+// Human issue #45's exact shape: current exact-moment endpoint is already
+// supported, and the longstanding fitted PCA API independently supplies frozen
+// projections without requesting exact full-spectrum moments.
+static void pca_wide_nirs_consumer_witness(n4m_context_t* ctx) {
+    constexpr int64_t n = 390, p = 2151;
+    std::vector<double> x(static_cast<size_t>(n * p));
+    for (int64_t i = 0; i < n; ++i) for (int64_t j = 0; j < p; ++j)
+        x[static_cast<size_t>(i * p + j)] = double((i % 17 - 8) * (j % 13 - 6)
+                                               + (i % 11 - 5) * (j % 7 - 3));
+    const auto start = std::chrono::steady_clock::now();
+    const auto exact = run_pca(ctx, x, n, p, 2);
+    REQUIRE(exact.status == N4M_OK);
+    REQUIRE(exact.eigen[0] > 0.0 && exact.eigen[1] > 0.0);
+    REQUIRE(std::isfinite(exact.moments[0]) && exact.moments[0] > 0.0);
+    REQUIRE(std::isfinite(exact.moments[1]) && exact.moments[1] > 0.0);
+    REQUIRE(rel_close(exact.eigen[0] + exact.eigen[1], exact.moments[0], 1e-10));
+    n4m_pp_flex_pca_handle_t* fitted = nullptr;
+    REQUIRE(n4m_decomposition_flexible_pca_create(&fitted, 2.0) == N4M_OK);
+    auto X = view(x.data(), n, p);
+    REQUIRE(n4m_decomposition_flexible_pca_fit(fitted, X) == N4M_OK);
+    std::vector<double> before(static_cast<size_t>(n * 2)), after(before.size());
+    auto B = view(before.data(), n, 2), A = view(after.data(), n, 2);
+    REQUIRE(n4m_decomposition_flexible_pca_transform(fitted, X, B) == N4M_OK);
+    std::vector<double> heldout(static_cast<size_t>(p), 123.0), heldout_scores(2);
+    auto H = view(heldout.data(), 1, p), HS = view(heldout_scores.data(), 1, 2);
+    REQUIRE(n4m_decomposition_flexible_pca_transform(fitted, H, HS) == N4M_OK);
+    REQUIRE(n4m_decomposition_flexible_pca_transform(fitted, X, A) == N4M_OK);
+    REQUIRE(before == after);  // Test batch cannot change training-only state.
+    n4m_decomposition_flexible_pca_destroy(fitted);
+    const auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    std::printf("390 x 2151 exact moments and frozen PCA projection: %.3f s\n", elapsed);
+}
+
 int main() {
     try {
         n4m_context_t* ctx=nullptr;
@@ -513,6 +548,7 @@ int main() {
         pca_component_count_tests(ctx);
         pca_completion_tests(ctx);
         pca_budget_tests(ctx);
+        pca_wide_nirs_consumer_witness(ctx);
         pca_constant_column_tests(ctx);
         // Weak decoupled variance: [A; -A; 26 zero rows], A = [[1,0,0],
         // [0,1e-9,0],[0,1e-9,1e-9]]. The second variance (NumPy 2.2.6:

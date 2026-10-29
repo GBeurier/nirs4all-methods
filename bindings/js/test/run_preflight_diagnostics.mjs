@@ -1636,4 +1636,21 @@ for (const n of [3, 10, 101]) {
     for (const alpha of tiny) relClose(hOf(x24, 6, 2, 2, alpha).ucl, 35 / 12 * f24(Math.log(alpha)), 1e-12);
     for (const beta of oneMinus) relClose(hOf(x24, 6, 2, 2, 1 - beta).ucl, 35 / 12 * f24(Math.log1p(-beta)), 1e-12);
 }
-console.log("JS/WASM Preflight diagnostics passed");
+// Wide NIRS spectra: constant-band padding preserves calibration statistics.
+// This runs the same C++/C core as native test_wide_pca_diagnostics_*, with no
+// JavaScript numerical replacement when a dataset has more bands than rows.
+{
+    const rows = 42, cols = 240;
+    const narrow = new Float64Array(rows * 3), wide = new Float64Array(rows * cols);
+    for (let i = 0; i < rows; ++i) {
+        const row = [i % 7 - 3, i % 5 - 2, i % 11 - 5];
+        row.forEach((value, j) => { narrow[i * 3 + j] = value; wide[i * cols + j] = value; });
+    }
+    for (const [Class, key] of [[HotellingT2, "t2"], [QResiduals, "q"]]) {
+        const reference = new Class({n_components: 2, alpha: 0.05}).run({data: narrow, rows, cols: 3});
+        const actual = new Class({n_components: 2, alpha: 0.05}).run({data: wide, rows, cols});
+        Array.from(actual[key].data).forEach((value, i) => near(value, reference[key].data[i]));
+        near(actual.ucl, reference.ucl);
+    }
+}
+console.log("JS/WASM Preflight diagnostics passed (including wide NIRS T²/Q parity)");

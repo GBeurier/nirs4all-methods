@@ -4,6 +4,21 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.9] - Unreleased local candidate
+
+ABI 2.20.0 is unchanged; no C symbol or numerical kernel is duplicated.
+
+- Hotelling T² and Q residuals support wide calibration matrices through
+  compact SVD dimensions, with native and WASM parity tests.
+- Document frozen fitted PCA reuse, shared diagnostic ownership and the
+  qualified 390 × 2151 Preflight witness.
+- Prepare the independently versioned Rust binding `n4m` 0.4.1. It supports
+  the existing owner N4MM v3 reader and exposes the actual selected runtime
+  ABI through the public C getters. Consumers must require ABI 2.20 and the
+  new binding before claiming format-3 replay support.
+
+No publication is implied by this candidate entry.
+
 ## [1.3.8] - 2026-10-20
 
 ABI 2.20.0 unchanged (no new or changed symbol). Patch release for the CI

@@ -272,6 +272,9 @@ const _: () = assert!(mem::offset_of!(RolePipelineStepInfoV1Raw, n_features_in) 
 #[cfg(all(feature = "linked", not(feature = "dynamic")))]
 #[link(name = "n4m")]
 extern "C" {
+    fn n4m_get_abi_version_major() -> u32;
+    fn n4m_get_abi_version_minor() -> u32;
+    fn n4m_get_abi_version_patch() -> u32;
     fn n4m_check_abi_compatibility(major: u32, minor: u32) -> i32;
     fn n4m_status_to_string(status: i32) -> *const c_char;
     fn n4m_context_create(out: *mut *mut ContextRaw) -> i32;
@@ -1136,6 +1139,22 @@ fn ensure_abi() -> Result<(), Error> {
         unsafe { n4m_check_abi_compatibility(ABI_MAJOR, ABI_MINOR) },
         None,
     )
+}
+
+/// Query the actual ABI of the selected native library after owner negotiation.
+///
+/// This is the runtime version, rather than the minimum ABI used to compile
+/// this binding. Consumers use it before hydrating a versioned native artifact.
+pub fn runtime_abi_version() -> Result<(u32, u32, u32), Error> {
+    ensure_abi()?;
+    // SAFETY: these no-argument getters belong to the negotiated public C ABI.
+    Ok(unsafe {
+        (
+            n4m_get_abi_version_major(),
+            n4m_get_abi_version_minor(),
+            n4m_get_abi_version_patch(),
+        )
+    })
 }
 
 impl Context {
@@ -3303,6 +3322,7 @@ mod tests {
         assert!(!info.has_pipeline());
         assert_eq!(info.pipeline, None);
         assert_eq!(info.writer_abi, (ABI_MAJOR, ABI_MINOR, 0));
+        assert_eq!(info.writer_abi, runtime_abi_version().unwrap());
         assert_eq!(info.algorithm, 0);
         assert_eq!(info.solver, 0);
         assert_eq!(info.deflation, 0);

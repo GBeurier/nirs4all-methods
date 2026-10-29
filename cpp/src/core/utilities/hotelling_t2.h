@@ -2,7 +2,7 @@
 /*
  * Hotelling T² statistic on the PCA-reduced score space.
  *
- * For a (n_samples x n_features) matrix X, n_samples >= n_features:
+ * For a (n_samples x n_features) matrix X (tall or wide):
  *   1. Centre by column means (corrected two-pass, column_centring.h:
  *      constant columns centre to exact zeros) at one power-of-two scale.
  *   2. Compute the thin SVD of the centred matrix: Xc = U Σ V^T.

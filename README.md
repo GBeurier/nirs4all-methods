@@ -241,6 +241,7 @@ implementation.
 - 🏗️ **[Architecture](docs/architecture/overview.md)** — memory model · error model · threading · serialization
 - 🔎 **[R2 native artifact preflight](docs/native-default-r2.md)** — N4MM v2 inspectors, limitations, archive boundary, and scientific links
 - 📜 **[ABI reference](docs/abi/reference.md)** — `n4m_*` C ABI surface, stability policy, changes log
+- **[Shared diagnostics and frozen PCA](docs/diagnostics_reuse.md)** — verified API reuse, wide-matrix support, calibration-only projection and protocol gaps
 - 🔌 **Bindings** — [Python](docs/bindings/python.md) · [R](docs/bindings/r.md) · [MATLAB / Octave](docs/bindings/matlab.md) · [JS / WASM](docs/bindings/js.md)
 - 🗃️ **Archived bindings** — [Android / JNI status](docs/bindings/android.md) and frozen PoCs under `bindings/_archive/`
 - ✅ **[Parity methodology](docs/parity/methodology.md)** — every algorithm cross-checked against an external library
@@ -348,7 +349,7 @@ choice; CeCILL-2.1 is recognised by French law and GPL-family-compatible) — wi
   title   = {nirs4all-methods: A portable Partial Least Squares engine with a stable C ABI},
   year    = {2026},
   url     = {https://github.com/GBeurier/nirs4all-methods},
-  version = {1.3.8}
+  version = {1.3.9}
 }
 ```
 
