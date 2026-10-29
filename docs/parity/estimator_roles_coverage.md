@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**210 of 232 catalog entries covered.**
+**215 of 237 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -20,7 +20,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | preprocessing | 63 | 64 |
 | selection | 26 | 26 |
 | splitters | 9 | 9 |
-| utilities | 7 | 7 |
+| utilities | 12 | 12 |
 
 | Method | Kind | Roles | Validated in |
 |---|---|---|---|
@@ -95,8 +95,10 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `diagnostics.hdbscan` | not yet | - | - |
 | `diagnostics.holm_adjust` | not yet | - | - |
 | `diagnostics.linear_sum_assignment` | not yet | - | - |
+| `diagnostics.local_density` | procedure | generic | manifest only |
 | `diagnostics.model_selection` | procedure | generic | manifest only |
 | `diagnostics.pca_monitor` | not yet | - | - |
+| `diagnostics.pca_reference_qc` | procedure | generic | manifest only |
 | `diagnostics.permanova` | not yet | - | - |
 | `diagnostics.permdisp` | not yet | - | - |
 | `diagnostics.pls_diagnostics` | procedure | generic | manifest only |
@@ -104,6 +106,9 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `diagnostics.preflight_qualification` | not yet | - | - |
 | `diagnostics.regression_metrics` | procedure | generic | manifest only |
 | `diagnostics.regression_scores` | not yet | - | - |
+| `diagnostics.spectral_events_qc` | procedure | generic | manifest only |
+| `diagnostics.spectral_noise_proxy` | procedure | generic | manifest only |
+| `diagnostics.spectral_reference_qc` | procedure | generic | manifest only |
 | `diagnostics.variance_components` | not yet | - | - |
 | `filters.composite` | not yet | - | - |
 | `filters.correlation` | estimator | selector | Python, R, JS/WASM |
