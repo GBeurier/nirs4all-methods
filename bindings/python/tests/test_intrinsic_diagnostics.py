@@ -271,3 +271,17 @@ def test_pca_rejects_nonfinite_reference_and_implicit_mask_imputation():
             n_components=2,
             valid_mask=[1, 0, 1, 1, 1, 1, 1, 1],
         )
+
+
+@pytest.mark.parametrize("mask_name", ["valid_mask", "reference_valid_mask"])
+@pytest.mark.parametrize("invalid", [-1, 2])
+def test_public_mask_contract_rejects_nonbinary_values(mask_name, invalid):
+    reference = np.array([[1.0, 2.0, 4.0, 8.0]])
+    with pytest.raises(ValueError):
+        run(
+            "spectral_reference_qc",
+            reference,
+            reference,
+            reference_mode="supplied",
+            **{mask_name: [1, invalid, 1, 1]},
+        )
