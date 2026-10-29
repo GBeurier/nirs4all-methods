@@ -24,6 +24,7 @@ struct n4m_lof_t {
     int     k;
     double* k_distance;   /* (rows,) */
     double* lrd;          /* (rows,) */
+    double* training_scores; /* training-only LOF, excludes self */
 };
 
 /* Compute squared Euclidean distance between two rows of length cols. */
@@ -76,6 +77,7 @@ void n4m_lof_free(n4m_lof_t* lof) {
     free(lof->train_X);
     free(lof->k_distance);
     free(lof->lrd);
+    free(lof->training_scores);
     free(lof);
 }
 
@@ -91,13 +93,16 @@ n4m_status_t n4m_lof_fit(n4m_lof_t* lof,
     free(lof->train_X);
     free(lof->k_distance);
     free(lof->lrd);
+    free(lof->training_scores);
     lof->train_X = (double*)malloc((size_t)rows * (size_t)cols * sizeof(double));
     lof->k_distance = (double*)malloc((size_t)rows * sizeof(double));
     lof->lrd = (double*)malloc((size_t)rows * sizeof(double));
-    if (lof->train_X == NULL || lof->k_distance == NULL || lof->lrd == NULL) {
+    lof->training_scores = (double*)malloc((size_t)rows * sizeof(double));
+    if (lof->train_X == NULL || lof->k_distance == NULL || lof->lrd == NULL || lof->training_scores == NULL) {
         free(lof->train_X);   lof->train_X = NULL;
         free(lof->k_distance);lof->k_distance = NULL;
-        free(lof->lrd);       lof->lrd = NULL;
+        free(lof->lrd); lof->lrd = NULL;
+        free(lof->training_scores); lof->training_scores = NULL;
         return N4M_ERR_OUT_OF_MEMORY;
     }
     memcpy(lof->train_X, X, (size_t)rows * (size_t)cols * sizeof(double));
@@ -152,6 +157,11 @@ n4m_status_t n4m_lof_fit(n4m_lof_t* lof,
         lof->lrd[i] = (mean > 0.0) ? (1.0 / mean) : 0.0;
     }
 
+    for (int64_t i = 0; i < rows; ++i) {
+        double sum = 0.0;
+        for (int t = 0; t < k; ++t) sum += lof->lrd[knn[(size_t)i * (size_t)k + (size_t)t]];
+        lof->training_scores[i] = lof->lrd[i] > 0.0 ? (sum / (double)k) / lof->lrd[i] : HUGE_VAL;
+    }
     free(knn);
     free(dist_buf);
     free(idx_buf);
@@ -208,5 +218,14 @@ n4m_status_t n4m_lof_score(const n4m_lof_t* lof,
     }
     free(dist_buf);
     free(idx_buf);
+    return N4M_OK;
+}
+
+n4m_status_t n4m_lof_training_scores(const n4m_lof_t* lof, double* scores) {
+    if (lof == NULL || scores == NULL)
+        return N4M_ERR_NULL_POINTER;
+    if (lof->training_scores == NULL)
+        return N4M_ERR_NOT_FITTED;
+    memcpy(scores, lof->training_scores, (size_t)lof->rows * sizeof(double));
     return N4M_OK;
 }

@@ -561,7 +561,10 @@ void dispatch(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
 }
 }  // namespace
 
+#ifndef N4M_ROLE_PIPELINE_HELPERS_ONLY
 void mexFunction(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     try { dispatch(nlhs, plhs, nrhs, prhs); }
     catch (const std::exception& error) { mexErrMsgIdAndTxt("n4m:role_pipeline", "%s", error.what()); }
 }
+
+#endif  // N4M_ROLE_PIPELINE_HELPERS_ONLY

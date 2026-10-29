@@ -51,6 +51,9 @@ n4m_status_t n4m_lof_score(const n4m_lof_t* lof,
                             int64_t cols,
                             double* scores);
 
+/* Training LOF excludes self, using the fitted neighbourhood. Internal only. */
+n4m_status_t n4m_lof_training_scores(const n4m_lof_t* lof, double* scores);
+
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif

@@ -785,6 +785,75 @@ const std::map<std::string, Direct>& generic_checks() {
                    N4M_OK);
              CHECK(rows == 1 && cols == 1 && same_bits(intercept.data(), data, 1));
          }},
+        {"diagnostics.spectral_reference_qc",
+         [](n4m_context_t*,
+            const n4m_params_t*,
+            const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             const auto& ref = r->double_arrays.at("reference");
+             for (int64_t j = 0; j < in.X->cols; ++j) {
+                 double expected = 0;
+                 for (int64_t i = 0; i < in.X->rows; ++i)
+                     expected += static_cast<const double*>(
+                                     in.X->data)[i * in.X->row_stride + j * in.X->col_stride]
+                                 / static_cast<double>(in.X->rows);
+                 CHECK(std::abs(ref[static_cast<size_t>(j)] - expected) < 1e-12);
+             }
+             CHECK(scalar_is(r, "rms_n", static_cast<double>(in.X->rows)));
+         }},
+        {"diagnostics.spectral_events_qc",
+         [](n4m_context_t*,
+            const n4m_params_t*,
+            const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             CHECK(scalar_is(
+                 r, "global_jump_eligible", static_cast<double>(in.X->rows * (in.X->cols - 1))));
+             CHECK(r->int_arrays.at("declared_clip_fraction_status")[0] == 5);
+             CHECK(r->scalars.count("global_declared_clip_fraction") == 0);
+         }},
+        {"diagnostics.spectral_noise_proxy",
+         [](n4m_context_t*,
+            const n4m_params_t*,
+            const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             double expected = 0;
+             for (int64_t i = 0; i < in.X->rows; ++i)
+                 for (int64_t j = 0; j < in.X->cols; ++j)
+                     expected += std::abs(static_cast<const double*>(
+                                     in.X->data)[i * in.X->row_stride + j * in.X->col_stride])
+                                 / static_cast<double>(in.X->rows * in.X->cols);
+             CHECK(std::abs(r->scalars.at("global_signal_mean_abs") - expected) < 1e-12);
+             CHECK(r->int_arrays.at("global_noise_sigma_status")[0] == 0);
+         }},
+        {"diagnostics.local_density",
+         [](n4m_context_t*,
+            const n4m_params_t*,
+            const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             CHECK(scalar_is(r, "reference_rows", static_cast<double>(in.X->rows)));
+             CHECK(r->int_arrays.at("lof_status").size() == static_cast<size_t>(in.X->rows));
+             for (double value : r->double_arrays.at("lof_values"))
+                 CHECK(std::isfinite(value) && value > 0);
+         }},
+        {"diagnostics.pca_reference_qc",
+         [](n4m_context_t*,
+            const n4m_params_t*,
+            const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             const auto& mean = r->double_arrays.at("reference_mean");
+             for (int64_t j = 0; j < in.X_target->cols; ++j) {
+                 double expected = 0;
+                 for (int64_t i = 0; i < in.X_target->rows; ++i)
+                     expected +=
+                         static_cast<const double*>(
+                             in.X_target
+                                 ->data)[i * in.X_target->row_stride + j * in.X_target->col_stride]
+                         / static_cast<double>(in.X_target->rows);
+                 CHECK(std::abs(mean[static_cast<size_t>(j)] - expected) < 1e-12);
+             }
+             CHECK(r->int_arrays.at("exact_full_moments_status")[0] == 6);
+             CHECK(scalar_is(r, "solver_code", 1));
+         }},
         {"utilities.ragged_summary",
          [](n4m_context_t*, const n4m_params_t*, const n4m_fit_inputs_v1_t& in,
             const n4m_method_result_t* r) {
@@ -969,7 +1038,9 @@ void conformance(n4m_context_t* ctx, const Inputs& inputs, int32_t index, int32_
     const bool requires_params = fill_required(index, params);
     CHECK(n4m_params_validate(ctx, params) == N4M_OK);
 
-    const n4m_fit_inputs_v1_t in = inputs.for_method(info);
+    n4m_fit_inputs_v1_t in = inputs.for_method(info);
+    if (current_ == "diagnostics.spectral_reference_qc" || current_ == "diagnostics.local_density")
+        in.X_target = nullptr;
     ResultPtr refused;
     // Missing required and unused inputs are refused with a named message.
     for (int k = 0; k < N4M_FIT_INPUT_COUNT; ++k) {

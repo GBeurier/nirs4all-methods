@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **232**
-- Curated scientific records: **239**
-- Resolved documentation pages: **232**
+- Catalog entries: **237**
+- Curated scientific records: **244**
+- Resolved documentation pages: **237**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -79,8 +79,10 @@ This generated report records the documentation source used for each catalog ent
 | `diagnostics.hdbscan` | [diagnostics_hdbscan](diagnostics_hdbscan.md) | curated |
 | `diagnostics.holm_adjust` | [diagnostics_holm_adjust](diagnostics_holm_adjust.md) | curated |
 | `diagnostics.linear_sum_assignment` | [diagnostics_linear_sum_assignment](diagnostics_linear_sum_assignment.md) | curated |
+| `diagnostics.local_density` | [diagnostics_local_density](diagnostics_local_density.md) | curated |
 | `diagnostics.model_selection` | [one_se_rule](one_se_rule.md) | curated |
 | `diagnostics.pca_monitor` | [diagnostics_pca_monitor](diagnostics_pca_monitor.md) | curated |
+| `diagnostics.pca_reference_qc` | [diagnostics_pca_reference_qc](diagnostics_pca_reference_qc.md) | curated |
 | `diagnostics.permanova` | [diagnostics_permanova](diagnostics_permanova.md) | curated |
 | `diagnostics.permdisp` | [diagnostics_permdisp](diagnostics_permdisp.md) | curated |
 | `diagnostics.pls_diagnostics` | [diagnostics_pls_diagnostics](diagnostics_pls_diagnostics.md) | curated |
@@ -88,6 +90,9 @@ This generated report records the documentation source used for each catalog ent
 | `diagnostics.preflight_qualification` | [diagnostics_preflight_qualification](diagnostics_preflight_qualification.md) | curated |
 | `diagnostics.regression_metrics` | [diagnostics_regression_metrics](diagnostics_regression_metrics.md) | curated |
 | `diagnostics.regression_scores` | [diagnostics_regression_scores](diagnostics_regression_scores.md) | curated |
+| `diagnostics.spectral_events_qc` | [diagnostics_spectral_events_qc](diagnostics_spectral_events_qc.md) | curated |
+| `diagnostics.spectral_noise_proxy` | [diagnostics_spectral_noise_proxy](diagnostics_spectral_noise_proxy.md) | curated |
+| `diagnostics.spectral_reference_qc` | [diagnostics_spectral_reference_qc](diagnostics_spectral_reference_qc.md) | curated |
 | `diagnostics.variance_components` | [diagnostics_variance_components](diagnostics_variance_components.md) | curated |
 | `filters.composite` | [filter_composite](filter_composite.md) | curated |
 | `filters.correlation` | [filter_correlation](filter_correlation.md) | curated |

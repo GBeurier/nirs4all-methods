@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **239**
+- Curated records: **244**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -484,11 +484,23 @@ Crouse (2016), *On implementing 2D rectangular assignment algorithms*, IEEE Tran
 
 **Provenance:** https://doi.org/10.1109/TAES.2016.140952; https://doi.org/10.1002/nav.3800020109; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/optimization/_vendored/rectangular_lsap.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/cluster_matching_null_v1.json
 
+### [`diagnostics_local_density`](diagnostics_local_density.md) — Native fixed-neighborhood Local Outlier Factor
+
+Breunig, Kriegel, Ng and Sander (2000), LOF: Identifying Density-Based Local Outliers. https://doi.org/10.1145/335191.335388.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
+
 ### [`diagnostics_pca_monitor`](diagnostics_pca_monitor.md) — PCA monitoring with out-of-fold empirical control limits
 
 Jackson (1991), *A User's Guide to Principal Components*, Wiley, https://doi.org/10.1002/0471725331; Nomikos & MacGregor (1995), *Multivariate SPC charts for monitoring batch processes*, Technometrics 37(1), 41–59, https://doi.org/10.1080/00401706.1995.10485888.
 
 **Provenance:** https://doi.org/10.1002/0471725331; https://doi.org/10.1080/00401706.1995.10485888; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/domain_shift_v1.json
+
+### [`diagnostics_pca_reference_qc`](diagnostics_pca_reference_qc.md) — Exact calibration-reference PCA without full covariance moments
+
+Principal-component projection under sample-covariance normalization (ddof1), with a declared numerical resolution. The independent full-SVD oracle is documented at https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
 
 ### [`diagnostics_permanova`](diagnostics_permanova.md) — PERMANOVA of one categorical term on Euclidean distances
 
@@ -525,6 +537,24 @@ No single paper defines this API bundle. RPD usage in NIR calibration is reviewe
 Standard regression scores, summed with the error-free TwoSum transformation of Møller (1965), *Quasi double-precision in floating point addition*, BIT 5, 37–50, https://doi.org/10.1007/BF01975722.
 
 **Provenance:** https://doi.org/10.1007/BF01975722; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_group_means.cpp
+
+### [`diagnostics_spectral_events_qc`](diagnostics_spectral_events_qc.md) — Declared-axis derivative events and bounded clipping
+
+A versioned descriptive threshold protocol: native first/second differences, normal-scaled MAD with a sample-standard-deviation fallback. NumPy defines the independent difference oracle: https://numpy.org/doc/stable/reference/generated/numpy.diff.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
+
+### [`diagnostics_spectral_noise_proxy`](diagnostics_spectral_noise_proxy.md) — Second-difference MAD high-frequency descriptive proxy
+
+A declared noise proxy under an approximately smooth signal, using normal-scaled MAD. SciPy documents the median absolute deviation definition used by the independent oracle: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
+
+### [`diagnostics_spectral_reference_qc`](diagnostics_spectral_reference_qc.md) — Declared-reference spectral RMS, SAM and affine residuals
+
+This descriptive protocol fixes the reference, valid coordinates, OLS normalization and finite-output availability explicitly. The least-squares reference definition is documented by NumPy: https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
 
 ### [`diagnostics_variance_components`](diagnostics_variance_components.md) — One-way random-effects variance components (REML) and their intervals
 

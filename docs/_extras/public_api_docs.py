@@ -141,6 +141,11 @@ class PublicApiIndex:
         by_normalized_name: dict[str, list[PublicSymbol]] = defaultdict(list)
         by_abi: dict[str, list[PublicSymbol]] = defaultdict(list)
         for item in ordered:
+            # Generated role classes are source-verified by exact module/name
+            # declarations. They must not make an undeclared legacy facade
+            # ambiguous or win an inferred same-name migration.
+            if item.module == "n4m.roles":
+                continue
             by_name[item.name].append(item)
             if item.kind in {"class", "function"}:
                 by_normalized_name[_normalized_name(item.name)].append(item)
@@ -472,10 +477,9 @@ def scan_public_api(source_dir: Path = DEFAULT_N4M_SOURCE) -> PublicApiIndex:
     resolver = _SourceResolver(source_dir)
     symbol_rows: list[PublicSymbol] = []
     for path in sorted(source_dir.rglob("*.py")):
-        # n4m.roles re-exposes catalog methods through the generated generic
-        # role classes; their coverage is documented by
-        # docs/parity/estimator_roles_coverage.md, not per-method pages.
-        if "_impl" in path.parts or "roles" in path.parts:
+        # Resolve only the public roles package exports, following their
+        # generated definitions through AST. Internal role modules stay private.
+        if "_impl" in path.parts or ("roles" in path.parts and path.name != "__init__.py"):
             continue
         rel = path.relative_to(source_dir).with_suffix("")
         parts = ["n4m", *rel.parts]
@@ -707,8 +711,12 @@ def cross_bindings_for_catalog(
     overrides = CROSS_BINDING_OVERRIDES.get(method_id, {})
     result: dict[str, dict[str, Any]] = {}
     for language, index in (("r", r_public), ("matlab", matlab_public)):
-        candidate_names = [overrides[language]] if language in overrides \
+        declared = method.get("bindings", {}).get(language, {})
+        declared_name = declared.get("function") if isinstance(declared, Mapping) else None
+        candidate_names = [declared_name] if isinstance(declared_name, str) else (
+            [overrides[language]] if language in overrides
             else list(_cross_binding_candidates(method))
+        )
         symbol = next((index.get(name) for name in candidate_names if index.get(name)), None)
         if symbol is None:
             continue

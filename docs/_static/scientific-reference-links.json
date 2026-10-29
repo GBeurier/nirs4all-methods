@@ -1155,6 +1155,31 @@
       "links": [
         {
           "kind": "doi",
+          "value": "10.1145/335191.335388"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1145/335191.335388"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json"
+        }
+      ],
+      "page": "diagnostics_local_density"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
           "value": "10.1002/0471725331"
         },
         {
@@ -1179,6 +1204,27 @@
         }
       ],
       "page": "diagnostics_pca_monitor"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html"
+        }
+      ],
+      "page": "diagnostics_pca_reference_qc"
     },
     {
       "links": [
@@ -1345,6 +1391,69 @@
         }
       ],
       "page": "diagnostics_regression_scores"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.diff.html"
+        }
+      ],
+      "page": "diagnostics_spectral_events_qc"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json"
+        }
+      ],
+      "page": "diagnostics_spectral_noise_proxy"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html"
+        }
+      ],
+      "page": "diagnostics_spectral_reference_qc"
     },
     {
       "links": [

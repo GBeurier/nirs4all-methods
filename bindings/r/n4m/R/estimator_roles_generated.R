@@ -61,10 +61,15 @@
   "augmentation.wavelength.wavelength_shift" = c("augmenter"),
   "augmentation.wavelength.wavelength_stretch" = c("augmenter"),
   "diagnostics.approximate_press" = c("generic"),
+  "diagnostics.local_density" = c("generic"),
   "diagnostics.model_selection" = c("generic"),
+  "diagnostics.pca_reference_qc" = c("generic"),
   "diagnostics.pls_diagnostics" = c("generic"),
   "diagnostics.pls_monitoring" = c("generic"),
   "diagnostics.regression_metrics" = c("generic"),
+  "diagnostics.spectral_events_qc" = c("generic"),
+  "diagnostics.spectral_noise_proxy" = c("generic"),
+  "diagnostics.spectral_reference_qc" = c("generic"),
   "filters.correlation" = c("selector"),
   "filters.high_leverage" = c("sample_filter"),
   "filters.spectral_quality" = c("sample_filter"),
@@ -274,10 +279,15 @@
   "augmentation.wavelength.wavelength_shift" = "n4m_wavelength_shift",
   "augmentation.wavelength.wavelength_stretch" = "n4m_wavelength_stretch",
   "diagnostics.approximate_press" = "n4m_approximate_press",
+  "diagnostics.local_density" = "n4m_local_density",
   "diagnostics.model_selection" = "n4m_model_selection",
+  "diagnostics.pca_reference_qc" = "n4m_pca_reference_qc",
   "diagnostics.pls_diagnostics" = "n4m_pls_diagnostics",
   "diagnostics.pls_monitoring" = "n4m_pls_monitoring",
   "diagnostics.regression_metrics" = "n4m_regression_metrics",
+  "diagnostics.spectral_events_qc" = "n4m_spectral_events_qc",
+  "diagnostics.spectral_noise_proxy" = "n4m_spectral_noise_proxy",
+  "diagnostics.spectral_reference_qc" = "n4m_spectral_reference_qc",
   "filters.correlation" = "n4m_correlation",
   "filters.high_leverage" = "n4m_high_leverage",
   "filters.spectral_quality" = "n4m_spectral_quality",
@@ -778,8 +788,20 @@ n4m_approximate_press <- function(max_components = 10L) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_local_density <- function(valid_mask = c(), mode = "training", n_neighbors = 20L) {
+  .n4m_estimator("diagnostics.local_density", c("generic"), list(valid_mask = valid_mask, mode = mode, n_neighbors = n_neighbors))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_model_selection <- function() {
   .n4m_estimator("diagnostics.model_selection", c("generic"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_pca_reference_qc <- function(valid_mask = c(), n_components = 5L) {
+  .n4m_estimator("diagnostics.pca_reference_qc", c("generic"), list(valid_mask = valid_mask, n_components = n_components))
 }
 
 #' @rdname n4m_estimator_role_constructors
@@ -798,6 +820,24 @@ n4m_pls_monitoring <- function(n_components = 2L, center_x = TRUE, scale_x = TRU
 #' @export
 n4m_regression_metrics <- function() {
   .n4m_estimator("diagnostics.regression_metrics", c("generic"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spectral_events_qc <- function(valid_mask = c(), axis_basis = "index", axis_values = c(), outlier_threshold = 8.0, clip_lower = NULL, clip_upper = NULL, clip_tolerance = 0.0) {
+  .n4m_estimator("diagnostics.spectral_events_qc", c("generic"), list(valid_mask = valid_mask, axis_basis = axis_basis, axis_values = axis_values, outlier_threshold = outlier_threshold, clip_lower = clip_lower, clip_upper = clip_upper, clip_tolerance = clip_tolerance))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spectral_noise_proxy <- function(valid_mask = c()) {
+  .n4m_estimator("diagnostics.spectral_noise_proxy", c("generic"), list(valid_mask = valid_mask))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spectral_reference_qc <- function(valid_mask = c(), reference_mode = "dataset_mean", reference_valid_mask = c()) {
+  .n4m_estimator("diagnostics.spectral_reference_qc", c("generic"), list(valid_mask = valid_mask, reference_mode = reference_mode, reference_valid_mask = reference_valid_mask))
 }
 
 #' @rdname n4m_estimator_role_constructors

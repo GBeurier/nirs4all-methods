@@ -125,9 +125,9 @@ static int64_t flex_pca_select_k(double param, int64_t k_full,
     return k_full;
 }
 
-n4m_status_t n4m_pp_flex_pca_state_fit(n4m_pp_flex_pca_state_t* state,
-                                        const double* X,
-                                        int64_t rows, int64_t cols) {
+static n4m_status_t flex_pca_fit_impl(n4m_pp_flex_pca_state_t* state,
+                                      const double* X,
+                                      int64_t rows, int64_t cols, int exact) {
     if (state == NULL || X == NULL) {
         return N4M_ERR_NULL_POINTER;
     }
@@ -169,7 +169,7 @@ n4m_status_t n4m_pp_flex_pca_state_fit(n4m_pp_flex_pca_state_t* state,
     if (state->n_components_param >= 1.0) {
         const int64_t k_kept =
             flex_pca_select_k(state->n_components_param, k_full, NULL);
-        if (use_tall_gram_svd(rows, cols, k_full, k_kept) ||
+        if (exact || use_tall_gram_svd(rows, cols, k_full, k_kept) ||
             use_truncated_svd(rows, cols, k_full, k_kept)) {
             double* U  =
                 (double*)malloc((size_t)rows * (size_t)k_kept * sizeof(double));
@@ -182,10 +182,10 @@ n4m_status_t n4m_pp_flex_pca_state_fit(n4m_pp_flex_pca_state_t* state,
                 return N4M_ERR_OUT_OF_MEMORY;
             }
             const n4m_status_t svd_st =
-                use_tall_gram_svd(rows, cols, k_full, k_kept)
+                ((exact && rows >= cols) || use_tall_gram_svd(rows, cols, k_full, k_kept))
                     ? n4m_svd_truncated_tall_gram(
                           Xc, rows, cols, k_kept, U, S, Vt)
-                    : (use_dual_wide_svd(rows, cols, k_full, k_kept)
+                    : ((exact && rows <= cols) || use_dual_wide_svd(rows, cols, k_full, k_kept)
                            ? n4m_svd_truncated_dual_wide(
                                  Xc, rows, cols, k_kept, U, S, Vt)
                            : n4m_svd_truncated_randomized(
@@ -402,4 +402,30 @@ n4m_status_t n4m_pp_flex_pca_state_load(n4m_pp_flex_pca_state_t* state,
     state->components    = components;
     state->fitted        = 1;
     return N4M_OK;
+}
+
+n4m_status_t n4m_pp_flex_pca_state_reference(const n4m_pp_flex_pca_state_t* state,
+                                             const double** mean,
+                                             const double** components) {
+    if (state == NULL || mean == NULL || components == NULL)
+        return N4M_ERR_NULL_POINTER;
+    if (!state->fitted)
+        return N4M_ERR_NOT_FITTED;
+    *mean = state->mean;
+    *components = state->components;
+    return N4M_OK;
+}
+
+n4m_status_t n4m_pp_flex_pca_state_fit(n4m_pp_flex_pca_state_t* state,
+                                       const double* X,
+                                       int64_t rows,
+                                       int64_t cols) {
+    return flex_pca_fit_impl(state, X, rows, cols, 0);
+}
+
+n4m_status_t n4m_pp_flex_pca_state_fit_exact(n4m_pp_flex_pca_state_t* state,
+                                             const double* X,
+                                             int64_t rows,
+                                             int64_t cols) {
+    return flex_pca_fit_impl(state, X, rows, cols, 1);
 }

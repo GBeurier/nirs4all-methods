@@ -1,0 +1,50 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.spectral_noise_proxy"
+family: "utilities"
+category: "utilities"
+subcategory: "spectral_diagnostics"
+since_abi: "2.20.0"
+abi_symbols:
+  - "n4m_procedure_run"
+tu:
+  - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+parity:
+  fixtures: []
+  tolerance_row: "spectral_diagnostics_v1"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.spectral_noise_proxy"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "SpectralNoiseProxy"
+    legacy_aliases: []
+  r:
+    function: "n4m_spectral_noise_proxy"
+    legacy_aliases: []
+publications: []
+notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+c_surface:
+  - "n4m_procedure_run"
+estimator:
+  kind: "procedure"
+  adapter: "spectral_noise_proxy"
+  roles: "[generic]"
+  params:
+    - name: "valid_mask"
+      type: "int_array"
+      default: []
+      min: 0
+      max: 1
+fq_name: "n4m.diagnostics.spectral_noise_proxy"
+leaf: "spectral_noise_proxy"
+namespace: "diagnostics"

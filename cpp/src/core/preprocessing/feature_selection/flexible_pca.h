@@ -78,6 +78,10 @@ n4m_status_t n4m_pp_flex_pca_state_fit(n4m_pp_flex_pca_state_t* state,
                                         const double* X,
                                         int64_t rows, int64_t cols);
 
+/* Exact native Gram/Jacobi path; no full covariance moments or changed legacy fit. */
+n4m_status_t n4m_pp_flex_pca_state_fit_exact(n4m_pp_flex_pca_state_t* state,
+                                            const double* X, int64_t rows, int64_t cols);
+
 /* Apply the fitted operator on `X` (rows x cols), writing the result to
  * `out` (rows x n_components_learned). */
 n4m_status_t n4m_pp_flex_pca_state_apply(const n4m_pp_flex_pca_state_t* state,
@@ -85,6 +89,11 @@ n4m_status_t n4m_pp_flex_pca_state_apply(const n4m_pp_flex_pca_state_t* state,
                                           int64_t rows, int64_t cols,
                                           int64_t out_cols,
                                           double* out);
+
+/* Borrow immutable reference arrays, owned by the fitted state. Internal only. */
+n4m_status_t n4m_pp_flex_pca_state_reference(const n4m_pp_flex_pca_state_t* state,
+                                            const double** mean,
+                                            const double** components);
 
 /* Fitted-state serialization (core/estimator/state_io.h): the column mean
  * and the kept components. */

@@ -6,11 +6,20 @@ _Namespace_: **`n4m.transform.scaling`** · _Fully-qualified_: `n4m.transform.sc
 
 **C ABI:** no standalone exported symbol is declared for this method.
 
-**Python:** catalog binding is not currently an AST-verified public `n4m` re-export. See the implementation source below.
+**Python (verified public re-export):** `from n4m.roles import StandardScale`
+
+**Signature:** [`StandardScale(*, with_mean = True, with_std = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L3952)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
 **MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+
+### Parameters
+
+| Name | Type | Default |
+|---|---|---|
+| `with_mean` | `—` | `True` |
+| `with_std` | `—` | `True` |
 
 ## Explanations
 
