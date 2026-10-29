@@ -14148,8 +14148,7 @@ methods:
     category: "utilities"
     subcategory: "spectral_diagnostics"
     since_abi: "2.20.0"
-    abi_symbols:
-      - "n4m_procedure_run"
+    abi_symbols: []
     tu:
       - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
     headers:
@@ -14177,8 +14176,9 @@ methods:
     namespace: "diagnostics"
     leaf: "spectral_reference_qc"
     fq_name: "n4m.diagnostics.spectral_reference_qc"
-    c_surface:
-      - "n4m_procedure_run"
+    c_surface: "none"
+    legacy_ids:
+      - "diagnostics.spectral_reference_qc"
     estimator:
       kind: procedure
       adapter: spectral_reference_qc
@@ -14205,8 +14205,7 @@ methods:
     category: "utilities"
     subcategory: "spectral_diagnostics"
     since_abi: "2.20.0"
-    abi_symbols:
-      - "n4m_procedure_run"
+    abi_symbols: []
     tu:
       - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
     headers:
@@ -14234,8 +14233,9 @@ methods:
     namespace: "diagnostics"
     leaf: "spectral_events_qc"
     fq_name: "n4m.diagnostics.spectral_events_qc"
-    c_surface:
-      - "n4m_procedure_run"
+    c_surface: "none"
+    legacy_ids:
+      - "diagnostics.spectral_events_qc"
     estimator:
       kind: procedure
       adapter: spectral_events_qc
@@ -14274,8 +14274,7 @@ methods:
     category: "utilities"
     subcategory: "spectral_diagnostics"
     since_abi: "2.20.0"
-    abi_symbols:
-      - "n4m_procedure_run"
+    abi_symbols: []
     tu:
       - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
     headers:
@@ -14303,8 +14302,9 @@ methods:
     namespace: "diagnostics"
     leaf: "spectral_noise_proxy"
     fq_name: "n4m.diagnostics.spectral_noise_proxy"
-    c_surface:
-      - "n4m_procedure_run"
+    c_surface: "none"
+    legacy_ids:
+      - "diagnostics.spectral_noise_proxy"
     estimator:
       kind: procedure
       adapter: spectral_noise_proxy
@@ -14320,8 +14320,7 @@ methods:
     category: "utilities"
     subcategory: "spectral_diagnostics"
     since_abi: "2.20.0"
-    abi_symbols:
-      - "n4m_procedure_run"
+    abi_symbols: []
     tu:
       - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
     headers:
@@ -14349,8 +14348,9 @@ methods:
     namespace: "diagnostics"
     leaf: "local_density"
     fq_name: "n4m.diagnostics.local_density"
-    c_surface:
-      - "n4m_procedure_run"
+    c_surface: "none"
+    legacy_ids:
+      - "diagnostics.local_density"
     estimator:
       kind: procedure
       adapter: local_density
@@ -14377,8 +14377,7 @@ methods:
     category: "utilities"
     subcategory: "spectral_diagnostics"
     since_abi: "2.20.0"
-    abi_symbols:
-      - "n4m_procedure_run"
+    abi_symbols: []
     tu:
       - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
     headers:
@@ -14406,8 +14405,9 @@ methods:
     namespace: "diagnostics"
     leaf: "pca_reference_qc"
     fq_name: "n4m.diagnostics.pca_reference_qc"
-    c_surface:
-      - "n4m_procedure_run"
+    c_surface: "none"
+    legacy_ids:
+      - "diagnostics.pca_reference_qc"
     estimator:
       kind: procedure
       adapter: pca_reference_qc
