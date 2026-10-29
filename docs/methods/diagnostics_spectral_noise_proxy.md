@@ -4,7 +4,7 @@ _Namespace_: **`n4m.diagnostics`** · _Fully-qualified_: `n4m.diagnostics.spectr
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_procedure_run`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h#L8). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI:** no standalone exported symbol is declared for this method.
 
 **Python (verified public re-export):** `from n4m.roles import SpectralNoiseProxy`
 

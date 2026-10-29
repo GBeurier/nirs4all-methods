@@ -6,8 +6,7 @@ family: "utilities"
 category: "utilities"
 subcategory: "spectral_diagnostics"
 since_abi: "2.20.0"
-abi_symbols:
-  - "n4m_procedure_run"
+abi_symbols: []
 tu:
   - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
 headers:
@@ -33,8 +32,7 @@ bindings:
     legacy_aliases: []
 publications: []
 notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
-c_surface:
-  - "n4m_procedure_run"
+c_surface: "none"
 estimator:
   kind: "procedure"
   adapter: "spectral_reference_qc"
@@ -58,4 +56,6 @@ estimator:
       max: 1
 fq_name: "n4m.diagnostics.spectral_reference_qc"
 leaf: "spectral_reference_qc"
+legacy_ids:
+  - "diagnostics.spectral_reference_qc"
 namespace: "diagnostics"
