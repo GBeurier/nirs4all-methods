@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract_id": "n4m.intrinsic_diagnostics.v1",
-  "status": "native_python_r_wasm_octave_qualified_windows_pending",
+  "status": "implemented",
   "transport": {
     "abi": "existing generic procedure ABI >=2.20; capability discovered by method_id, not ABI alone",
     "entrypoint": "n4m_procedure_run",
@@ -270,5 +270,5 @@
       "solver_reuse": "existing FlexiblePCA fitted representation and existing exact dual Gram/Jacobi kernels; no alternative PCA implementation; existing FlexiblePCA randomized default remains unchanged"
     }
   },
-  "candidate_project_version": "1.3.10"
+  "minimum_project_version": "1.3.10"
 }
