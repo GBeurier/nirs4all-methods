@@ -92,9 +92,7 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
     const int64_t n = rows;
     const int64_t p = cols;
     const int32_t k = n_components;
-    if (n < p) {
-        return N4M_ERR_INVALID_ARGUMENT;
-    }
+    const int64_t compact = n < p ? n : p;
 
     /* Everything below runs on Xc = (X - mean) 2^-e, max|Xc| in [0.5, 1)
      * (corrected two-pass centring shared with Hotelling T²: a constant
@@ -113,11 +111,10 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
         return centred;
     }
 
-    double* U  = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
-    double* S  = (double*)malloc((size_t)p * sizeof(double));
-    /* The shared SVD returns Vt (p x p) row-major where Vt[i, j] is the
-     * j-th component of the i-th right singular vector. */
-    double* Vt = (double*)malloc((size_t)p * (size_t)p * sizeof(double));
+    double* U  = (double*)malloc((size_t)n * (size_t)compact * sizeof(double));
+    double* S  = (double*)malloc((size_t)compact * sizeof(double));
+    /* The shared SVD returns Vt (min(n,p) x p) row-major. */
+    double* Vt = (double*)malloc((size_t)compact * (size_t)p * sizeof(double));
     /* n4m_svd_compact consumes (overwrites) its input matrix. Pass a copy
      * so the original centred Xc survives for the residual computation. */
     double* Xc_svd = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
@@ -142,7 +139,7 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
      * 0.1 used to give Q = 1.9e-65 everywhere next to UCL 0). Otherwise the
      * residual is resolved and the UCL is a positive normal double. */
     const double tol = 16.0 * (double)(n > p ? n : p) * DBL_EPSILON * S[0];
-    if (!(k < p && S[k] > tol)) {
+    if (!(k < compact && S[k] > tol)) {
         for (int64_t i = 0; i < n; ++i) q_per_sample[i] = 0.0;
         *ucl_out = 0.0;
         free(Xc); free(U); free(S); free(Vt);
@@ -159,10 +156,10 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
         const double sigma_j = S[j];
         if (sigma_j == 0.0) continue;
         for (int64_t i = 0; i < n; ++i) {
-            const double uij = U[(size_t)i * (size_t)p + (size_t)j];
+            const double uij = U[(size_t)i * (size_t)compact + (size_t)j];
             const double sij = uij * sigma_j;
             for (int64_t d = 0; d < p; ++d) {
-                /* Vt is (p x p) row-major: Vt[j, d] is the d-th coord of
+                /* Vt is (compact x p) row-major: Vt[j, d] is the d-th coord of
                  * the j-th right singular vector. */
                 Xc_hat[(size_t)i * (size_t)p + (size_t)d] +=
                     sij * Vt[(size_t)j * (size_t)p + (size_t)d];
@@ -211,7 +208,7 @@ n4m_status_t n4m_util_q_residuals_impl(const double* X,
     if (st == N4M_OK) {
         const double inv_nm1 = 1.0 / (double)(n - 1);
         double theta1 = 0.0, theta2 = 0.0, theta3 = 0.0;
-        for (int64_t j = (int64_t)k; j < p; ++j) {
+        for (int64_t j = (int64_t)k; j < compact; ++j) {
             const double lam = S[j] * S[j] * inv_nm1;
             theta1 += lam;
             theta2 += lam * lam;

@@ -66,8 +66,8 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
     const int64_t p = cols;
     const int32_t k = n_components;
 
-    /* The SVD below requires rows >= cols. */
-    if (n < p) return N4M_ERR_INVALID_ARGUMENT;
+    /* Compact SVD supports both orientations; its inner dimension is min(n,p). */
+    const int64_t compact = n < p ? n : p;
 
     /* Corrected two-pass centring at one power-of-two scale
      * (column_centring.h): a constant column centres to exact zeros, and T²
@@ -81,12 +81,11 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
         return centred;
     }
 
-    double* U  = (double*)malloc((size_t)n * (size_t)p * sizeof(double));
-    double* S  = (double*)malloc((size_t)p * sizeof(double));
-    /* Shared SVD (core/common/svd.h) requires a non-NULL Vt scratch even
-     * when the caller does not need the right singular vectors. Allocate a
-     * (p x p) buffer here purely as a sink. */
-    double* Vt = (double*)malloc((size_t)p * (size_t)p * sizeof(double));
+    double* U  = (double*)malloc((size_t)n * (size_t)compact * sizeof(double));
+    double* S  = (double*)malloc((size_t)compact * sizeof(double));
+    /* Shared SVD requires the compact right-singular-vector buffer even
+     * when T² only needs the left singular vectors. */
+    double* Vt = (double*)malloc((size_t)compact * (size_t)p * sizeof(double));
     if (U == NULL || S == NULL || Vt == NULL) {
         free(Xc); free(U); free(S); free(Vt);
         return N4M_ERR_OUT_OF_MEMORY;
@@ -113,7 +112,7 @@ n4m_status_t n4m_util_hotelling_t2_impl(const double* X,
     for (int64_t i = 0; i < n; ++i) {
         double t2 = 0.0;
         for (int32_t j = 0; j < r; ++j) {
-            const double u = U[(size_t)i * (size_t)p + (size_t)j];
+            const double u = U[(size_t)i * (size_t)compact + (size_t)j];
             t2 += u * u;
         }
         t2_per_sample[i] = nm1 * t2;

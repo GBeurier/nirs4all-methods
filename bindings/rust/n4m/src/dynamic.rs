@@ -18,6 +18,9 @@ static UNCONFIGURED_STATUS: &[u8] = b"libn4m dynamic runtime is not configured\0
 macro_rules! n4m_symbols {
     ($macro:ident) => {
         $macro! {
+            n4m_get_abi_version_major() -> u32 => 0;
+            n4m_get_abi_version_minor() -> u32 => 0;
+            n4m_get_abi_version_patch() -> u32 => 0;
             n4m_check_abi_compatibility(major: u32, minor: u32) -> i32 => RUNTIME_UNAVAILABLE;
             n4m_status_to_string(status: i32) -> *const c_char => UNCONFIGURED_STATUS.as_ptr().cast();
             n4m_context_create(out: *mut *mut ContextRaw) -> i32 => RUNTIME_UNAVAILABLE;

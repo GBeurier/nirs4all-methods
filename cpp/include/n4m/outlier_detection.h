@@ -132,7 +132,7 @@ N4M_API n4m_status_t n4m_outlier_detection_composite_apply(
  * measured relative error below 1e-12 on the sampled grid, not uniform
  * in the rank (7.2e-12 at r = 127, alpha = 1e-100). A UCL that is not a finite normal
  * double (extreme alpha only, e.g. n = 3, r = 1, alpha < 7.4e-309) is
- * N4M_ERR_NUMERICAL_FAILURE. Requires rows >= cols. */
+ * N4M_ERR_NUMERICAL_FAILURE. Supports tall and wide matrices with compact SVD. */
 N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2(n4m_matrix_view_t X,
                                             int32_t n_components,
                                             double alpha,
@@ -148,7 +148,7 @@ N4M_API n4m_status_t n4m_outlier_detection_hotelling_t2_resolved(
  * corrected two-pass centring as Hotelling T²) outside its leading
  * n_components PCA directions, and the Jackson-Mudholkar UCL from the
  * residual eigenvalue moments theta_1..3 and the upper normal quantile at
- * alpha. Requires rows >= cols.
+ * alpha. Supports tall and wide matrices with compact SVD.
  *  - Computed at one power-of-two scale (max |Xc| in [0.5, 1)) and rescaled:
  *    the moments cannot overflow or underflow, and scaling X by 2^s scales
  *    every Q and the UCL by exactly 4^s.

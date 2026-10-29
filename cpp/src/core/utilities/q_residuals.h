@@ -2,7 +2,7 @@
 /*
  * Q-residuals (squared prediction error, SPE) on the PCA-reduced subspace.
  *
- * For a (n_samples x n_features) matrix X, n_samples >= n_features:
+ * For a (n_samples x n_features) matrix X (tall or wide):
  *   1. Centre the columns (corrected two-pass mean, column_centring.h) at one
  *      power-of-two scale 2^e: Xc = (X - mean) 2^-e, max|Xc| in [0.5, 1).
  *   2. Thin SVD Xc = U Σ V^T.
