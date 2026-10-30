@@ -648,9 +648,21 @@ table.mx th .language-icon { margin-bottom: 3px; }
 table.mx tbody tr[data-row-key] { cursor: pointer; }
 table.mx tbody tr.mx-selected td { background: #eff6ff; }
 table.mx tbody tr.mx-selected td.c-ref, table.mx tbody tr:hover td.c-ref { background: #fffbeb; }
+.mx-summary-status { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; }
+.mx-summary-status .mx-gly { font-size: .72rem; }
+.mx-summary-detail { display: block; font-family: var(--mono); font-size: .62rem; color: var(--text-3); }
+table.mx.mx-grouped { width: 100%; table-layout: fixed; }
+table.mx.mx-grouped tr.colrow th { top: 0; }
+table.mx.mx-grouped th.c-algo { width: 210px; }
+table.mx.mx-grouped th.c-size { width: 74px; }
+table.mx.mx-grouped th.c-thr { width: 38px; }
+table.mx.mx-grouped th .col-label { max-width: none; }
+table.mx.mx-grouped td.c-ref .mx-cell { display: flex; min-width: 0; }
+table.mx.mx-grouped td.c-ref .refname { overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 700px) {
   .matrix-shell { padding: 12px 8px; }
   .mx-controls { position: static; }
+  table.mx.mx-grouped { min-width: 760px; }
   .nav-inner { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
   .nav-logo { min-width: 0; }
   .nav-logo .ver { display: none; }

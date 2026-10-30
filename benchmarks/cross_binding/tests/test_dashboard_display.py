@@ -132,10 +132,14 @@ def test_matrix_row_clicks_cycle_columns_without_hiding_rows(browser_page) -> No
     assert not page.locator('#mxHead [data-col="nirs4all"]').count()
     page.locator("#mxSearch").fill("group_sparse_pls")
     expect(page.locator("#mxBody [data-row-key]")).to_have_count(3)
-    # First click: hide columns empty for this row; every filtered row remains.
+    # First click selects the row and keeps every implementation column.
     page.locator("#mxBody tr").first.locator("td").nth(3).click()
     expect(page.locator("#mxBody [data-row-key]")).to_have_count(3)
     expect(page.locator("#mxBody .mx-selected")).to_have_count(1)
+    expect(page.locator("#mxFocusLabel")).to_contain_text("1/3")
+    assert page.locator("#mxHead tr.colrow th").count() == all_count
+    # Second click hides columns empty for this row, without hiding other rows.
+    page.locator("[data-focus-row]").first.click()
     expect(page.locator("#mxFocusLabel")).to_contain_text("2/3")
     expect(page.locator("#mxFocus")).to_be_visible()
     headers = page.locator("#mxHead tr.colrow [data-col]").evaluate_all(
@@ -158,27 +162,31 @@ def test_matrix_row_clicks_cycle_columns_without_hiding_rows(browser_page) -> No
     )
     assert page.locator("#mxBody .q-cross_check").count() > 0
     assert page.locator("#mxBody .q-exact").filter(has_text="δ 0").count() > 0
-    # Second click: restore every column, ordered by this row's current metric.
+    # Third click restores the compact grouped summary.
     page.locator("[data-focus-row]").first.click()
     expect(page.locator("#mxFocusLabel")).to_contain_text("3/3")
-    assert page.locator("#mxHead tr.colrow th").count() == all_count
+    expect(page.locator("table.mx")).to_have_class("mx mx-grouped")
+    assert page.locator("#mxHead tr.colrow th").count() == 9
     assert page.locator("#mxBody [data-row-key]").count() == 3
-    deltas = page.evaluate("""() => {
-      const row = DATA.rows.find(r => rowKey(r) === state.focus);
-      return visibleColumns(filteredRows()).filter(c => c.id !== REF_COL)
-        .map(c => row.cells[c.id]?.divergence).filter(v => Number.isFinite(v));
-    }""")
-    assert deltas == sorted(deltas)
-    # Timing order also changes when the value mode changes.
+    expect(page.locator('#mxHead [data-col="summary:external"]')).to_contain_text(
+        "Third-party"
+    )
+    expect(page.locator('#mxHead [data-col="summary:r"] img')).to_have_attribute(
+        "alt", "R"
+    )
+    expect(page.locator('#mxHead [data-col="summary:matlab"] img')).to_have_attribute(
+        "alt", "MATLAB/Octave"
+    )
+    expect(page.locator("#mxHint")).to_contain_text(
+        "badge numbers count implementations"
+    )
+    expect(page.locator("#mxBody .mx-summary").first).to_contain_text("max δ 1e-15")
     page.locator('[data-viz="duration"]').click()
-    times = page.evaluate("""() => {
-      const row = DATA.rows.find(r => rowKey(r) === state.focus);
-      return visibleColumns(filteredRows()).filter(c => c.id !== REF_COL)
-        .map(c => row.cells[c.id]).filter(c => c?.ok && Number.isFinite(c.ms))
-        .map(c => c.ms);
-    }""")
-    assert times == sorted(times)
-    # Third click: return to the original complete column order.
+    expect(page.locator("#mxBody .mx-summary").first).to_contain_text("best")
+    assert page.evaluate(
+        'document.querySelector("table.mx").scrollWidth <= document.querySelector("#matrix").clientWidth'
+    )
+    # Fourth click returns to the complete column order.
     page.locator("[data-focus-row]").first.click()
     expect(page.locator("#mxFocusLabel")).to_contain_text("1/3")
     ids = page.locator("#mxHead tr.colrow [data-col]").evaluate_all(

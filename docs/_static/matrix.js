@@ -99,7 +99,7 @@ const state = {
 };
 
 /* ==========================================================================
-   Row clicks cycle through all, populated, and value-sorted columns.
+   Row clicks cycle through all, populated, and grouped summary columns.
    ========================================================================== */
 function rowKey(row) {
   return JSON.stringify([row.algo, row.n, row.p, row.threads]);
@@ -121,25 +121,21 @@ function visibleColumns(rows) {
         return rank(a) - rank(b);
       });
   }
-  const columns = COLS.slice();
-  if (selected && state.columns === 'sorted') {
-    const value = col => {
-      const cell = selected.cells[col.id];
-      if (!cell) return null;
-      if (state.viz === 'divergence') {
-        if (!Number.isFinite(cell.divergence)) return null;
-        return cell.divergence_metric === 'jaccard' ? -cell.divergence : Math.abs(cell.divergence);
-      }
-      return cell.ok && Number.isFinite(cell.ms) ? cell.ms : null;
-    };
-    columns.sort((a, b) => {
-      if (a.id === REF_COL || b.id === REF_COL) return a.id === REF_COL ? -1 : 1;
-      const av = value(a), bv = value(b);
-      if (av == null || bv == null) return av == null ? (bv == null ? 0 : 1) : -1;
-      return av - bv;
-    });
+  if (state.columns === 'summary') {
+    const groups = [
+      ['external', 'Third-party', 'external', c => thirdParty(c)],
+      ['core', 'C++ builds', 'C++', c => c.id.startsWith('pls4all.cpp.')],
+      ['python', 'Python', 'Python', c => c.kind === 'pls4all' && c.lang === 'Python'],
+      ['r', 'R', 'R', c => c.kind === 'pls4all' && c.lang === 'R'],
+      ['matlab', 'MATLAB', 'MATLAB/Octave', c => c.kind === 'pls4all' && c.lang === 'MATLAB/Octave'],
+    ];
+    const reference = COLS.find(c => c.id === REF_COL);
+    return (reference ? [reference] : []).concat(groups.map(([id, label, lang, include]) => ({
+      id: `summary:${id}`, label, short: label, lang, kind: 'summary',
+      members: COLS.filter(include),
+    })).filter(c => c.members.length));
   }
-  return columns;
+  return COLS.slice();
 }
 
 /* contiguous (language, group) runs for the band row */
@@ -214,6 +210,12 @@ function sortRows(rows, cols) {
   else {
     const id = sc.col;
     const val = r => {
+      const group = cols.find(c => c.id === id && c.kind === 'summary');
+      if (group) {
+        const values = group.members.map(c => r.cells[c.id])
+          .filter(c => c && c.ok && Number.isFinite(c.ms)).map(c => c.ms);
+        return values.length ? Math.min(...values) : null;
+      }
       const cell = r.cells[id];
       return cell && cell.ok && Number.isFinite(cell.ms) ? cell.ms : null;
     };
@@ -267,6 +269,7 @@ function divModeCell(cell, meta, lcls, colCls) {
 }
 
 function dataCellHtml(row, meta, baselineMs, fastestId) {
+  if (meta.kind === 'summary') return summaryCellHtml(row, meta);
   const id = meta.id;
   const lcls = `lt-${langSlug(meta.lang)}`;
   const colCls = (meta.kind || '') === 'pls4all' ? 'col-pls4all' : '';
@@ -329,9 +332,40 @@ function statusLabel(status) {
     drift: 'Drift', error: 'Execution error', not_run: 'Not run', not_available: 'Not available' })[status] || status;
 }
 
+function summaryCellHtml(row, column) {
+  const reported = column.members.filter(c => hasResult(row.cells[c.id], c));
+  if (!reported.length) return '<td class="mx-summary"><span class="mx-dash" title="No result for this group">—</span></td>';
+  const hist = {};
+  for (const col of reported) {
+    const status = effectiveParity(row.cells[col.id], col);
+    hist[status] = (hist[status] || 0) + 1;
+  }
+  const badges = Object.entries(hist).map(([key, n]) => {
+    const label = `${n} implementation${n === 1 ? '' : 's'}: ${statusLabel(key)}`;
+    return `<span class="mx-gly ${verdict(key).cls}" role="img" aria-label="${escAttr(label)}" title="${escAttr(label)}">${verdict(key).gly} ${n}</span>`;
+  }).join(' ');
+  const cells = reported.map(c => row.cells[c.id]);
+  let detail = `${reported.length} impl.`;
+  if (state.viz === 'divergence') {
+    const ds = cells.map(c => c.divergence).filter(Number.isFinite);
+    const jaccard = cells.some(c => c.divergence_metric === 'jaccard');
+    if (ds.length) detail = jaccard ? `min J ${Math.min(...ds).toFixed(2)}`
+      : `max δ ${Math.max(...ds.map(Math.abs)).toExponential(0)}`;
+  } else {
+    const times = cells.filter(c => c.ok && Number.isFinite(c.ms)).map(c => c.ms);
+    if (times.length && state.viz === 'duration') detail = `best ${fmtMs(Math.min(...times))}`;
+    const baseline = row.cells[NATIVE_COL];
+    const positive = times.filter(t => t > 0);
+    if (state.viz === 'speedup' && baseline && Number.isFinite(baseline.ms) && positive.length) {
+      detail = `best ${fmtSpeedup(baseline.ms / Math.min(...positive))}`;
+    }
+  }
+  return `<td class="mx-summary"><span class="mx-summary-status">${badges}</span><span class="mx-summary-detail">${escapeHtml(detail)}</span></td>`;
+}
+
 function focusRow(key) {
-  const modes = ['all', 'populated', 'sorted'];
-  state.columns = state.focus === key ? modes[(modes.indexOf(state.columns) + 1) % modes.length] : 'populated';
+  const modes = ['all', 'populated', 'summary'];
+  state.columns = state.focus === key ? modes[(modes.indexOf(state.columns) + 1) % modes.length] : 'all';
   state.focus = key;
   const scrollTop = document.getElementById('matrix').scrollTop;
   render();
@@ -357,10 +391,14 @@ function render() {
   // header
   const sc = state.sort;
   const arrow = id => sc.col === id ? `<span class="arrow" aria-hidden="true">${sc.dir === 1 ? ' ↑' : ' ↓'}</span>` : '';
-  let head = `<tr class="lang-band">
+  const grouped = state.columns === 'summary';
+  document.querySelector('table.mx').classList.toggle('mx-grouped', grouped);
+  let head = grouped ? '' : `<tr class="lang-band">
     <th class="spacer c-algo"></th><th class="spacer c-size"></th><th class="spacer c-thr"></th>`;
-  for (const b of bands) head += `<th class="${b.ref ? 'c-ref' : ''}" colspan="${b.count}">${escapeHtml(b.label)}<span class="bcount">${b.count}</span></th>`;
-  head += '</tr>';
+  if (!grouped) {
+    for (const b of bands) head += `<th class="${b.ref ? 'c-ref' : ''}" colspan="${b.count}">${escapeHtml(b.label)}<span class="bcount">${b.count}</span></th>`;
+    head += '</tr>';
+  }
   head += `<tr class="colrow">
     <th class="c-algo lt-cpp" data-col="__algo" role="button" tabindex="0"><span class="col-label">algorithm${arrow('__algo')}</span></th>
     <th class="c-size" data-col="__size" role="button" tabindex="0"><span class="col-label">size${arrow('__size')}</span></th>
@@ -372,7 +410,7 @@ function render() {
     }
     const lt = `lt-${langSlug(c.lang)}`;
     head += `<th class="${lt}" data-col="${escAttr(c.id)}" role="button" tabindex="0" title="${escAttr([c.label, c.tier, c.lang, c.what].filter(Boolean).join(' — '))}">
-      ${thirdParty(c) ? window.N4MParity.languageIcon(c.lang) : ''}<span class="col-label">${escapeHtml(c.short || c.label)}${arrow(c.id)}</span>
+      ${thirdParty(c) || c.kind === 'summary' ? window.N4MParity.languageIcon(c.lang) : ''}<span class="col-label">${escapeHtml(c.short || c.label)}${arrow(c.id)}</span>
       </th>`;
   }
   head += `</tr>`;
@@ -398,7 +436,7 @@ function render() {
       const docPage = dmap[row.algo];
       const key = rowKey(row);
       const isSelected = key === state.focus;
-      const algoHtml = `<button type="button" class="mx-row-toggle" data-focus-row="${escAttr(key)}" aria-pressed="${isSelected}" title="Cycle columns: all, populated for this row, sorted by this row">${isSelected ? '▾' : '▸'} ${escapeHtml(disp)}</button>` +
+      const algoHtml = `<button type="button" class="mx-row-toggle" data-focus-row="${escAttr(key)}" aria-pressed="${isSelected}" title="Cycle columns: all, populated for this row, grouped summary">${isSelected ? '▾' : '▸'} ${escapeHtml(disp)}</button>` +
         (docPage ? `<a class="mx-doc-link" href="methods/${escAttr(docPage)}.html" aria-label="${escAttr(disp)} documentation" title="Open documentation">↗</a>` : '');
       let tr = `<tr class="${rowCls}${isSelected ? ' mx-selected' : ''}" data-row-key="${escAttr(key)}">
         <td class="c-algo" title="${escAttr(fq || row.algo)}">${algoHtml}${fq ? `<span class="ns">${escapeHtml(fq)}</span>` : ''}</td>
@@ -417,13 +455,13 @@ function render() {
   focus.hidden = !selected;
   if (selected) {
     document.getElementById('mxFocusLabel').textContent =
-      `${algoDisplay(selected.algo)} · ${selected.n}×${selected.p} · ${selected.threads}t — ${state.columns === 'all' ? '1/3 · All columns' : state.columns === 'populated' ? '2/3 · Populated columns' : '3/3 · Columns sorted by this row'}`;
+      `${algoDisplay(selected.algo)} · ${selected.n}×${selected.p} · ${selected.threads}t — ${state.columns === 'all' ? '1/3 · All columns' : state.columns === 'populated' ? '2/3 · Populated columns' : '3/3 · Grouped summary'}`;
   }
   document.getElementById('mxHint').textContent = selected && state.columns === 'populated'
     ? `${COLS.length - cols.length} columns empty for the selected row are hidden. All rows remain visible; zero is a valid result.`
-    : selected && state.columns === 'sorted'
-      ? `Columns are ordered ${state.viz === 'divergence' ? 'by closest match' : 'from fastest to slowest'} for the selected row; missing values follow. All rows remain visible.`
-      : 'Click a row to cycle: all columns → populated for this row → sorted by this row. All rows stay visible.';
+    : grouped
+      ? 'Grouped summary: badge numbers count implementations. Values show the best time / speed-up, or worst δ/J. All rows stay visible.'
+      : 'Click a row to cycle: all columns → populated for this row → grouped summary. All rows stay visible.';
   document.querySelectorAll('[data-columns]').forEach(b => {
     b.setAttribute('aria-pressed', String(b.dataset.columns === state.columns));
     b.disabled = b.dataset.columns !== 'all' && !selected;
@@ -433,7 +471,7 @@ function render() {
 
   // meta line
   document.getElementById('mxMeta').innerHTML =
-    `<span><b>${rows.length}</b> filtered rows · <b>${dataCols.length}</b> implementation columns</span>` +
+    `<span><b>${rows.length}</b> filtered rows · <b>${dataCols.length}</b> implementation ${grouped ? 'groups' : 'columns'}</span>` +
     `<span>${DATA.rows.length} rows · <b>${(DATA.stats && DATA.stats.cells || 0).toLocaleString()}</b> timed cells total</span>` +
     `<span>generated <b>${escapeHtml(DATA.generated_at || '—')}</b></span>`;
 
