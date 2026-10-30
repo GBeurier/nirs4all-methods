@@ -59,30 +59,24 @@
 
   <header class="hero">
     <div class="eyebrow">full parity &amp; benchmark matrix</div>
-    <h1>Methods × <span class="grad">implementations</span> — the complete grid</h1>
+    <h1>Methods × <span class="grad">implementations</span></h1>
     <p class="lede">
-      One row per method × problem size × thread count; one column per implementation (C++ build tiers,
-      every language binding, and the canonical external references). Each cell pairs a value with a
-      parity verdict — <strong>reference gate</strong> for the C++ core &amp; external libraries,
-      <strong>binding gate</strong> for the language bindings. Switch to <strong>divergence</strong> to read
-      ΔRMSE (numeric methods) and Jaccard set-overlap (selectors). <strong>NR</strong> (not run) and
-      <strong>n/a</strong> (not available) stay distinct and are never coerced into a number.
-      Prefer a guided view? Open the <a href="{{ pathto('index') }}">card explorer</a>.
+      Click a row to compare its populated implementations, with third-party libraries first.
+      Use <strong>All columns</strong> for the complete grid, or switch between timing and parity δ/J.
     </p>
     <div class="provenance" id="provenance" aria-label="Benchmark host provenance"></div>
   </header>
 
   <div class="legend" role="note" aria-label="Verdict legend">
     <strong>Verdicts</strong>
-    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact match</span>
-    <span class="badge cross"><span class="gly" aria-hidden="true">⇄</span>validated cross-check</span>
-    <span class="badge diverg"><span class="gly" aria-hidden="true">≈</span>drift</span>
+    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>match</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">↔</span>informational</span>
     <span class="badge diverg"><span class="gly" aria-hidden="true">✗</span>failure</span>
     <span class="badge na"><span class="gly" aria-hidden="true">–</span>not&nbsp;available</span>
     <span class="badge nr"><span class="gly" aria-hidden="true">NR</span>not&nbsp;run</span>
     <span class="badge error"><span class="gly" aria-hidden="true">!</span>error</span>
     <span class="badge" style="color:var(--amber);background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.3)"><span class="gly" aria-hidden="true">◆</span>canonical&nbsp;reference</span>
-    <span style="margin-left:auto;color:var(--text-3)">≡ = build-insensitive (matches native) · color is always paired with a glyph</span>
+    <span class="legend-help">Numeric δ &lt; 10⁻⁸ is a green match, including informational comparisons. Jaccard: 1 = identical selection. ≡ = matches native.</span>
   </div>
 
   <!-- toolbar -->
@@ -99,10 +93,10 @@
     <div class="mx-group"><span class="ctl-label">parity</span>
       <select class="ctl" id="mxParity" aria-label="Filter by parity status">
         <option value="">any status</option>
-        <option value="exact">has exact match</option>
+        <option value="exact">has match</option>
         <option value="attention">has failures</option>
-        <option value="divergent">has divergent</option>
-        <option value="cross_check">has cross-check</option>
+        <option value="divergent">outside tolerance</option>
+        <option value="cross_check">has informational comparison</option>
         <option value="error">has error</option>
       </select>
     </div>
@@ -114,6 +108,10 @@
     </div>
 
     <button type="button" class="ctl" id="mxScoreToggle" aria-pressed="false">show score cards</button>
+    <div class="seg mx-layout" role="group" aria-label="Matrix layout">
+      <button type="button" data-layout="compact" aria-pressed="true">Compact</button>
+      <button type="button" data-layout="all" aria-pressed="false">All columns</button>
+    </div>
   </div>
 
   <!-- per-method score cards (toggle) -->
@@ -122,8 +120,13 @@
   </section>
 
   <!-- the matrix -->
+  <div class="mx-focus" id="mxFocus" hidden>
+    <span id="mxFocusLabel" role="status"></span>
+    <button type="button" class="ctl" id="mxClearFocus">← All rows</button>
+  </div>
+  <p class="mx-hint" id="mxHint" role="status"></p>
   <div class="mx-tablecard">
-    <div class="mx-tablewrap" id="matrix">
+    <div class="mx-tablewrap" id="matrix" role="region" aria-label="Parity matrix, scroll to see additional implementations" tabindex="0">
       <table class="mx" aria-label="Methods by implementation parity and benchmark matrix">
         <thead id="mxHead"></thead>
         <tbody id="mxBody"></tbody>
@@ -146,6 +149,7 @@
 </footer>
 
 <script>window.BENCH_DATA = {{ bench_data_json | safe }};</script>
+<script src="{{ pathto('_static/parity-display.js', 1) }}"></script>
 <script src="{{ pathto('_static/matrix.js', 1) }}"></script>
 <!-- GoatCounter privacy-friendly analytics (no cookies); ecosystem path /methods. -->
 <script data-goatcounter="https://nirs4all.goatcounter.com/count" data-goatcounter-settings='{"path": "/methods"}' async src="//gc.zgo.at/count.js"></script>

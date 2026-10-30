@@ -78,13 +78,13 @@
 
   <div class="legend" role="note" aria-label="Verdict legend">
     <strong>Verdicts</strong>
-    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>exact match</span>
-    <span class="badge cross"><span class="gly" aria-hidden="true">◐</span>validated cross-check</span>
+    <span class="badge exact"><span class="gly" aria-hidden="true">✓</span>match</span>
+    <span class="badge cross"><span class="gly" aria-hidden="true">↔</span>informational</span>
     <span class="badge diverg"><span class="gly" aria-hidden="true">▲</span>failure</span>
     <span class="badge na"><span class="gly" aria-hidden="true">∅</span>not&nbsp;available</span>
     <span class="badge nr"><span class="gly" aria-hidden="true">·</span>not&nbsp;run&nbsp;(NR)</span>
     <span class="badge error"><span class="gly" aria-hidden="true">✕</span>error</span>
-    <span style="margin-left:auto;color:var(--text-3)">color is always paired with a glyph &amp; label · NR is never coerced to a number</span>
+    <span class="legend-help">Numeric δ &lt; 10⁻⁸ is a green match, including informational comparisons. Jaccard: 1 = identical selection.</span>
   </div>
 
   <div class="controls" role="search">
@@ -103,9 +103,9 @@
     <span class="ctl-label">parity</span>
     <select class="ctl" id="filterParity" aria-label="Filter by parity status">
       <option value="">any status</option>
-      <option value="clean">validated / no failures</option>
+      <option value="clean">no failures</option>
       <option value="attention">has failures</option>
-      <option value="cross">has cross-checks</option>
+      <option value="cross">has informational comparisons</option>
       <option value="hasref">has reference gate</option>
       <option value="hasdoc">documented</option>
     </select>
@@ -156,6 +156,7 @@
 </footer>
 
 <script>window.BENCH_DATA = {{ bench_data_json | safe }};</script>
+<script src="{{ pathto('_static/parity-display.js', 1) }}"></script>
 <script src="{{ pathto('_static/dashboard.js', 1) }}"></script>
 <!-- GoatCounter privacy-friendly analytics (no cookies); ecosystem path /methods. -->
 <script data-goatcounter="https://nirs4all.goatcounter.com/count" data-goatcounter-settings='{"path": "/methods"}' async src="//gc.zgo.at/count.js"></script>

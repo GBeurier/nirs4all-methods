@@ -77,6 +77,26 @@ where exact feature-mask parity is not expected, and noncanonical API/facade
 cells that keep useful timings while the canonical registry/C++ path is already
 exact.
 
+### Display policy
+
+The explorer and full parity matrix share `_static/parity-display.js`. A finite
+numeric relative-RMSE delta with absolute value **below `1e-8`** is displayed as
+a green **match**, including informational comparisons. This applies only to the
+gate measured by that delta. Jaccard overlaps, missing results, and execution
+errors are not converted by the numeric threshold. The raw payload and its
+scientific verdicts remain unchanged; badges, filters, counts, and score cards
+use the same derived display verdicts. Informational comparisons above the
+threshold appear in blue and are counted separately from the match rate.
+
+The matrix opens in a compact view grouping third-party libraries, C++ builds,
+and bindings by language. Groups show verdict counts and the best recorded time
+or speed-up; parity mode shows maximum absolute numeric delta or minimum Jaccard
+overlap. Clicking a row focuses its populated implementation columns, placing
+third-party libraries first after the canonical reference. Missing columns are
+hidden; numeric zeros and execution errors remain visible. **All rows** (or
+Escape) restores the overview; **All columns** exposes the complete grid,
+including missing coverage.
+
 ## Source of the verdicts
 
 The verdicts come from the parity gate (**Phase C**): the cross-binding
