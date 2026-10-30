@@ -59,6 +59,7 @@
 </nav>
 
 <main class="shell">
+<div id="overview">
 
   <header class="hero">
     <div class="eyebrow">parity &amp; benchmark explorer</div>
@@ -121,30 +122,25 @@
 
   <div id="methods" aria-label="Methods overview"></div>
 
-</main>
+</div>
 
-<!-- drill-down drawer -->
-<div class="overlay" id="overlay" tabindex="-1"></div>
-<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
-  <div class="drawer-head">
-    <div class="dh-top">
-      <div>
-        <h2 id="drawerTitle">—</h2>
-        <div class="dh-sym mono" id="drawerSym"></div>
-      </div>
-      <button class="btn-close" id="drawerClose" aria-label="Close detail panel" title="Close (Esc)">✕</button>
-    </div>
-    <a class="drawer-doc-cta" id="drawerDocLink" hidden>
-      <span class="drawer-doc-cta-icon" aria-hidden="true">↗</span>
-      <span class="drawer-doc-cta-copy">
+<section class="method-detail" id="methodDetail" aria-labelledby="methodTitle" hidden>
+  <header class="method-head">
+    <a class="method-back" id="methodBack" href="#methods">← Back to methods</a>
+    <h1 id="methodTitle" tabindex="-1">—</h1>
+    <div class="method-symbol mono" id="methodSymbol"></div>
+    <div class="method-meta" id="methodMeta"></div>
+    <a class="method-doc-cta" id="methodDocLink" hidden>
+      <span class="method-doc-cta-icon" aria-hidden="true">↗</span>
+      <span class="method-doc-cta-copy">
         <strong>View full documentation</strong>
         <small>Equations, references, usage and API</small>
       </span>
     </a>
-    <div class="dh-meta" id="drawerMeta"></div>
-  </div>
-  <div class="drawer-body" id="drawerBody"></div>
-</aside>
+  </header>
+  <div class="method-body" id="methodBody"></div>
+</section>
+</main>
 
 <div class="chart-tip" id="chartTip" role="tooltip" aria-hidden="true"></div>
 

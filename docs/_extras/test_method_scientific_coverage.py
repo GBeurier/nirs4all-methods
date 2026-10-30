@@ -687,9 +687,13 @@ def test_committed_corpus_matches_clean_generation_and_preserves_manual_pages(
     )
 
     index = (METHODS_DIR / "index.md").read_text(encoding="utf-8")
-    assert ":glob:" in index and "\n*\n" in index, (
-        "methods toctree no longer exposes preserved HPO/AOM/reference pages"
+    navigation = index.split("```{toctree}\n", 1)[1].split("```", 1)[0]
+    entries = {line for line in navigation.splitlines() if line and not line.startswith(":")}
+    assert ":glob:" not in navigation and "*" not in entries
+    assert {Path(page).stem for page in MANUAL_METHOD_PAGES} <= entries, (
+        "methods toctree no longer exposes preserved HPO/AOM guides"
     )
+    assert {page.stem for page in fresh if page.suffix == ".md"} - {"index"} <= entries
 
 
 def test_checked_in_scientific_reference_artifacts_are_current() -> None:

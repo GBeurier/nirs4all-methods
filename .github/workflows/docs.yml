@@ -51,12 +51,13 @@ jobs:
       - name: Generated method-science corpus gates
         run: |
           # The scientific-coverage gate regenerates to two empty temporary
-          # directories, verifies byte-idempotence, the 209-entry catalog,
+          # directories, verifies byte-idempotence, the current catalog,
           # public source-level binding signatures, preserved snapshots and
           # the checked-in corpus.  The ABI-1 lint remains a focused negative
           # regression test for historical C-family prefixes.
           python -m pytest \
             docs/_extras/test_methods_doc_lint.py \
+            docs/_extras/test_method_navigation.py \
             docs/_extras/test_method_scientific_coverage.py -q
 
       - name: Build sphinx html

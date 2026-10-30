@@ -3279,8 +3279,49 @@ def _catalog_refs(method: dict) -> str:
     return ", ".join(tags) if tags else "—"
 
 
+# Maintained method aliases, HPO/facade guides, and generated reference reports.
+# Keep membership explicit: arbitrary local assessment notes must never become
+# method navigation entries merely because they live beside generated pages.
+METHOD_GUIDE_PAGES = frozenset({
+    "aom_calibration",
+    "aom_pop_ridge_active_superblock",
+    "aom_pop_ridge_global",
+    "aom_pop_ridge_mkl_superblock",
+    "aom_pop_ridge_superblock",
+    "asha",
+    "cmaes",
+    "coverage",
+    "ga_search",
+    "gp_ei",
+    "hyperband",
+    "intrinsic_diagnostics",
+    "lhs",
+    "median_pruner",
+    "moment_stack",
+    "moments",
+    "optimization",
+    "pso_search",
+    "racing",
+    "random",
+    "ridge",
+    "scientific-references",
+    "sobol",
+    "spectral_encoding",
+    "sweep_run",
+    "ternary",
+    "tpe",
+})
+
+
+def render_method_toctree(pages: set[str]) -> str:
+    """Render known method pages and maintained guides without directory globs."""
+    entries = "\n".join(sorted(pages | METHOD_GUIDE_PAGES))
+    return f"```{{toctree}}\n:hidden:\n:maxdepth: 1\n\n{entries}\n```\n"
+
+
 def render_catalog_index(catalog: list[dict],
-                         page_for: dict[str, str]) -> str:
+                         page_for: dict[str, str],
+                         additional_pages: set[str] | None = None) -> str:
     """The `n4m.<role>` namespace catalogue index for all catalogued methods.
 
     `page_for` maps method_id -> page base name (already resolved / stubbed).
@@ -3307,7 +3348,7 @@ def render_catalog_index(catalog: list[dict],
         "[moment-based fitting and diagnostics](moments.md), "
         "[moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the "
         "[direct Ridge facade](ridge.md).\n",
-        "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
+        render_method_toctree(set(page_for.values()) | (additional_pages or set())),
     ]
     seen_roles = [r for r in ROLE_ORDER if r in by_role]
     # Any role not in the canonical order (defensive) appended at the end.
@@ -3361,7 +3402,7 @@ def render_index(methods: list[dict],
         f"_Total methods_: **{total}** "
         f"({len(methods)} PLS / selection · {len(operators)} operators). "
         "Grouped by family below.\n",
-        "```{toctree}\n:hidden:\n:glob:\n:maxdepth: 1\n\n*\n```\n",
+        render_method_toctree({m["name"] for m in methods + operators}),
     ]
     order = ["core", "sparse", "ensemble", "robust", "nonlinear",
              "multi-block", "calibration-transfer", "classification",
@@ -4129,7 +4170,9 @@ def main() -> None:
             catalog_pages += 1
 
     (out_dir / "index.md").write_text(
-        render_catalog_index(catalog_methods, page_for), encoding="utf-8")
+        render_catalog_index(
+            catalog_methods, page_for, method_names | operator_page_names),
+        encoding="utf-8")
     (out_dir / "coverage.md").write_text(
         render_coverage_report(catalog_methods, page_for, science),
         encoding="utf-8")
