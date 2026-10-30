@@ -67,8 +67,15 @@ assert.equal(JSON.stringify(raw), before, 'raw scientific verdicts must stay unc
 const row = prepared.rows.find(r => r.algo === 'group_sparse_pls');
 assert.equal(row.cells.sgPLS.reference_parity, 'exact');
 assert.equal(row.cells.sgPLS.divergence, raw.rows.find(r => r.algo === row.algo).cells.sgPLS.divergence);
-assert(prepared.method_scores.group_sparse_pls.reference.exact >
-  raw.method_scores.group_sparse_pls.reference.exact);
+assert(!prepared.columns.some(c => c.id === 'nirs4all'));
+for (const r of prepared.rows) {
+  assert(!r.cells.nirs4all);
+  const source = r.cells.__reference;
+  if (source) {
+    assert(!r.cells[source.ref_of], 'reference source must appear only once');
+    assert(source.ref_lang, 'reference must retain its language');
+  }
+}
 """
     subprocess.run(
         [
@@ -113,20 +120,23 @@ def browser_page(tmp_path_factory: pytest.TempPathFactory):
         assert not errors, errors
 
 
-def test_matrix_compact_focus_and_full_grid(browser_page) -> None:
+def test_matrix_row_clicks_cycle_columns_without_hiding_rows(browser_page) -> None:
     page, preview, expect = browser_page
     page.goto((preview / "matrix.html").as_uri())
-    expect(page.locator("table.mx")).to_have_class("mx mx-compact")
-    assert page.evaluate(
-        'document.querySelector("table.mx").scrollWidth <= '
-        'document.querySelector("#matrix").clientWidth'
-    )
-    assert page.locator("#mxHead tr.colrow th").count() < 12
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+    raw = json.loads((STATIC / "bench-data.json").read_text())
+    public_columns = [c for c in raw["columns"] if c["id"] != "nirs4all"]
+    all_count = len(public_columns) + 3
+    assert page.locator("#mxHead tr.colrow th").count() == all_count
+    assert not page.locator('#mxHead [data-col^="summary:"]').count()
+    assert not page.locator('#mxHead [data-col="nirs4all"]').count()
     page.locator("#mxSearch").fill("group_sparse_pls")
     expect(page.locator("#mxBody [data-row-key]")).to_have_count(3)
-    # Clicking a cell (not just the method name) focuses the entire row.
+    # First click: hide columns empty for this row; every filtered row remains.
     page.locator("#mxBody tr").first.locator("td").nth(3).click()
-    expect(page.locator("#mxBody [data-row-key]")).to_have_count(1)
+    expect(page.locator("#mxBody [data-row-key]")).to_have_count(3)
+    expect(page.locator("#mxBody .mx-selected")).to_have_count(1)
+    expect(page.locator("#mxFocusLabel")).to_contain_text("2/3")
     expect(page.locator("#mxFocus")).to_be_visible()
     headers = page.locator("#mxHead tr.colrow [data-col]").evaluate_all(
         "elements => elements.map(e => e.dataset.col)"
@@ -135,25 +145,94 @@ def test_matrix_compact_focus_and_full_grid(browser_page) -> None:
     assert headers.index("sgPLS") < headers.index("pls4all.cpp.blas+omp")
     assert "pls4all.matlab" not in headers
     assert "pls4all.cpp.blas+omp" in headers  # A zero delta stays visible.
+    assert "python_numpy" not in headers  # It is already in the reference column.
     expect(page.locator('#mxHead [data-col="sgPLS"]')).to_be_visible()
     page.locator('[data-viz="divergence"]').click()
-    cells = page.locator("#mxBody tr td")
+    cells = page.locator("#mxBody tr").first.locator("td")
     sgpls_index = headers.index("sgPLS") + 1  # The reference header has no data-col.
     expect(cells.nth(sgpls_index).locator(".q-exact")).to_be_visible()
+    # Language icons must not paint the entire external result column.
+    assert (
+        cells.nth(sgpls_index).evaluate("el => getComputedStyle(el).backgroundColor")
+        != "rgb(13, 148, 136)"
+    )
     assert page.locator("#mxBody .q-cross_check").count() > 0
     assert page.locator("#mxBody .q-exact").filter(has_text="δ 0").count() > 0
+    # Second click: restore every column, ordered by this row's current metric.
+    page.locator("[data-focus-row]").first.click()
+    expect(page.locator("#mxFocusLabel")).to_contain_text("3/3")
+    assert page.locator("#mxHead tr.colrow th").count() == all_count
+    assert page.locator("#mxBody [data-row-key]").count() == 3
+    deltas = page.evaluate("""() => {
+      const row = DATA.rows.find(r => rowKey(r) === state.focus);
+      return visibleColumns(filteredRows()).filter(c => c.id !== REF_COL)
+        .map(c => row.cells[c.id]?.divergence).filter(v => Number.isFinite(v));
+    }""")
+    assert deltas == sorted(deltas)
+    # Timing order also changes when the value mode changes.
+    page.locator('[data-viz="duration"]').click()
+    times = page.evaluate("""() => {
+      const row = DATA.rows.find(r => rowKey(r) === state.focus);
+      return visibleColumns(filteredRows()).filter(c => c.id !== REF_COL)
+        .map(c => row.cells[c.id]).filter(c => c?.ok && Number.isFinite(c.ms))
+        .map(c => c.ms);
+    }""")
+    assert times == sorted(times)
+    # Third click: return to the original complete column order.
+    page.locator("[data-focus-row]").first.click()
+    expect(page.locator("#mxFocusLabel")).to_contain_text("1/3")
+    ids = page.locator("#mxHead tr.colrow [data-col]").evaluate_all(
+        "es => es.map(e => e.dataset.col).filter(id => !id.startsWith('__'))"
+    )
+    assert ids == [c["id"] for c in public_columns if c["id"] != "__reference"]
     page.keyboard.press("Escape")
     expect(page.locator("#mxFocus")).to_be_hidden()
     expect(page.locator("#mxBody [data-row-key]")).to_have_count(3)
-    page.locator('[data-layout="all"]').click()
-    raw = json.loads((STATIC / "bench-data.json").read_text())
-    assert page.locator("#mxHead tr.colrow th").count() == len(raw["columns"]) + 3
+    page.locator('[data-columns="all"]').click()
+    assert page.locator("#mxHead tr.colrow th").count() == all_count
     # The native row button supports keyboard activation in the full grid too.
     page.locator("[data-focus-row]").first.focus()
     page.keyboard.press("Enter")
     expect(page.locator("#mxFocus")).to_be_visible()
     page.locator("#mxClearFocus").click()
     expect(page.locator("#mxBody [data-row-key]")).to_have_count(3)
+
+
+@pytest.mark.parametrize("language", ["Python", "R", "MATLAB/Octave"])
+def test_one_reference_with_language_icon_in_cards_and_details(
+    browser_page, language
+) -> None:
+    page, preview, expect = browser_page
+    raw = json.loads((STATIC / "bench-data.json").read_text())
+    row = next(
+        r
+        for r in raw["rows"]
+        if r["cells"].get("__reference", {}).get("ref_lang") == language
+    )
+    source = row["cells"]["__reference"]["ref_of"]
+    page.goto((preview / "index.html").as_uri())
+    card = page.locator(f'.mcard[data-algo="{row["algo"]}"]')
+    expect(card.locator(".reference-strip")).to_have_count(1)
+    expect(card.locator(".reference-strip")).to_contain_text(source)
+    expect(card.locator(".reference-strip img")).to_have_attribute("alt", language)
+    page.goto((preview / "index.html").as_uri() + "#m/" + row["algo"])
+    reference = page.locator("#ptableMount .reference-row")
+    expect(reference).to_have_count(1)
+    expect(reference).to_contain_text(source)
+    expect(reference.locator("img")).to_have_attribute("alt", language)
+    expect(reference.locator("img")).to_have_js_property("complete", True)
+    expect(reference.locator("img")).not_to_have_js_property("naturalWidth", 0)
+    expect(
+        page.locator(f'#ptableMount [data-implementation="{source}"]')
+    ).to_have_count(0)
+    expect(page.locator('#ptableMount [data-implementation="nirs4all"]')).to_have_count(
+        0
+    )
+    # Sorting the comparison never dislodges the single highlighted reference.
+    page.locator('[data-sort="time"]').click()
+    expect(page.locator("#ptableMount tbody tr").first).to_have_class(
+        "lang-ext reference-row"
+    )
 
 
 def test_explorer_uses_the_same_match_policy(browser_page) -> None:

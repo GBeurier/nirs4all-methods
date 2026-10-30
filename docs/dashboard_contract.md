@@ -88,14 +88,22 @@ scientific verdicts remain unchanged; badges, filters, counts, and score cards
 use the same derived display verdicts. Informational comparisons above the
 threshold appear in blue and are counted separately from the match rate.
 
-The matrix opens in a compact view grouping third-party libraries, C++ builds,
-and bindings by language. Groups show verdict counts and the best recorded time
-or speed-up; parity mode shows maximum absolute numeric delta or minimum Jaccard
-overlap. Clicking a row focuses its populated implementation columns, placing
-third-party libraries first after the canonical reference. Missing columns are
-hidden; numeric zeros and execution errors remain visible. **All rows** (or
-Escape) restores the overview; **All columns** exposes the complete grid,
-including missing coverage.
+Each matrix column represents one implementation. Repeated clicks on one row
+cycle through **all columns**, **columns populated for that row**, and **columns
+sorted by that row's values**, then return to all columns. Every filtered row
+stays visible throughout. Sorting uses ascending duration (also for speed-up),
+ascending absolute numeric delta, or descending Jaccard overlap. Missing values
+follow measured values. The reference column stays first. Numeric zeros and
+execution errors remain visible when empty columns are hidden. Escape or
+**Reset columns** restores the complete grid.
+
+The display copy keeps each reference source once, in a highlighted Reference
+row/column with its Python, R, or MATLAB icon. The method overview cards name
+that reference in a matching strip. The source's duplicate implementation cell
+is omitted, and `nirs4all` is not listed as an external implementation. Other
+external libraries and nirs4all-methods / pls4all bindings remain separate,
+with language icons for external libraries. The raw payload retains all
+provenance and verdicts.
 
 ## Source of the verdicts
 

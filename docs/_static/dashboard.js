@@ -36,9 +36,9 @@ function langClass(l) { return LANG_CLASS[l] || 'lang-ext'; }
 
 /* ---------- origin vocabulary (data values → human label + css token) ---------- */
 const ORIGIN_LABEL = {
-  pls4all: 'pls4all native',
-  n4m_donor: 'donor',
-  donor: 'donor',
+  pls4all: 'pls4all',
+  n4m_donor: 'nirs4all-methods',
+  donor: 'nirs4all-methods',
   external: 'external',
 };
 function originLabel(o) { return ORIGIN_LABEL[o] || o; }
@@ -170,6 +170,8 @@ function buildMethods() {
     }
 
     const gateStats = methodGateStats(rows, score);
+    const references = [...new Map(rows.map(r => r.cells[REF_COL_ID]).filter(Boolean)
+      .map(c => [c.ref_of, { name: c.ref_of, lang: c.ref_lang }])).values()];
     const refHist = gateStats.refHist;
     const bindHist = gateStats.bindHist;
     const timing = gateStats.timing;
@@ -181,7 +183,7 @@ function buildMethods() {
       .reduce((s, k) => s + (refHist[k] || 0) + (bindHist[k] || 0), 0);
 
     methods.push({
-      algo, display, fq, docPage, docUrl, group, origin, symbol, rows, sizes,
+      algo, display, fq, docPage, docUrl, group, origin, symbol, rows, sizes, references,
       langs: [...langs], anyJaccard,
       refHist, bindHist, timing, divRef, divBind, attention,
       hasRef: histTotalReal(refHist) > 0,
@@ -403,6 +405,7 @@ function methodCard(m) {
         </div>
         <span class="m-origin ${originClass(m.origin)}">${escapeHtml(originLabel(m.origin))}</span>
       </div>
+      ${referenceStrip(m)}
       <div class="m-badges">
         <span style="font-size:.62rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;font-weight:700;align-self:center">ref</span>${refBadge}
         <span style="font-size:.62rem;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;font-weight:700;align-self:center;margin-left:4px">bind</span>${bindBadge}
@@ -418,6 +421,11 @@ function methodCard(m) {
         ${docLink}
       </div>
     </div>`;
+}
+
+function referenceStrip(m) {
+  const sources = m.references.map(source => `<span class="reference-source">${window.N4MParity.languageIcon(source.lang)}<strong>${escapeHtml(source.name)}</strong></span>`).join('');
+  return `<div class="reference-strip"><span class="reference-label">Reference</span>${sources || '<span class="dash">Not available</span>'}</div>`;
 }
 
 function langDots(langs) {
@@ -588,7 +596,7 @@ function methodBodyHtml(m) {
 
   /* --- 1. score summary --- */
   html += `<div class="dsection"><h2>Score card</h2><div class="dscore">`;
-  html += gateScoreTile('Reference gate', m.refHist, 'vs canonical lib');
+  html += gateScoreTile('Reference gate', m.refHist, 'vs reference');
   html += gateScoreTile('Binding gate', m.bindHist, 'vs C++ core');
   // selector methods report divergence as Jaccard set-overlap on BOTH gates; numeric
   // methods report relative-RMSE Δ. Label + format must follow the method's metric.
@@ -610,7 +618,7 @@ function methodBodyHtml(m) {
 
   /* --- 2. verdict histograms (full breakdown) --- */
   html += `<div class="dsection"><h2>Verdict breakdown</h2><div class="dscore verdict-scores">`;
-  html += verdictBreakdownCard('Reference gate', '⇄', m.refHist, 'libn4m C++ core vs canonical external library');
+  html += verdictBreakdownCard('Reference gate', '⇄', m.refHist, 'libn4m C++ core vs reference library');
   html += verdictBreakdownCard('Binding gate', '⊻', m.bindHist, 'each binding tier vs the C++ core');
   html += `</div></div>`;
 
@@ -675,8 +683,11 @@ function collectTimingSeries(m) {
   const out = [];
   for (const cid of Object.keys(series)) {
     const pts = series[cid].sort((a, b) => a.x - b.x || a.threads - b.threads);
-    const col = COL_BY_ID[cid];
+    let col = COL_BY_ID[cid];
     if (!col) continue;
+    if (cid === REF_COL_ID && m.references.length) {
+      col = { ...col, label: `Reference · ${m.references[0].name}`, lang: m.references[0].lang };
+    }
     out.push({ id: cid, col, pts });
   }
   // surface the most informative columns first: cpp blas+omp, python, sklearn, R, reference
@@ -820,7 +831,7 @@ function parityTableHtml(m) {
         `<button type="button" data-size="${s.key}" aria-pressed="${i === sizes.length - 1 ? 'true' : 'false'}">${s.n}×${s.p}${sizes.some(z => z.threads !== 1) ? ` · ${s.threads}t` : ''}</button>`
       ).join('') + `</div>`;
   }
-  return `<p class="ptable-explanation">Canonical reference sources are highlighted. By default, scored external implementations precede scored internal implementations; implementations without scores follow. Reference parity compares the C++ core with the canonical library, while binding parity compares a binding with the core. Select a column heading to sort; missing values remain last.</p>${picker}<div id="ptableMount" class="ptable-wrap" role="region" aria-label="Parity results by implementation" tabindex="0"></div>`;
+  return `<p class="ptable-explanation">The highlighted reference appears once, followed by external libraries and nirs4all-methods / pls4all implementations. Reference parity compares the C++ core with this reference; binding parity compares a binding with the core.</p>${picker}<div id="ptableMount" class="ptable-wrap" role="region" aria-label="Parity results by implementation" tabindex="0"></div>`;
 }
 
 function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
@@ -836,7 +847,7 @@ function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
       ['exact', 'cross_check', 'divergent', 'drift'].includes(v));
   const rank = cid => {
     const cell = row.cells[cid], col = COL_BY_ID[cid];
-    if (cell.is_canonical_reference) return 0;
+    if (cid === REF_COL_ID) return 0;
     if (!scored(cell)) return 3;
     return col.kind === 'external' || col.kind === 'reference' ? 1 : 2;
   };
@@ -850,6 +861,7 @@ function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
     return null;
   };
   colIds.sort((a, b) => {
+    if (a === REF_COL_ID || b === REF_COL_ID) return a === REF_COL_ID ? -1 : 1;
     if (!sort.key) return rank(a) - rank(b) || COL_BY_ID[a].label.localeCompare(COL_BY_ID[b].label);
     const av = sortValue(a), bv = sortValue(b);
     const missing = v => v == null || v === '' || v === 'not_run' || v === 'not_available';
@@ -893,13 +905,15 @@ function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
       ? `<span class="dash">—</span>`
       : `<span class="mono">${cell.fmt || fmtMs(cell.ms)}</span>`;
 
-    const canonical = !!cell.is_canonical_reference;
-    const implLabel = cid === REF_COL_ID && cell.ref_of ? `Canonical reference: ${cell.ref_of}` : col.label;
-    body += `<tr class="${lc}${canonical ? ' canonical-row' : ''}">
-      <td class="col-impl"><span class="lang-tag"></span>${escapeHtml(implLabel)}${canonical ? ' <span class="canonical-badge">Canonical reference</span>' : ''}
-        <span style="color:var(--text-3);font-size:.66rem;display:block;margin-left:15px">${escapeHtml(col.lang)} · ${escapeHtml(col.tier || col.group)}</span></td>
-      <td><span class="badge ${rp.cls} sm"><span class="gly" aria-hidden="true">${rp.gly}</span>${rp.label}</span></td>
-      <td><span class="badge ${bp.cls} sm"><span class="gly" aria-hidden="true">${bp.gly}</span>${bp.label}</span></td>
+    const isReference = cid === REF_COL_ID;
+    const language = isReference ? cell.ref_lang : col.lang;
+    const implLabel = isReference ? cell.ref_of : window.N4MParity.implementationLabel(col, m.origin);
+    const type = isReference ? 'Reference' : col.kind === 'external' ? 'External library' : originLabel(m.origin);
+    body += `<tr class="${lc}${isReference ? ' reference-row' : ''}" data-implementation="${escapeAttr(cid)}">
+      <td class="col-impl"><span class="implementation-name">${window.N4MParity.languageIcon(language)}<strong>${escapeHtml(implLabel)}</strong>${isReference ? ' <span class="reference-badge">Reference</span>' : ''}</span>
+        <span class="implementation-type">${escapeHtml(type)} · ${escapeHtml(language || '')}</span></td>
+      <td>${isReference ? '<span class="dash">—</span>' : `<span class="badge ${rp.cls} sm"><span class="gly" aria-hidden="true">${rp.gly}</span>${rp.label}</span>`}</td>
+      <td>${isReference ? '<span class="dash">—</span>' : `<span class="badge ${bp.cls} sm"><span class="gly" aria-hidden="true">${bp.gly}</span>${bp.label}</span>`}</td>
       <td>${divHtml}</td>
       <td class="num">${ms}</td>
     </tr>`;
@@ -916,7 +930,7 @@ function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
 
   const headings = [
     ['implementation', 'Implementation', 'Implementation name'],
-    ['reference', 'Reference ⇄', 'libn4m core vs canonical external library'],
+    ['reference', 'Reference ⇄', 'libn4m core vs reference library'],
     ['binding', 'Binding ⊻', 'This binding vs the C++ core'],
     ['divergence', 'Divergence', 'ΔRMSE for numeric rows, Jaccard for selector rows'],
     ['time', 'Median ms', 'Median wall-clock time'],
