@@ -5,7 +5,7 @@
    ========================================================================== */
 'use strict';
 
-const DATA = window.BENCH_DATA;
+const DATA = window.N4MParity.prepare(window.BENCH_DATA);
 if (!DATA) {
   document.getElementById('methods').innerHTML =
     '<div class="empty"><div class="big">⚠️</div><h3>benchmark data failed to load</h3>' +
@@ -15,9 +15,9 @@ if (!DATA) {
 
 /* ---------- verdict vocabulary: color + glyph + label, never color alone ---------- */
 const VERDICT = {
-  exact:        { cls: 'exact',  gly: '✓', label: 'exact' },
-  cross_check:  { cls: 'cross',  gly: '◐', label: 'cross-check' },
-  divergent:    { cls: 'diverg', gly: '▲', label: 'divergent' },
+  exact:        { cls: 'exact',  gly: '✓', label: 'match' },
+  cross_check:  { cls: 'cross',  gly: '↔', label: 'comparison' },
+  divergent:    { cls: 'diverg', gly: '▲', label: 'outside tolerance' },
   drift:        { cls: 'diverg', gly: '▲', label: 'drift' },
   not_available:{ cls: 'na',     gly: '∅', label: 'n/a' },
   not_run:      { cls: 'nr',     gly: '·', label: 'NR' },
@@ -176,8 +176,7 @@ function buildMethods() {
     const divRef = gateStats.divRef;
     const divBind = gateStats.divBind;
 
-    // an "attention" flag means real failures only; cross-checks are validated
-    // informational comparisons and should not make a method look broken.
+    // Informational comparisons are separate from failed checks.
     const attention = FAILURE_KEYS
       .reduce((s, k) => s + (refHist[k] || 0) + (bindHist[k] || 0), 0);
 
@@ -193,12 +192,12 @@ function buildMethods() {
   }
   return methods;
 }
-// "real" verdict total = excludes not_run/not_available so percentages mean something
+// The match rate excludes informational comparisons and untested cells.
 function histTotalReal(h) {
-  return (h.exact || 0) + (h.cross_check || 0) + (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
+  return (h.exact || 0) + (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
 }
 function histTotalValidated(h) {
-  return (h.exact || 0) + (h.cross_check || 0);
+  return h.exact || 0;
 }
 function histTotalFailed(h) {
   return (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
@@ -326,7 +325,6 @@ function meterSegments(h) {
 
 function meterMeta(h) {
   const real = histTotalReal(h);
-  const exact = h.exact || 0;
   const cross = h.cross_check || 0;
   const validated = histTotalValidated(h);
   const failed = histTotalFailed(h);
@@ -335,14 +333,14 @@ function meterMeta(h) {
   if (real === 0) {
     // nothing comparable — surface NR / NA honestly, never a fake %
     const bits = [];
+    if (cross) bits.push(`${cross} informational`);
     if (nr) bits.push(`${nr} NR`);
     if (na) bits.push(`${na} n/a`);
     return bits.length ? `<span style="color:var(--v-nr)">${bits.join(' · ')}</span>` : '<span style="color:var(--v-nr)">no gate</span>';
   }
-  let s = `<b>${fmtPct(validated, real)}%</b> validated <span style="color:var(--text-3)">(${validated}/${real})</span>`;
+  let s = `<b>${fmtPct(validated, real)}%</b> match <span style="color:var(--text-3)">(${validated}/${real})</span>`;
   const bits = [];
-  if (exact) bits.push(`${exact} exact`);
-  if (cross) bits.push(`${cross} cross-check`);
+  if (cross) bits.push(`${cross} informational`);
   if (bits.length) s += ` <span style="color:var(--text-3)">· ${bits.join(' · ')}</span>`;
   if (failed) s += ` <span style="color:var(--v-diverg)">· ${failed} failed</span>`;
   if (nr) s += ` <span style="color:var(--v-nr)">· ${nr} NR</span>`;
@@ -352,7 +350,7 @@ function meterMeta(h) {
 // human-readable verdict tally for screen readers (color-independent)
 function meterAriaLabel(label, h) {
   const order = [
-    ['exact', 'exact'], ['cross_check', 'cross-check'], ['divergent', 'divergent'],
+    ['exact', 'match'], ['cross_check', 'informational comparison'], ['divergent', 'outside tolerance'],
     ['drift', 'drift'], ['error', 'error'], ['not_available', 'not available'], ['not_run', 'not run'],
   ];
   const bits = order.filter(([k]) => h[k]).map(([k, name]) => `${h[k]} ${name}`);
@@ -369,16 +367,15 @@ function parityMeter(label, glyph, h) {
 }
 
 function topVerdictBadge(h) {
-  // Surface failures first. Cross-checks are validated, not attention states.
+  // Surface failures first; informational comparisons are not failures.
   for (const k of ['error', 'divergent', 'drift']) {
     if (h[k]) { const v = verdict(k); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>${v.label} ×${h[k]}</span>`; }
   }
   if (histTotalValidated(h)) {
-    const cross = h.cross_check || 0;
-    if (cross) return `<span class="badge cross sm"><span class="gly" aria-hidden="true">✓</span>validated · ${cross} cross-check</span>`;
     const v = verdict('exact');
-    return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>validated</span>`;
+    return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>match</span>`;
   }
+  if (h.cross_check) return `<span class="badge cross sm">↔ ${h.cross_check} informational</span>`;
   if (h.not_available) { const v = verdict('not_available'); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>not covered</span>`; }
   const v = verdict('not_run'); return `<span class="badge ${v.cls} sm"><span class="gly" aria-hidden="true">${v.gly}</span>not run</span>`;
 }
@@ -456,10 +453,10 @@ function render() {
       const ms = byGroup[gk];
       if (!ms || !ms.length) continue;
       const accent = GROUP_ACCENT[gk];
-      // category mini-summary: aggregate validated ratio (exact + cross-check).
+      // Category mini-summary: match rate among evaluated checks.
       let validated = 0, real = 0;
       for (const m of ms) { validated += histTotalValidated(m.refHist); real += histTotalReal(m.refHist); }
-      const miniRef = real ? `${fmtPct(validated, real)}% ref validated` : '';
+      const miniRef = real ? `${fmtPct(validated, real)}% ref match` : '';
       html += `
         <section class="cat-section">
           <div class="cat-head">
@@ -574,13 +571,13 @@ function gateScoreTile(label, h, target) {
   const na = h.not_available || 0;
   if (!real) {
     const bits = [];
+    if (h.cross_check) bits.push(`${h.cross_check} informational`);
     if (nr) bits.push(`${nr} NR`);
     if (na) bits.push(`${na} n/a`);
     return scoreTile(label, '—', bits.length ? bits.join(' · ') : 'no gate');
   }
-  const bits = [`${validated}/${real} validated`];
-  if (h.exact) bits.push(`${h.exact} exact`);
-  if (h.cross_check) bits.push(`${h.cross_check} cross-check`);
+  const bits = [`${validated}/${real} matching`];
+  if (h.cross_check) bits.push(`${h.cross_check} informational`);
   if (failed) bits.push(`${failed} failed`);
   if (nr || na) bits.push(`${nr + na} not covered`);
   return scoreTile(label, `${fmtPct(validated, real)}%`, `${bits.join(' · ')} ${target}`);
@@ -886,8 +883,10 @@ function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
       const tag = metric === 'jaccard'
         ? `<span class="metric-tag jaccard" title="set overlap of selected variables; 1.00 = identical mask">J</span>`
         : `<span class="metric-tag rmse" title="relative RMSE delta vs the gate basis">ΔRMSE</span>`;
-      const basis = cell.divergence_basis ? `<span style="font-size:.6rem;color:var(--text-3)">${cell.divergence_basis}</span>` : '';
-      divHtml = `<span class="div-cell">${tag}<span class="mono">${escapeHtml(cell.divergence_fmt ?? fmtDiv(cell.divergence, metric))}</span>${basis}</span>`;
+      const basisLabel = cell.divergence_basis === 'cross_check' ? 'reference' : cell.divergence_basis;
+      const basis = basisLabel ? `<span style="font-size:.6rem;color:var(--text-3)">${escapeHtml(basisLabel)}</span>` : '';
+      const matchClass = cell.display_match_basis ? ' numeric-match' : '';
+      divHtml = `<span class="div-cell${matchClass}">${tag}<span class="mono">${escapeHtml(cell.divergence_fmt ?? fmtDiv(cell.divergence, metric))}</span>${basis}</span>`;
     }
 
     const ms = cell.ms == null
@@ -908,11 +907,10 @@ function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
     // surface the informational note whenever ANY gate is a cross-check (not just the
     // top-level verdict), but skip the terse `selection_exact` marker which carries no
     // explanation and would just add noise on already-exact selector rows.
-    const isCross = cell.parity === 'cross_check'
-      || cell.reference_parity === 'cross_check'
+    const isCross = cell.reference_parity === 'cross_check'
       || cell.binding_parity === 'cross_check';
     if (cell.divergence_note && cell.divergence_note !== 'selection_exact' && isCross) {
-      body += `<tr class="note-row"><td colspan="5">◐ ${escapeHtml(cell.divergence_note)}</td></tr>`;
+      body += `<tr class="note-row"><td colspan="5"><details><summary>Comparison details</summary>${escapeHtml(cell.divergence_note)}</details></td></tr>`;
     }
   }
 
@@ -995,6 +993,7 @@ function renderChrome() {
   let exact = 0, cross = 0, diverg = 0, nr = 0, na = 0, err = 0, timed = 0;
   for (const r of DATA.rows) {
     for (const cid of Object.keys(r.cells)) {
+      if (cid === REF_COL_ID || !COL_BY_ID[cid]) continue;
       const c = r.cells[cid]; if (!c) continue;
       switch (effectiveParity(c, COL_BY_ID[cid])) {
         case 'exact': exact++; break;
@@ -1007,14 +1006,14 @@ function renderChrome() {
       if (c.ms != null) timed++;
     }
   }
-  const real = exact + cross + diverg + err;
-  const validated = exact + cross;
+  const real = exact + diverg + err;
+  const validated = exact;
   const failed = diverg + err;
   const kpis = [
     { v: METHODS.length, l: 'methods', sub: `${DATA.algo_groups.length} categories`, accent: '#0d9488' },
-    { v: `${fmtPct(validated, real)}%`, l: 'validated cells', sub: `${validated.toLocaleString()} of ${real.toLocaleString()} comparable · ${exact.toLocaleString()} exact + ${cross.toLocaleString()} cross-check`, accent: '#0f766e' },
+    { v: real ? `${fmtPct(validated, real)}%` : '—', l: 'matching checks', sub: `${validated.toLocaleString()} of ${real.toLocaleString()} evaluated`, accent: '#0f766e' },
     { v: failed, l: 'failures', sub: 'divergent, drift, or error', accent: failed ? '#b3261e' : '#10b981' },
-    { v: cross, l: 'cross-check cells', sub: 'validated, not failures', accent: '#b45309' },
+    { v: cross, l: 'informational', sub: 'comparisons shown separately', accent: '#1d4ed8' },
     { v: nr.toLocaleString(), l: 'not run', sub: 'kept honest, never faked', accent: '#7c7f86' },
     { v: timed.toLocaleString(), l: 'timed cells', sub: `${COLS.length} implementations`, accent: '#4f46e5' },
   ];

@@ -13,7 +13,7 @@
    ========================================================================== */
 'use strict';
 
-const DATA = window.BENCH_DATA;
+const DATA = window.N4MParity.prepare(window.BENCH_DATA);
 const mount = document.getElementById('matrix');
 if (!DATA || !Array.isArray(DATA.columns)) {
   mount.innerHTML = '<div class="mx-empty"><h3>benchmark data failed to load</h3>' +
@@ -26,7 +26,7 @@ const REF_COL = '__reference';
 /* ---------- verdict vocabulary: glyph + css class, never colour alone ---------- */
 const VERDICT = {
   exact:        { cls: 'exact',  gly: '✓' },
-  cross_check:  { cls: 'cross',  gly: '⇄' },
+  cross_check:  { cls: 'cross',  gly: '↔' },
   divergent:    { cls: 'diverg', gly: '✗' },
   drift:        { cls: 'cross',  gly: '≈' },
   error:        { cls: 'error',  gly: '!' },
@@ -95,14 +95,45 @@ const state = {
   viz: 'duration',      // duration | divergence | speedup
   sort: { col: '__algo', dir: 1 },
   showScores: false,
+  layout: 'compact', focus: null,
 };
 
 /* ==========================================================================
-   Column ordering — keep DATA.columns order, contiguous language bands.
-   The reference column (if present) is pinned first by the payload already.
+   Compact groups, populated row focus, or the complete implementation grid.
    ========================================================================== */
-function visibleColumns() {
-  return COLS.slice();   // payload order already groups by language band
+function rowKey(row) {
+  return JSON.stringify([row.algo, row.n, row.p, row.threads]);
+}
+function hasResult(cell, column) {
+  if (!cell) return false;
+  return Number.isFinite(cell.divergence) || (cell.ok && Number.isFinite(cell.ms)) ||
+    ['exact', 'cross_check', 'divergent', 'drift', 'error'].includes(effectiveParity(cell, column));
+}
+function thirdParty(column) {
+  return column.id !== REF_COL && ['external', 'reference'].includes(column.kind);
+}
+function visibleColumns(rows) {
+  const selected = rows.find(row => rowKey(row) === state.focus);
+  if (selected) {
+    return COLS.filter(c => c.id === REF_COL || hasResult(selected.cells[c.id], c))
+      .sort((a, b) => {
+        const rank = c => c.id === REF_COL ? 0 : thirdParty(c) ? 1 : 2;
+        return rank(a) - rank(b);
+      });
+  }
+  if (state.layout === 'all') return COLS.slice();
+  const groups = [
+    ['third-party', 'Third-party', c => thirdParty(c)],
+    ['core', 'C++ builds', c => c.id.startsWith('pls4all.cpp.')],
+    ['python', 'Python bindings', c => c.kind === 'pls4all' && c.lang === 'Python'],
+    ['r', 'R bindings', c => c.kind === 'pls4all' && c.lang === 'R'],
+    ['matlab', 'MATLAB bindings', c => c.kind === 'pls4all' && c.lang === 'MATLAB/Octave'],
+  ];
+  const reference = COLS.find(c => c.id === REF_COL);
+  return (reference ? [reference] : []).concat(groups.map(([id, label, include]) => ({
+    id: `summary:${id}`, label, short: label, group: id, kind: 'summary', lang: 'external',
+    members: COLS.filter(include),
+  })).filter(c => c.members.some(m => rows.some(r => hasResult(r.cells[m.id], m)))));
 }
 
 /* contiguous (language, group) runs for the band row */
@@ -162,7 +193,7 @@ function rowCells(row, cols) {
   for (const c of cols) {
     if (c.id === REF_COL) continue;
     const cell = row.cells[c.id];
-    if (cell && cell.ok && isFinite(cell.ms)) out.push({ id: c.id, ms: cell.ms });
+    if (cell && cell.ok && Number.isFinite(cell.ms)) out.push({ id: c.id, ms: cell.ms });
   }
   return out;
 }
@@ -176,8 +207,18 @@ function sortRows(rows, cols) {
   else if (sc.col === '__threads') cmp = (a, b) => a.threads - b.threads;
   else {
     const id = sc.col;
-    const val = r => { const c = r.cells[id]; return (c && isFinite(c.ms)) ? c.ms : Infinity; };
-    cmp = (a, b) => val(a) - val(b);
+    const column = cols.find(c => c.id === id);
+    const val = r => {
+      const cells = column && column.members ? column.members.map(c => r.cells[c.id]).filter(Boolean)
+        : [r.cells[id]].filter(Boolean);
+      const values = cells.filter(c => c.ok && Number.isFinite(c.ms)).map(c => c.ms);
+      return values.length ? Math.min(...values) : null;
+    };
+    cmp = (a, b) => {
+      const av = val(a), bv = val(b);
+      if (av == null || bv == null) return av == null ? (bv == null ? 0 : dir) : -dir;
+      return av - bv;
+    };
   }
   return rows.slice().sort((a, b) => dir * cmp(a, b));
 }
@@ -198,21 +239,22 @@ function divModeCell(cell, meta, lcls, colCls) {
   const metric = cell.divergence_metric || 'rmse';
   const fmt = cell.divergence_fmt;
   if (fmt == null || fmt === '—') {
+    if (effectiveParity(cell, meta) === 'error') return `<td class="${lcls} ${colCls}"><span class="mx-gly error" role="img" aria-label="Execution error" title="${escAttr(cell.reason || 'Execution error')}">!</span></td>`;
     return `<td class="${lcls} ${colCls}"><span class="mx-dash">—</span></td>`;
   }
   if (metric === 'jaccard') {
     const bd = (cell.divergence_quality === 'selection_bydesign');
     const v = parseFloat(cell.divergence) || 0;
-    const cls = bd ? 'j-bydesign' : (v >= 0.9 ? 'j-good' : 'j-mid');
+    const cls = effectiveParity(cell, meta) === 'exact' ? 'j-good' : bd ? 'j-bydesign' : 'j-mid';
     const note = cell.divergence_note ? ' — ' + cell.divergence_note : '';
     const title = bd ? `By-design selector cross-check · Jaccard=${fmt}${note}`
                      : `Jaccard feature-set overlap: ${fmt} (1.00 = identical mask)${note}`;
     return `<td class="${lcls} ${colCls}"><span class="mx-div ${cls}" title="${escAttr(title)}">${bd ? 'BD ' : '∩ '}J ${escapeHtml(fmt)}</span></td>`;
   }
-  // relative-RMSE δ; a failure verdict overrides the tolerance-band class
+  // Use the shared display verdict, including the numerical match threshold.
   let dq = cell.divergence_quality || 'unknown';
   const ev = effectiveParity(cell, meta);
-  if (ev === 'divergent' || ev === 'error' || ev === 'drift') dq = ev;
+  if (['exact', 'cross_check', 'divergent', 'error', 'drift'].includes(ev)) dq = ev;
   const basis = cell.divergence_basis || 'unknown';
   const lead = basis === 'self' ? '' : 'δ ';
   const note = cell.divergence_note ? ' — ' + cell.divergence_note : '';
@@ -224,6 +266,7 @@ function divModeCell(cell, meta, lcls, colCls) {
 }
 
 function dataCellHtml(row, meta, baselineMs, fastestId) {
+  if (meta.kind === 'summary') return summaryCellHtml(row, meta);
   const id = meta.id;
   const lcls = `lt-${langSlug(meta.lang)}`;
   const colCls = (meta.kind || '') === 'pls4all' ? 'col-pls4all' : '';
@@ -241,23 +284,23 @@ function dataCellHtml(row, meta, baselineMs, fastestId) {
   if (state.viz === 'divergence') return divModeCell(cell, meta, lcls, colCls);
 
   // build-insensitive sentinel (elementwise op, no BLAS/OMP path)
-  if ((!cell.ok || !isFinite(cell.ms)) && cell.build_insensitive) {
+  if ((!cell.ok || !Number.isFinite(cell.ms)) && cell.build_insensitive) {
     return `<td class="${lcls} ${colCls}" title="≡ native — no BLAS/OpenMP code path"><span class="mx-sentinel">≡</span></td>`;
   }
 
   // no usable timing: hard failure OR parity-validated-but-not-timed
-  if (!cell.ok || !isFinite(cell.ms)) {
-    const notTimed = cell.ok && !isFinite(cell.ms);
+  if (!cell.ok || !Number.isFinite(cell.ms)) {
+    const notTimed = cell.ok && !Number.isFinite(cell.ms);
     const ev = effectiveParity(cell, meta);
     const reason = cell.reason ? escAttr(cell.reason)
                  : notTimed ? 'parity-validated (C++ fixture) · not timed' : '';
-    const t = reason ? ` title="${reason}"` : '';
+    const t = ` title="${reason || escAttr(statusLabel(ev))}"`;
     if (notTimed && cell.is_canonical_reference) {
       return `<td class="${lcls} ${colCls}"${t}><span class="mx-gly ref" title="canonical reference · not timed">◆</span></td>`;
     }
     const v = verdict(ev);
     const cls = v.gly === 'NR' ? 'mx-nr' : `mx-gly ${v.cls}`;
-    return `<td class="${lcls} ${colCls}"${t}><span class="${cls}">${v.gly}</span></td>`;
+    return `<td class="${lcls} ${colCls}"${t}><span class="${cls}" role="img" aria-label="${escAttr(statusLabel(ev))}">${v.gly}</span></td>`;
   }
 
   // timed cell — value depends on viz mode
@@ -273,40 +316,90 @@ function dataCellHtml(row, meta, baselineMs, fastestId) {
   const ev = effectiveParity(cell, meta);
   const gly = cell.is_canonical_reference
     ? `<span class="mx-gly ref" title="canonical reference">◆</span>`
-    : (ev !== 'not_available' ? `<span class="mx-gly ${verdict(ev).cls}" title="${usesReferenceGate(meta) ? 'reference parity vs canonical external library' : 'binding parity vs C++ core'}">${verdict(ev).gly}</span>` : '');
+    : (ev !== 'not_available' ? `<span class="mx-gly ${verdict(ev).cls}" role="img" aria-label="${escAttr(statusLabel(ev))}" title="${escAttr(statusLabel(ev))}">${verdict(ev).gly}</span>` : '');
   const tt = cell.timing_statistic ? ` title="timing: ${escAttr(cell.timing_statistic)}, ${cell.n_runs || '?'} run(s)"` : '';
   return `<td class="${lcls} ${colCls} ${rowBest}"${tt}><span class="mx-cell ${rowBest}"><span class="mx-val ${valCls}">${escapeHtml(valHtml)}</span>${gly}</span></td>`;
+}
+
+function statusLabel(status) {
+  return ({ exact: 'Match', cross_check: 'Informational comparison', divergent: 'Outside tolerance',
+    drift: 'Drift', error: 'Execution error', not_run: 'Not run', not_available: 'Not available' })[status] || status;
+}
+
+function summaryCellHtml(row, column) {
+  const reported = column.members.filter(c => hasResult(row.cells[c.id], c));
+  if (!reported.length) return '<td><span class="mx-dash">—</span></td>';
+  const h = {};
+  for (const col of reported) {
+    const key = effectiveParity(row.cells[col.id], col);
+    h[key] = (h[key] || 0) + 1;
+  }
+  const statuses = Object.entries(h).map(([key, n]) =>
+    `<span class="mx-gly ${verdict(key).cls}" role="img" aria-label="${escAttr(`${n} ${statusLabel(key)}`)}" title="${escAttr(`${n} ${statusLabel(key)}`)}">${verdict(key).gly} ${n}</span>`).join(' ');
+  const values = reported.map(c => row.cells[c.id]);
+  let detail = `${reported.length} result${reported.length === 1 ? '' : 's'}`;
+  if (state.viz === 'divergence') {
+    const ds = values.map(c => c.divergence).filter(Number.isFinite);
+    const jaccard = values.some(c => c.divergence_metric === 'jaccard');
+    if (ds.length) detail = jaccard ? `min J ${Math.min(...ds).toFixed(2)}`
+      : `max δ ${Math.max(...ds.map(Math.abs)).toExponential(0)}`;
+  } else if (state.viz === 'duration') {
+    const ts = values.filter(c => c.ok && Number.isFinite(c.ms)).map(c => c.ms);
+    if (ts.length) detail = `best ${fmtMs(Math.min(...ts))}`;
+  } else if (state.viz === 'speedup') {
+    const baseline = row.cells[NATIVE_COL];
+    const ts = values.filter(c => c.ok && Number.isFinite(c.ms) && c.ms > 0).map(c => c.ms);
+    if (baseline && Number.isFinite(baseline.ms) && ts.length) detail = `best ${fmtSpeedup(baseline.ms / Math.min(...ts))}`;
+  }
+  return `<td class="mx-summary"><span class="mx-summary-status">${statuses}</span><span class="mx-summary-detail">${escapeHtml(detail)}</span></td>`;
+}
+
+function focusRow(key) {
+  state.focus = state.focus === key ? null : key;
+  render();
+  document.getElementById('matrix').scrollLeft = 0;
+  const target = state.focus ? document.getElementById('mxClearFocus') :
+    Array.from(document.querySelectorAll('[data-focus-row]')).find(b => b.dataset.focusRow === key);
+  if (target) target.focus({ preventScroll: true });
 }
 
 /* ==========================================================================
    Table render
    ========================================================================== */
 function render() {
-  const cols = visibleColumns();
+  const filtered = filteredRows();
+  const selected = filtered.find(row => rowKey(row) === state.focus);
+  if (!selected) state.focus = null;
+  const cols = visibleColumns(filtered);
   const dataCols = cols.filter(c => c.id !== REF_COL);
   const bands = langBands(cols);
-  let rows = filteredRows();
+  let rows = selected ? [selected] : filtered;
   rows = sortRows(rows, cols);
 
   // header
   const sc = state.sort;
   const arrow = id => sc.col === id ? `<span class="arrow" aria-hidden="true">${sc.dir === 1 ? ' ↑' : ' ↓'}</span>` : '';
-  let head = `<tr class="lang-band">
+  const compact = !selected && state.layout === 'compact';
+  document.querySelector('table.mx').classList.toggle('mx-compact', compact);
+  let head = compact ? '' : `<tr class="lang-band">
     <th class="spacer c-algo"></th><th class="spacer c-size"></th><th class="spacer c-thr"></th>`;
-  for (const b of bands) head += `<th class="${b.ref ? 'c-ref' : ''}" colspan="${b.count}">${escapeHtml(b.label)}<span class="bcount">${b.count}</span></th>`;
-  head += `</tr><tr class="colrow">
+  if (!compact) {
+    for (const b of bands) head += `<th class="${b.ref ? 'c-ref' : ''}" colspan="${b.count}">${escapeHtml(b.label)}<span class="bcount">${b.count}</span></th>`;
+    head += '</tr>';
+  }
+  head += `<tr class="colrow">
     <th class="c-algo lt-cpp" data-col="__algo" role="button" tabindex="0"><span class="col-label">algorithm${arrow('__algo')}</span></th>
     <th class="c-size" data-col="__size" role="button" tabindex="0"><span class="col-label">size${arrow('__size')}</span></th>
     <th class="c-thr" data-col="__threads" role="button" tabindex="0"><span class="col-label">t${arrow('__threads')}</span></th>`;
   for (const c of cols) {
     if (c.id === REF_COL) {
-      head += `<th class="c-ref" title="canonical external reference per row"><span class="col-label">reference</span><span class="col-sub">per-method truth</span></th>`;
+      head += `<th class="c-ref" title="canonical external reference per row"><span class="col-label">reference</span></th>`;
       continue;
     }
     const lt = `lt-${langSlug(c.lang)}`;
     head += `<th class="${lt}" data-col="${escAttr(c.id)}" role="button" tabindex="0" title="${escAttr([c.label, c.tier, c.lang, c.what].filter(Boolean).join(' — '))}">
       <span class="col-label">${escapeHtml(c.short || c.label)}${arrow(c.id)}</span>
-      <span class="col-sub">${escapeHtml(c.tier || c.kind || '')}</span></th>`;
+      </th>`;
   }
   head += `</tr>`;
 
@@ -323,16 +416,16 @@ function render() {
       const timed = rowCells(row, cols);
       const fastestId = timed.length ? timed.reduce((a, b) => a.ms <= b.ms ? a : b).id : null;
       const baseCell = NATIVE_COL ? row.cells[NATIVE_COL] : null;
-      const baselineMs = baseCell && isFinite(baseCell.ms) ? baseCell.ms : null;
+      const baselineMs = baseCell && Number.isFinite(baseCell.ms) ? baseCell.ms : null;
       const origin = omap[row.algo] || 'pls4all';
       const rowCls = origin === 'pls4all' ? 'row-pls4all' : 'row-donor';
       const disp = algoDisplay(row.algo);
       const fq = fqmap[row.algo];
       const docPage = dmap[row.algo];
-      const algoHtml = docPage
-        ? `<a href="methods/${escAttr(docPage)}.html" title="open ${escAttr(disp)} documentation">${escapeHtml(disp)}</a>`
-        : `<span class="algo-nodoc" title="no dedicated documentation page yet">${escapeHtml(disp)}</span>`;
-      let tr = `<tr class="${rowCls}">
+      const key = rowKey(row);
+      const algoHtml = `<button type="button" class="mx-row-toggle" data-focus-row="${escAttr(key)}" aria-pressed="${!!selected}" title="Show populated implementations for ${escAttr(disp)}">${selected ? '▾' : '▸'} ${escapeHtml(disp)}</button>` +
+        (docPage ? `<a class="mx-doc-link" href="methods/${escAttr(docPage)}.html" aria-label="${escAttr(disp)} documentation" title="Open documentation">↗</a>` : '');
+      let tr = `<tr class="${rowCls}${selected ? ' mx-selected' : ''}" data-row-key="${escAttr(key)}">
         <td class="c-algo" title="${escAttr(fq || row.algo)}">${algoHtml}${fq ? `<span class="ns">${escapeHtml(fq)}</span>` : ''}</td>
         <td class="c-size">${row.n}×${row.p}</td>
         <td class="c-thr"><span class="thr-pill">${row.threads}t</span></td>`;
@@ -345,14 +438,29 @@ function render() {
     }
   }
 
+  const focus = document.getElementById('mxFocus');
+  focus.hidden = !selected;
+  if (selected) {
+    document.getElementById('mxFocusLabel').textContent =
+      `${algoDisplay(selected.algo)} · ${selected.n}×${selected.p} · ${selected.threads}t · ${dataCols.length} populated implementations · third-party first`;
+  }
+  document.getElementById('mxHint').textContent = selected
+    ? `${COLS.length - cols.length} empty columns hidden. Zero is a valid result and stays visible.`
+      : compact ? 'Click a row to compare its populated implementations. Groups show verdict counts and the best time / speed-up, or worst δ/J.'
+      : 'Click a row to hide its empty columns and bring third-party libraries first.';
   document.getElementById('mxHead').innerHTML = head;
   document.getElementById('mxBody').innerHTML = body;
 
   // meta line
   document.getElementById('mxMeta').innerHTML =
-    `<span><b>${rows.length}</b> row${rows.length === 1 ? '' : 's'} shown · <b>${dataCols.length}</b> implementation columns</span>` +
+    `<span><b>${rows.length}</b> of ${filtered.length} filtered rows · <b>${dataCols.length}</b> ${compact ? 'implementation groups' : 'implementation columns'}</span>` +
     `<span>${DATA.rows.length} rows · <b>${(DATA.stats && DATA.stats.cells || 0).toLocaleString()}</b> timed cells total</span>` +
     `<span>generated <b>${escapeHtml(DATA.generated_at || '—')}</b></span>`;
+
+  document.querySelectorAll('[data-focus-row]').forEach(button => button.addEventListener('click', () => focusRow(button.dataset.focusRow)));
+  document.querySelectorAll('[data-row-key]').forEach(tr => tr.addEventListener('click', event => {
+    if (!event.target.closest('a, button')) focusRow(tr.dataset.rowKey);
+  }));
 
   // wire sortable headers
   document.querySelectorAll('#mxHead [data-col]').forEach(th => {
@@ -373,10 +481,10 @@ function render() {
    Per-method score cards
    ========================================================================== */
 function histTotalReal(h) {
-  return (h.exact || 0) + (h.cross_check || 0) + (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
+  return (h.exact || 0) + (h.divergent || 0) + (h.drift || 0) + (h.error || 0);
 }
 function histTotalValidated(h) {
-  return (h.exact || 0) + (h.cross_check || 0);
+  return h.exact || 0;
 }
 function scoreBar(h) {
   const order = [['exact', 'exact'], ['cross_check', 'cross'], ['divergent', 'diverg'], ['drift', 'diverg'], ['error', 'diverg'], ['not_available', 'na'], ['not_run', 'nr']];
@@ -387,8 +495,8 @@ function scoreRow(k, h) {
   const real = histTotalReal(h);
   const validated = histTotalValidated(h);
   const pct = real ? fmtPct(validated, real) + '%' : '—';
-  const detail = real ? `${validated}/${real} validated` : 'no comparable gate';
-  return `<div class="sc-row"><span class="sc-k">${k}</span><span class="sc-bar" role="img" aria-label="${k} parity">${scoreBar(h)}</span><span class="sc-pct" title="${detail}">${pct}</span></div>`;
+  const detail = `${real ? `${validated}/${real} matching` : 'no evaluated check'}; ${h.cross_check || 0} informational`;
+  return `<div class="sc-row"><span class="sc-k">${k}</span><span class="sc-bar" role="img" aria-label="${escAttr(`${k}: ${detail}`)}">${scoreBar(h)}</span><span class="sc-pct" title="${detail}">${pct}</span></div>`;
 }
 function renderScores() {
   const wrap = document.getElementById('mxScores');
@@ -425,7 +533,7 @@ function renderScores() {
    Chrome: nav stats, filters
    ========================================================================== */
 function resetFilters() {
-  Object.assign(state, { search: '', category: '', origin: '', parity: '', size: '', threads: '' });
+  Object.assign(state, { search: '', category: '', origin: '', parity: '', size: '', threads: '', focus: null });
   document.getElementById('mxSearch').value = '';
   ['mxCategory', 'mxOrigin', 'mxParity', 'mxSize', 'mxThreads'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
   refresh();
@@ -474,6 +582,16 @@ function renderChrome() {
 }
 
 function wire() {
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && state.focus) focusRow(state.focus);
+  });
+  document.getElementById('mxClearFocus').addEventListener('click', () => focusRow(state.focus));
+  document.querySelectorAll('[data-layout]').forEach(button => button.addEventListener('click', () => {
+    state.layout = button.dataset.layout;
+    state.focus = null;
+    document.querySelectorAll('[data-layout]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+    render();
+  }));
   const dbounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
   document.getElementById('mxSearch').addEventListener('input', dbounce(e => { state.search = e.target.value.trim(); refresh(); }, 90));
   document.getElementById('mxCategory').addEventListener('change', e => { state.category = e.target.value; refresh(); });
