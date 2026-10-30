@@ -31,7 +31,7 @@ bindings:
     function: "n4m_spectral_noise_proxy"
     legacy_aliases: []
 publications: []
-notes: "Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json."
+notes: "Versioned descriptive protocol with native global and bandwise aggregates and explicit availability; see docs/intrinsic_diagnostics_contract.v1.json."
 c_surface: "none"
 estimator:
   kind: "procedure"
