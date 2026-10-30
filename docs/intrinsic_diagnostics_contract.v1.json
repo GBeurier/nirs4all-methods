@@ -186,16 +186,22 @@
         "global_noise_sigma": "median eligible per-row noise_sigma",
         "global_signal_mean_abs": "mean(abs(X)) over all valid dataset cells",
         "global_signal_noise_ratio": "global_signal_mean_abs/global_noise_sigma when both positive",
-        "global_signal_noise_db": "20*log10(global_signal_noise_ratio)"
+        "global_signal_noise_db": "20*log10(global_signal_noise_ratio)",
+        "bandwise_min": "minimum finite abs(mean(valid X[:,j]))/(MAD(valid diff2[:,j-1])*1.4826/sqrt(6)) over interior features j with positive scale",
+        "bandwise_median": "type-7 median of the same finite bandwise ratios",
+        "worst_band_index": "zero-based interior feature index attaining bandwise_min; first index wins ties"
       },
       "extra_outputs": {
         "global_noise_sigma": "native finite scalar plus global_noise_sigma_status integer vector length1",
         "global_signal_mean_abs": "native finite scalar plus global_signal_mean_abs_status integer vector length1",
         "global_signal_noise_ratio": "native finite scalar plus global_signal_noise_ratio_status integer vector length1",
-        "global_signal_noise_db": "native finite scalar plus global_signal_noise_db_status integer vector length1"
+        "global_signal_noise_db": "native finite scalar plus global_signal_noise_db_status integer vector length1",
+        "bandwise_min": "native finite scalar plus bandwise_min_status integer vector length1; status4 when undefined",
+        "bandwise_median": "native finite scalar plus bandwise_median_status integer vector length1; status4 when undefined",
+        "worst_band_index": "native finite scalar plus worst_band_index_status integer vector length1; status4 when undefined"
       },
       "interpretation": "descriptive index-space high frequency proxy; not instrumental SNR, not physical-axis derivative, not existing SG band_noise",
-      "legacy_equivalence": "matches Datasets spectral_noise global noise_rms/snr/snr_db on identical complete data; bandwise fields remain separately inventoried until implemented"
+      "legacy_equivalence": "matches Datasets spectral_noise global noise_rms/snr/snr_db and bandwise ratios within floating-point tolerance on identical populations and masks; Dataset maps nonfinite input cells to zero-fill plus an explicit exclusion mask, without imputation"
     },
     "diagnostics.local_density": {
       "signals": [
