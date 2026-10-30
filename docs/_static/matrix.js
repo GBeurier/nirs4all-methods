@@ -95,11 +95,11 @@ const state = {
   viz: 'duration',      // duration | divergence | speedup
   sort: { col: '__algo', dir: 1 },
   showScores: false,
-  layout: 'compact', focus: null,
+  columns: 'all', focus: null,
 };
 
 /* ==========================================================================
-   Compact groups, populated row focus, or the complete implementation grid.
+   Row clicks cycle through all, populated, and value-sorted columns.
    ========================================================================== */
 function rowKey(row) {
   return JSON.stringify([row.algo, row.n, row.p, row.threads]);
@@ -114,26 +114,32 @@ function thirdParty(column) {
 }
 function visibleColumns(rows) {
   const selected = rows.find(row => rowKey(row) === state.focus);
-  if (selected) {
+  if (selected && state.columns === 'populated') {
     return COLS.filter(c => c.id === REF_COL || hasResult(selected.cells[c.id], c))
       .sort((a, b) => {
         const rank = c => c.id === REF_COL ? 0 : thirdParty(c) ? 1 : 2;
         return rank(a) - rank(b);
       });
   }
-  if (state.layout === 'all') return COLS.slice();
-  const groups = [
-    ['third-party', 'Third-party', c => thirdParty(c)],
-    ['core', 'C++ builds', c => c.id.startsWith('pls4all.cpp.')],
-    ['python', 'Python bindings', c => c.kind === 'pls4all' && c.lang === 'Python'],
-    ['r', 'R bindings', c => c.kind === 'pls4all' && c.lang === 'R'],
-    ['matlab', 'MATLAB bindings', c => c.kind === 'pls4all' && c.lang === 'MATLAB/Octave'],
-  ];
-  const reference = COLS.find(c => c.id === REF_COL);
-  return (reference ? [reference] : []).concat(groups.map(([id, label, include]) => ({
-    id: `summary:${id}`, label, short: label, group: id, kind: 'summary', lang: 'external',
-    members: COLS.filter(include),
-  })).filter(c => c.members.some(m => rows.some(r => hasResult(r.cells[m.id], m)))));
+  const columns = COLS.slice();
+  if (selected && state.columns === 'sorted') {
+    const value = col => {
+      const cell = selected.cells[col.id];
+      if (!cell) return null;
+      if (state.viz === 'divergence') {
+        if (!Number.isFinite(cell.divergence)) return null;
+        return cell.divergence_metric === 'jaccard' ? -cell.divergence : Math.abs(cell.divergence);
+      }
+      return cell.ok && Number.isFinite(cell.ms) ? cell.ms : null;
+    };
+    columns.sort((a, b) => {
+      if (a.id === REF_COL || b.id === REF_COL) return a.id === REF_COL ? -1 : 1;
+      const av = value(a), bv = value(b);
+      if (av == null || bv == null) return av == null ? (bv == null ? 0 : 1) : -1;
+      return av - bv;
+    });
+  }
+  return columns;
 }
 
 /* contiguous (language, group) runs for the band row */
@@ -145,7 +151,7 @@ function langBands(colMetas) {
     const slug = langSlug(c.lang);
     const key = slug + '|' + (c.group || '');
     const isPls = (c.kind || '') === 'pls4all';
-    const label = (isPls ? 'n4m · ' : 'ext · ') + c.lang;
+    const label = (isPls ? 'Methods / pls4all · ' : 'External · ') + c.lang;
     if (!cur || cur.key !== key) { cur = { slug, key, label, count: 0 }; bands.push(cur); }
     cur.count++;
   }
@@ -207,12 +213,9 @@ function sortRows(rows, cols) {
   else if (sc.col === '__threads') cmp = (a, b) => a.threads - b.threads;
   else {
     const id = sc.col;
-    const column = cols.find(c => c.id === id);
     const val = r => {
-      const cells = column && column.members ? column.members.map(c => r.cells[c.id]).filter(Boolean)
-        : [r.cells[id]].filter(Boolean);
-      const values = cells.filter(c => c.ok && Number.isFinite(c.ms)).map(c => c.ms);
-      return values.length ? Math.min(...values) : null;
+      const cell = r.cells[id];
+      return cell && cell.ok && Number.isFinite(cell.ms) ? cell.ms : null;
     };
     cmp = (a, b) => {
       const av = val(a), bv = val(b);
@@ -229,10 +232,8 @@ function sortRows(rows, cols) {
 function refCellHtml(cell, lcls) {
   if (!cell) return `<td class="${lcls}"><span class="mx-dash">—</span></td>`;
   const name = cell.ref_of || '–';
-  const rp = verdict(cell.reference_parity || cell.parity);
-  return `<td class="c-ref ${lcls}" title="canonical reference for this method">
-    <span class="mx-cell"><span class="refname">${escapeHtml(name)}</span>
-    <span class="mx-gly ${rp.cls}" aria-hidden="true">${rp.gly}</span></span></td>`;
+  return `<td class="c-ref ${lcls}" title="Reference: ${escAttr(name)}">
+    <span class="mx-cell">${window.N4MParity.languageIcon(cell.ref_lang)}<span class="refname">${escapeHtml(name)}</span></span></td>`;
 }
 
 function divModeCell(cell, meta, lcls, colCls) {
@@ -260,13 +261,12 @@ function divModeCell(cell, meta, lcls, colCls) {
   const note = cell.divergence_note ? ' — ' + cell.divergence_note : '';
   const title = basis === 'binding' ? `binding diff vs C++ core (gate 1): δ=${fmt}${note}`
               : basis === 'reference' ? `reference-gate rel-RMSE vs ${cell.reference_kind || 'external ref'} (gate 2, ${dq}): δ=${fmt}${note}`
-              : basis === 'self' ? `this row is the canonical reference for this method${note}`
+              : basis === 'self' ? `this row is the reference for this method${note}`
               : `divergence ${fmt}${note}`;
   return `<td class="${lcls} ${colCls}"><span class="mx-div q-${dq}" title="${escAttr(title)}">${lead}${escapeHtml(fmt)}</span></td>`;
 }
 
 function dataCellHtml(row, meta, baselineMs, fastestId) {
-  if (meta.kind === 'summary') return summaryCellHtml(row, meta);
   const id = meta.id;
   const lcls = `lt-${langSlug(meta.lang)}`;
   const colCls = (meta.kind || '') === 'pls4all' ? 'col-pls4all' : '';
@@ -274,6 +274,9 @@ function dataCellHtml(row, meta, baselineMs, fastestId) {
 
   // missing cell: distinguish "C++ tier not run this snapshot" (NR) from n/a
   if (!cell) {
+    if (row.cells[REF_COL] && row.cells[REF_COL].ref_of === id) {
+      return `<td class="${lcls} ${colCls}"><span class="mx-dash" title="Shown once in the Reference column">—</span></td>`;
+    }
     if (id.startsWith('pls4all.cpp.') &&
         Object.keys(row.cells).some(c => c.startsWith('pls4all.cpp.'))) {
       return `<td class="${lcls} ${colCls}" title="C++ build tier not run in this snapshot"><span class="mx-nr">NR</span></td>`;
@@ -296,7 +299,7 @@ function dataCellHtml(row, meta, baselineMs, fastestId) {
                  : notTimed ? 'parity-validated (C++ fixture) · not timed' : '';
     const t = ` title="${reason || escAttr(statusLabel(ev))}"`;
     if (notTimed && cell.is_canonical_reference) {
-      return `<td class="${lcls} ${colCls}"${t}><span class="mx-gly ref" title="canonical reference · not timed">◆</span></td>`;
+      return `<td class="${lcls} ${colCls}"${t}><span class="mx-gly ref" title="reference · not timed">◆</span></td>`;
     }
     const v = verdict(ev);
     const cls = v.gly === 'NR' ? 'mx-nr' : `mx-gly ${v.cls}`;
@@ -315,7 +318,7 @@ function dataCellHtml(row, meta, baselineMs, fastestId) {
   const rowBest = (state.viz === 'duration' && id === fastestId) ? 'row-best' : '';
   const ev = effectiveParity(cell, meta);
   const gly = cell.is_canonical_reference
-    ? `<span class="mx-gly ref" title="canonical reference">◆</span>`
+    ? `<span class="mx-gly ref" title="reference">◆</span>`
     : (ev !== 'not_available' ? `<span class="mx-gly ${verdict(ev).cls}" role="img" aria-label="${escAttr(statusLabel(ev))}" title="${escAttr(statusLabel(ev))}">${verdict(ev).gly}</span>` : '');
   const tt = cell.timing_statistic ? ` title="timing: ${escAttr(cell.timing_statistic)}, ${cell.n_runs || '?'} run(s)"` : '';
   return `<td class="${lcls} ${colCls} ${rowBest}"${tt}><span class="mx-cell ${rowBest}"><span class="mx-val ${valCls}">${escapeHtml(valHtml)}</span>${gly}</span></td>`;
@@ -326,40 +329,15 @@ function statusLabel(status) {
     drift: 'Drift', error: 'Execution error', not_run: 'Not run', not_available: 'Not available' })[status] || status;
 }
 
-function summaryCellHtml(row, column) {
-  const reported = column.members.filter(c => hasResult(row.cells[c.id], c));
-  if (!reported.length) return '<td><span class="mx-dash">—</span></td>';
-  const h = {};
-  for (const col of reported) {
-    const key = effectiveParity(row.cells[col.id], col);
-    h[key] = (h[key] || 0) + 1;
-  }
-  const statuses = Object.entries(h).map(([key, n]) =>
-    `<span class="mx-gly ${verdict(key).cls}" role="img" aria-label="${escAttr(`${n} ${statusLabel(key)}`)}" title="${escAttr(`${n} ${statusLabel(key)}`)}">${verdict(key).gly} ${n}</span>`).join(' ');
-  const values = reported.map(c => row.cells[c.id]);
-  let detail = `${reported.length} result${reported.length === 1 ? '' : 's'}`;
-  if (state.viz === 'divergence') {
-    const ds = values.map(c => c.divergence).filter(Number.isFinite);
-    const jaccard = values.some(c => c.divergence_metric === 'jaccard');
-    if (ds.length) detail = jaccard ? `min J ${Math.min(...ds).toFixed(2)}`
-      : `max δ ${Math.max(...ds.map(Math.abs)).toExponential(0)}`;
-  } else if (state.viz === 'duration') {
-    const ts = values.filter(c => c.ok && Number.isFinite(c.ms)).map(c => c.ms);
-    if (ts.length) detail = `best ${fmtMs(Math.min(...ts))}`;
-  } else if (state.viz === 'speedup') {
-    const baseline = row.cells[NATIVE_COL];
-    const ts = values.filter(c => c.ok && Number.isFinite(c.ms) && c.ms > 0).map(c => c.ms);
-    if (baseline && Number.isFinite(baseline.ms) && ts.length) detail = `best ${fmtSpeedup(baseline.ms / Math.min(...ts))}`;
-  }
-  return `<td class="mx-summary"><span class="mx-summary-status">${statuses}</span><span class="mx-summary-detail">${escapeHtml(detail)}</span></td>`;
-}
-
 function focusRow(key) {
-  state.focus = state.focus === key ? null : key;
+  const modes = ['all', 'populated', 'sorted'];
+  state.columns = state.focus === key ? modes[(modes.indexOf(state.columns) + 1) % modes.length] : 'populated';
+  state.focus = key;
+  const scrollTop = document.getElementById('matrix').scrollTop;
   render();
   document.getElementById('matrix').scrollLeft = 0;
-  const target = state.focus ? document.getElementById('mxClearFocus') :
-    Array.from(document.querySelectorAll('[data-focus-row]')).find(b => b.dataset.focusRow === key);
+  document.getElementById('matrix').scrollTop = scrollTop;
+  const target = Array.from(document.querySelectorAll('[data-focus-row]')).find(b => b.dataset.focusRow === key);
   if (target) target.focus({ preventScroll: true });
 }
 
@@ -369,36 +347,32 @@ function focusRow(key) {
 function render() {
   const filtered = filteredRows();
   const selected = filtered.find(row => rowKey(row) === state.focus);
-  if (!selected) state.focus = null;
+  if (!selected) { state.focus = null; state.columns = 'all'; }
   const cols = visibleColumns(filtered);
   const dataCols = cols.filter(c => c.id !== REF_COL);
   const bands = langBands(cols);
-  let rows = selected ? [selected] : filtered;
+  let rows = filtered;
   rows = sortRows(rows, cols);
 
   // header
   const sc = state.sort;
   const arrow = id => sc.col === id ? `<span class="arrow" aria-hidden="true">${sc.dir === 1 ? ' ↑' : ' ↓'}</span>` : '';
-  const compact = !selected && state.layout === 'compact';
-  document.querySelector('table.mx').classList.toggle('mx-compact', compact);
-  let head = compact ? '' : `<tr class="lang-band">
+  let head = `<tr class="lang-band">
     <th class="spacer c-algo"></th><th class="spacer c-size"></th><th class="spacer c-thr"></th>`;
-  if (!compact) {
-    for (const b of bands) head += `<th class="${b.ref ? 'c-ref' : ''}" colspan="${b.count}">${escapeHtml(b.label)}<span class="bcount">${b.count}</span></th>`;
-    head += '</tr>';
-  }
+  for (const b of bands) head += `<th class="${b.ref ? 'c-ref' : ''}" colspan="${b.count}">${escapeHtml(b.label)}<span class="bcount">${b.count}</span></th>`;
+  head += '</tr>';
   head += `<tr class="colrow">
     <th class="c-algo lt-cpp" data-col="__algo" role="button" tabindex="0"><span class="col-label">algorithm${arrow('__algo')}</span></th>
     <th class="c-size" data-col="__size" role="button" tabindex="0"><span class="col-label">size${arrow('__size')}</span></th>
     <th class="c-thr" data-col="__threads" role="button" tabindex="0"><span class="col-label">t${arrow('__threads')}</span></th>`;
   for (const c of cols) {
     if (c.id === REF_COL) {
-      head += `<th class="c-ref" title="canonical external reference per row"><span class="col-label">reference</span></th>`;
+      head += `<th class="c-ref" title="Reference library for each method"><span class="col-label">reference</span></th>`;
       continue;
     }
     const lt = `lt-${langSlug(c.lang)}`;
     head += `<th class="${lt}" data-col="${escAttr(c.id)}" role="button" tabindex="0" title="${escAttr([c.label, c.tier, c.lang, c.what].filter(Boolean).join(' — '))}">
-      <span class="col-label">${escapeHtml(c.short || c.label)}${arrow(c.id)}</span>
+      ${thirdParty(c) ? window.N4MParity.languageIcon(c.lang) : ''}<span class="col-label">${escapeHtml(c.short || c.label)}${arrow(c.id)}</span>
       </th>`;
   }
   head += `</tr>`;
@@ -423,9 +397,10 @@ function render() {
       const fq = fqmap[row.algo];
       const docPage = dmap[row.algo];
       const key = rowKey(row);
-      const algoHtml = `<button type="button" class="mx-row-toggle" data-focus-row="${escAttr(key)}" aria-pressed="${!!selected}" title="Show populated implementations for ${escAttr(disp)}">${selected ? '▾' : '▸'} ${escapeHtml(disp)}</button>` +
+      const isSelected = key === state.focus;
+      const algoHtml = `<button type="button" class="mx-row-toggle" data-focus-row="${escAttr(key)}" aria-pressed="${isSelected}" title="Cycle columns: all, populated for this row, sorted by this row">${isSelected ? '▾' : '▸'} ${escapeHtml(disp)}</button>` +
         (docPage ? `<a class="mx-doc-link" href="methods/${escAttr(docPage)}.html" aria-label="${escAttr(disp)} documentation" title="Open documentation">↗</a>` : '');
-      let tr = `<tr class="${rowCls}${selected ? ' mx-selected' : ''}" data-row-key="${escAttr(key)}">
+      let tr = `<tr class="${rowCls}${isSelected ? ' mx-selected' : ''}" data-row-key="${escAttr(key)}">
         <td class="c-algo" title="${escAttr(fq || row.algo)}">${algoHtml}${fq ? `<span class="ns">${escapeHtml(fq)}</span>` : ''}</td>
         <td class="c-size">${row.n}×${row.p}</td>
         <td class="c-thr"><span class="thr-pill">${row.threads}t</span></td>`;
@@ -442,18 +417,23 @@ function render() {
   focus.hidden = !selected;
   if (selected) {
     document.getElementById('mxFocusLabel').textContent =
-      `${algoDisplay(selected.algo)} · ${selected.n}×${selected.p} · ${selected.threads}t · ${dataCols.length} populated implementations · third-party first`;
+      `${algoDisplay(selected.algo)} · ${selected.n}×${selected.p} · ${selected.threads}t — ${state.columns === 'all' ? '1/3 · All columns' : state.columns === 'populated' ? '2/3 · Populated columns' : '3/3 · Columns sorted by this row'}`;
   }
-  document.getElementById('mxHint').textContent = selected
-    ? `${COLS.length - cols.length} empty columns hidden. Zero is a valid result and stays visible.`
-      : compact ? 'Click a row to compare its populated implementations. Groups show verdict counts and the best time / speed-up, or worst δ/J.'
-      : 'Click a row to hide its empty columns and bring third-party libraries first.';
+  document.getElementById('mxHint').textContent = selected && state.columns === 'populated'
+    ? `${COLS.length - cols.length} columns empty for the selected row are hidden. All rows remain visible; zero is a valid result.`
+    : selected && state.columns === 'sorted'
+      ? `Columns are ordered ${state.viz === 'divergence' ? 'by closest match' : 'from fastest to slowest'} for the selected row; missing values follow. All rows remain visible.`
+      : 'Click a row to cycle: all columns → populated for this row → sorted by this row. All rows stay visible.';
+  document.querySelectorAll('[data-columns]').forEach(b => {
+    b.setAttribute('aria-pressed', String(b.dataset.columns === state.columns));
+    b.disabled = b.dataset.columns !== 'all' && !selected;
+  });
   document.getElementById('mxHead').innerHTML = head;
   document.getElementById('mxBody').innerHTML = body;
 
   // meta line
   document.getElementById('mxMeta').innerHTML =
-    `<span><b>${rows.length}</b> of ${filtered.length} filtered rows · <b>${dataCols.length}</b> ${compact ? 'implementation groups' : 'implementation columns'}</span>` +
+    `<span><b>${rows.length}</b> filtered rows · <b>${dataCols.length}</b> implementation columns</span>` +
     `<span>${DATA.rows.length} rows · <b>${(DATA.stats && DATA.stats.cells || 0).toLocaleString()}</b> timed cells total</span>` +
     `<span>generated <b>${escapeHtml(DATA.generated_at || '—')}</b></span>`;
 
@@ -533,7 +513,7 @@ function renderScores() {
    Chrome: nav stats, filters
    ========================================================================== */
 function resetFilters() {
-  Object.assign(state, { search: '', category: '', origin: '', parity: '', size: '', threads: '', focus: null });
+  Object.assign(state, { search: '', category: '', origin: '', parity: '', size: '', threads: '', focus: null, columns: 'all' });
   document.getElementById('mxSearch').value = '';
   ['mxCategory', 'mxOrigin', 'mxParity', 'mxSize', 'mxThreads'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
   refresh();
@@ -582,14 +562,13 @@ function renderChrome() {
 }
 
 function wire() {
+  const clearColumns = () => { state.focus = null; state.columns = 'all'; render(); };
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && state.focus) focusRow(state.focus);
+    if (event.key === 'Escape' && state.focus) clearColumns();
   });
-  document.getElementById('mxClearFocus').addEventListener('click', () => focusRow(state.focus));
-  document.querySelectorAll('[data-layout]').forEach(button => button.addEventListener('click', () => {
-    state.layout = button.dataset.layout;
-    state.focus = null;
-    document.querySelectorAll('[data-layout]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+  document.getElementById('mxClearFocus').addEventListener('click', clearColumns);
+  document.querySelectorAll('[data-columns]').forEach(button => button.addEventListener('click', () => {
+    state.columns = button.dataset.columns;
     render();
   }));
   const dbounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
