@@ -54,7 +54,9 @@ SCIENTIFIC_CONTENT = {
         "For each row, median absolute deviation of index-space second differences is multiplied "
         "by 1.4826/sqrt(6). The sqrt(6) removes variance inflation for independent equal-variance "
         "white noise under differencing twice. Native summaries expose mean absolute amplitude, "
-        "amplitude/noise and 20log10 of that positive finite ratio.",
+        "amplitude/noise and 20log10 of that positive finite ratio. Bandwise ratios divide "
+        "each interior feature's absolute valid mean by its across-row second-difference MAD "
+        "scale; native outputs retain their finite minimum, median and first minimum index.",
         "Describing high-frequency variation on an explicitly declared index-grid protocol "
         "and comparing that same protocol on identical populations and masks.",
         "Smooth signal structure, correlated/heteroscedastic noise and nonuniform physical "
@@ -62,7 +64,8 @@ SCIENTIFIC_CONTENT = {
         "and is distinct from the existing SG residual/noise-gain estimator. Zero estimated "
         "noise does not create an infinite or arbitrarily large finite ratio.",
         "One mask-aware native procedure with per-row sparse availability and native global "
-        "median/noise ratio. Independent NumPy reductions validate the normalization and dB; "
+        "median/noise ratio and bandwise summaries. Independent NumPy reductions validate "
+        "normalization, dB, masks and bandwise aggregation; "
         "no MAD or percentile is recomputed by a binding."),
     "diagnostics_local_density": entry(
         "Native fixed-neighborhood Local Outlier Factor",

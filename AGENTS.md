@@ -64,3 +64,7 @@ regenerate `catalog/methods/<id>.yaml` with `split_legacy_methods.py` until the
 legacy YAML is retired. Python bindings use `ctypes.CDLL` and release the GIL
 during native calls, but `n4m.Context` / `pls4all.Context` are not thread-safe;
 create one context per thread.
+
+## Language Policy
+
+All application and project content must be in English, including UI text, subtitles, tooltips, errors, documentation, comments and docstrings, test and fixture prose, reports, pull requests, commits, and generated content. Conversation with the maintainer may be in French. Preserve proper names, identifiers, filenames, source quotations, and historical or provenance records where translation would change their meaning or provenance.

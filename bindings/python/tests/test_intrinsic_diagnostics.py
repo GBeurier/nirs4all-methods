@@ -285,3 +285,39 @@ def test_public_mask_contract_rejects_nonbinary_values(mask_name, invalid):
             reference_mode="supplied",
             **{mask_name: [1, invalid, 1, 1]},
         )
+
+
+def test_noise_proxy_bandwise_matches_independent_masked_reference():
+    rng = np.random.default_rng(712)
+    x = rng.normal(size=(11, 9)) + 2
+    mask = rng.integers(0, 4, size=x.shape) != 0
+    expected = []
+    for j in range(1, x.shape[1] - 1):
+        valid = mask[:, j - 1] & mask[:, j] & mask[:, j + 1]
+        second = x[valid, j + 1] - 2 * x[valid, j] + x[valid, j - 1]
+        if not second.size or not mask[:, j].any():
+            expected.append(np.nan)
+            continue
+        sigma = np.median(np.abs(second - np.median(second))) * 1.4826 / np.sqrt(6)
+        expected.append(abs(np.mean(x[mask[:, j], j])) / sigma if sigma > 0 else np.nan)
+    expected = np.array(expected)
+    out = run("spectral_noise_proxy", x, valid_mask=mask.ravel().astype(int).tolist())
+    assert_allclose(out["bandwise_min"], np.nanmin(expected), rtol=1e-13)
+    assert_allclose(out["bandwise_median"], np.nanmedian(expected), rtol=1e-13)
+    assert out["worst_band_index"] == np.nanargmin(expected) + 1
+    for key in ("bandwise_min", "bandwise_median", "worst_band_index"):
+        assert_array_equal(out[key + "_status"], [0])
+
+
+def test_noise_proxy_bandwise_ties_and_undefined():
+    x = np.array([[1, 0, 1, 0, 1], [2, 0, 2, 0, 2], [4, 0, 4, 0, 4]])
+    out = run("spectral_noise_proxy", x)
+    assert out["bandwise_min"] == 0
+    assert out["worst_band_index"] == 1
+    for matrix, mask in [(np.ones((4, 5)), np.ones((4, 5))), (x, np.zeros(x.shape))]:
+        out = run(
+            "spectral_noise_proxy", matrix, valid_mask=mask.ravel().astype(int).tolist()
+        )
+        for key in ("bandwise_min", "bandwise_median", "worst_band_index"):
+            assert_array_equal(out[key + "_status"], [4])
+            assert key not in out

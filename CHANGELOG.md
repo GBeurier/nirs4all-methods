@@ -4,6 +4,13 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+- Extend the existing `diagnostics.spectral_noise_proxy` procedure with native
+  bandwise minimum/median ratios and the first worst-band index, each with an
+  explicit availability status. Reuse its masked second-difference MAD protocol;
+  no new method, exported C symbol, ABI version, or package release is introduced.
+
 ## [1.3.9] - Unreleased local candidate
 
 ABI 2.20.0 is unchanged; no C symbol or numerical kernel is duplicated.

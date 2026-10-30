@@ -402,6 +402,9 @@ n4m_status_t run_spectral_noise_proxy(n4m_context_t* ctx,
         Signal noise("noise_sigma", d.n), signal("signal_mean_abs", d.n),
             ratio("signal_noise_ratio", d.n), db("signal_noise_db", d.n);
         double global_signal = 0, total = 0;
+        const auto second_difference = [&](std::int64_t i, std::int64_t j) {
+            return d.at(i, j + 2) - 2 * d.at(i, j + 1) + d.at(i, j);
+        };
         for (std::int64_t i = 0; i < d.n; ++i) {
             std::vector<double> second;
             double amplitude = 0, count = 0;
@@ -410,7 +413,7 @@ n4m_status_t run_spectral_noise_proxy(n4m_context_t* ctx,
                     amplitude += std::abs(d.at(i, j));
                     ++count;
                     if (j + 2 < d.p && d.valid(i, j + 1) && d.valid(i, j + 2))
-                        second.push_back(d.at(i, j + 2) - 2 * d.at(i, j + 1) + d.at(i, j));
+                        second.push_back(second_difference(i, j));
                 }
             global_signal += amplitude;
             total += count;
@@ -448,6 +451,41 @@ n4m_status_t run_spectral_noise_proxy(n4m_context_t* ctx,
                                                          : UNDEFINED;
         scalar(*out, "global_signal_noise_ratio", snr, status);
         scalar(*out, "global_signal_noise_db", snr > 0 ? 20 * std::log10(snr) : 0, status);
+        std::vector<double> band_ratios;
+        double minimum = 0;
+        std::int64_t worst = -1;
+        for (std::int64_t j = 1; j + 1 < d.p; ++j) {
+            std::vector<double> second;
+            double sum = 0, count = 0;
+            for (std::int64_t i = 0; i < d.n; ++i) {
+                if (d.valid(i, j)) {
+                    sum += d.at(i, j);
+                    ++count;
+                }
+                if (d.valid(i, j - 1) && d.valid(i, j) && d.valid(i, j + 1))
+                    second.push_back(second_difference(i, j - 1));
+            }
+            if (second.empty() || count == 0 ||
+                std::any_of(second.begin(), second.end(), [](double v) { return !std::isfinite(v); }))
+                continue;
+            const double center = quantile(second, .5);
+            for (double& v : second)
+                v = std::abs(v - center);
+            const double band_sigma = quantile(second, .5) * 1.4826 / std::sqrt(6.0);
+            const double band_ratio = band_sigma > 0 ? std::abs(sum / count) / band_sigma :
+                                                      std::numeric_limits<double>::quiet_NaN();
+            if (!std::isfinite(band_ratio)) continue;
+            if (worst < 0 || band_ratio < minimum) {
+                minimum = band_ratio;
+                worst = j;
+            }
+            band_ratios.push_back(band_ratio);
+        }
+        const auto band_status = band_ratios.empty() ? UNDEFINED : OK;
+        scalar(*out, "bandwise_min", minimum, band_status);
+        scalar(*out, "bandwise_median", band_ratios.empty() ? 0 : quantile(band_ratios, .5),
+               band_status);
+        scalar(*out, "worst_band_index", static_cast<double>(worst), band_status);
         for (const auto* s : {&noise, &signal, &ratio, &db})
             s->write(*out);
         return out;

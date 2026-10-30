@@ -33,7 +33,7 @@ A declared noise proxy under an approximately smooth signal, using normal-scaled
 
 ### Mathematical principle
 
-For each row, median absolute deviation of index-space second differences is multiplied by 1.4826/sqrt(6). The sqrt(6) removes variance inflation for independent equal-variance white noise under differencing twice. Native summaries expose mean absolute amplitude, amplitude/noise and 20log10 of that positive finite ratio.
+For each row, median absolute deviation of index-space second differences is multiplied by 1.4826/sqrt(6). The sqrt(6) removes variance inflation for independent equal-variance white noise under differencing twice. Native summaries expose mean absolute amplitude, amplitude/noise and 20log10 of that positive finite ratio. Bandwise ratios divide each interior feature's absolute valid mean by its across-row second-difference MAD scale; native outputs retain their finite minimum, median and first minimum index.
 
 ### Appropriate uses
 
@@ -45,7 +45,7 @@ Smooth signal structure, correlated/heteroscedastic noise and nonuniform physica
 
 ### Implementation
 
-One mask-aware native procedure with per-row sparse availability and native global median/noise ratio. Independent NumPy reductions validate the normalization and dB; no MAD or percentile is recomputed by a binding.
+One mask-aware native procedure with per-row sparse availability and native global median/noise ratio and bandwise summaries. Independent NumPy reductions validate normalization, dB, masks and bandwise aggregation; no MAD or percentile is recomputed by a binding.
 
 ### Sources and provenance
 
@@ -53,7 +53,7 @@ https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/in
 
 ## Catalog note
 
-Versioned descriptive protocol with native aggregates and explicit per-row availability; see docs/intrinsic_diagnostics_contract.v1.json.
+Versioned descriptive protocol with native global and bandwise aggregates and explicit availability; see docs/intrinsic_diagnostics_contract.v1.json.
 
 
 _See also_: [methods index](index.md).

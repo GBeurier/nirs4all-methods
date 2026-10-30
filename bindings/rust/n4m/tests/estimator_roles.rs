@@ -26,6 +26,15 @@ fn fixture() -> Value {
     serde_json::from_str(&std::fs::read_to_string(path).expect("fixture")).expect("fixture JSON")
 }
 
+fn intrinsic_fixture() -> Value {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../../parity/fixtures/intrinsic_diagnostics.v1.json"
+    );
+    serde_json::from_str(&std::fs::read_to_string(path).expect("intrinsic fixture"))
+        .expect("intrinsic fixture JSON")
+}
+
 /// Row-major owned matrix from nested JSON rows, or a column from a flat list.
 struct Dense {
     data: Vec<f64>,
@@ -474,9 +483,7 @@ fn replays_the_cross_language_fixture() {
     let cases = fx["cases"].as_array().unwrap();
     let procedures = fx["procedures"].as_array().unwrap();
     let methods = roles::methods().unwrap();
-    // Keep the old 208-method ABI2.15 fixture unchanged. The additive scaler
-    // and ragged utility are covered independently; preserve the historical fixture.
-    assert_eq!(methods.len(), cases.len() + procedures.len() + 2);
+    // Preserve the historical fixture; separately covered additions join its registry set.
     let mut listed: BTreeSet<&str> = cases
         .iter()
         .chain(procedures)
@@ -484,6 +491,12 @@ fn replays_the_cross_language_fixture() {
         .collect();
     assert!(listed.insert("preprocessing.scaling.standard_scale"));
     assert!(listed.insert("utilities.ragged_summary"));
+    let intrinsic = intrinsic_fixture();
+    let intrinsic_cases = intrinsic["cases"].as_array().unwrap();
+    assert_eq!(intrinsic_cases.len(), 5);
+    for case in intrinsic_cases {
+        assert!(listed.insert(case["method_id"].as_str().unwrap()));
+    }
     assert_eq!(
         listed,
         methods
@@ -719,4 +732,68 @@ fn ragged_summary_matches_independent_population_statistics() {
             1.
         ]
     );
+}
+
+#[test]
+fn replays_intrinsic_diagnostics_fixture() {
+    let ctx = Context::new().unwrap();
+    let fixture = intrinsic_fixture();
+    let cases = fixture["cases"].as_array().unwrap();
+    assert_eq!(cases.len(), 5);
+    for case in cases {
+        let method_id = case["method_id"].as_str().unwrap();
+        let x = Dense::new(&case["X"]);
+        let target = case
+            .get("X_target")
+            .filter(|v| !v.is_null())
+            .map(Dense::new);
+        let params = params_for(&ctx, method_id, &case["parameters"]);
+        let mut inputs = FitInputs::new(x.view());
+        if let Some(target) = &target {
+            inputs = inputs.x_target(target.view());
+        }
+        let result = roles::run_procedure(&ctx, method_id, Some(&params), &inputs)
+            .unwrap_or_else(|e| panic!("{method_id}: {e}"));
+        let expected = case["expected"].as_object().unwrap();
+        let entries = result.entries().unwrap();
+        assert_eq!(
+            entries
+                .iter()
+                .map(|e| e.name.as_str())
+                .collect::<BTreeSet<_>>(),
+            expected.keys().map(String::as_str).collect::<BTreeSet<_>>(),
+            "{method_id} outputs"
+        );
+        for entry in entries {
+            let name = &entry.name;
+            let label = format!("{method_id}.{name}");
+            match entry.kind {
+                ResultEntryKind::IntVector => {
+                    let actual = result.int_vector(name).unwrap();
+                    let wanted: Vec<i32> = ints(&expected[name])
+                        .into_iter()
+                        .map(|v| i32::try_from(v).unwrap())
+                        .collect();
+                    assert_eq!(actual, wanted, "{label}");
+                }
+                ResultEntryKind::Int64Vector => assert_eq!(
+                    result.int64_vector(name).unwrap(),
+                    ints(&expected[name]),
+                    "{label}"
+                ),
+                ResultEntryKind::DoubleMatrix => close(
+                    &result.double_matrix(name).unwrap().data,
+                    &floats(&expected[name]),
+                    REPLAY_TOL,
+                    &label,
+                ),
+                ResultEntryKind::Scalar => close(
+                    &[result.scalar(name).unwrap()],
+                    &floats(&expected[name]),
+                    REPLAY_TOL,
+                    &label,
+                ),
+            }
+        }
+    }
 }

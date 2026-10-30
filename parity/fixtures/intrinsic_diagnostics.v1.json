@@ -633,6 +633,14 @@
       "X_target": null,
       "parameters": {},
       "expected": {
+        "bandwise_median": 33.48889126985536,
+        "bandwise_median_status": [
+          0
+        ],
+        "bandwise_min": 12.445941904739115,
+        "bandwise_min_status": [
+          0
+        ],
         "global_noise_sigma": 0.0883157556465794,
         "global_noise_sigma_status": [
           0
@@ -798,6 +806,10 @@
           [
             27.72766043523816
           ]
+        ],
+        "worst_band_index": 4.0,
+        "worst_band_index_status": [
+          0
         ]
       }
     },
