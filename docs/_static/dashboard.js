@@ -398,11 +398,10 @@ function methodCard(m) {
           onclick="event.stopPropagation()">📚 science &amp; API</a>`
     : '';
   return `
-    <div class="mcard" style="--accent:${accent}" data-algo="${escapeAttr(m.algo)}"
-         role="button" tabindex="0" aria-label="Open details for ${escapeAttr(m.display)}">
+    <div class="mcard" style="--accent:${accent}" data-algo="${escapeAttr(m.algo)}">
       <div class="m-top">
         <div>
-          <h3>${escapeHtml(m.display)}</h3>
+          <h3><a class="method-link" href="#m/${encodeURIComponent(m.algo)}" aria-label="Open details for ${escapeAttr(m.display)}">${escapeHtml(m.display)}</a></h3>
           ${sym}
         </div>
         <span class="m-origin ${originClass(m.origin)}">${escapeHtml(originLabel(m.origin))}</span>
@@ -476,14 +475,6 @@ function render() {
     html = `<section class="cat-section"><div class="cards">${list.map(methodCard).join('')}</div></section>`;
   }
   el.methods.innerHTML = html;
-
-  // wire cards
-  el.methods.querySelectorAll('.mcard').forEach(btn => {
-    btn.addEventListener('click', () => openDrawer(btn.dataset.algo));
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(btn.dataset.algo); }
-    });
-  });
 }
 
 function resetFilters() {
@@ -496,22 +487,55 @@ function resetFilters() {
 }
 
 /* ==========================================================================
-   Drill-down drawer
+   Full-page method details and hash navigation
    ========================================================================== */
-const drawer = document.getElementById('drawer');
-const overlay = document.getElementById('overlay');
-let lastFocus = null;
+const overview = document.getElementById('overview');
+const methodDetail = document.getElementById('methodDetail');
+const overviewTitle = document.title;
+let activeMethod = null;
+let overviewScroll = 0;
+let overviewFocus = null;
 
-function openDrawer(algo) {
-  const m = METHODS.find(x => x.algo === algo);
-  if (!m) return;
-  lastFocus = document.activeElement;
-  document.getElementById('drawerTitle').textContent = m.display;
-  const _fq = m.fq
+function methodFromHash() {
+  // Preserve both current #m/<id> links and older #<id> bookmarks.
+  try {
+    const algo = decodeURIComponent(location.hash.replace(/^#m\//, '').replace(/^#/, ''));
+    return METHODS.find(m => m.algo === algo);
+  } catch {
+    return null;
+  }
+}
+
+function renderRoute() {
+  const m = methodFromHash();
+  if (!m) {
+    if (methodDetail.hidden) return;
+    methodDetail.hidden = true;
+    overview.hidden = false;
+    activeMethod = null;
+    document.title = overviewTitle;
+    document.querySelector('.skip-link').href = '#methods';
+    document.getElementById('chartTip').style.opacity = '0';
+    if (overviewFocus && overviewFocus.isConnected && overview.contains(overviewFocus)) overviewFocus.focus({ preventScroll: true });
+    else document.getElementById('search').focus({ preventScroll: true });
+    window.scrollTo({ top: overviewScroll, behavior: 'instant' });
+    return;
+  }
+  if (activeMethod === m.algo) return;
+  if (!overview.hidden) {
+    overviewScroll = window.scrollY;
+    overviewFocus = document.activeElement;
+  }
+  activeMethod = m.algo;
+  overview.hidden = true;
+  methodDetail.hidden = false;
+  document.title = `${m.display} · nirs4all-methods`;
+  document.querySelector('.skip-link').href = '#methodTitle';
+  document.getElementById('methodTitle').textContent = m.display;
+  document.getElementById('methodSymbol').innerHTML = m.fq
     ? `<span style="font-family:var(--mono)">${escapeHtml(m.fq)}</span>`
     : `<span style="opacity:.7">${escapeHtml(m.algo)} — no namespace mapping</span>`;
-  document.getElementById('drawerSym').innerHTML = _fq;
-  const docLink = document.getElementById('drawerDocLink');
+  const docLink = document.getElementById('methodDocLink');
   if (m.docUrl) {
     docLink.href = m.docUrl;
     docLink.hidden = false;
@@ -521,30 +545,14 @@ function openDrawer(algo) {
     docLink.hidden = true;
     docLink.removeAttribute('aria-label');
   }
-  document.getElementById('drawerMeta').innerHTML = drawerMetaHtml(m);
-  document.getElementById('drawerBody').innerHTML = drawerBodyHtml(m);
-
-  drawer.classList.add('open');
-  drawer.setAttribute('aria-hidden', 'false');
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  document.getElementById('drawerClose').focus();
-
-  // post-render wiring (charts + size picker)
-  wireDrawer(m);
-  history.replaceState(null, '', '#m/' + encodeURIComponent(algo));
+  document.getElementById('methodMeta').innerHTML = methodMetaHtml(m);
+  document.getElementById('methodBody').innerHTML = methodBodyHtml(m);
+  wireMethod(m);
+  document.getElementById('methodTitle').focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-function closeDrawer() {
-  drawer.classList.remove('open');
-  drawer.setAttribute('aria-hidden', 'true');
-  overlay.classList.remove('open');
-  document.body.style.overflow = '';
-  if (lastFocus) lastFocus.focus();
-  history.replaceState(null, '', '#');
-}
-
-function drawerMetaHtml(m) {
+function methodMetaHtml(m) {
   const accent = GROUP_ACCENT[m.group];
   let h = `<span class="badge" style="color:${accent};background:${accent}1a;border-color:${accent}40">${escapeHtml(GROUP_LABEL[m.group] || m.group)}</span>`;
   h += `<span class="m-origin ${originClass(m.origin)}" style="font-size:.66rem;padding:3px 9px">${escapeHtml(originLabel(m.origin))}</span>`;
@@ -578,11 +586,11 @@ function gateScoreTile(label, h, target) {
   return scoreTile(label, `${fmtPct(validated, real)}%`, `${bits.join(' · ')} ${target}`);
 }
 
-function drawerBodyHtml(m) {
+function methodBodyHtml(m) {
   let html = '';
 
   /* --- 1. score summary --- */
-  html += `<div class="dsection"><h3>Score card</h3><div class="dscore">`;
+  html += `<div class="dsection"><h2>Score card</h2><div class="dscore">`;
   html += gateScoreTile('Reference gate', m.refHist, 'vs canonical lib');
   html += gateScoreTile('Binding gate', m.bindHist, 'vs C++ core');
   // selector methods report divergence as Jaccard set-overlap on BOTH gates; numeric
@@ -604,28 +612,28 @@ function drawerBodyHtml(m) {
   html += `</div></div>`;
 
   /* --- 2. verdict histograms (full breakdown) --- */
-  html += `<div class="dsection"><h3>Verdict breakdown</h3><div class="dscore" style="grid-template-columns:1fr 1fr">`;
+  html += `<div class="dsection"><h2>Verdict breakdown</h2><div class="dscore verdict-scores">`;
   html += verdictBreakdownCard('Reference gate', '⇄', m.refHist, 'libn4m C++ core vs canonical external library');
   html += verdictBreakdownCard('Binding gate', '⊻', m.bindHist, 'each binding tier vs the C++ core');
   html += `</div></div>`;
 
-  /* --- 3. timing curves (only when timed cells actually exist) --- */
+  /* --- 3. implementation comparison before timing --- */
+  html += `<div class="dsection"><h2>Parity matrix · per implementation</h2>${parityTableHtml(m)}</div>`;
+
+  /* --- 4. timing curves (only when timed cells actually exist) --- */
   const hasTiming = m.timing && (m.timing.n || 0) > 0 && m.timing.median_ms != null;
   if (hasTiming && m.sizes.length >= 1) {
-    html += `<div class="dsection"><h3>Timing vs problem size</h3>${timingChartHtml(m)}</div>`;
+    html += `<div class="dsection"><h2>Timing vs problem size</h2>${timingChartHtml(m)}</div>`;
   } else {
-    html += `<div class="dsection"><h3>Timing vs problem size</h3>
+    html += `<div class="dsection"><h2>Timing vs problem size</h2>
       <div class="chart-card" style="color:var(--text-3);font-size:.82rem">
         No wall-clock timing was recorded for this method — it is a parity-only / fixture method
         (the matrix still verifies its verdicts, but it carries no benchmarked <span class="mono">ms</span>).
       </div></div>`;
   }
 
-  /* --- 4. multi-reference parity table --- */
-  html += `<div class="dsection"><h3>Parity matrix · per implementation</h3>${parityTableHtml(m)}</div>`;
-
   /* --- 5. provenance --- */
-  html += `<div class="dsection"><h3>Provenance</h3>${provenanceHtml(m)}</div>`;
+  html += `<div class="dsection"><h2>Provenance</h2>${provenanceHtml(m)}</div>`;
 
   return html;
 }
@@ -815,22 +823,45 @@ function parityTableHtml(m) {
         `<button type="button" data-size="${s.key}" aria-pressed="${i === sizes.length - 1 ? 'true' : 'false'}">${s.n}×${s.p}${sizes.some(z => z.threads !== 1) ? ` · ${s.threads}t` : ''}</button>`
       ).join('') + `</div>`;
   }
-  return `${picker}<div id="ptableMount" class="ptable-wrap"></div>`;
+  return `<p class="ptable-explanation">Canonical reference sources are highlighted. By default, scored external implementations precede scored internal implementations; implementations without scores follow. Reference parity compares the C++ core with the canonical library, while binding parity compares a binding with the core. Select a column heading to sort; missing values remain last.</p>${picker}<div id="ptableMount" class="ptable-wrap" role="region" aria-label="Parity results by implementation" tabindex="0"></div>`;
 }
 
-function drawParityTable(m, sizeKey) {
+function drawParityTable(m, sizeKey, sort = { key: null, direction: 1 }) {
   const mount = document.getElementById('ptableMount');
   if (!mount) return;
   const row = m.rows.find(r => (r.n + 'x' + r.p + '@' + r.threads) === sizeKey) || m.rows[m.rows.length - 1];
   if (!row) { mount.innerHTML = '<div style="padding:18px;color:var(--text-3)">no rows for this method</div>'; return; }
 
-  // Build one table row per implementation column that has a cell here.
-  // Order: C++ tiers, python, R, matlab, then externals, reference last.
+  // Canonical identity comes from the benchmark payload, not the display name.
   const colIds = Object.keys(row.cells).filter(cid => row.cells[cid] && COL_BY_ID[cid]);
-  const ORDER_GROUP = { cpp: 0, python: 1, r: 2, matlab: 3, 'ext-py': 4, 'ext-r': 5, 'ext-ml': 6, reference: 9 };
+  const scored = cell => Number.isFinite(cell.divergence) ||
+    [cell.reference_parity, cell.binding_parity].some(v =>
+      ['exact', 'cross_check', 'divergent', 'drift'].includes(v));
+  const rank = cid => {
+    const cell = row.cells[cid], col = COL_BY_ID[cid];
+    if (cell.is_canonical_reference) return 0;
+    if (!scored(cell)) return 3;
+    return col.kind === 'external' || col.kind === 'reference' ? 1 : 2;
+  };
+  const sortValue = cid => {
+    const cell = row.cells[cid], col = COL_BY_ID[cid];
+    if (sort.key === 'implementation') return col.label.toLowerCase();
+    if (sort.key === 'reference') return cell.reference_parity;
+    if (sort.key === 'binding') return cell.binding_parity;
+    if (sort.key === 'divergence') return Number.isFinite(cell.divergence) ? cell.divergence : null;
+    if (sort.key === 'time') return Number.isFinite(cell.ms) ? cell.ms : null;
+    return null;
+  };
   colIds.sort((a, b) => {
-    const ga = ORDER_GROUP[COL_BY_ID[a].group] ?? 7, gb = ORDER_GROUP[COL_BY_ID[b].group] ?? 7;
-    return ga - gb || a.localeCompare(b);
+    if (!sort.key) return rank(a) - rank(b) || COL_BY_ID[a].label.localeCompare(COL_BY_ID[b].label);
+    const av = sortValue(a), bv = sortValue(b);
+    const missing = v => v == null || v === '' || v === 'not_run' || v === 'not_available';
+    if (missing(av) !== missing(bv)) return missing(av) ? 1 : -1;
+    if (!missing(av)) {
+      const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      if (cmp) return cmp * sort.direction;
+    }
+    return rank(a) - rank(b) || COL_BY_ID[a].label.localeCompare(COL_BY_ID[b].label);
   });
 
   let body = '';
@@ -863,8 +894,10 @@ function drawParityTable(m, sizeKey) {
       ? `<span class="dash">—</span>`
       : `<span class="mono">${cell.fmt || fmtMs(cell.ms)}</span>`;
 
-    body += `<tr class="${lc}">
-      <td class="col-impl"><span class="lang-tag"></span>${escapeHtml(col.label)}
+    const canonical = !!cell.is_canonical_reference;
+    const implLabel = cid === REF_COL_ID && cell.ref_of ? `Canonical reference: ${cell.ref_of}` : col.label;
+    body += `<tr class="${lc}${canonical ? ' canonical-row' : ''}">
+      <td class="col-impl"><span class="lang-tag"></span>${escapeHtml(implLabel)}${canonical ? ' <span class="canonical-badge">Canonical reference</span>' : ''}
         <span style="color:var(--text-3);font-size:.66rem;display:block;margin-left:15px">${escapeHtml(col.lang)} · ${escapeHtml(col.tier || col.group)}</span></td>
       <td><span class="badge ${rp.cls} sm"><span class="gly" aria-hidden="true">${rp.gly}</span>${rp.label}</span></td>
       <td><span class="badge ${bp.cls} sm"><span class="gly" aria-hidden="true">${bp.gly}</span>${bp.label}</span></td>
@@ -883,17 +916,23 @@ function drawParityTable(m, sizeKey) {
     }
   }
 
-  mount.innerHTML = `
-    <table class="ptable">
-      <thead><tr>
-        <th>implementation</th>
-        <th title="libn4m core vs canonical external library">reference&nbsp;⇄</th>
-        <th title="this binding vs the C++ core">binding&nbsp;⊻</th>
-        <th title="ΔRMSE for numeric rows, Jaccard for selector rows">divergence</th>
-        <th style="text-align:right">median&nbsp;ms</th>
-      </tr></thead>
-      <tbody>${body}</tbody>
-    </table>`;
+  const headings = [
+    ['implementation', 'Implementation', 'Implementation name'],
+    ['reference', 'Reference ⇄', 'libn4m core vs canonical external library'],
+    ['binding', 'Binding ⊻', 'This binding vs the C++ core'],
+    ['divergence', 'Divergence', 'ΔRMSE for numeric rows, Jaccard for selector rows'],
+    ['time', 'Median ms', 'Median wall-clock time'],
+  ];
+  mount.innerHTML = `<table class="ptable"><thead><tr>${headings.map(([key, label, title]) => {
+    const active = sort.key === key;
+    const aria = active ? (sort.direction === 1 ? 'ascending' : 'descending') : (!sort.key && key === 'implementation' ? 'other' : null);
+    return `<th scope="col"${aria ? ` aria-sort="${aria}"` : ''}><button type="button" class="ptable-sort" data-sort="${key}" title="${escapeAttr(title)}">${label}<span aria-hidden="true">${active ? (sort.direction === 1 ? ' ▲' : ' ▼') : ' ↕'}</span></button></th>`;
+  }).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+  mount.querySelectorAll('.ptable-sort').forEach(button => button.addEventListener('click', () => {
+    const key = button.dataset.sort;
+    drawParityTable(m, sizeKey, { key, direction: sort.key === key ? -sort.direction : 1 });
+    mount.querySelector(`[data-sort="${key}"]`).focus();
+  }));
 }
 
 function provenanceHtml(m) {
@@ -921,7 +960,7 @@ function provenanceHtml(m) {
     </p>`;
 }
 
-function wireDrawer(m) {
+function wireMethod(m) {
   // timing chart
   drawTimingChart(m, 'linear');
   document.querySelectorAll('.scale-btn').forEach(b => {
@@ -1034,34 +1073,32 @@ function wireControls() {
     });
   });
 
-  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
-  overlay.addEventListener('click', closeDrawer);
-
-  // keyboard
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && drawer.classList.contains('open')) { closeDrawer(); return; }
-    // focus trap inside drawer
-    if (e.key === 'Tab' && drawer.classList.contains('open')) {
-      const focusables = drawer.querySelectorAll('button, [href], input, select, [tabindex]:not([tabindex="-1"])');
-      if (!focusables.length) return;
-      const first = focusables[0], last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-      return;
+  // Native links retain open-in-new-tab and copy-link behavior.
+  el.methods.addEventListener('click', e => {
+    const link = e.target.closest('.method-link');
+    if (!link || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    history.pushState({ n4mMethodDetail: true }, '', link.href);
+    renderRoute();
+  });
+  document.getElementById('methodBack').addEventListener('click', e => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    if (history.state && history.state.n4mMethodDetail) {
+      e.preventDefault();
+      history.back();
     }
-    // "/" focuses search (when not already typing)
-    if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'SELECT' && !drawer.classList.contains('open')) {
+  });
+  history.scrollRestoration = 'manual';
+  window.addEventListener('popstate', renderRoute);
+  window.addEventListener('hashchange', renderRoute);
+
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && !overview.hidden && !e.target.closest('input, select, textarea, [contenteditable="true"]')) {
       e.preventDefault();
       search.focus();
     }
   });
-
-  // deep-link: open drawer if hash names a method
-  const hash = decodeURIComponent(location.hash.replace(/^#m\//, '').replace(/^#/, ''));
-  if (hash && METHODS.some(m => m.algo === hash)) {
-    // defer so chrome/render done
-    setTimeout(() => openDrawer(hash), 30);
-  }
+  renderRoute();
 }
 
 /* ==========================================================================

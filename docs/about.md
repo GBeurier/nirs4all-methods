@@ -68,16 +68,7 @@ bindings/matlab
 bindings/js
 parity/methodology
 parity/tolerances
-dev/workflow
-dev/build
-dev/readthedocs
-dev/testing
-dev/documentation
-dev/documentation-restoration
-dev/hdbscan
-dev/cluster_matching_null
-dev/style
-dev/release_process
+dev/index
 ```
 
 ## Current Status
