@@ -88,14 +88,17 @@ scientific verdicts remain unchanged; badges, filters, counts, and score cards
 use the same derived display verdicts. Informational comparisons above the
 threshold appear in blue and are counted separately from the match rate.
 
-Each matrix column represents one implementation. Repeated clicks on one row
-cycle through **all columns**, **columns populated for that row**, and **columns
-sorted by that row's values**, then return to all columns. Every filtered row
-stays visible throughout. Sorting uses ascending duration (also for speed-up),
-ascending absolute numeric delta, or descending Jaccard overlap. Missing values
-follow measured values. The reference column stays first. Numeric zeros and
-execution errors remain visible when empty columns are hidden. Escape or
+The first click on a row shows **all implementation columns**, the second shows
+**columns populated for that row**, and the third shows a **grouped summary**
+(Third-party, C++ builds, Python, R, MATLAB). The fourth click returns to all
+columns. Clicking another row starts again at all columns. Every filtered row
+stays visible throughout, and the reference column stays first. Numeric zeros
+and execution errors remain visible when empty columns are hidden. Escape or
 **Reset columns** restores the complete grid.
+
+Summary badges count implementations by verdict. Summary values show the best
+recorded time or speed-up, maximum absolute numeric delta, or minimum Jaccard
+overlap for the group. A visible explanation identifies those aggregates.
 
 The display copy keeps each reference source once, in a highlighted Reference
 row/column with its Python, R, or MATLAB icon. The method overview cards name
