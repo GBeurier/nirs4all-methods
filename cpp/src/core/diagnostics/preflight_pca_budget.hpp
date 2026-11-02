@@ -5,12 +5,10 @@
 // in a header so the counts are tested directly (cpp/tests/test_preflight.cpp)
 // without allocating the inputs they refuse.
 //
-// Unit of work: one compensated multiply-add (a product rounded to double
-// and a TwoSum, about 7 double operations; until Methods 1.3.10 a long-double
-// multiply-add, software binary128 in WebAssembly); every other operation
-// counts 1/16. The weights and the limit are unchanged, so the bound stays
-// conservative. With s = min(n,p), l = max(n,p) and the Gram matrix on the
-// smaller side, the bound adds, as upper bounds of what the code executes:
+// Unit of work: one compensated multiply-add (TwoSum of a product rounded to
+// double, Methods 1.3.11 and later); every other double operation counts
+// 1/16. With s = min(n,p), l = max(n,p) and the Gram matrix on the smaller
+// side, the bound adds, as upper bounds of what the code executes:
 //  - compensated: sum of squares n p, Gram s(s+1)/2 * l, trace(C^2) s(s+1),
 //    projections (scores or loadings) k s l and their division k l;
 //  - double, at 1/16: input copy, domain scan and centring 32 n p; Gram
@@ -25,21 +23,20 @@
 // The QL ceiling is never reached in practice (QL converges in about two
 // sweeps per eigenvalue), so the typical cost is far below the bound: for a
 // square s x s input it is about 0.5 s^3 + 0.6 s^3 against 8 s^3 for the
-// bound. The limit 2.4e9 is the smallest round value that keeps every shape a
-// Preflight request can produce (n p <= 10^7, k <= 10) and that Methods 1.3.6
-// (Gram-only s^2 l <= 2.5e8) or the previous whole-computation estimate
-// accepted: their worst case under this bound is 658 x 658, k = 1, 2.33e9
-// (enumerated in cpp/tests/test_preflight.cpp).
+// bound.
 //
-// The limit is a working bound on the computation, not a browser performance
-// qualification. Review measurements of the WebAssembly kernel alone (-O3,
-// Node 22 / V8, Intel i9-12900K, deterministic integer matrices): 658 x 658,
-// k = 1 (the worst accepted Preflight shape above), 6.27 s; 600 x 600,
-// k = 600 (outside the Preflight profile, k <= 10), 12.48 s (long-double
-// kernel, Methods 1.3.10 and earlier). Compensated kernel (1.3.11, Node 24,
-// same CPU): 360 x 2151, k = 10, 0.63 s, against 5.7 s before. A browser
-// profile needs its own execution budget (p50/p95 timings, inter-module
-// copies, cumulative memory) before it can be called qualified.
+// The limit 4e10 admits the calibration sets of NIRS practice: about 1,650
+// samples on 2,150 bands, or any number of samples on up to about 1,650
+// bands (the Gram is built on the smaller side). Every shape the former
+// 2.4e9 limit accepted is still accepted. It was raised in 1.3.12: 2.4e9 was
+// set when the unit was a software binary128 product in WebAssembly, and with
+// compensated doubles it refused every set above about 600 samples although
+// its worst accepted shape then took half a second. Measured WebAssembly
+// kernel alone (Methods 1.3.11, -O3, Node 24 / V8, WSL2 on a desktop x86-64,
+// smooth synthetic spectra, k = 10): 650 x 650 (bound 2.25e9) 0.51 s,
+// 424 x 2151 (0.79e9) 0.75 s, 560 x 2152 (1.70e9) 0.70 s; see the 1.3.12
+// changelog for shapes near the new limit. The limit is a working bound on the
+// computation, not a browser performance qualification.
 //
 // Memory: the doubles simultaneously live at the peak, all counted together
 // (an upper bound of the peak): the centred copy n p, the column exponents p
@@ -56,7 +53,7 @@
 
 namespace n4m::core {
 
-constexpr long double preflight_pca_max_work = 2.4e9L;
+constexpr long double preflight_pca_max_work = 4.0e10L;
 constexpr long double preflight_pca_max_doubles = 134217728.0L;  // 1 GiB
 
 struct PreflightPcaBudget {

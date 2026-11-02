@@ -4,6 +4,23 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.12] - 2026-11-02
+
+### Changed
+
+- Preflight PCA work budget (`n4m_preflight_pca_compute{,_resolved}` and the
+  `diagnostics.pca_reference_qc` procedure): the guaranteed-bound limit rises
+  from 2.4e9 to 4e10 compensated multiply-add equivalents. The 2.4e9 limit was
+  set when the unit was a software binary128 product in WebAssembly; since
+  1.3.11 it refused every calibration set above about 600 samples although
+  its worst accepted shape took about half a second. The limit now admits
+  about 1,650 samples on 2,150 bands, or any number of samples on up to about
+  1,650 bands; every shape accepted before is still accepted, and the memory
+  bound (1 GiB) is unchanged. Measured WebAssembly kernel alone (Node 24 /
+  V8, WSL2 on a desktop x86-64, smooth synthetic spectra, k = 10): 975 x 1050
+  2.3 s, 1260 x 2152 8.1 s, 1530 x 2152 19.3 s, 1650 x 2152 23.3 s,
+  1600 x 1600 20.0 s; 2000 x 2000 is refused. ABI unchanged.
+
 ## [1.3.11] - 2026-11-02
 
 ### Performance

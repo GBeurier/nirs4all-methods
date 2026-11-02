@@ -571,7 +571,7 @@ n4m_status_t run_pca_reference_qc(n4m_context_t* ctx,
             || budget.doubles + extra_doubles > ::n4m::core::preflight_pca_max_doubles) {
             set_error(
                 ctx,
-                "PCA reference exceeds the whole-computation budget (2.4 billion multiply-add equivalents including eigensolver ceiling, 1 GiB buffers, 50 million cells); reduce reference/query rows, features or components; exact full moments were not requested");
+                "PCA reference exceeds the whole-computation budget (40 billion multiply-add equivalents including eigensolver ceiling, 1 GiB buffers, 50 million cells); reduce reference/query rows, features or components; exact full moments were not requested");
             return N4M_ERR_UNSUPPORTED;
         }
     }

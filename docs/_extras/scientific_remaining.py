@@ -1459,13 +1459,12 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "equally spaced features and a locally polynomial signal; it is not an SNR. ICC is "
         "computed only for balanced complete groups and is NaN otherwise. The association test "
         "assumes exchangeable units and permutes targets as one unrestricted block. A PCA whose "
-        "guaranteed work bound (QL iteration at its ceiling) exceeds 2.4 billion long-double "
+        "guaranteed work bound (QL iteration at its ceiling) exceeds 40 billion compensated "
         "product equivalents or whose live buffers exceed 1 GiB, and permutation tests above "
         "250 million operations, return `N4M_ERR_UNSUPPORTED`; "
         "neighbor and pair searches are exhaustive and quadratic in rows. The PCA limit is a "
         "working bound, not a browser performance qualification: the WebAssembly kernel alone "
-        "(Node 22, i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s for 600 x 600, "
-        "k = 600.",
+        "(Methods 1.3.11, Node 24) took 0.51 s for 650 x 650, k = 10.",
         "The ABI-2 symbols `n4m_preflight_{pca_compute,repeatability_compute,summary_compute,"
         "nearest_neighbors,local_contrast,noise_proxy_compute,pairs_within_tolerance,"
         "factor_association}` in `n4m/metrics.h` are implemented in "

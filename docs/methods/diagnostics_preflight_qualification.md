@@ -26,7 +26,7 @@ Qualifying a spectral dataset before modelling: spectral rank and dominance, rep
 
 ### Limits and validation
 
-These are descriptive diagnostics, not model-validation scores. The noise proxy assumes equally spaced features and a locally polynomial signal; it is not an SNR. ICC is computed only for balanced complete groups and is NaN otherwise. The association test assumes exchangeable units and permutes targets as one unrestricted block. A PCA whose guaranteed work bound (QL iteration at its ceiling) exceeds 2.4 billion long-double product equivalents or whose live buffers exceed 1 GiB, and permutation tests above 250 million operations, return `N4M_ERR_UNSUPPORTED`; neighbor and pair searches are exhaustive and quadratic in rows. The PCA limit is a working bound, not a browser performance qualification: the WebAssembly kernel alone (Node 22, i9-12900K) took 6.27 s for 658 x 658, k = 1, and 12.48 s for 600 x 600, k = 600.
+These are descriptive diagnostics, not model-validation scores. The noise proxy assumes equally spaced features and a locally polynomial signal; it is not an SNR. ICC is computed only for balanced complete groups and is NaN otherwise. The association test assumes exchangeable units and permutes targets as one unrestricted block. A PCA whose guaranteed work bound (QL iteration at its ceiling) exceeds 40 billion compensated product equivalents or whose live buffers exceed 1 GiB, and permutation tests above 250 million operations, return `N4M_ERR_UNSUPPORTED`; neighbor and pair searches are exhaustive and quadratic in rows. The PCA limit is a working bound, not a browser performance qualification: the WebAssembly kernel alone (Methods 1.3.11, Node 24) took 0.51 s for 650 x 650, k = 10.
 
 ### Implementation
 
