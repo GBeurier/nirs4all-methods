@@ -411,12 +411,18 @@ static void pca_budget_tests(n4m_context_t* ctx) {
                 REQUIRE(b.doubles <= ::n4m::core::preflight_pca_max_doubles);
                 worst = std::max(worst, b.work);
             }
-    REQUIRE(worst > 2.3e9L);  // 658 x 658, k = 1: the limit is tight
-    // Through the ABI: 700 x 700 with k = 700 (3.2e9) is refused before
-    // allocating; 600 x 600 with k = 600 (2.0e9) is now inside the bound.
-    REQUIRE(preflight_pca_budget(700, 700, 700).work > ::n4m::core::preflight_pca_max_work);
+    REQUIRE(worst > 2.3e9L);  // 658 x 658, k = 1, the worst of those shapes
+    // Calibration sets of NIRS practice fit the 1.3.12 limit: 1,650 samples on
+    // 2,152 bands, 45,417 samples on 196 bands, 1,600 x 1,600 with k = 10.
+    REQUIRE(preflight_pca_budget(1650, 2152, 10).work <= ::n4m::core::preflight_pca_max_work);
+    REQUIRE(preflight_pca_budget(45417, 196, 10).work <= ::n4m::core::preflight_pca_max_work);
+    REQUIRE(preflight_pca_budget(1600, 1600, 10).work <= ::n4m::core::preflight_pca_max_work);
+    REQUIRE(preflight_pca_budget(2000, 2000, 10).work > ::n4m::core::preflight_pca_max_work);
+    // Through the ABI: 1800 x 1800 with k = 1800 (5.4e10) is refused before
+    // allocating; 600 x 600 with k = 600 (2.0e9) is inside the bound.
+    REQUIRE(preflight_pca_budget(1800, 1800, 1800).work > ::n4m::core::preflight_pca_max_work);
     REQUIRE(preflight_pca_budget(600, 600, 600).work <= ::n4m::core::preflight_pca_max_work);
-    const int64_t n=700, p=700; const int32_t k=700;
+    const int64_t n=1800, p=1800; const int32_t k=1800;
     std::vector<double> x(static_cast<size_t>(n*p),1.0), sc(static_cast<size_t>(n*k)),
         ld(static_cast<size_t>(k*p)), ev(static_cast<size_t>(k)), mom(2);
     auto X=view(x.data(),n,p), S=view(sc.data(),n,k), L=view(ld.data(),k,p);

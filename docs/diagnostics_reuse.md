@@ -49,9 +49,9 @@ These are one-shot calibration diagnostics, not a reusable fitted handle.
 Do not sum retained eigenvalues and present them as exact full-spectrum moments.
 
 The 250-million-product refusal reported in issue #45 predates current 1.3.8.
-Current `preflight_pca_budget.hpp` bounds the whole computation (2.4 billion
-long-double multiply-add equivalents, 1 GiB working memory), including the
-eigensolver ceiling. This change is already upstream; the local fix does not
+Current `preflight_pca_budget.hpp` bounds the whole computation (40 billion
+compensated multiply-add equivalents since 1.3.12, 1 GiB working memory),
+including the eigensolver ceiling. This change is already upstream; the local fix does not
 raise or remove that guard. The regression witness uses the exact 390 x 2,151
 shape, verifies exact moments, and proves that held-out projection leaves the
 training scores bit-identical. On this Linux release build its synthetic

@@ -71,7 +71,8 @@ extern "C" {
  * 1/16 (s = min(n,p), l = max(n,p)): sum of squares n p, Gram s(s+1)/2 * l,
  * projections k s l, centring and scans, tridiagonalisation, the QL
  * iteration at the solver's ceiling (30 s sweeps of s - 1 rotations), and
- * for n <= p the loading re-orthonormalisation and completion; limit 2.4e9.
+ * for n <= p the loading re-orthonormalisation and completion; limit 4e10
+ * (1.3.12; 2.4e9 before).
  * The typical cost is much lower (QL converges in about two sweeps per
  * eigenvalue: about 1.1 s^3 against the bound's 8 s^3 for a square input).
  * Memory: every buffer live at the peak (centred copy n p, column exponents,
@@ -79,10 +80,10 @@ extern "C" {
  * copy 2 k p, scores n k, vectors); limit 1 GiB. Every shape a Preflight
  * request can produce (n p <= 10^7, k <= 10) that Methods 1.3.6 or the
  * former estimate accepted is still accepted; any other request must also
- * satisfy both bounds (1000 x 1000 with k = 10 is refused by the work
+ * satisfy both bounds (2000 x 2000 with k = 10 is refused by the work
  * bound). The limit is a working bound, not a browser performance
- * qualification (WASM kernel alone, Node 22, i9-12900K: 658 x 658, k = 1,
- * 6.27 s; 600 x 600, k = 600, 12.48 s).
+ * qualification (WASM kernel alone, Methods 1.3.11, Node 24: 650 x 650,
+ * k = 10, 0.51 s).
  * Resolved eigenvalues, the resolution and both moments are normal doubles.
  * This 2.19 entry point cannot flag unresolved components;
  * n4m_preflight_pca_compute_resolved (ABI 2.20) returns the resolution and

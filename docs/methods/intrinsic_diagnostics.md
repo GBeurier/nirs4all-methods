@@ -57,7 +57,7 @@ limit or effective full rank is inferred from truncated eigenvalues. The existin
 
 The computation is checked before allocation against the existing whole-PCA
 budget including the eigensolver iteration ceiling, plus the new query/output
-passes: 2.4 billion multiply-add equivalents, 1 GiB buffers and 50 million input
+passes: 40 billion multiply-add equivalents, 1 GiB buffers and 50 million input
 cells. A refusal returns `N4M_ERR_UNSUPPORTED` with an actionable explanation.
 This is a work/memory bound, not a browser latency promise.
 

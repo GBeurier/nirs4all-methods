@@ -1021,7 +1021,7 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
         const auto budget = ::n4m::core::preflight_pca_budget(n, p, k);
         if (budget.work > ::n4m::core::preflight_pca_max_work)
             return fail(ctx, N4M_ERR_UNSUPPORTED,
-                        "PCA exceeds the 2.4 billion operation budget (guaranteed bound)");
+                        "PCA exceeds the 40 billion operation budget (guaranteed bound)");
         if (budget.doubles > ::n4m::core::preflight_pca_max_doubles)
             return fail(ctx, N4M_ERR_UNSUPPORTED, "PCA working buffers exceed 1 GiB budget");
     }
