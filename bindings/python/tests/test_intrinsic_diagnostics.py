@@ -5,6 +5,7 @@ import json
 import numpy as np
 import pytest
 from n4m._errors import N4MError
+from n4m._types import Status
 from n4m.roles import method_class
 from numpy.testing import assert_allclose, assert_array_equal
 
@@ -251,10 +252,22 @@ def test_nonfinite_values_are_rejected_without_silent_imputation(name):
 
 
 def test_pca_budget_refusal_is_actionable_and_distinct_from_missing_moments():
-    with pytest.raises(N4MError, match="whole-computation budget.*reduce"):
+    with pytest.raises(N4MError, match="whole-computation budget.*reduce") as refused:
         run(
-            "pca_reference_qc", np.zeros((1, 2000)), np.zeros((2000, 2000)), n_components=5
+            "pca_reference_qc",
+            np.zeros((1, 2000)),
+            np.zeros((2000, 2000)),
+            n_components=5,
         )
+    assert refused.value.status == Status.ERR_UNSUPPORTED
+
+
+def test_pca_budget_admits_a_reference_refused_by_the_former_limit():
+    # 900 x 900 (5.9e9 work equivalents) exceeded the 2.4e9 limit before 1.3.12.
+    reference = np.random.default_rng(0).standard_normal((900, 900)).cumsum(axis=1)
+    out = run("pca_reference_qc", reference[:3], reference, n_components=5)
+    assert np.shape(out["loadings"]) == (5, 900)
+    assert_array_equal(out["pca_t2_status"], [0, 0, 0])
 
 
 def test_pca_rejects_nonfinite_reference_and_implicit_mask_imputation():
