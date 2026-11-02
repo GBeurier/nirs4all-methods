@@ -26,6 +26,17 @@ inline DD dd_quick_two_sum(double a, double b) {
     const double s = a + b;
     return {s, b - (s - a)};
 }
+// Exact product a b = hi + lo without fma (Dekker's TwoProduct with
+// Veltkamp splitting; exact unless a b or the split overflows). std::fma is
+// a software routine in WebAssembly and on baseline x86-64, where this is
+// several times faster for the same result.
+inline DD dd_two_prod(double a, double b) {
+    constexpr double split = 134217729.0;  // 2^27 + 1
+    const double ca = split * a, ah = ca - (ca - a), al = a - ah;
+    const double cb = split * b, bh = cb - (cb - b), bl = b - bh;
+    const double p = a * b;
+    return {p, ((ah * bh - p) + ah * bl + al * bh) + al * bl};
+}
 inline DD dd_add(DD a, DD b) {
     DD s = dd_two_sum(a.hi, b.hi);
     const DD t = dd_two_sum(a.lo, b.lo);

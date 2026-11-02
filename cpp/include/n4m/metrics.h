@@ -39,8 +39,8 @@ extern "C" {
  * have no influence, translations change nothing beyond the input's
  * rounding, and scaling X by 2^s scales eigenvalues and full_moments[0] by
  * 4^s, full_moments[1] by 16^s and scores by 2^s (loadings invariant).
- * Decomposition: the Gram matrix on the smaller side (accumulated in long
- * double) is eigendecomposed by a converged symmetric QL solver, for every
+ * Decomposition: the Gram matrix on the smaller side (each entry a
+ * compensated sum of rounded products) is eigendecomposed by a converged symmetric QL solver, for every
  * n, p and k; there is no randomized or iteration-limited approximation,
  * and truncation only selects the leading k components.
  * Accuracy (absolute only; no relative accuracy is claimed for smaller
@@ -52,14 +52,13 @@ extern "C" {
  *    * lambda_max), which also absorbs the rounding of the Gram entries to
  *    double (at most DBL_EPSILON / 2 * sqrt(min(n,p)) * lambda_max);
  *  - the total error bound, which adds the accumulation of the Gram entries:
- *    at most L * u * trace(C), with L the length of each inner product (p
- *    for the row-side Gram used when n <= p, n for the column-side Gram
- *    otherwise) and u the unit roundoff of long double (2^-64 for x87
- *    extended precision, 2^-113 for binary128 as in WebAssembly, DBL_EPSILON
- *    / 2 where long double is double: MSVC, Apple arm64). This worst-case
- *    term is not part of resolution and can exceed it for high-rank spectra
- *    (typical accumulation errors grow like sqrt(L) * u), so a variance
- *    within it of the threshold has no guaranteed classification.
+ *    each entry is a compensated sum (TwoSum) of products rounded to double,
+ *    so its error is at most (2 u + 2 gamma_L^2) * trace(C) with u =
+ *    DBL_EPSILON / 2 and L the length of each inner product (p for the
+ *    row-side Gram used when n <= p, n for the column-side Gram otherwise),
+ *    i.e. about 2 u * trace(C) for L u << 1, identically on every platform
+ *    (no long double, no fma). This term is not part of resolution, so a
+ *    variance within it of the threshold has no guaranteed classification.
  * Loadings: every row, unresolved ones included, is a unit vector, and the
  * rows are mutually orthogonal to working precision. For n <= p the rows
  * Xc^T u / sigma of resolved components (which lose orthonormality as sigma
@@ -68,7 +67,7 @@ extern "C" {
  * n > p the rows are the Gram eigenvectors.
  * Budget: N4M_ERR_UNSUPPORTED before allocating when a GUARANTEED bound
  * exceeds its limit; both bounds count every pass and every buffer, not a
- * typical cost. Work, in long-double multiply-adds with double operations at
+ * typical cost. Work, in compensated multiply-adds with other double operations at
  * 1/16 (s = min(n,p), l = max(n,p)): sum of squares n p, Gram s(s+1)/2 * l,
  * projections k s l, centring and scans, tridiagonalisation, the QL
  * iteration at the solver's ceiling (30 s sweeps of s - 1 rotations), and

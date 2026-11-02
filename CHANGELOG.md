@@ -4,6 +4,25 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.11] - 2026-11-02
+
+### Performance
+
+- Preflight PCA (`n4m_preflight_pca_compute{,_resolved}`): the Gram entries,
+  full-spectrum moments, scores and loadings are compensated sums (TwoSum) of
+  products rounded to double instead of `long double` accumulations. In
+  WebAssembly `long double` is a software binary128 type and 54 % of a
+  Preflight analysis of a 424 x 2151 dataset was spent in its emulation; one
+  360 x 2151, k = 10 PCA drops from 5.7 s to 0.63 s (Node 24). The Gram error
+  bound is now about 2 u trace(C) (u = DBL_EPSILON / 2) on every platform,
+  instead of L u trace(C) with u the platform's long-double roundoff (x87,
+  binary128, or double on MSVC and Apple arm64); see `metrics.h`.
+- New `dd_two_prod` (Dekker TwoProduct, no fma) in `double_double.hpp`. The
+  PCA monitor's compensated dot product uses it instead of `std::fma`, which
+  is a software routine in WebAssembly and on baseline x86-64; products stay
+  exact, so the results are unchanged.
+- C ABI 2.20.0 unchanged (no new or removed symbol).
+
 ## Unreleased
 
 - Extend the existing `diagnostics.spectral_noise_proxy` procedure with native

@@ -5,12 +5,13 @@
 // in a header so the counts are tested directly (cpp/tests/test_preflight.cpp)
 // without allocating the inputs they refuse.
 //
-// Unit of work: one long-double multiply-add (software binary128 in
-// WebAssembly, measured at least 16 times slower than a double operation
-// there); every other operation counts 1/16. With s = min(n,p), l = max(n,p)
-// and the Gram matrix on the smaller side, the bound adds, as upper bounds of
-// what the code executes:
-//  - long double: sum of squares n p, Gram s(s+1)/2 * l, trace(C^2) s(s+1),
+// Unit of work: one compensated multiply-add (a product rounded to double
+// and a TwoSum, about 7 double operations; until Methods 1.3.10 a long-double
+// multiply-add, software binary128 in WebAssembly); every other operation
+// counts 1/16. The weights and the limit are unchanged, so the bound stays
+// conservative. With s = min(n,p), l = max(n,p) and the Gram matrix on the
+// smaller side, the bound adds, as upper bounds of what the code executes:
+//  - compensated: sum of squares n p, Gram s(s+1)/2 * l, trace(C^2) s(s+1),
 //    projections (scores or loadings) k s l and their division k l;
 //  - double, at 1/16: input copy, domain scan and centring 32 n p; Gram
 //    storage s^2; eigensolver scaling and copies 4 s^2 + s; Householder
@@ -34,7 +35,9 @@
 // qualification. Review measurements of the WebAssembly kernel alone (-O3,
 // Node 22 / V8, Intel i9-12900K, deterministic integer matrices): 658 x 658,
 // k = 1 (the worst accepted Preflight shape above), 6.27 s; 600 x 600,
-// k = 600 (outside the Preflight profile, k <= 10), 12.48 s. A browser
+// k = 600 (outside the Preflight profile, k <= 10), 12.48 s (long-double
+// kernel, Methods 1.3.10 and earlier). Compensated kernel (1.3.11, Node 24,
+// same CPU): 360 x 2151, k = 10, 0.63 s, against 5.7 s before. A browser
 // profile needs its own execution budget (p50/p95 timings, inter-module
 // copies, cumulative memory) before it can be called qualified.
 //
@@ -57,7 +60,7 @@ constexpr long double preflight_pca_max_work = 2.4e9L;
 constexpr long double preflight_pca_max_doubles = 134217728.0L;  // 1 GiB
 
 struct PreflightPcaBudget {
-    long double work;     // long-double multiply-add equivalents (upper bound)
+    long double work;     // compensated multiply-add equivalents (upper bound)
     long double doubles;  // peak live buffers, in doubles (upper bound)
 };
 
