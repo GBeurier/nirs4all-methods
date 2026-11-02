@@ -4,6 +4,21 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.13] - 2026-11-02
+
+Release-hygiene patch: no numerical kernel, public header or exported symbol
+changes. C ABI 2.20.0 unchanged.
+
+### Fixed
+
+- JS and Python preflight tests probe the PCA work budget above the 1.3.12
+  limit (1800 x 1800 with k = 1800 in JS, a 2000 x 2000 reference in
+  Python); the previous probes were accepted under the 4e10 limit and failed
+  the 1.3.12 CI.
+- `CITATION.cff` records the release date, and the bibliography catalog pins
+  the source revision of the current citation file, so
+  `catalog/scripts/migrate_bibliography.py --check` passes again.
+
 ## [1.3.12] - 2026-11-02
 
 ### Changed
@@ -47,9 +62,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   explicit availability status. Reuse its masked second-difference MAD protocol;
   no new method or exported C symbol.
 
-## Unreleased
+## [1.3.10] - 2026-10-29
 
-## [1.3.9] - Unreleased local candidate
+ABI 2.20.0 unchanged (no new or changed symbol).
+
+- Intrinsic and reference spectral diagnostics (`diagnostics.local_density`,
+  `diagnostics.pca_reference_qc`, `diagnostics.spectral_events_qc`,
+  `diagnostics.spectral_noise_proxy`, `diagnostics.spectral_reference_qc`)
+  are exposed as generic procedures that share one protocol and one native
+  kernel set, with a versioned contract
+  (`docs/intrinsic_diagnostics_contract.v1.json`) and parity fixtures.
+- Catalog entries describe these generic procedures without duplicate ABI
+  ownership.
+
+## [1.3.9] - 2026-10-29
 
 ABI 2.20.0 is unchanged; no C symbol or numerical kernel is duplicated.
 
@@ -61,8 +87,6 @@ ABI 2.20.0 is unchanged; no C symbol or numerical kernel is duplicated.
   the existing owner N4MM v3 reader and exposes the actual selected runtime
   ABI through the public C getters. Consumers must require ABI 2.20 and the
   new binding before claiming format-3 replay support.
-
-No publication is implied by this candidate entry.
 
 ## [1.3.8] - 2026-10-20
 
