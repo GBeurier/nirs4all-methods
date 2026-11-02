@@ -253,7 +253,7 @@ def test_nonfinite_values_are_rejected_without_silent_imputation(name):
 def test_pca_budget_refusal_is_actionable_and_distinct_from_missing_moments():
     with pytest.raises(N4MError, match="whole-computation budget.*reduce"):
         run(
-            "pca_reference_qc", np.zeros((1, 900)), np.zeros((900, 900)), n_components=5
+            "pca_reference_qc", np.zeros((1, 2000)), np.zeros((2000, 2000)), n_components=5
         )
 
 
