@@ -15,7 +15,9 @@ unchanged.
 - JS and Python preflight tests probe the PCA work budget above the 1.3.12
   limit (1800 x 1800 with k = 1800 in JS, a 2000 x 2000 reference in
   Python); the previous probes were accepted under the 4e10 limit and failed
-  the 1.3.12 CI.
+  the 1.3.12 CI. The Python suite also asserts the `ERR_UNSUPPORTED` status of
+  the refusal and that a 900 x 900 reference, refused by the former 2.4e9
+  limit, is now accepted.
 - `CITATION.cff` records the release date, and the bibliography catalog pins
   the source revision of the current citation file, so
   `catalog/scripts/migrate_bibliography.py --check` passes again.
