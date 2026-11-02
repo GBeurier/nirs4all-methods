@@ -6,8 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [1.3.13] - 2026-11-02
 
-Release-hygiene patch: no numerical kernel, public header or exported symbol
-changes. C ABI 2.20.0 unchanged.
+Release-hygiene patch: no numerical kernel, public API or exported symbol
+change (the public headers only carry the new project version). C ABI 2.20.0
+unchanged.
 
 ### Fixed
 
