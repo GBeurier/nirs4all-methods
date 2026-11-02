@@ -23,12 +23,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   exact, so the results are unchanged.
 - C ABI 2.20.0 unchanged (no new or removed symbol).
 
-## Unreleased
+### Diagnostics
 
 - Extend the existing `diagnostics.spectral_noise_proxy` procedure with native
   bandwise minimum/median ratios and the first worst-band index, each with an
   explicit availability status. Reuse its masked second-difference MAD protocol;
-  no new method, exported C symbol, ABI version, or package release is introduced.
+  no new method or exported C symbol.
+
+## Unreleased
 
 ## [1.3.9] - Unreleased local candidate
 
