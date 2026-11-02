@@ -38,6 +38,7 @@ using ::n4m::core::dd_add;
 using ::n4m::core::dd_div;
 using ::n4m::core::dd_mul;
 using ::n4m::core::dd_neg;
+using ::n4m::core::dd_quick_two_sum;
 using ::n4m::core::dd_two_sum;
 constexpr double nan_value = std::numeric_limits<double>::quiet_NaN();
 constexpr long double max_moment_products = 250000000.0L;
@@ -889,13 +890,13 @@ double squared_norm(const double* v, size_t p) noexcept {
     return s.hi + s.lo;
 }
 
-// Compensated dot product.
+// Compensated dot product (exact products, double-double sum).
 double dot(const double* a, const double* b, size_t p) noexcept {
     DD s;
     for (size_t j = 0; j < p; ++j) {
-        const double prod = a[j] * b[j];
-        s = dd_add(s, prod);
-        s = dd_add(s, std::fma(a[j], b[j], -prod));
+        const DD prod = ::n4m::core::dd_two_prod(a[j], b[j]);
+        s = dd_add(s, prod.hi);
+        s = dd_add(s, prod.lo);
     }
     return s.hi + s.lo;
 }
@@ -977,6 +978,23 @@ int compare_with_tolerance(double value, double limit, double tolerance) noexcep
 }  // namespace
 
 namespace {
+// Compensated sum of rounded terms (Ogita, Rump and Oishi's Sum2: TwoSum per
+// term, the errors summed apart). For L terms of rounded products,
+// |s + c - exact dot| <= (u + 2 gamma_{L-1}^2) * sum|a_j b_j| + ... with
+// u = DBL_EPSILON / 2, i.e. about 2 u * sum|a_j b_j| for L u << 1, on every
+// platform (no long double, no fma: both are emulated in software in
+// WebAssembly, where a long-double accumulation was about 18 times slower).
+struct CompensatedSum {
+    double s = 0.0, c = 0.0;
+    void add(double x) noexcept {
+        const double t = s + x, bb = t - s;
+        c += (s - (t - bb)) + (x - bb);
+        s = t;
+    }
+    double value() const noexcept { return s + c; }
+    DD dd() const noexcept { return dd_quick_two_sum(s, c); }
+};
+
 // Shared body of n4m_preflight_pca_compute (2.19) and
 // n4m_preflight_pca_compute_resolved (2.20). unresolved has k entries.
 n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t k,
@@ -1074,9 +1092,9 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
             for (size_t i = 0; i < un; ++i)
                 data[i * up + j] = std::ldexp(data[i * up + j], col_exp[j] - g);
 
-        // One Gram matrix on the smaller side, accumulated in long double,
-        // gives both the exact full-spectrum moments of the rescaled
-        // covariance (trace(C) = ||Xc||_F^2 / (n-1), trace(C^2) =
+        // One Gram matrix on the smaller side, each entry a compensated sum
+        // of rounded products (CompensatedSum), gives both the full-spectrum
+        // moments of the rescaled covariance (trace(C) = ||Xc||_F^2 / (n-1), trace(C^2) =
         // ||Gram||_F^2 / (n-1)^2) and the decomposition. A converged
         // symmetric QL eigensolver (n4m_symmetric_eigh, backward stable) on
         // that Gram is exact for every n, p and k: no randomized projection,
@@ -1084,26 +1102,26 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
         const bool wide = n <= p;  // Gram = Xc Xc^T (n x n), else Xc^T Xc (p x p)
         const size_t m = wide ? un : up;
         std::vector<double> gram(m * m);
-        long double sum1 = 0.0L, sum2 = 0.0L;
-        for (double x : data) sum1 += static_cast<long double>(x) * static_cast<long double>(x);
+        CompensatedSum sum1;
+        for (double x : data) sum1.add(x * x);
+        DD sum2;  // trace(C^2) (n-1)^2: squares of the double-double entries
         for (size_t a = 0; a < m; ++a) for (size_t b = 0; b <= a; ++b) {
-            long double dot = 0.0L;
+            CompensatedSum dot;
             if (wide) {
-                for (size_t j = 0; j < up; ++j)
-                    dot += static_cast<long double>(data[a * up + j]) *
-                           static_cast<long double>(data[b * up + j]);
+                const double* ra = data.data() + a * up;
+                const double* rb = data.data() + b * up;
+                for (size_t j = 0; j < up; ++j) dot.add(ra[j] * rb[j]);
             } else {
-                for (size_t i = 0; i < un; ++i)
-                    dot += static_cast<long double>(data[i * up + a]) *
-                           static_cast<long double>(data[i * up + b]);
+                for (size_t i = 0; i < un; ++i) dot.add(data[i * up + a] * data[i * up + b]);
             }
-            sum2 += (a == b ? 1.0L : 2.0L) * dot * dot;
-            gram[a * m + b] = gram[b * m + a] = static_cast<double>(dot);
+            const DD entry = dot.dd();
+            sum2 = dd_add(sum2, dd_mul(dd_mul(entry, entry), a == b ? 1.0 : 2.0));
+            gram[a * m + b] = gram[b * m + a] = entry.hi;
         }
-        const long double d = static_cast<long double>(n - 1);
+        const double d = static_cast<double>(n - 1);
         // Inside the domain every rescaled output below is a normal double.
-        const double m1 = std::ldexp(static_cast<double>(sum1 / d), 2 * g);
-        const double m2 = std::ldexp(static_cast<double>(sum2 / (d * d)), 4 * g);
+        const double m1 = std::ldexp(sum1.value() / d, 2 * g);
+        const double m2 = std::ldexp(dd_div(sum2, d * d).hi, 4 * g);
 
         std::vector<double> lam(m), vec(m * m);  // eigenvectors are the columns of vec
         const auto st = n4m_symmetric_eigh(gram.data(), static_cast<int64_t>(m), lam.data(),
@@ -1142,11 +1160,9 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                 for (size_t j = 0; j < up; ++j) row[j] = vec[j * m + c];
                 if (!lost)
                     for (size_t i = 0; i < un; ++i) {
-                        long double s = 0.0L;
-                        for (size_t j = 0; j < up; ++j)
-                            s += static_cast<long double>(data[i * up + j]) *
-                                 static_cast<long double>(row[j]);
-                        sc[i * uk + a] = static_cast<double>(s);
+                        CompensatedSum dot;
+                        for (size_t j = 0; j < up; ++j) dot.add(data[i * up + j] * row[j]);
+                        sc[i * uk + a] = dot.value();
                     }
                 continue;
             }
@@ -1157,11 +1173,9 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                 const double sigma = std::sqrt(lam[c]);
                 for (size_t i = 0; i < un; ++i) sc[i * uk + a] = vec[i * m + c] * sigma;
                 for (size_t j = 0; j < up; ++j) {
-                    long double s = 0.0L;
-                    for (size_t i = 0; i < un; ++i)
-                        s += static_cast<long double>(data[i * up + j]) *
-                             static_cast<long double>(vec[i * m + c]);
-                    row[j] = static_cast<double>(s / static_cast<long double>(sigma));
+                    CompensatedSum dot;
+                    for (size_t i = 0; i < un; ++i) dot.add(data[i * up + j] * vec[i * m + c]);
+                    row[j] = dd_div(dot.dd(), sigma).hi;
                 }
             }
         }
