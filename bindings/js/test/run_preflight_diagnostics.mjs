@@ -1433,10 +1433,10 @@ for (const d of [3, 5, 6, 7]) {
     }
 }
 // The budget is a guaranteed bound over every pass and live buffer, with the
-// QL iteration at its ceiling (mirrors pca_budget_tests): 700 x 700 with
-// k = 700 (3.2e9 long-double product equivalents) is refused before
+// QL iteration at its ceiling (mirrors pca_budget_tests): 1800 x 1800 with
+// k = 1800 (5.4e10 compensated product equivalents) is refused before
 // allocating.
-assert.equal(statusOf(new Array(700 * 700).fill(1), 700, 700, 700), UNSUPPORTED);
+assert.equal(statusOf(new Array(1800 * 1800).fill(1), 1800, 1800, 1800), UNSUPPORTED);
 // Non-dyadic constant columns centre to exact zeros at every scale; a
 // varying column i * s next to them keeps its variance s^2 n (n+1) / 12.
 for (const s of [1, 3, 1e-7, 1e7, 0.1]) {
