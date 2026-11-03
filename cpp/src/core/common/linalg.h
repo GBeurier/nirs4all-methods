@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Shared dense linear algebra helpers (Householder QR factorisation +
  * companions). Extracted in Phase 5a so EMSC, SavitzkyGolay (main coef

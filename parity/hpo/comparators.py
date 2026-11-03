@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Comparators for HPO parity traces.
 
 - ``compare_traces`` — the cross-binding gate: two StudyTraces must agree on the

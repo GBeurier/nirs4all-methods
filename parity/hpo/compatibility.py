@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Fail-closed 9 x 5 sampler-pruner native conformance matrix.
 
 This module deliberately separates two claims:

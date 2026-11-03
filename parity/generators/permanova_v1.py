@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generate parity/fixtures/permanova_v1.json, the PERMANOVA / PERMDISP gate.
 
 Test-only. Requires exactly numpy==2.2.6, scipy==1.15.3 and scikit-bio==0.7.4

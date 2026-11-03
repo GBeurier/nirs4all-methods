@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Public ABI tests for n4m_model_selection_aom_sweep_run. The result shape is intentionally
 // checked because this surface is meant to feed downstream preprocessing-rank

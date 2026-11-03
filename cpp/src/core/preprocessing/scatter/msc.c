@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Multiplicative Scatter Correction using the conventional row-wise contract:
  * each spectrum is regressed against a fitted reference spectrum, then

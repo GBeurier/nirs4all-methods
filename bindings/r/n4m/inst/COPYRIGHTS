@@ -2,7 +2,7 @@ COPYRIGHTS — third-party material vendored under src/vendor/
 
 The C/C++ sources under src/vendor/ are a copy of the nirs4all-methods
 (libn4m) numerical core, compiled into this package at install time. They are
-licensed CECILL-2.1 (see the LICENSE file) EXCEPT for the following vendored or
+dual-licensed CECILL-2.1 OR AGPL-3.0-or-later (see the repository LICENSING.md) EXCEPT for the following vendored or
 reproduced third-party material:
 
 1. FITPACK — C translation of the Fortran spline kernels (SPDX: BSD-3-Clause)

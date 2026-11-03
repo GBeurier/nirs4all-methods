@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // PsoSampler (F3) — binary/continuous Particle Swarm Optimization over the unit
 // hypercube (Kennedy & Eberhart). A swarm of `swarm_size` particles is asked out

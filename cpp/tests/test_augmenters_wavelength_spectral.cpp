@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Parity tests for the Phase 16 wavelength + spectral augmenters
 // (10 operators × 3 symbols = 30 new C ABI symbols).

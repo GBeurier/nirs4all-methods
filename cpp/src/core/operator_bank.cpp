@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Translation unit for OperatorBank — the class body is header-only because
 // it currently delegates to std::vector. PR 6 keeps this TU as a stable

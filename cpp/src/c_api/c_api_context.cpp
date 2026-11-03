@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrappers for n4m_context_t. Every wrapper has a try/catch
 // around its full body so no C++ exception ever crosses the boundary.

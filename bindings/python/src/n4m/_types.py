@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """ctypes structs and enums mirroring ``n4m.h``.
 
 Layout matters: the C ABI fixes :class:`n4m_matrix_view_t` at 48 bytes on LP64

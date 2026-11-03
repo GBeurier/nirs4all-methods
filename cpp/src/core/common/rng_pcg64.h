@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal pure-C PCG64 random number generator for n4m.
  *
@@ -15,7 +15,7 @@
  *   numpy/random/src/pcg64/pcg64.{h,c}  (MIT — Melissa O'Neill, Robert Kern)
  *   numpy/random/bit_generator.pyx       (BSD-3-Clause — SeedSequence mixer)
  *
- * Both upstream licenses are compatible with CeCILL-2.1.
+ * Both upstream licenses are compatible with CECILL-2.1 OR AGPL-3.0-or-later.
  */
 #ifndef N4M_CORE_COMMON_RNG_PCG64_H
 #define N4M_CORE_COMMON_RNG_PCG64_H

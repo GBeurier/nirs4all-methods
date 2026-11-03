@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal types of the generic estimator surface (n4m/estimator.h):
 // method specs compiled from the catalog, typed parameter values, the

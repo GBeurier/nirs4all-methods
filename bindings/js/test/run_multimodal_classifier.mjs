@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Consume a freshly generated Python/oracle fixture; no saved success output.
 import assert from "node:assert/strict";
 import fs from "node:fs";

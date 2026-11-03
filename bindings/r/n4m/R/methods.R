@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # R tier-1 wrappers for MethodResult-returning fits exposed by
 # r_methods.c. These are thin: validate / coerce / .Call / repackage.

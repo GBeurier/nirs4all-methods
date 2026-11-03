@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Owning wrapper around n4m_method_result_t — the universal output
 // container used by every method shipped in Batches 1-12 of the C ABI.

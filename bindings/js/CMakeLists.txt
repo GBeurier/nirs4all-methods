@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # WASM build of libn4m via Emscripten. Produces (OUTPUT_NAME = n4m):
 #   build/<preset>/bindings/js/n4m.js     — Emscripten glue (MODULARIZE, ES6)

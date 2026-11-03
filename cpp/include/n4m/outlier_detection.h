@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* cpp/include/n4m/outlier_detection.h — outlier_detection role header (ABI 2.0). */
 #ifndef N4M_OUTLIER_DETECTION_H
 #define N4M_OUTLIER_DETECTION_H

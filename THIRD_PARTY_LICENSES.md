@@ -4,7 +4,7 @@
 
 **Upstream**: https://github.com/scipy/scipy/tree/main/scipy/interpolate/fitpack
 **Vendored at**: `cpp/src/core/common/_vendored/fitpack`
-**Notes**: C translation of SciPy's interpolate/fitpack/ Fortran spline kernels (curfit/splev path). CECILL-2.1 carrier is compatible because BSD-3 is permissive.
+**Notes**: C translation of SciPy's interpolate/fitpack/ Fortran spline kernels (curfit/splev path). The CECILL-2.1 OR AGPL-3.0-or-later carrier is compatible because BSD-3 is permissive.
 
 ```
 Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.
@@ -72,8 +72,8 @@ clause 2:
     - scikit-learn developers (https://scikit-learn.org/) — algorithmic
       descriptions of IsolationForest, LOF, and MCD.
 
-The n4m source files in this directory are licensed under CECILL-2.1
-(see the repository-level LICENSE file). This NOTICE serves as
+The n4m source files in this directory are licensed under CECILL-2.1 OR
+AGPL-3.0-or-later (see the repository-level LICENSING.md). This NOTICE serves as
 clarification that the algorithms are derived from BSD-3-licensed
 reference implementations; the C code itself is original.
 ```
@@ -91,8 +91,8 @@ source copied verbatim. Only difference: equal-weight MST edges are stably sorte
 Copyright (c) 2007-2026 The scikit-learn developers.
 Copyright (c) 2015, Leland McInnes.
 Licensed under the BSD-3-Clause license; the algorithms reproduced here are
-attributed to both projects. The n4m source files are CECILL-2.1 (see the
-repository LICENSE); BSD-3 is permissive and compatible.
+attributed to both projects. The n4m source files are CECILL-2.1 OR
+AGPL-3.0-or-later (see the repository LICENSING.md); BSD-3 is permissive and compatible.
 ```
 
 ## SciPy rectangular linear sum assignment  (SPDX: BSD-3-Clause)
@@ -109,7 +109,7 @@ Copyright (c) 2001-2002 Enthought, Inc. 2003, SciPy Developers.
 All rights reserved.
 Licensed under the BSD-3-Clause license (full text in
 cpp/src/core/optimization/_vendored/LICENSE.scipy.txt). BSD-3 is permissive
-and compatible with the CECILL-2.1 licence of the rest of n4m.
+and compatible with the CECILL-2.1 OR AGPL-3.0-or-later licence of the rest of n4m.
 ```
 
 ## NumPy random (PCG64 / SeedSequence / Ziggurat / bounded + choice samplers)  (SPDX: BSD-3-Clause)
@@ -128,6 +128,6 @@ family is by Melissa O'Neill (https://www.pcg-random.org/).
 ```
 Copyright (c) 2005-2024, NumPy Developers.
 Licensed under the BSD-3-Clause license; the algorithms reproduced here are
-attributed to the NumPy project. The n4m source files are CECILL-2.1 (see the
-repository LICENSE); BSD-3 is permissive and compatible.
+attributed to the NumPy project. The n4m source files are CECILL-2.1 OR
+AGPL-3.0-or-later (see the repository LICENSING.md); BSD-3 is permissive and compatible.
 ```

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Filter banks + single/multi-level DWT and IDWT kernels for the Phase 6
  * wavelets operators.  Coefficients are vendored from PyWavelets 1.6.0;

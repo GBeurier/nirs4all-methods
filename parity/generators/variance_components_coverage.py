@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Coverage study of the cluster-bootstrap percentile intervals (test-only).
 
 Runs n4m_stats_variance_components_intervals from a built libn4m on simulated

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // TpeSampler (F4) — univariate Tree-structured Parzen Estimator. Per parameter,
 // the completed history is split into a "good" set (top γ by score) and the

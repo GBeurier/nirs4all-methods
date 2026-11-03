@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * R .Call gateway for MethodResult-returning entry points
  * (sparse SIMPLS / CPPLS / weighted / MB-PLS / PLS-GLM / MIR-PLS),

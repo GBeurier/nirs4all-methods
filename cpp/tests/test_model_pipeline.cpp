@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Focused contract for model-owned SNV -> Savitzky-Golay -> PLS and N4MM v2.
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal Config — POD-style storage for every knob declared on the
 // public n4m_config_t handle. Setter validation lives in the c_api_config

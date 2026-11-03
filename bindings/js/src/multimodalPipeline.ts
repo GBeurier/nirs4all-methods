@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Raw tensor marshalling only. Learned encoders/fusion/Ridge live in libn4m.
 import { checkStatus, getModule, makeMatrixView } from "./ffi.js";
 import { nativeParams, type NativeMethod, withContext } from "./estimatorRoles.js";

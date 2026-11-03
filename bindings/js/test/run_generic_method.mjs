@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Item #19 regression guard: a JS-built n4m_matrix_view_t* reaches the deep
 // entrypoints correctly once i64 dims are marshalled as BigInt under

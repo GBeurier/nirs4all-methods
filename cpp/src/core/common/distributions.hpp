@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Chi-square and F distribution functions for exact confidence intervals.
 //
 // The regularized incomplete gamma uses its power series below a+1 and its

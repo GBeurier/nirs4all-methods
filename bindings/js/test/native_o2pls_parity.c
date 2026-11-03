@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  * Native held-out oracle for the canonical SIMPLS/OmicsPLS O2PLS shim.
  * Compile with wasm_entry.c and a matching native libn4m, as with
  * native_portable_ensemble_parity.c. No WASM artifact is exercised here.

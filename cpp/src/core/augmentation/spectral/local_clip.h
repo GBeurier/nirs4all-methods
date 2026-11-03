@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * LocalClipping augmenter — clips each spectrum within `n_regions` random
  * bands to the band's 90th percentile, simulating detector saturation.

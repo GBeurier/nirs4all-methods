@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Shared filter banks and low-level DWT / IDWT helpers for the Phase 6
  * wavelets preprocessing operators (Wavelet, Haar, WaveletDenoise,

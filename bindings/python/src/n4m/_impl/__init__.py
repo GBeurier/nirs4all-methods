@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Private implementation layer for the n4m public role packages.
 
 This package is **not** part of the public API. It carries the cohesive

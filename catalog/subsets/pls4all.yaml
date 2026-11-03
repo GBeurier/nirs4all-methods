@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Schema: catalog/schema/subset_v1.json
 package: pls4all
 title: "pls4all — Partial Least Squares engine, slim distribution"
@@ -12,7 +12,7 @@ description: |
   package.
 maintainers:
   - "Grégory Beurier <beurier@cirad.fr>"
-license: CECILL-2.1
+license: CECILL-2.1 OR AGPL-3.0-or-later
 status: active
 since_release: "1.0.0"
 abi:

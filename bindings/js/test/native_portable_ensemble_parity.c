@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  * Native C-ABI oracle for the four portable Methods model tokens. Compare the
  * raw WASM entry shim with direct C fits under the R/Python default Config.
  */

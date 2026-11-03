@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 test_that("generic pipeline advertises only implemented C operators", {
     capabilities <- n4m_preprocess_capabilities()

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // GpEiSampler (F4) — Bayesian optimization with a Gaussian-process surrogate and
 // Expected Improvement acquisition. Each ask (after the random startup) fits an

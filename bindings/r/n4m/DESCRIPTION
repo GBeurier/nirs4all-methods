@@ -17,7 +17,7 @@ Description: Implements a portable Partial Least Squares (PLS) and
     Q residuals, DModX), and calibration transfer (PDS, DS). The 'C++17'
     implementation is vendored and compiled from source at install
     time; no external system libraries are required.
-License: CeCILL (== 2.1)
+License: CeCILL-2.1 | AGPL (>= 3)
 URL: https://github.com/GBeurier/nirs4all-methods
 BugReports: https://github.com/GBeurier/nirs4all-methods/issues
 SystemRequirements: C++17, GNU make

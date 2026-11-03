@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 test_that("22 X-only native augmentations preserve shape and seeded result", {
     X <- matrix(rep(1 + 0.02 * (0:31), each = 8L), nrow = 8L)

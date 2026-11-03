@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * SNIP — Statistics-sensitive Non-linear Iterative Peak-clipping baseline
  * (Ryan 1988, Morháč 1997).

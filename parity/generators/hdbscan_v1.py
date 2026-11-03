@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generate parity/fixtures/hdbscan_v1.json, the HDBSCAN reference gate.
 
 Test-only. Requires exactly scikit-learn==1.9.1, hdbscan==0.8.44 and

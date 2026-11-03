@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Selector role adapters: a fitted selector keeps the input width and the
 // selected column indices; transform returns those columns in ascending input

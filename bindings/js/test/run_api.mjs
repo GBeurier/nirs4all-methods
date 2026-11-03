@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Smoke the compiled public JS API. The raw C splitter mask is kept for
 // compatibility, while computeSplitIndices exposes libn4m's ordered indices.

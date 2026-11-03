@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* cpp/include/n4m/compose.h — compose role header (no C ABI surface) (ABI 2.0). */
 #ifndef N4M_COMPOSE_H
 #define N4M_COMPOSE_H

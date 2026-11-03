@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Rewrite cibuildwheel/auditwheel-tagged wheels to ``py3-none-${platform}``.
 
 The pls4all Python binding is ctypes-only — no CPython extension is

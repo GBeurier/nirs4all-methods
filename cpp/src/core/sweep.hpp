@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Native moment-sweep entry points. v1 ships exact Ridge CV over row-additive
 // moments/dual Ridge designs plus exact single-target PLS1 grids from moment

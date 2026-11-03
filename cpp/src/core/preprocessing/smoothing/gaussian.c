@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Gaussian filter reference implementation.  Matches
  * `scipy.ndimage.gaussian_filter1d` byte-for-byte on the kernel construction

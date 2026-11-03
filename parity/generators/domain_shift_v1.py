@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generate parity/fixtures/domain_shift_v1.json, the energy distance and
 PCA monitoring gate (n4m_stats_energy_distance, n4m_stats_pca_monitor).
 

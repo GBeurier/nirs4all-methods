@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Conversion helpers between :mod:`numpy` arrays and :c:struct:`n4m_matrix_view_t`.
 
 libn4m's row-major preprocessings require contiguous F64 input. Bindings must

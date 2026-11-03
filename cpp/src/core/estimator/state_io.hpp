@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // C++ side of the kernel fitted-state writer / reader, and the adapter for
 // transformers whose kernels learn a state at fit (see state_io.h).

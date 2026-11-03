@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // n4m_cli — tiny introspection tool. Phase 0 (bootstrap) supports:
 //   --version      print "nirs4all-methods <project> (ABI <abi>)"

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * BandMasking augmenter — masks out 1+ random spectral bands per sample,
  * either by zeroing or by linear interpolation between the band's endpoints.

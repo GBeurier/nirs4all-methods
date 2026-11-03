@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrapper for the Phase 19 SignalTypeDetector ABI entry-point
 // (n4m_transform_signal_type_detector). Stateless function: no handle lifecycle. The body

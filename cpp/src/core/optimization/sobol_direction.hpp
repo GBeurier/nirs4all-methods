@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Joe-Kuo (new-joe-kuo-6.21201) Sobol direction numbers, extracted from
 // scipy.stats.qmc.Sobol._sv for the first 52 dimensions x 30 bits. Embedding

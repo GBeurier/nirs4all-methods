@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Classifier role adapters. Class labels are arbitrary int64 ids; the fitted
 // state keeps them sorted and the kernels see 0-based indices. Every

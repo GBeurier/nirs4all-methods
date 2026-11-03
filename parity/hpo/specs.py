@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """HpoSpec registry — the declarative catalog of HPO cross-binding parity cells.
 
 Each ``HpoSpec`` fully determines a study: sampler, pruner, search space, seed,

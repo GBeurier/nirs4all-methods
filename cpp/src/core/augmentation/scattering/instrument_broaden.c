@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * InstrumentalBroadeningAugmenter — Gaussian convolution with FWHM-derived
  * sigma. Uses the existing n4m_pp_gaussian engine for the convolution.

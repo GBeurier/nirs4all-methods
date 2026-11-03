@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Analytic small-covariance cases of the PLSRegression solvers and PCR
 // without autoscaling, checked through the raw C ABI on W, P, Q, R, T, U,
 // coefficients and predictions, on the fitted model and on its

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Minimal consumption example for @nirs4all/methods.
 // A downstream repo (nirs4all-core) would do:

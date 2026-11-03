@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Exhaustive native conformance for all 9 sampler x 5 pruner cells."""
 
 from __future__ import annotations

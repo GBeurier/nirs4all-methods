@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Fitted transformer adapters over the advanced kernels of c_api_advanced.cpp:
 // alignment, paired source -> target standardization, slope / bias

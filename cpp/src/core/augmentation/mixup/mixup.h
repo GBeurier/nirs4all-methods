@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal C engine for the MixupAugmenter — within-batch convex combination
  * of pairs of spectra weighted by a Beta(alpha, alpha) random variable.

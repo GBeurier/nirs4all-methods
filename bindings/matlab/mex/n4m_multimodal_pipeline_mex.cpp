@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Thin MATLAB/Octave raw tensor translator for ABI 2.16.
 #include "mex.h"
 #include "n4m/multimodal.h"

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Feature-selection wrappers over the tier-1 ``n4m_feature_selection_*`` ABI.
 
 Public role names live in ``n4m.feature_selection.{wrapper,ranking}``; these

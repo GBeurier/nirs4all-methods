@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* Unified RNG dispatch. See rng_engine.h. */
 #include "rng_engine.h"
 

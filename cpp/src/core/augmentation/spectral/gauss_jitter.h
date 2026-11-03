@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * GaussianSmoothingJitter augmenter — convolves each row with a normalized
  * 1-D Gaussian kernel whose sigma is sampled uniformly per sample. The

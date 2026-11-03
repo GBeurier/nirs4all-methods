@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* Thin R lifetime and value bridge for the native N4M optimizer. */
 #define R_NO_REMAP
 #include <R.h>

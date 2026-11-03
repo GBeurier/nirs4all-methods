@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* numpy.random.RandomState-compatible MT19937. See rng_numpy_mt.h. */
 #include "rng_numpy_mt.h"
 

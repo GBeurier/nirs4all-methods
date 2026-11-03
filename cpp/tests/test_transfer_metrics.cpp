@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Parity tests for the Phase 20 transfer-metrics utility
 // (n4m_domain_adaptation_transfer_metrics_compute). One smoke test exercises the

@@ -10,8 +10,8 @@
   from source at install time. The package contains **no Fortran**: it is a
   pure C/C++ build, so no Fortran toolchain is needed and no Fortran flags are
   set. No external system library is required.
-* License: `CeCILL (== 2.1)` (a GPL-compatible French free-software
-  license, listed in R's license database).
+* License: `CeCILL-2.1 | AGPL (>= 3)` (SPDX `CECILL-2.1 OR AGPL-3.0-or-later`;
+  both are listed in R's license database).
 * The same numerical core powers the project's Python (PyPI),
   JavaScript / WebAssembly (npm), Julia, MATLAB and other bindings.
   Each binding is parity-gated against shared `parity_fixture.json`

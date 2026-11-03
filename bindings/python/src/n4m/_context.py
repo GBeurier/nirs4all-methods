@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Thin wrapper around :c:type:`n4m_context_t`.
 
 Most operators in libn4m don't currently consume a context (they take their

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Exercise the authoritative HPO registry through the R binding and compare
 # native proposals, pruning decisions and the owning rich trace to Python goldens.
 suppressPackageStartupMessages(library(n4m))

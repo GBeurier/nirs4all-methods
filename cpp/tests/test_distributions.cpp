@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Chi-square and F quantiles against SciPy 1.18.1 stats.chi2.ppf / stats.f.ppf
 // (parity/generators/variance_components_v1.py, "quantile_grid"), including
 // tails at 1e-12 and 1 - 1e-12 and degrees of freedom from 1/2 to 1e8, and

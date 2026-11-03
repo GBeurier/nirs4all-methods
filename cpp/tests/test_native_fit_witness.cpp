@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Test-only CDLL probes linked to the real public FIT functions. No kernels.
 #include "n4m/n4m.h"
 #include "n4m/estimator.h"

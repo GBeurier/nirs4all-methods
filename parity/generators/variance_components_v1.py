@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Print the references pinned in cpp/tests/test_variance_components.cpp.
 
 Test-only; nothing here enters libn4m. Recorded with Python 3.14.3,

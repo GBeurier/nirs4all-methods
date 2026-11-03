@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Transformer role adapters whose fitted state lives in the core kernels
 // (cpp/src/core/preprocessing/**): OSC, EPO, flexible and wavelet PCA/SVD, the

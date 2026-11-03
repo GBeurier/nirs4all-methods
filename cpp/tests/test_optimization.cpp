@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // F0 — native ask/tell hyperparameter optimizer smoke tests. Drives the
 // public C ABI end-to-end (search space, optimizer, ask/tell, best, trials,

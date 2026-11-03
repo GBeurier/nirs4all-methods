@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal tests for moment-sweep accelerators that are hidden from the public
 // C ABI. This TU is linked into n4m_internal_tests via the static archive.

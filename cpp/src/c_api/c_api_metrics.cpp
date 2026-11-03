@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrappers for the Phase 19 NIRS regression metrics
 // (n4m_metric_*) and the multivariate outlier statistics

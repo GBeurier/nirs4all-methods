@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 # The declarations below are plain R values. Only the native engine samples,
 # tracks, prunes and serializes trials; the R layer never implements an optimizer.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Variable selection wrappers (tier 1). All selectors return either:
 #   - a list with `selected_indices` (1-based after the C-side conversion

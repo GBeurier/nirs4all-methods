@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Tests for the native ``finetune_estimator`` Python wrapper (MT8).
 
 Run against a built libn4m:  N4M_LIB_PATH=/path/to/libn4m.so.2.2.0 \

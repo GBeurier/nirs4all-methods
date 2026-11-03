@@ -13,7 +13,8 @@ Scope:
                                          tables (BSD), pybaselines (BSD-3),
                                          scipy (BSD-3)
   - bindings/donor_imports/r/n4m/src/libn4m/   — R-side vendored copy of
-                                                  libn4m (CECILL-2.1 same as
+                                                  libn4m (CECILL-2.1 OR
+                                                  AGPL-3.0-or-later, same as
                                                   upstream)
 
 Output:
@@ -43,7 +44,7 @@ VENDORED = [
         "upstream": "https://github.com/scipy/scipy/tree/main/scipy/interpolate/fitpack",
         "spdx": "BSD-3-Clause",
         "license_file": "LICENSE.scipy.txt",
-        "notes": "C translation of SciPy's interpolate/fitpack/ Fortran spline kernels (curfit/splev path). CECILL-2.1 carrier is compatible because BSD-3 is permissive.",
+        "notes": "C translation of SciPy's interpolate/fitpack/ Fortran spline kernels (curfit/splev path). The CECILL-2.1 OR AGPL-3.0-or-later carrier is compatible because BSD-3 is permissive.",
     },
     {
         "path": "cpp/src/core/filters/_vendored",
@@ -86,7 +87,7 @@ def find_license_in(path: Path) -> Path | None:
 
 def emit_notice() -> str:
     lines = ["# NOTICE — third-party software bundled with nirs4all-methods", ""]
-    lines.append("This library is licensed under CECILL-2.1 (see `LICENSE`).")
+    lines.append("This library is licensed under CECILL-2.1 OR AGPL-3.0-or-later (see `LICENSING.md`).")
     lines.append("Bundled within the source distribution and/or the compiled")
     lines.append("shared library are the following third-party components,")
     lines.append("each retaining its original license:")

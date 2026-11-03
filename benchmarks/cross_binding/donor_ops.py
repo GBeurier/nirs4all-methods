@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Donor-operator binding specs — the source of truth for Layer-2 timing.
 
 The C++ donor-operator timing tool (`bench/cpp/n4m_donor_bench`) times every

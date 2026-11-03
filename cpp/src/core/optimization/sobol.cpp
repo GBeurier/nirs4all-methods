@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // SobolSampler (F1) — Sobol low-discrepancy sequence over the search space
 // using the embedded Joe-Kuo direction numbers (see sobol_direction.hpp). One

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // HDBSCAN* (Euclidean) — C++ port of scikit-learn 1.9.1
 // sklearn/cluster/_hdbscan/{hdbscan.py,_linkage.pyx,_tree.pyx} (BSD-3-Clause),

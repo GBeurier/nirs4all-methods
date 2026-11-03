@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal C engine for the SPXY K-Fold splitter (and pure Kennard-Stone
  * K-Fold via `use_y == 0`). Public ABI lives in n4m.h §15.

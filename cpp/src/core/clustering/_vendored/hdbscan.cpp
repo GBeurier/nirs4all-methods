@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // HDBSCAN* port. The algorithm, control flow and floating-point operation
 // order follow scikit-learn 1.9.1 (`_hdbscan_prims`, `mst_from_data_matrix`,

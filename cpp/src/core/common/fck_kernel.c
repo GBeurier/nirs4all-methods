@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Reference implementation of n4m_fck_kernel_1d. Mirrors
  * nirs4all.operators.transforms.fck_static._build_kernel step-for-step so

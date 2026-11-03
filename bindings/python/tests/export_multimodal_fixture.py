@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Export the binding-only raw diagnostic fixture after native qualification.
 
 This is test tooling, not a dataset product or a replacement for canonical U07.

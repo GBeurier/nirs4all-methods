@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // n4m_method_manifest_json: the native manifest rendered once, in the
 // library, so every binding and tool (CLI, Studio/Web node generators, DAG-ML

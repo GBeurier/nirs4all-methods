@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // C ABI for advanced chemometric operators promoted from the Python Tier-2
 // surface. The implementations live here for now to keep the promotion scoped:

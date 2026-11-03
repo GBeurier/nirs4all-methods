@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // One-way random-effects variance components: REML estimates and exact or
 // cluster-bootstrap confidence intervals, per feature, into caller buffers.
 #include "n4m/metrics.h"

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Thin, caller-buffer wrappers for the public Methods Preflight diagnostics.
 import { checkStatus, getModule, makeMatrixView } from "./ffi.js";
 import { Context } from "./context.js";

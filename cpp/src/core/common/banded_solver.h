@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Pentadiagonal (5-diagonal) symmetric LDLT solver + helpers shared by the
  * Whittaker-baseline operators (AsLS / AirPLS / ArPLS / IAsLS / BEADS).

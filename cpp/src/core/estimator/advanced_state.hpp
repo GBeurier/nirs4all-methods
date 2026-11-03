@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Fitted-state save / load of the advanced transformer kernels whose state
 // lives in c_api/c_api_advanced.cpp (internal, not part of the public ABI;

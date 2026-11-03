@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Role pipeline (n4m/estimator.h, ABI 2.14): recipe validation, fit routing
 // (filters, supervised transformers, multi-target Y, label targets), the

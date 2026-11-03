@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  *
  * R .Call dispatcher covering ALL MethodResult-returning entry points
  * of libn4m (33 method-result fits + 24 selectors + 4 diagnostics).

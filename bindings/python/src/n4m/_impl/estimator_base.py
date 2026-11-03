@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Base classes for sklearn-style operator wrappers.
 
 Each subclass declares a class-level ``_C_PREFIX`` constant (e.g. ``"n4m_transform_snv"``)

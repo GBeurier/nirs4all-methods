@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Raw marshalling and label tables only; every learned operation is native.
 .n4m_mm_class_table <- function(values) {
   values <- .n4m_label_table(values)

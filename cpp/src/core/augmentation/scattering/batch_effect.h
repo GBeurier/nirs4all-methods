@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal C engine for BatchEffectAugmenter — simulates instrument/session
  * variability via additive offset, wavelength-dependent slope, and

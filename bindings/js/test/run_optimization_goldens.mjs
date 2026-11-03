@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Execute selected or exhaustive HPO specs through JS/WASM and compare the
 // native rich trace with the published Python/native golden tapes.
 import assert from "node:assert/strict";

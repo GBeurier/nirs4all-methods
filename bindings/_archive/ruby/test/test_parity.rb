@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Cross-binding parity gate for the Ruby binding. Builds the same
 # deterministic (X, Y) the Python generator writes, fits the model

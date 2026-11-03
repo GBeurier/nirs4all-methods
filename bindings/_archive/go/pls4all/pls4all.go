@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 // Package pls4all wraps the libn4m C ABI helper n4m_pls_fit_simple
 // for Go consumers. The package is parity-gated against the shared

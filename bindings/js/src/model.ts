@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // PLS regression model wrapper. Internally uses the `n4m_wasm_pls_fit`
 // helper which takes raw double pointers and works around an Emscripten

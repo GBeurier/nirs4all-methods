@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // n4m_stats_group_means and n4m_stats_regression_scores: exact dyadic cases,
 // magnitude sweeps and offsets inside the declared domain D, both sides of
 // D's boundaries, column-major strides and argument refusals.

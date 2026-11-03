@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Pruners (F2) — early-stopping policies over the tell_intermediate() score
 // stream, composed with (and orthogonal to) the sampler. F2 ships the median

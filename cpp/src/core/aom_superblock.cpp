@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Sums, means and the argmin follow the numpy order of the n4m reference
 // (pairwise sums over contiguous buffers, sequential column means, first

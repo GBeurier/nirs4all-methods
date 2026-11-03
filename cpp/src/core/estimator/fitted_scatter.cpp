@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Fitted transformer adapters whose kernel state is reachable through the
 // public accessors (MSC and EMSC: the learned reference spectrum; set_reference

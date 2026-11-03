@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 # Generic native estimator roles (ABI 2.13). Each constructor generated in
 # estimator_roles_generated.R returns an unfitted specification whose S3

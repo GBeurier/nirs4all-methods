@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Verify the public WASM diagnostic wrappers against hand-computed results.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";

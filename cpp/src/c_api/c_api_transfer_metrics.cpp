@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrapper for the Phase 20 TransferMetricsComputer utility. A
 // single entry point computes a 9-element struct of transfer-alignment

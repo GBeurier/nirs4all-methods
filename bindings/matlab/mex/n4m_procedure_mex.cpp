@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Generic procedure transport; parameter types come exclusively from the native
 // manifest. Reuse the established MEX input/parameter/RAII translations.
 #define N4M_ROLE_PIPELINE_HELPERS_ONLY

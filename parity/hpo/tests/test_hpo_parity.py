@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Pytest wrapper for the HPO cross-binding parity gate.
 
 Skips when no libn4m build is available (N4M_LIB_PATH unset). With a build, every

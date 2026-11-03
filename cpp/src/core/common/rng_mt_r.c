@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * R-compatible Mersenne-Twister + Inversion-normal RNG.
  * See rng_mt_r.h. Re-implemented from the published algorithms in R's

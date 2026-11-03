@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Boundary index lookup for 1-D padding used by SavitzkyGolay (scipy.signal
  * convention) and Gaussian (scipy.ndimage convention).

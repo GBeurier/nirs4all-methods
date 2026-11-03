@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* cpp/include/n4m/augmentation/drift.h — augmentation.drift methods (ABI 2.0). */
 #ifndef N4M_AUGMENTATION_DRIFT_H
 #define N4M_AUGMENTATION_DRIFT_H

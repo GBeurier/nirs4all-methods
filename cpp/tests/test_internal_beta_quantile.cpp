@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal-core test of the Beta upper quantile used by the T2-PLS variable
 // selection limit (core/t2_selection.cpp, hidden in libn4m, hence linked into

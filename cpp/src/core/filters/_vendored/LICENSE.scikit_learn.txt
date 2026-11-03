@@ -24,7 +24,7 @@ clause 2:
     - scikit-learn developers (https://scikit-learn.org/) — algorithmic
       descriptions of IsolationForest, LOF, and MCD.
 
-The n4m source files in this directory are licensed under CECILL-2.1
-(see the repository-level LICENSE file). This NOTICE serves as
+The n4m source files in this directory are licensed under CECILL-2.1 OR
+AGPL-3.0-or-later (see the repository-level LICENSING.md). This NOTICE serves as
 clarification that the algorithms are derived from BSD-3-licensed
 reference implementations; the C code itself is original.

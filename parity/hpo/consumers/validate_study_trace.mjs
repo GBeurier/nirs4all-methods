@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Independent, dependency-free JavaScript consumer for StudyTrace v1 goldens.
 
 import { readFileSync } from "node:fs";

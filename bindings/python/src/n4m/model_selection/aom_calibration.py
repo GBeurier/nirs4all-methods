@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Native AOM calibrations with explicit branch, bank and search contracts.
 
 All model calculations (including fold-local SNV/MSC, covariance screening,

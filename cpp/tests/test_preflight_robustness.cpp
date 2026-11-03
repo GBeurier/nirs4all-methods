@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Property and oracle tests for the Preflight SNV, noise-proxy and
 // tolerance-pair kernels (ABI 2.20) on the supported numerical domain D
 // (lead rules 13/15): every nonzero |x| in [2^-256, 2^256] and, per row,

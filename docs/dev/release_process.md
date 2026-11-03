@@ -324,8 +324,8 @@ New submission.
 n4m <version> — a portable Partial Least Squares (PLS) and Near-Infrared
 Spectroscopy (NIRS) engine. The C++17/C numerical core (233 vendored
 translation units under src/vendor/) is compiled from source at install time;
-no external system library is required. License: CeCILL-2.1 (a GPL-compatible
-French free-software license, in R's license database). Imports: stats only.
+no external system library is required. License: CeCILL-2.1 | AGPL (>= 3) (both in
+R's license database). Imports: stats only.
 
 SystemRequirements: GNU make — the Makevars use $(shell find ...) to enumerate
 the vendored sources without hard-coding each filename.
@@ -358,8 +358,7 @@ pls4all <version> — a portable Partial Least Squares engine for chemometrics: 
 slim, PLS-focused distribution carved from the nirs4all-methods library. The
 C++17/C numerical core (233 vendored translation units under src/vendor/)
 is compiled from source at install time; no external system library is required.
-License: CeCILL-2.1 (a GPL-compatible French free-software license, in R's
-license database). Imports: stats only.
+License: CeCILL-2.1 | AGPL (>= 3) (both in R's license database). Imports: stats only.
 
 SystemRequirements: GNU make — the Makevars use $(shell find ...) to enumerate
 the vendored sources without hard-coding each filename.
