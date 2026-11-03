@@ -4,6 +4,23 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.14] - 2026-11-03
+
+Licensing metadata patch: no numerical kernel, public API or exported symbol
+change (the public headers carry the new project version and the dual SPDX
+identifier). C ABI 2.20.0 unchanged.
+
+### Changed
+
+- Every published surface declares the dual license
+  `CECILL-2.1 OR AGPL-3.0-or-later`, which `LICENSING.md` and the Rust crate
+  already offered: PyPI `nirs4all-methods` and `pls4all`, npm
+  `@nirs4all/methods`, the R packages `n4m` and `pls4all`
+  (`CeCILL-2.1 | AGPL (>= 3)`), `CITATION.cff`, the catalog subsets and the
+  source SPDX headers. The Python distributions, the npm package and the
+  MATLAB/Octave archive ship both license texts. Vendored BSD-3-Clause code
+  keeps its own license.
+
 ## [1.3.13] - 2026-11-02
 
 Release-hygiene patch: no numerical kernel, public API or exported symbol
