@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // One-way random-effects variance components x_ij = mu + u_i + e_ij with
 // u_i ~ N(0, s2b) and e_ij ~ N(0, s2w), estimated by REML for balanced or
 // unbalanced groups.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Continue a Python N4MOPT checkpoint in R, then produce the reciprocal one.
 suppressPackageStartupMessages(library(n4m))
 directory <- commandArgs(trailingOnly = TRUE)[1]

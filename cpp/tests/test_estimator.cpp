@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Manifest-driven conformance suite for the generic estimator surface.
 // Every estimator in the compiled manifest is fitted on a train split,

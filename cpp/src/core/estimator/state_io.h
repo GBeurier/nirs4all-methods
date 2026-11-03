@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal, C-callable serialization of kernel fitted state (not part of the
  * public ABI). Kernels that own an opaque state struct implement

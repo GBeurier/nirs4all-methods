@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // One-way random-effects REML and confidence intervals against independent
 // references recorded as test-only constants:
 //  * "dense": REML maximised on the full matrices V = s2b ZZ' + s2w I with

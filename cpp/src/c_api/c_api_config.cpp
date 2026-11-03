@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrappers for n4m_config_t. Every setter validates its input
 // and leaves the config UNCHANGED on rejection (idempotent failure). Every

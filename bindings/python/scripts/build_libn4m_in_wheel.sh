@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Build libn4m + stage it inside the Python source tree so the wheel ships
 # it as package data. Invoked by cibuildwheel via:

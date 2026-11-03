@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Portable, fail-closed optimizer checkpoint (N4MOPT v1). Every scalar is
 // little-endian and every collection is length-prefixed. The format stores the

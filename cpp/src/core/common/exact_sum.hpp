@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Exact signed accumulator of sums of products of binary64 values (a Kulisch
 // fixed-point accumulator). Every product a*b of finite doubles is an integer
 // multiple of 2^-2148 below 2^2048; the accumulator holds such sums exactly

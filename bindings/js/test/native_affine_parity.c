@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  * Native check for the raw-pointer shim used by fitModel. The held-out
  * predictions are frozen in nirs4all's portable-affine-methods.R recipe test.
  * Build after cmake --preset dev-release && cmake --build --preset dev-release:

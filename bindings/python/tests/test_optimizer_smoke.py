@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Smoke test for the native HPO optimizer Python wrapper.
 
 Run against a built libn4m:  N4M_LIB_PATH=/path/to/libn4m.so.2.1.0 \

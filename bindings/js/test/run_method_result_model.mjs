@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // The JS binding promotes a native GroupSparse result without host arithmetic.
 
 import assert from "node:assert/strict";

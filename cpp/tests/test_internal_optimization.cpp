@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal transaction-safety tests for the HPO optimizer. These need direct
 // access to hidden C++ symbols and therefore run in n4m_internal_tests, which

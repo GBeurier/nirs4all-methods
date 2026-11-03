@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // GaSampler (F3) — real-coded genetic algorithm over the unit hypercube. A
 // candidate is a unit vector u∈[0,1)^P decoded per parameter; a generation of

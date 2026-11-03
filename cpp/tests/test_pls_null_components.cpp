@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Consumers of fitted PLS / PCR models with null components (components
 // flagged in N4M_MODEL_UNRESOLVED_COMPONENTS with zero W, P, R, T columns):

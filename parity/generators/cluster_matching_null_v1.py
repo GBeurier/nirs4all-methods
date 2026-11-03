@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generate parity/fixtures/cluster_matching_null_v1.json.
 
 Test-only reference gate for four ABI 2.20 kernels used by cluster matching,

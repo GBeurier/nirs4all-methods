@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal-core tests for the shared SVD / symmetric-eigen helpers
 // (core/common/svd.c) on degenerate, near-degenerate and extreme-magnitude

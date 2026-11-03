@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Ruby binding around libn4m's `n4m_pls_fit_simple` C ABI helper.
 # Uses Fiddle from the Ruby standard library — no extra gems required.

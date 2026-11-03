@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrappers for the native ask/tell hyperparameter optimizer
 // (optimization role header, ABI 2.2). Translates opaque handles to the

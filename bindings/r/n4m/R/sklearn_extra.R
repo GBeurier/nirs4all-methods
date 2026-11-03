@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Formula+S3 tier-2 wrappers for the remaining MethodResult-based
 # algorithms. Each constructor returns a `n4m_method_fit` S3

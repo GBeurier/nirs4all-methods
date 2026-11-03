@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Thin binding for the complete native raw multimodal predictor (ABI 2.16).
 
 Sources are already aligned by the caller. Learned encoders, categorical

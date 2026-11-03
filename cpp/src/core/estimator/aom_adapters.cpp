@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Estimator adapters of the AOM / POP family. The sweeps, the AOM / POP-PLS
 // selectors, the Ridge blender, the operator PLS stack, the robust-HPO

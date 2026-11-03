@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal-core unit tests for the shared dense linear-algebra helpers in
 // core/common/linalg.c (Householder QR + Q^T apply + back-substitution).

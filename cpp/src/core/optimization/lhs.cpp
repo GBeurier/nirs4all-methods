@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // LhsSampler (F1) — Latin Hypercube sampling over the numeric axes. For the
 // first `n_startup_trials` asks it hands out a stratified + jittered design

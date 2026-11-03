@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Shared dense SVD helpers used by Phase 9 feature-selection operators
  * (FlexiblePCA, FlexibleSVD) and potentially by Phase 8 / Phase 19 agents

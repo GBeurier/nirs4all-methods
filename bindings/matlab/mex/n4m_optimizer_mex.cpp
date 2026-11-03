@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // MATLAB/Octave handle bridge for the existing libn4m optimizer C ABI.
 #include <algorithm>
 #include <cmath>

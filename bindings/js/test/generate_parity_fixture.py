@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generate the parity fixture consumed by `run_smoke.mjs`.
 
 Fits the same (X, Y) PLS regression that the WASM smoke fits, using

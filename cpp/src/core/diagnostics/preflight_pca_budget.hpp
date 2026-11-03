@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Guaranteed work and memory bounds of n4m_preflight_pca_compute{,_resolved}
 // (cpp/src/c_api/c_api_preflight.cpp), checked before any allocation. Kept

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Compile-only guard: proves n4m/optimization.h is independently includable as
 // C++ (no prior include of n4m/n4m.h). Contributes no runtime test; if the

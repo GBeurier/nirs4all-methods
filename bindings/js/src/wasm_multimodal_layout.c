@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* Compile-time guards for the thin wasm32 descriptor offsets. */
 #include <stddef.h>
 #include "n4m/multimodal.h"

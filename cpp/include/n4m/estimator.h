@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* cpp/include/n4m/estimator.h — generic estimator roles (ABI 2.13).
  *
  * Every catalog method with a reusable fitted state is exposed through one

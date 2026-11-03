@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Smoke + parity tests for the edge, spline, and random augmenter slice.
 // Each operator gets a smoke test that exercises create / apply / destroy

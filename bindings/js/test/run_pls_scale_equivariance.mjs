@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Scale equivariance of every PLSRegression solver and the PCR estimator role
 // without autoscaling (center on, scale off, the preflight probe settings).
 // Fitting X 2^k, Y 2^m must predict exactly 2^m times the base predictions,

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * UnsharpSpectralMask augmenter — sharpens each spectrum using a single
  * shared smoothing kernel and a per-sample amplification factor.

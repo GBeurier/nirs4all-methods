@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* cpp/include/n4m/transform/wavelet.h — transform.wavelet methods (ABI 2.0). */
 #ifndef N4M_TRANSFORM_WAVELET_H
 #define N4M_TRANSFORM_WAVELET_H

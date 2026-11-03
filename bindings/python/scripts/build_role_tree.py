@@ -16,7 +16,7 @@ import os
 # scripts/ -> python/ -> bindings/python
 PY_BINDINGS = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(PY_BINDINGS, "src", "n4m")
-H = "# SPDX-License-Identifier: CECILL-2.1\n"
+H = "# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later\n"
 
 # leaf module path -> list of public class names re-exported verbatim from n4m._impl
 CLASS_LEAVES: dict[str, list[str]] = {

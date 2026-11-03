@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Native role pipeline (ABI 2.14): the shared fixture written by the Python
 // binding (also replayed by R and Rust). Its pipelines predict identically in
 // JS/WASM, JS refits reproduce the Python fits, and the negative cases are

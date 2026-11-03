@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Thin R wrappers around the libn4m preprocessing and splitter C ABI.
  * These functions do only R <-> C shape/layout translation; the numerical

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Refusals of the generic estimator roles: the shared negative fixture (also
 // replayed by Python, R and Rust) gives the same refusals and the same
 // surviving state in JS/WASM.

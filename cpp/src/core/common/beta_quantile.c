@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* Small-tail Beta quantile; see beta_quantile.h for the contract. */
 
 #include "beta_quantile.h"

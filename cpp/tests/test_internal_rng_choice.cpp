@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Direct unit tests for the INTERNAL PCG64 bounded-integer + choice-without-
 // replacement primitives. These symbols are hidden in libn4m (visibility +

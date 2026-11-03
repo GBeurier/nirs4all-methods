@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Vendored Ziggurat constants for the standard normal distribution.
  *
@@ -6,7 +6,7 @@
  * scalar constants `ziggurat_nor_r` and `ziggurat_nor_inv_r` are bit-exact
  * copies from NumPy 1.26.4's `numpy/random/src/distributions/ziggurat_constants.h`
  * (BSD-3-Clause — NumPy developers). BSD-3-Clause is compatible with
- * CeCILL-2.1, the licence of n4m.
+ * CECILL-2.1 OR AGPL-3.0-or-later, the licence of n4m.
  *
  * These tables are internal-only and never appear in `n4m/n4m.h`.
  *

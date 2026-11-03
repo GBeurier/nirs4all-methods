@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 # MethodResult regressors whose coefficients define a reusable affine model.
 # The dispatcher remains the fitting source of truth; this S3 layer owns the

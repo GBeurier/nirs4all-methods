@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Sample-filter role adapters over the outlier kernels (core/filters/*):
 // fit learns the keep rule on training rows, apply_mask writes 1 (keep) or 0

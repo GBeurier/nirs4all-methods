@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal C engine for the group-aware SPXY K-Fold splitter. Public ABI
  * lives in n4m.h §15.

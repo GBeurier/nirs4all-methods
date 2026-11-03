@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Tier-1 R wrappers for the remaining MethodResult fits, selectors and
 # diagnostics exposed by the unified dispatcher (r_dispatch.c). The

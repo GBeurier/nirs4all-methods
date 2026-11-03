@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Fresh Python/oracle fixture, native fit and native replay; no skip fallback.
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1L) stop("actual raw classifier fixture JSON path required")

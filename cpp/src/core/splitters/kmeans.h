@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal C engine for the KMeans-based splitter. Public ABI lives in
  * n4m.h §15. Uses a vendored k-means++ initialisation + Lloyd iterations.

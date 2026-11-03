@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Multi-block PLS extensions: O2PLS, SO-PLS, OnPLS, ROSA. Internal
 // kernels — public ABI wrappers ship with the binding tranche.

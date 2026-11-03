@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 test_that("one native contract exposes all nine ordered sample splitters", {
     samples <- 1:30

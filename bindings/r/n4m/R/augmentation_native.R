@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 .n4m_native_augmentation_kinds <- c(
     gaussian_noise = 0L, multiplicative_noise = 1L, spike_noise = 2L,

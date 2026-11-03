@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Independent semantic oracle for the versioned HPO StudyTrace contract.
 
 This module is test-only and deliberately imports no n4m production package.

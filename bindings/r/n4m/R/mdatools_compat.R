@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Compatibility facade for the common `mdatools::pls(x, y, ...)` idiom.
 # This does not import mdatools; it mirrors the matrix-oriented signature

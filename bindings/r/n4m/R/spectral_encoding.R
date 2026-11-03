@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 #' Fit a native local variance subspace encoder
 #' @param X Training spectra, samples by channels.

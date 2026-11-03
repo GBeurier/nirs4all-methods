@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* Raw-pointer adapters for by-value matrix views; no numerical code. */
 #include "n4m/n4m.h"
 

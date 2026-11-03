@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * nirs4all-methods — public C ABI (version: see N4M_ABI_VERSION_* in n4m_version.h).
  *

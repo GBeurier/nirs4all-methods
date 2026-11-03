@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 import io.github.pls4all.Pls4all;
 import java.io.IOException;
 import java.nio.file.Files;

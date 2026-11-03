@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Public ABI tests for n4m_model_selection_sweep_run. The key test compares the moment-based
 // OOF predictions against a materialized fold-by-fold n4m_estimators_ridge_fit reference.

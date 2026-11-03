@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal access from the public preprocessing handles to their kernel
 // fitted state, for the estimator adapters (fitted_core.cpp). The handles

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 fixture_path <- Sys.getenv("N4M_INTRINSIC_FIXTURE")
 if (!nzchar(fixture_path)) {
   fixture_path <- system.file("parity", "intrinsic_diagnostics.v1.json", package = "n4m")

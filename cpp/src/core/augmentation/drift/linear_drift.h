@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * LinearBaselineDrift — Phase 15 augmenter (n4m_aug_linear_drift_*).
  *

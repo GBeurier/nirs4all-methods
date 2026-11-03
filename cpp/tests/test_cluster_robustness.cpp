@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Magnitude, translation and constant-column property tests for the
 // clustering kernels (HDBSCAN, linear sum assignment, multivariate normal and
 // adjusted Rand index). Every scaled run must either reproduce the unscaled

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Interval Random Frog — Random Frog applied to fixed-width sliding
 // intervals over the spectral axis. Mirrors libPLS 1.95 `irf.m`.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Test-only adapter exposing the legacy AOM/moment facade surface.
 
 The public ``n4m`` package no longer re-exports the flat AOM/moment functions

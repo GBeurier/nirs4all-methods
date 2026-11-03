@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Schema: catalog/schema/subset_v1.json
 # Status: PLANNED — no build glue generated at v1.0.0.
 package: nirs4all-preprocessing
@@ -9,7 +9,7 @@ description: |
   unified nirs4all-methods source tree.
 maintainers:
   - "Grégory Beurier <beurier@cirad.fr>"
-license: CECILL-2.1
+license: CECILL-2.1 OR AGPL-3.0-or-later
 status: planned
 activates_in_release: null
 abi:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // .NET / C# binding around libn4m's `n4m_pls_fit_simple` C ABI helper.
 // Parity-gated against the shared cross-binding fixture

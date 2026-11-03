@@ -1,6 +1,6 @@
 # NOTICE — third-party software bundled with nirs4all-methods
 
-This library is licensed under CECILL-2.1 (see `LICENSE`).
+This library is licensed under CECILL-2.1 OR AGPL-3.0-or-later (see `LICENSING.md`).
 Bundled within the source distribution and/or the compiled
 shared library are the following third-party components,
 each retaining its original license:

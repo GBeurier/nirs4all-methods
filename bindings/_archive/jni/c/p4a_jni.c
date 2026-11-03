@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  *
  * JNI shim that bridges io.github.pls4all.Pls4all to the libn4m
  * public C ABI. Compiles into libp4a_jni.so which links against

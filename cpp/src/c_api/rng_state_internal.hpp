@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal-only definition of `n4m_rng_pcg64_state_t` shared between the
 // translation units that wrap the PCG64 engine (`c_api_rng.cpp`) and the

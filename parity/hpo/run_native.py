@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Run an HpoSpec through the native libn4m optimizer (Python binding) and emit a
 StudyTrace — the binding-neutral record every other binding must reproduce.
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #include "core/linear_stack.hpp"
 #include "n4m/n4m.h"
 extern "C" N4M_API n4m_status_t

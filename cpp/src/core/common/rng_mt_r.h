@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal R-compatible Mersenne-Twister RNG for n4m.
  *
@@ -16,7 +16,7 @@
  *
  * Algorithm vendored / re-derived from R's `src/main/RNG.c` and `qnorm.c`
  * (Wichura AS 241), GPL-2 — re-implemented from the public algorithm, not
- * copied verbatim, so it is license-compatible with CeCILL-2.1.
+ * copied verbatim, so it is license-compatible with CECILL-2.1 OR AGPL-3.0-or-later.
  */
 #ifndef N4M_CORE_COMMON_RNG_MT_R_H
 #define N4M_CORE_COMMON_RNG_MT_R_H

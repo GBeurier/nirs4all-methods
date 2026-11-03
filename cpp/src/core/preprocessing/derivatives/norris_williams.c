@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * NorrisWilliams reference implementation.  See norris_williams.h for the
  * algorithm summary.  Boundary handling uses edge replication (clamp to the

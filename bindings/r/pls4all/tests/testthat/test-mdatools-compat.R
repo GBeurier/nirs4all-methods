@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 skip_if_no_libn4m <- function() {
     so <- tryCatch(getLoadedDLLs()[["pls4all"]], error = function(e) NULL)

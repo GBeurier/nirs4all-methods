@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Internal C engine for the Kennard-Stone sample-partitioning splitter
  * (max-min Euclidean distance on X). The public C ABI lives in n4m.h §15

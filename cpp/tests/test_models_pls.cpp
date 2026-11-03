@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Model-fixture parity tests for the core regression-solver PLS families that
 // are reachable through the public `n4m_model_fit` / `n4m_model_predict` /

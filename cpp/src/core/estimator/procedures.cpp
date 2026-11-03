@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Procedure runners (n4m_procedure_run): one-shot methods without reusable
 // state. Splitters go through n4m_splitter_run fold by fold, the ABI 2.11

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Locked ML-namespace role aliases (ABI 2.0 migration, TARGET_NAMESPACE_ML.md).
 #

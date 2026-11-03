@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Reference outputs of augmentation.splines.spline_smoothing captured from
 // the vendored Fortran FITPACK build (SciPy 1.17.1 curfit/splev, gfortran
 // 15.2 -O3) before its C translation replaced it.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Idiomatic .NET tier-2 wrapper around Pls4all.Pls4all.Fit. Provides a
 // ML.NET-style estimator with Fit / Predict / Score methods on a

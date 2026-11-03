@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * SNIP — Ryan 1988 / Morháč 1997 statistics-sensitive non-linear iterative
  * peak-clipping baseline.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Consumers of PLS models with null (unresolved) components, through the raw
 // C ABI on WASM (mirrors cpp/tests/test_pls_null_components.cpp). With the
 // centred, orthogonal a = (-3,-1,1,3), b = (1,-3,3,-1) (a'a = b'b = 20):

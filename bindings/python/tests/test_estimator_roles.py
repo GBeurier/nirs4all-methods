@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generic estimator roles (ABI 2.13): Python facade over n4m_estimator_*."""
 
 from __future__ import annotations

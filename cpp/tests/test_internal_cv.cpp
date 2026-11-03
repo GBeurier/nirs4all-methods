@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal-core parity tests for the cross-validation / model-selection
 // families that have NO public C ABI surface (they are exercised only through

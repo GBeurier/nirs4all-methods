@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Optional scikit-learn base classes.
 
 The Python wheel only requires NumPy, but when scikit-learn is installed the

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 # Raw object translation only; the complete learned recipe belongs to Methods.
 .n4m_mm_keys <- function(value, expected) {
   if (!is.list(value) || !setequal(names(value), expected) ||

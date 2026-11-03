@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Shared MatrixRef definition for the mechanically generated model-parity
 // fixture headers (parity/python_generator/src/pls4all_parity/cpp_header.py).

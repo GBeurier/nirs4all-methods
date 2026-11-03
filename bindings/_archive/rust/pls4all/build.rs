@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Build script for the pls4all Rust binding. Tells cargo where to
 // find libn4m's shared object. The PLS4ALL_LIB_DIR env var overrides

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Manifest-driven conformance suite for procedures (n4m_procedure_run).
 // Every procedure in the compiled manifest runs with its default parameters

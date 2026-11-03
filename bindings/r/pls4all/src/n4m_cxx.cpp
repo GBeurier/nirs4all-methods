@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Minimal top-level C++ TU that exists solely to force R's build system
 // into C++ link mode. R-exts (§1.6) warns that R only auto-selects the

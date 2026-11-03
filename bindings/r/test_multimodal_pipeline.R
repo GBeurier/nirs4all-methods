@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) != 1L) stop("raw diagnostic fixture JSON path required")
 library(n4m)

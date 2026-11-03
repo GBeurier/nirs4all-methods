@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Minimal double-double arithmetic (about 106 significant bits) built from
 // error-free transformations (TwoSum, fma TwoProduct), after Dekker (1971)
 // and the QD library algorithms of Hida, Li and Bailey (2001). Used where a

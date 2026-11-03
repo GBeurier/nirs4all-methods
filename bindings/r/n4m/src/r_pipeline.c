@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* Generic R-to-C ABI bridge for fitted preprocessing pipelines. */
 #define R_NO_REMAP
 #include <R.h>

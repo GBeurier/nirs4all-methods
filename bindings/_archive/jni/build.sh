@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Build script for the pls4all JNI desktop binding. Compiles
 # Pls4all.java, generates the JNI header, and builds libp4a_jni.so

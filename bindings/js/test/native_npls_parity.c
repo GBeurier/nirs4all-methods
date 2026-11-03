@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  * Native C-ABI N-PLS oracle: compare the WASM raw-pointer shim with the
  * canonical SIMPLS/no-scale direct fit and held-out affine predictions.
  */

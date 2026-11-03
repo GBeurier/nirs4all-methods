@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
 .n4m_preprocess_kinds <- c(
     identity = 0L, center = 1L, autoscale = 2L, pareto_scale = 3L,

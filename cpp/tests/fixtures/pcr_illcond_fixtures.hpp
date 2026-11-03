@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Ill-conditioned PCR parity reference, generated with numpy SVD-based PCR.
 //
 // Design: n=60 samples, p=400 features, a=8 retained components.

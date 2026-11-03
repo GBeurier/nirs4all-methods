@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * ResampleTransformer — linear resample of every row to a fixed `num_samples`
  * target column count, sharing the same [0, 1] normalised axis as scipy

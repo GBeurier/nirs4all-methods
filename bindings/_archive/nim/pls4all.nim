@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 ##
 ## Nim binding around libn4m's `n4m_pls_fit_simple` C ABI helper.
 ## Uses Nim's built-in `{.importc, dynlib.}` pragmas — no nimble

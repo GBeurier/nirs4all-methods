@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Idiomatic Go tier-2 wrapper around pls4all.Fit. Mirrors the
 // gonum/learn-style estimator surface: Fit / Predict / Score on a

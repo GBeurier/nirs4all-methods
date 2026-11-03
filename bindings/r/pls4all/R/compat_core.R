@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Shared helpers for R ecosystem compatibility facades. These helpers are
 # intentionally package-local: they expose pls/plsr/mdatools-like entry

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Compatibility facade for the R `pls` package idiom. This is not an
 # import of `pls`: it provides familiar function signatures and S3

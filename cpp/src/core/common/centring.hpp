@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Exponent-managed centring shared by the statistics kernels: exact
 // power-of-two rescaling and translation-stable centring, so a scale is
 // always chosen from centred variation, never from raw magnitudes.

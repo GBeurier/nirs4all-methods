@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """External / independent references for HPO parity.
 
 Two kinds of check, matching the tiers used across the rest of the project:

@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * SavitzkyGolay reference implementation. Mirrors scipy.signal.savgol_filter
  * (scipy 1.11.4 source kept canonical; 1.17.x produces identical bytes for

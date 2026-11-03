@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Public TypeScript API for the @nirs4all/methods binding — a
 // non-idiomatic function library over libn4m (raw typed arrays in/out). See

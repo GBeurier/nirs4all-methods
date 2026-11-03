@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """scikit-learn facade over the generic native roles (ABI 2.13).
 
 Every class in :mod:`n4m.roles` is a thin, generated subclass of a role base:

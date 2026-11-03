@@ -10,7 +10,7 @@
     <Version>0.97.3</Version>
     <Authors>pls4all contributors</Authors>
     <Description>.NET bindings for the pls4all PLS / NIRS engine (libp4a).</Description>
-    <PackageLicenseExpression>CECILL-2.1</PackageLicenseExpression>
+    <PackageLicenseExpression>CECILL-2.1 OR AGPL-3.0-or-later</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/GBeurier/pls4all</PackageProjectUrl>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

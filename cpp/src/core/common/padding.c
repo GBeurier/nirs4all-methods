@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /*
  * Implementation of n4m_pad_resolve_index. The branchy modes (reflect /
  * mirror) compute their canonical index through a single Euclidean modulus.

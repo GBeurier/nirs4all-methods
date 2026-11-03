@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Generate ``bindings/python/src/n4m/_ffi_decls.py`` from the public C ABI headers.
 
 The generator parses every ``N4M_API`` function prototype declared in
@@ -73,7 +73,7 @@ SCALAR_MAP = {
 }
 
 # Header. Kept byte-stable so ``--check`` diffs cleanly across regenerations.
-FILE_HEADER = '''# SPDX-License-Identifier: CECILL-2.1
+FILE_HEADER = '''# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 """Auto-generated ctypes argtypes/restype declarations for libn4m.
 
 Do not edit by hand. Regenerate with::

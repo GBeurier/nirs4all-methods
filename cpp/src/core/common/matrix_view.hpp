@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal helpers for n4m_matrix_view_t validation. The struct itself is
 // declared in n4m/n4m.h and is part of the public C ABI; these helpers

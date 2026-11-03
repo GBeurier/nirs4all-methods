@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // MATLAB/Octave translation of the existing ABI 2.14 RolePipeline surface.
 #include <cmath>
 #include <cstdint>

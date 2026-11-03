@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 // Unit invariance of the consumers of fitted PLS models, through the raw C
 // ABI on WASM (mirrors the scale-invariance cases of
 // cpp/tests/test_pls_null_components.cpp). With the centred, orthogonal

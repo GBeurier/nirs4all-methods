@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
  * Deterministic malformed-MethodResult regression for the WASM model shim.
  * Build after cmake --preset dev-release && cmake --build --preset dev-release:
  * gcc -std=c11 -Wall -Wextra -Werror -ffunction-sections -fdata-sections \

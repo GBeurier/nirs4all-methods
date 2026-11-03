@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrappers for the Phase 13 XOutlierFilter
 // (n4m_filter_x_outlier_*). Six selectable methods over one operator.

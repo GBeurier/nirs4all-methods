@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // TernarySampler (F1) — unimodal-integer search over a single axis, porting the
 // nirs4all BinarySearchSampler. It probes low / high / midpoint first, then

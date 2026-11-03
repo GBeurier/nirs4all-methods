@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Estimator adapters whose fitted state is a core kernel struct rather than
 // an N4MM model: the non-affine regressors (kernel PLS, GPR-on-PLS, LW-PLS,

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // CmaEsSampler (F4) — separable (diagonal) CMA-ES over the CONTINUOUS axes of the
 // search space (Ros & Hansen 2008). The distribution (mean, diagonal covariance,

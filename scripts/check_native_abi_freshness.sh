@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: CECILL-2.1
+# SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 #
 # Local release gate for the native libn4m ABI surface. This complements
 # regen_abi_snapshots.sh --check with loadability, symbol-prefix, SONAME/RPATH,

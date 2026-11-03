@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // extern "C" wrappers for the Phase 12 filter operators (new ABI category
 // `n4m_filter_*`). The single operator landed in Phase 12 is YOutlierFilter

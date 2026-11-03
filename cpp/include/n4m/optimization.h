@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: CECILL-2.1 */
+/* SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later */
 /* cpp/include/n4m/optimization.h — native hyperparameter-optimization role
  * header (ABI 2.2). A handle-based ask/tell optimizer + typed search space,
  * with nine samplers and five pruners behind one stable enum-based ABI. See

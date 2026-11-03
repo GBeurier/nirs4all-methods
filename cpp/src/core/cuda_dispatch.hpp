@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: CECILL-2.1
+// SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 //
 // Internal cuBLAS dispatch surface (Phase 45). Included only when
 // N4M_USE_CUDA is defined — the header itself is safe to include
