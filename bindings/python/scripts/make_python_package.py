@@ -116,7 +116,7 @@ version = "{version}"
 description = "{description}"
 authors = [{{ name = "Grégory Beurier and contributors" }}]
 license = "CECILL-2.1 OR AGPL-3.0-or-later"
-license-files = ["LICENSE", "LICENSES/*.txt"]
+license-files = ["LICENSE", "LICENSES/*.txt", "THIRD_PARTY_LICENSES.md"]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.21", "typing-extensions>=4.0; python_version < '3.11'"]
@@ -146,6 +146,7 @@ license = CECILL-2.1 OR AGPL-3.0-or-later
 license_files =
     LICENSE
     LICENSES/*.txt
+    THIRD_PARTY_LICENSES.md
 long_description = file: README.md
 long_description_content_type = text/markdown
 url = https://github.com/GBeurier/nirs4all-methods
@@ -224,6 +225,7 @@ def generate(name: str) -> Path:
     for asset in ("setup.py", "LICENSE"):
         shutil.copy2(SRC_PKG / asset, out / asset)
     shutil.copytree(SRC_PKG / "LICENSES", out / "LICENSES")
+    shutil.copy2(REPO / "THIRD_PARTY_LICENSES.md", out / "THIRD_PARTY_LICENSES.md")
     # Generate a per-package README — do NOT copy bindings/python/README.md,
     # which documents the slim `pls4all` surface and would mislabel the full
     # `nirs4all-methods` (module `n4m`) package on PyPI.

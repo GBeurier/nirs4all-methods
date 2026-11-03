@@ -18,12 +18,8 @@ implied. See the license texts for the complete legal terms.
 
 ---
 
-Vendored third-party components (test-only or build-only - not linked
-into the public `libn4m` shared library):
-
-* doctest (cpp/tests/doctest/doctest.h) - MIT License
-  Copyright (c) 2016-2024 Viktor Kirilov
-  Used to compile the test executable. Not part of any shipped artefact.
-
-Additional vendored components will be listed here as they are added,
-each with their license and the path within the repository.
+Third-party material compiled into libn4m (BSD-3-Clause and MIT: FITPACK,
+SciPy rectangular LSAP, scikit-learn/hdbscan-derived reimplementations,
+NumPy/PCG random-number algorithms and tables) keeps its own license. The
+notices, conditions and disclaimers are in THIRD_PARTY_LICENSES.md, shipped
+with the distributions built from this tree.
