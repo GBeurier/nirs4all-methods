@@ -26,8 +26,8 @@
 
 #define N4M_PROJECT_VERSION_MAJOR  1
 #define N4M_PROJECT_VERSION_MINOR  3
-#define N4M_PROJECT_VERSION_PATCH  13
-#define N4M_PROJECT_VERSION_STRING "1.3.13"
+#define N4M_PROJECT_VERSION_PATCH  14
+#define N4M_PROJECT_VERSION_STRING "1.3.14"
 
 /* Canonical error-buffer capacity for n4m_context_t. The 4 KiB figure is part
  * of the ABI contract — see docs/architecture/error_model.md. Bindings may
