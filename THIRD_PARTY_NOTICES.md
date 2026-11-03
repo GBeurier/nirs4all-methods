@@ -6,7 +6,7 @@ components below — they are pulled from their official distributions — but t
 acknowledged here as a courtesy and for compliance. Licenses are reported on a best-effort
 basis; the authoritative text always ships with each upstream project.
 
-`nirs4all-methods` (`libn4m`) has a C++17 core with **zero mandatory third-party dependencies** — it links only the C++ standard library. The components below are **optional** (dev/test) or belong to the **language bindings**, which only translate native objects and add their host ecosystem's dependencies. No third-party source is vendored into the shipped library.
+`nirs4all-methods` (`libn4m`) has a C++17 core with **zero mandatory third-party dependencies** — it links only the C++ standard library. The components below are **optional** (dev/test) or belong to the **language bindings**, which only translate native objects and add their host ecosystem's dependencies. BSD-3-Clause and MIT material compiled into `libn4m` (FITPACK, SciPy LSAP, scikit-learn/hdbscan- and NumPy/PCG-derived code) is listed with its notices in [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md), which the Python and npm distributions ship.
 
 | Component | License (SPDX) | Upstream |
 |---|---|---|
