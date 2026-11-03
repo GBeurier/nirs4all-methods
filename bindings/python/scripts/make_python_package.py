@@ -225,7 +225,7 @@ def generate(name: str) -> Path:
     for asset in ("setup.py", "LICENSE"):
         shutil.copy2(SRC_PKG / asset, out / asset)
     shutil.copytree(SRC_PKG / "LICENSES", out / "LICENSES")
-    shutil.copy2(REPO / "THIRD_PARTY_LICENSES.md", out / "THIRD_PARTY_LICENSES.md")
+    shutil.copy2(SRC_PKG / "THIRD_PARTY_LICENSES.md", out / "THIRD_PARTY_LICENSES.md")
     # Generate a per-package README — do NOT copy bindings/python/README.md,
     # which documents the slim `pls4all` surface and would mislabel the full
     # `nirs4all-methods` (module `n4m`) package on PyPI.

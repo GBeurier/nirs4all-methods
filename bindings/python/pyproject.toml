@@ -13,7 +13,7 @@ version = "1.3.14"
 description = "Slim PLS-focused Python binding for the libn4m C ABI from nirs4all-methods."
 authors = [{ name = "Grégory Beurier and contributors" }]
 license = "CECILL-2.1 OR AGPL-3.0-or-later"
-license-files = ["LICENSE", "LICENSES/*.txt"]
+license-files = ["LICENSE", "LICENSES/*.txt", "THIRD_PARTY_LICENSES.md"]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.21", "typing-extensions>=4.0; python_version < '3.11'"]
