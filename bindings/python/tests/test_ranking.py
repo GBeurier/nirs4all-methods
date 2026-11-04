@@ -130,3 +130,42 @@ def test_relative_gain_preserves_near_equal_large_positive_losses():
     result = ranking.paired_relative_gain([baseline], [candidate])
     assert result["mean_gain"] == (baseline - candidate) / baseline
     assert result["sample_sd"] is None
+
+
+@pytest.mark.parametrize(
+    "variances, expected_se",
+    [([1e-16, 1], 1e-8), ([1e-16, 1e-16], np.sqrt(5e-17)), ([1e-300, 1e300], 1e-150)],
+)
+def test_dl_dominant_weight_avoids_cancellation(variances, expected_se):
+    # Identical effects imply exactly Q=tau²=I²=0 for arbitrary positive variances.
+    # Old sw - sw2/sw cancelled to zero for the first finite-input case.
+    try:
+        result = ranking.paired_relative_gain([2, 2], [1, 1], variances=variances)
+    except N4MError as error:
+        if np.finfo(np.longdouble).minexp == np.finfo(
+            np.float64
+        ).minexp and variances == [1e-300, 1e300]:
+            assert error.status_name == "UNSUPPORTED"
+            return
+        raise
+    assert result["pooled_gain"] == 0.5
+    assert result["tau_squared"] == result["q"] == result["i_squared"] == 0
+    assert result["standard_error"] == pytest.approx(expected_se, rel=2e-15, abs=0)
+    json.dumps(result, allow_nan=False)
+
+
+def test_dl_subnormal_variances_preserve_representable_standard_error():
+    variance = np.nextafter(0.0, 1.0)
+    try:
+        result = ranking.paired_relative_gain(
+            [2, 2], [1, 1], variances=[variance, variance]
+        )
+    except N4MError as error:
+        if np.finfo(np.longdouble).minexp == np.finfo(np.float64).minexp:
+            assert error.status_name == "UNSUPPORTED"
+            return
+        raise
+    # Compute square root before the division to avoid underflow in the oracle.
+    expected = np.sqrt(variance) / np.sqrt(2.0)
+    assert result["standard_error"] > 0
+    assert result["standard_error"] == pytest.approx(expected, rel=2e-15, abs=0)

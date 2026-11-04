@@ -374,39 +374,58 @@ n4m_status_t relative_gain(const double* baseline,
     }
     out = {k, mean, k > 1 ? std::sqrt(std::max(0.0, m2 / (k - 1))) : NaN, NaN, NaN, NaN, NaN, NaN};
     if (variances && k >= 2) {
-        // Scale inverse-variance weights to keep finite positive variances from
-        // overflowing merely because a caller uses small effect units.
-        const double vmin = *std::min_element(vars.begin(), vars.end());
-        double sw = 0, sw2 = 0, fixed = 0;
+        // Positive prefix cross-products evaluate
+        // C = ((sum w)^2 - sum w^2) / sum w without cancellation.
+        // Scaling keeps each weight <=1; extended intermediates preserve the
+        // entire F64 variance range where long double has a wider exponent.
+        const long double vmin =
+            static_cast<long double>(*std::min_element(vars.begin(), vars.end()));
+        const long double df = static_cast<long double>(effects.size() - 1);
+        const long double effect_origin = static_cast<long double>(effects.front());
+        long double sw = 0, cross = 0, fixed = 0;
         for (size_t i = 0; i < effects.size(); ++i) {
-            const double w = vmin / vars[i];
+            const long double w = vmin / static_cast<long double>(vars[i]);
+            // Some targets alias long double to double. Refuse an unrepresentable
+            // positive scaled weight instead of silently dropping a study.
+            if (!(w > 0))
+                return N4M_ERR_UNSUPPORTED;
+            cross += sw * w;
             sw += w;
-            sw2 += w * w;
-            fixed += w * effects[i];
+            fixed += w * (static_cast<long double>(effects[i]) - effect_origin);
         }
-        fixed /= sw;
-        double qscaled = 0;
+        fixed = effect_origin + fixed / sw;
+        long double q = 0;
         for (size_t i = 0; i < effects.size(); ++i) {
-            const double d = effects[i] - fixed;
-            qscaled += vmin / vars[i] * d * d;
+            const long double d = static_cast<long double>(effects[i]) - fixed;
+            const long double standardized = d / std::sqrt(static_cast<long double>(vars[i]));
+            q += standardized * standardized;
         }
-        const double denom = sw - sw2 / sw;
-        if (!(denom > 0))
-            return N4M_ERR_NUMERICAL_FAILURE;
-        const double tau2 = std::max(0.0, (qscaled - (k - 1) * vmin) / denom);
-        const double scale = vmin + tau2;
-        double rw = 0, pooled = 0;
+        const long double denom = 2 * cross / sw;
+        if (!(denom > 0) || !std::isfinite(denom))
+            return N4M_ERR_UNSUPPORTED;
+        const long double tau2 = q > df ? (q - df) * (vmin / denom) : 0;
+        const long double scale = vmin + tau2;
+        long double rw = 0, pooled = 0;
         for (size_t i = 0; i < effects.size(); ++i) {
-            const double w = scale / (vars[i] + tau2);
+            const long double w = scale / (static_cast<long double>(vars[i]) + tau2);
+            if (!(w > 0))
+                return N4M_ERR_UNSUPPORTED;
             rw += w;
-            pooled += w * effects[i];
+            pooled += w * (static_cast<long double>(effects[i]) - effect_origin);
         }
-        const double q = qscaled / vmin;
-        out[3] = pooled / rw;
-        out[4] = std::sqrt(scale / rw);
-        out[5] = tau2;
-        out[6] = q;
-        out[7] = q > 0 ? std::max(0.0, (q - (k - 1)) / q) : 0;
+        const long double values[] = {effect_origin + pooled / rw,
+                                      std::sqrt(scale) / std::sqrt(rw),
+                                      tau2,
+                                      q,
+                                      q > 0 ? std::max(0.0L, (q - df) / q) : 0};
+        for (size_t i = 0; i < 5; ++i) {
+            out[i + 3] = static_cast<double>(values[i]);
+            // Finite representable outputs only; never silently turn a positive
+            // variance, uncertainty, or statistic into zero on narrowing.
+            if (!std::isfinite(values[i]) || !std::isfinite(out[i + 3])
+                || (values[i] != 0 && out[i + 3] == 0))
+                return N4M_ERR_UNSUPPORTED;
+        }
     }
     for (double z : out)
         if (std::isinf(z))
