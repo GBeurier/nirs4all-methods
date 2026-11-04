@@ -6,6 +6,13 @@ include(CMakeFindDependencyMacro)
 # detected at runtime via n4m_context_set_backend(); CMake consumers never
 # need to find anything else to use libn4m.
 
+if(@N4M_WITH_MIXEFF@)
+    if(NOT TARGET n4m::mixeff_backend)
+        add_library(n4m::mixeff_backend STATIC IMPORTED)
+        set_target_properties(n4m::mixeff_backend PROPERTIES
+            IMPORTED_LOCATION "${PACKAGE_PREFIX_DIR}/@CMAKE_INSTALL_LIBDIR@/@N4M_MIXEFF_ARCHIVE_NAME@")
+    endif()
+endif()
 include("${CMAKE_CURRENT_LIST_DIR}/N4mTargets.cmake")
 
 check_required_components(n4m)

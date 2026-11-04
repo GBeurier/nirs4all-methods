@@ -245,7 +245,16 @@
         "N4M_BUILD_TESTS": "OFF",
         "N4M_BUILD_CLI": "OFF"
       }
-    }
+    },
+    {"name": "analysis-baseline", "inherits": "dev-release", "cacheVariables": {"N4M_WITH_MIXEFF": "OFF", "N4M_WITH_RFR": "OFF", "N4M_WARNINGS_AS_ERRORS": "ON"}},
+    {"name": "analysis-mixed", "inherits": "dev-release", "cacheVariables": {"N4M_WITH_MIXEFF": "ON", "N4M_WITH_RFR": "OFF", "N4M_WARNINGS_AS_ERRORS": "ON"}},
+    {"name": "analysis-fanova", "inherits": "dev-release", "cacheVariables": {"N4M_WITH_MIXEFF": "OFF", "N4M_WITH_RFR": "ON", "N4M_WARNINGS_AS_ERRORS": "ON"}},
+    {"name": "analysis-all", "inherits": "dev-release", "cacheVariables": {"N4M_WITH_MIXEFF": "ON", "N4M_WITH_RFR": "ON", "N4M_WARNINGS_AS_ERRORS": "ON"}},
+    {"name": "emscripten-analysis", "inherits": "emscripten", "cacheVariables": {"N4M_WITH_MIXEFF": "ON", "N4M_WITH_RFR": "ON"}},
+    {"name": "analysis-macos-universal2", "inherits": "ci-macos-universal2", "cacheVariables": {"N4M_WITH_MIXEFF": "ON", "N4M_WITH_RFR": "ON"}},
+    {"name": "analysis-windows", "inherits": "ci-windows-msvc-release", "cacheVariables": {"N4M_WITH_MIXEFF": "ON", "N4M_WITH_RFR": "ON"}},
+    {"name": "emscripten-mixed", "inherits": "emscripten", "cacheVariables": {"N4M_WITH_MIXEFF": "ON", "N4M_WITH_RFR": "OFF"}},
+    {"name": "emscripten-fanova", "inherits": "emscripten", "cacheVariables": {"N4M_WITH_MIXEFF": "OFF", "N4M_WITH_RFR": "ON"}}
   ],
   "buildPresets": [
     { "name": "dev-debug",                "configurePreset": "dev-debug" },
@@ -271,7 +280,16 @@
     { "name": "ci-tsan",                  "configurePreset": "ci-tsan" },
     { "name": "ci-asan_ubsan",            "configurePreset": "ci-asan_ubsan" },
     { "name": "ci-fuzz-n4mm",             "configurePreset": "ci-fuzz-n4mm" },
-    { "name": "ci-coverage",              "configurePreset": "ci-coverage" }
+    { "name": "ci-coverage",              "configurePreset": "ci-coverage" },
+    {"name": "analysis-baseline", "configurePreset": "analysis-baseline"},
+    {"name": "analysis-mixed", "configurePreset": "analysis-mixed"},
+    {"name": "analysis-fanova", "configurePreset": "analysis-fanova"},
+    {"name": "analysis-all", "configurePreset": "analysis-all"},
+    {"name": "emscripten-analysis", "configurePreset": "emscripten-analysis"},
+    {"name": "analysis-macos-universal2", "configurePreset": "analysis-macos-universal2", "configuration": "Release"},
+    {"name": "analysis-windows", "configurePreset": "analysis-windows", "configuration": "Release"},
+    {"name": "emscripten-mixed", "configurePreset": "emscripten-mixed"},
+    {"name": "emscripten-fanova", "configurePreset": "emscripten-fanova"}
   ],
   "testPresets": [
     { "name": "dev-debug",                "configurePreset": "dev-debug",                "output": { "outputOnFailure": true } },

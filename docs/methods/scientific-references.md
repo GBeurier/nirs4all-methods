@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **246**
+- Curated records: **249**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -705,6 +705,24 @@ Implementation-specific inverse-regression construction; no canonical paper is c
 Walczak, B. & Massart, D. L. (2001). *Dealing with missing data: Part I and Part II*. Chemometrics and Intelligent Laboratory Systems 58(1), 15--27 and 29--42. DOIs [10.1016/S0169-7439(01)00131-9](https://doi.org/10.1016/S0169-7439(01)00131-9) and [10.1016/S0169-7439(01)00132-0](https://doi.org/10.1016/S0169-7439(01)00132-0).
 
 **Provenance:** Current implementation: [cpp/src/core/model.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/model.cpp).
+
+### [`model_selection_fanova`](model_selection_fanova.md) — Forest functional ANOVA under a declared uniform product measure
+
+Hutter, Hoos and Leyton-Brown (2014), An Efficient Approach for Assessing Hyperparameter Importance, ICML, PMLR 32(1), 754-762, https://proceedings.mlr.press/v32/hutter14.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/component_analysis/fanova.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_fanova.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/fanova.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_fanova.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/backends/rfr/README.md; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/FANOVA.md
+
+### [`model_selection_mixed_effects`](model_selection_mixed_effects.md) — Gaussian ML/REML with explicit fixed designs and random-intercept factors
+
+Bates, Maechler, Bolker and Walker (2015), Fitting Linear Mixed-Effects Models Using lme4, Journal of Statistical Software 67(1): https://doi.org/10.18637/jss.v067.i01. Pinned independent Rust implementation: https://github.com/bbuchsbaum/mixeff-rs/tree/696e5e74623301280142e73cbb6bf7f2650647d7. Development oracle: https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLM.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/backends/mixeff/src/lib.rs; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/backends/mixeff/Cargo.lock; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/mixed_effects.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_mixed_effects.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_mixed_effects.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/mixed_effects_reference_v1.json; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/generate_mixed_effects_reference.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/MIXED_EFFECTS.md
+
+### [`model_selection_normalize_loss`](model_selection_normalize_loss.md) — Dimensionless loss against an explicit matched baseline
+
+The relative-baseline scale is defined by the native protocol at https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/component_analysis.h; this arithmetic utility does not claim a new statistical estimator.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_component_analysis.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/component_analysis.h; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_component_analysis.py
 
 ### [`model_selection_ranking`](model_selection_ranking.md) — Comparable-block rankings with explicit connectivity and approximation
 

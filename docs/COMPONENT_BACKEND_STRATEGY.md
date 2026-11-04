@@ -1,7 +1,6 @@
 # Component analysis backend strategy
 
-Decision assessment, 2026-11-04. This is the strategy stage; no new distribution
-rebuild, PR replacement or claim of shipped backend support is made here.
+Decision and implementation assessment, 2026-11-04. Both recommended static backends are implemented and execute through the native C ABI, Python and JS/WASM. Release tooling enables them in full Python wheels and npm artifacts; ordinary source builds keep optional backends disabled by default.
 
 ## Recommended combination
 
@@ -23,14 +22,23 @@ dependency-free preset with explicit capability reporting for optional backends.
 
 ## What is established and what remains to measure
 
-The existing reproducible probes establish native rfr static linkage and a
-mixeff static Gaussian fit without NLopt. The mixeff Emscripten archive compiles,
-but complete C++/JS linkage and execution remain unqualified. Probe archive sizes
-(rfr 350,702 bytes, mixeff about 82 MB) are **not installed or download sizes**;
-the Rust result is unoptimized. Measure optimized final native/WASM artifact
-increments, peak fit memory and elapsed time during the complete rebuild.
-Try LTO, dead-code elimination and a matrix-only wrapper before considering a
-maintenance-heavy source fork. Never silently replace a failed backend.
+Both engines execute through optimized native and Emscripten 3.1.74 artifacts.
+Python and actual JS/WASM tests fit analytic mixed effects and known fANOVA
+main/interaction cases; an installed wheel and installed static CMake consumer
+also execute both engines. Rust panic-unwind and C++ use the same native WASM
+exception model. Independent statsmodels ML/REML fixtures qualify crossed and
+nested group layouts; technical errors preserve outputs and statistical refusals
+withhold estimates. Native and Clang WASM compilation pass warnings as errors.
+
+Dead-section elimination and stripping reduce the Linux x86-64 combined wheel
+increment to about 0.99 MB and the installed shared library increment to 2.13 MB.
+Mixed effects alone adds about 0.93 MB to the wheel and 2.00 MB installed; fANOVA
+adds about 64 KB and 139 KB. Full same-source native/WASM measurements and the
+reproduction script are `component_analysis_sizes.linux-x86_64.json` and
+`scripts/measure_component_artifacts.py`. These are final artifact measurements,
+not intermediate archive sizes. Platform CI qualifies other release targets;
+Linux measurements do not claim identical cross-platform sizes. Resource caps
+bound supported fits; no automatic substitute engine is used.
 
 ## Analysis presets and qualification
 
@@ -60,8 +68,7 @@ interactions with known variance, all-constant data, confounding and repeated fi
 - [Pinned rfr license](https://github.com/automl/random_forest_run/blob/1ba17650e734edd3ea536efc91d32815c4874e72/LICENSE.txt), [fANOVA paper](https://proceedings.mlr.press/v32/hutter14.html), [separate Python license metadata](https://github.com/automl/fanova/blob/46eb005320a0f67fc6b34ed74a91f702c2358c3f/setup.py).
 - Detailed evidence and reproducible probes: `RANKING_EXTERNAL_DEPENDENCIES.md`.
 
-One Sol high agent fixes CI/CD in parallel, without pushes. Backend integration,
-affected usage/UI contracts and block reviews come next. Only after the combined
-lot is ready: complete rebuild/qualification, close the superseded PRs, create
-one complete replacement PR per project. Never merge or disturb original
-refactor checkouts.
+The native engines, thin bindings, original-observation benchmark orchestration,
+shared React views and benchmark controls have been reviewed in separate blocks.
+Complete local qualification precedes replacing the superseded PRs with one PR
+per project. Never merge or disturb original refactor checkouts.

@@ -1,0 +1,50 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "model_selection.fanova"
+family: "model_selection.ranking"
+category: "utilities"
+subcategory: "component_analysis"
+since_abi: "2.22.0"
+abi_symbols:
+  - "n4m_fanova_options_init_v1"
+  - "n4m_fanova_backend_available_v1"
+  - "n4m_fanova_fit_v1"
+tu:
+  - "cpp/src/core/component_analysis/fanova.cpp"
+  - "cpp/src/c_api/c_api_fanova.cpp"
+headers:
+  - "cpp/include/n4m/fanova.h"
+parity:
+  fixtures: []
+  tolerance_row: "component_analysis_v1"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "model_selection.fanova"
+  registry_entry: null
+feature_flags:
+  - "N4M_WITH_RFR"
+vendored_licenses:
+  - "rfr-BSD-3-Clause"
+  - "cereal-BSD-3-Clause"
+bindings:
+  python:
+    module: "n4m.component_analysis"
+    class: "fanova"
+    legacy_aliases: []
+  js:
+    function: "fanova"
+    legacy_aliases: []
+publications: []
+notes: "Exact per-tree marginal integration under explicit independent uniform product domains. Native forest surrogate; first-order and pairwise variance fractions averaged after per-tree normalization; tree dispersion is not CI. Optional static backend, no Python fanova code."
+c_surface:
+  - "n4m_fanova_options_init_v1"
+  - "n4m_fanova_backend_available_v1"
+  - "n4m_fanova_fit_v1"
+fq_name: "n4m.component_analysis.fanova"
+leaf: "fanova"
+legacy_ids:
+  - "model_selection.fanova"
+namespace: "component_analysis"

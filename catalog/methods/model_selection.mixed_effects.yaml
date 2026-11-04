@@ -1,0 +1,48 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "model_selection.mixed_effects"
+family: "model_selection.ranking"
+category: "utilities"
+subcategory: "component_analysis"
+since_abi: "2.22.0"
+abi_symbols:
+  - "n4m_mixed_effects_options_init_v1"
+  - "n4m_mixed_effects_backend_available_v1"
+  - "n4m_mixed_effects_fit_v1"
+tu:
+  - "cpp/src/c_api/c_api_mixed_effects.cpp"
+headers:
+  - "cpp/include/n4m/mixed_effects.h"
+parity:
+  fixtures: []
+  tolerance_row: "component_analysis_v1"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "model_selection.mixed_effects"
+  registry_entry: null
+feature_flags:
+  - "N4M_WITH_MIXEFF"
+vendored_licenses:
+  - "mixeff-rs-MIT"
+bindings:
+  python:
+    module: "n4m.component_analysis"
+    class: "mixed_effects"
+    legacy_aliases: []
+  js:
+    function: "mixedEffects"
+    legacy_aliases: []
+publications: []
+notes: "Explicit fixed design and crossed or nested group intercepts; pinned static mixeff-rs with no NLopt. ML or REML; rank, identifiability, optimizer and boundary diagnostics; conditional plug-in SE only. Optional compile-time backend, explicit unavailable state."
+c_surface:
+  - "n4m_mixed_effects_options_init_v1"
+  - "n4m_mixed_effects_backend_available_v1"
+  - "n4m_mixed_effects_fit_v1"
+fq_name: "n4m.component_analysis.mixed_effects"
+leaf: "mixed_effects"
+legacy_ids:
+  - "model_selection.mixed_effects"
+namespace: "component_analysis"

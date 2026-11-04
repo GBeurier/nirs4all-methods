@@ -53,6 +53,7 @@ add_library(n4m_core OBJECT
     core/variable_importance.cpp
     core/variable_selection.cpp
     core/ranking/ranking.cpp
+    core/component_analysis/fanova.cpp
     core/config.cpp
     core/estimator/registry.cpp
     core/estimator/linear_adapters.cpp
@@ -354,3 +355,5 @@ if(N4M_BUILD_STATIC)
     endif()
     n4m_add_warnings(n4m_c_static)
 endif()
+
+include(${PROJECT_SOURCE_DIR}/cmake/ComponentBackends.cmake)

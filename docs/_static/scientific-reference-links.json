@@ -1852,6 +1852,109 @@
       "links": [
         {
           "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/backends/rfr/README.md"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/fanova.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_fanova.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/component_analysis/fanova.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_fanova.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/FANOVA.md"
+        },
+        {
+          "kind": "url",
+          "value": "https://proceedings.mlr.press/v32/hutter14.html"
+        }
+      ],
+      "page": "model_selection_fanova"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.18637/jss.v067.i01"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.18637/jss.v067.i01"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/backends/mixeff/Cargo.lock"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/backends/mixeff/src/lib.rs"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/mixed_effects.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_mixed_effects.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_mixed_effects.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/MIXED_EFFECTS.md"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/mixed_effects_reference_v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/generate_mixed_effects_reference.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/bbuchsbaum/mixeff-rs/tree/696e5e74623301280142e73cbb6bf7f2650647d7"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.statsmodels.org/stable/generated/statsmodels.regression.mixed_linear_model.MixedLM.html"
+        }
+      ],
+      "page": "model_selection_mixed_effects"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_component_analysis.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/component_analysis.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_component_analysis.cpp"
+        }
+      ],
+      "page": "model_selection_normalize_loss"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
           "value": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.friedmanchisquare.html"
         },
         {

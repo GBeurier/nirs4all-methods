@@ -98,6 +98,13 @@ include(N4mOptions)
 include(CompilerWarnings)
 include(SanitizersToolchain)
 
+# Rust's Emscripten panic-unwind runtime uses native WebAssembly exception
+# tags. Compile every C++ translation unit with that same exception model.
+if(EMSCRIPTEN AND N4M_WITH_MIXEFF)
+    add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fwasm-exceptions>)
+    add_link_options(-fwasm-exceptions)
+endif()
+
 # OpenMP must be discovered at the top-level so its imported target
 # (OpenMP::OpenMP_CXX) is visible in both cpp/src/ and cpp/tests/.
 # When N4M_WITH_OPENMP=OFF this is a no-op.

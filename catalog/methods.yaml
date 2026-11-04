@@ -14525,3 +14525,134 @@ methods:
       - "n4m_ranking_relative_gain_v1"
     legacy_ids:
       - "model_selection.relative_gain"
+
+  - method_id: "model_selection.mixed_effects"
+    family: "model_selection.ranking"
+    category: "utilities"
+    subcategory: "component_analysis"
+    since_abi: "2.22.0"
+    abi_symbols:
+      - "n4m_mixed_effects_options_init_v1"
+      - "n4m_mixed_effects_backend_available_v1"
+      - "n4m_mixed_effects_fit_v1"
+    tu:
+      - "cpp/src/c_api/c_api_mixed_effects.cpp"
+    headers:
+      - "cpp/include/n4m/mixed_effects.h"
+    parity:
+      fixtures: []
+      tolerance_row: "component_analysis_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "model_selection.mixed_effects"
+      registry_entry: null
+    feature_flags:
+      - "N4M_WITH_MIXEFF"
+    vendored_licenses:
+      - "mixeff-rs-MIT"
+    bindings:
+      python:
+        module: "n4m.component_analysis"
+        class: "mixed_effects"
+        legacy_aliases: []
+      js:
+        function: "mixedEffects"
+        legacy_aliases: []
+    publications: []
+    notes: "Explicit fixed design and crossed or nested group intercepts; pinned static mixeff-rs with no NLopt. ML or REML; rank, identifiability, optimizer and boundary diagnostics; conditional plug-in SE only. Optional compile-time backend, explicit unavailable state."
+    namespace: "component_analysis"
+    leaf: "mixed_effects"
+    fq_name: "n4m.component_analysis.mixed_effects"
+    c_surface:
+      - "n4m_mixed_effects_options_init_v1"
+      - "n4m_mixed_effects_backend_available_v1"
+      - "n4m_mixed_effects_fit_v1"
+    legacy_ids:
+      - "model_selection.mixed_effects"
+
+  - method_id: "model_selection.fanova"
+    family: "model_selection.ranking"
+    category: "utilities"
+    subcategory: "component_analysis"
+    since_abi: "2.22.0"
+    abi_symbols:
+      - "n4m_fanova_options_init_v1"
+      - "n4m_fanova_backend_available_v1"
+      - "n4m_fanova_fit_v1"
+    tu:
+      - "cpp/src/core/component_analysis/fanova.cpp"
+      - "cpp/src/c_api/c_api_fanova.cpp"
+    headers:
+      - "cpp/include/n4m/fanova.h"
+    parity:
+      fixtures: []
+      tolerance_row: "component_analysis_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "model_selection.fanova"
+      registry_entry: null
+    feature_flags:
+      - "N4M_WITH_RFR"
+    vendored_licenses:
+      - "rfr-BSD-3-Clause"
+      - "cereal-BSD-3-Clause"
+    bindings:
+      python:
+        module: "n4m.component_analysis"
+        class: "fanova"
+        legacy_aliases: []
+      js:
+        function: "fanova"
+        legacy_aliases: []
+    publications: []
+    notes: "Exact per-tree marginal integration under explicit independent uniform product domains. Native forest surrogate; first-order and pairwise variance fractions averaged after per-tree normalization; tree dispersion is not CI. Optional static backend, no Python fanova code."
+    namespace: "component_analysis"
+    leaf: "fanova"
+    fq_name: "n4m.component_analysis.fanova"
+    c_surface:
+      - "n4m_fanova_options_init_v1"
+      - "n4m_fanova_backend_available_v1"
+      - "n4m_fanova_fit_v1"
+    legacy_ids:
+      - "model_selection.fanova"
+
+  - method_id: "model_selection.normalize_loss"
+    family: "model_selection.ranking"
+    category: "utilities"
+    subcategory: "component_analysis"
+    since_abi: "2.22.0"
+    abi_symbols:
+      - "n4m_component_normalize_loss_v1"
+    tu:
+      - "cpp/src/c_api/c_api_component_analysis.cpp"
+    headers:
+      - "cpp/include/n4m/component_analysis.h"
+    parity:
+      fixtures: []
+      tolerance_row: "component_analysis_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "model_selection.normalize_loss"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.component_analysis"
+        class: "normalize_loss"
+        legacy_aliases: []
+      js:
+        function: "normalizeLoss"
+        legacy_aliases: []
+    publications: []
+    notes: "Finite nonnegative loss divided by a finite strictly-positive matched baseline. Native calculation, atomic output, no inferred matching or uncertainty."
+    namespace: "component_analysis"
+    leaf: "normalize_loss"
+    fq_name: "n4m.component_analysis.normalize_loss"
+    c_surface:
+      - "n4m_component_normalize_loss_v1"
+    legacy_ids:
+      - "model_selection.normalize_loss"

@@ -1,0 +1,42 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "model_selection.normalize_loss"
+family: "model_selection.ranking"
+category: "utilities"
+subcategory: "component_analysis"
+since_abi: "2.22.0"
+abi_symbols:
+  - "n4m_component_normalize_loss_v1"
+tu:
+  - "cpp/src/c_api/c_api_component_analysis.cpp"
+headers:
+  - "cpp/include/n4m/component_analysis.h"
+parity:
+  fixtures: []
+  tolerance_row: "component_analysis_v1"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "model_selection.normalize_loss"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.component_analysis"
+    class: "normalize_loss"
+    legacy_aliases: []
+  js:
+    function: "normalizeLoss"
+    legacy_aliases: []
+publications: []
+notes: "Finite nonnegative loss divided by a finite strictly-positive matched baseline. Native calculation, atomic output, no inferred matching or uncertainty."
+c_surface:
+  - "n4m_component_normalize_loss_v1"
+fq_name: "n4m.component_analysis.normalize_loss"
+leaf: "normalize_loss"
+legacy_ids:
+  - "model_selection.normalize_loss"
+namespace: "component_analysis"
