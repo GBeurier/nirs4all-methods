@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **237**. Additional Python reference
+_Total catalogued native methods_: **242**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -140,6 +140,11 @@ mb_pls
 median_pruner
 mir_pls
 missing_aware_nipals
+model_selection_fanova
+model_selection_mixed_effects
+model_selection_normalize_loss
+model_selection_ranking
+model_selection_relative_gain
 models_ensembles_moment_stack
 models_pls_pls_regression
 models_regularized_ridge
@@ -572,6 +577,14 @@ wvc_threshold_select
 | [`hdbscan`](diagnostics_hdbscan.md) | `n4m.cluster.hdbscan` | `n4m.cluster` | C |
 | [`jaccard_matrix`](diagnostics_cluster_jaccard_matrix.md) | `n4m.cluster.jaccard_matrix` | `n4m.cluster` | C |
 
+## component_analysis
+
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`fanova`](model_selection_fanova.md) | `n4m.component_analysis.fanova` | `n4m.component_analysis` | C, Py |
+| [`mixed_effects`](model_selection_mixed_effects.md) | `n4m.component_analysis.mixed_effects` | `n4m.component_analysis` | C, Py |
+| [`normalize_loss`](model_selection_normalize_loss.md) | `n4m.component_analysis.normalize_loss` | `n4m.component_analysis` | C, Py |
+
 ## diagnostics
 
 | Method | Fully-qualified name | Namespace | Refs |
@@ -587,6 +600,13 @@ wvc_threshold_select
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
 | [`linear_sum_assignment`](diagnostics_linear_sum_assignment.md) | `n4m.optimize.linear_sum_assignment` | `n4m.optimize` | C |
+
+## ranking
+
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`paired_relative_gain`](model_selection_relative_gain.md) | `n4m.ranking.paired_relative_gain` | `n4m.ranking` | C, Py |
+| [`rank`](model_selection_ranking.md) | `n4m.ranking.rank` | `n4m.ranking` | C, Py, ref |
 
 ## stats
 

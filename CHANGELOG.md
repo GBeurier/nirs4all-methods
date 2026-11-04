@@ -4,6 +4,23 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- ABI 2.21 comparable-block ranking for complete pipelines and arbitrary
+  component candidates: Elo, regularized batch Bradley-Terry, pairwise
+  TrueSkill1, Weng-Lin Bradley-Terry, available-case mean ranks and tie-corrected
+  complete-block Friedman with a labelled chi-square approximation. Python
+  and JS/WASM share the dependency-free native core, explicit missingness,
+  transitive connected comparisons, coverage, convergence and uncertainty
+  metadata. Add paired positive-loss relative gains and optional
+  caller-supplied-effect-variance DerSimonian-Laird meta-analysis in C/Python.
+- Versioned result schema, independent numerical fixtures, native and actual
+  WASM validation. R/MATLAB ranking wrappers, general mixed effects and fANOVA
+  remain deferred; see `docs/RANKING.md` and
+  `docs/RANKING_EXTERNAL_DEPENDENCIES.md`.
+
 ## [1.3.14] - 2026-11-03
 
 Licensing metadata patch: no numerical kernel, public API or exported symbol

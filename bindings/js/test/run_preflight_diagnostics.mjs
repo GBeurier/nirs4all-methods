@@ -24,7 +24,13 @@ const relativeNear = (actual, expected) => assert.ok(
 const relativeNearTol = (actual, expected) => assert.ok(
     Math.abs(actual - expected) <= 1e-12 * Math.abs(expected), `${actual} != ${expected}`);
 await loadModule();
-assert.deepEqual(abiVersion(), [2, 20, 0]);
+const versionHeader = readFileSync(new URL("../../../cpp/include/n4m/n4m_version.h", import.meta.url), "utf8");
+const expectedAbi = ["MAJOR", "MINOR", "PATCH"].map(part => {
+    const match = versionHeader.match(new RegExp(`^#define N4M_ABI_VERSION_${part}\\s+(\\d+)`, "m"));
+    assert.ok(match, `canonical ABI ${part} macro is missing`);
+    return Number(match[1]);
+});
+assert.deepEqual(abiVersion(), expectedAbi);
 const pca = preflightPca({
     data: new Float64Array([2, 1, 2, -1, -2, 1, -2, -1]), rows: 4, cols: 2,
 }, 1);

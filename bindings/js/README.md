@@ -57,8 +57,8 @@ restores the original typed label table; omitting it exposes native class IDs.
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.3.6+abi.2.20.0"
-console.log(n4m.abiVersion());  // [2, 20, 0]
+console.log(n4m.version());     // "1.3.14+abi.2.22.0"
+console.log(n4m.abiVersion());  // [2, 22, 0]
 
 const rows = 40, cols = 6;
 const X = new Float64Array(rows * cols);   // row-major
@@ -223,3 +223,25 @@ bindings/js/
     ├── run_pop_aom.mjs
     └── run_new_pack.mjs  # broad-model-pack smoke
 ```
+
+## Ranking candidates
+
+`rank(scores, present, options)` sends a row-major `Matrix` of scores and a
+required row-major `Uint8Array` presence mask to the native ranking ABI. Each
+row is a comparable block and each column a candidate. Mask entries are 0 or 1;
+masked scores may be nonfinite. For example:
+
+```js
+import { loadModule, rank } from "@nirs4all/methods";
+await loadModule();
+const result = rank({ rows: 2, cols: 2, data: Float64Array.of(1, 2, 3, 2) },
+                    Uint8Array.of(1, 1, 1, 1),
+                    { method: "bradley_terry", higher_is_better: false });
+```
+
+Methods are `average_rank`, `elo`, `bradley_terry`, `trueskill` and `openskill`.
+The result identifies the native variant and effective options. Unavailable
+quantities are `null`, including ranks across disconnected comparison graphs.
+Bayesian uncertainty is an approximate algorithm posterior standard deviation,
+not a frequentist standard error. The Friedman statistic is descriptive and
+uses complete blocks; the caller must assess independence.

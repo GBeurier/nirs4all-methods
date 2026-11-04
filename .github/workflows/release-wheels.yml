@@ -118,6 +118,8 @@ jobs:
         with:
           package-dir: bindings/python_nirs4all_methods
         env:
+          CIBW_ENVIRONMENT: "N4M_WHEEL_ANALYSIS=1"
+          N4M_WHEEL_ANALYSIS: "1"
           CIBW_ARCHS_LINUX:   ${{ matrix.arch }}
           # macos-14 builds a single universal2 wheel (x86_64 + arm64) via the
           # ci-macos-universal2 preset below — covers Intel + Apple Silicon and

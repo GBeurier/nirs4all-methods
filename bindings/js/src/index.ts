@@ -108,3 +108,8 @@ export function abiVersion(): readonly [number, number, number] {
         m.ccall("n4m_get_abi_version_patch", "number", [], []) as number,
     ];
 }
+
+export { rank, type RankingMethod, type RankingOptions, type RankingCandidate,
+         type RankingResult } from "./ranking.js";
+export { mixedEffects, fanova, normalizeLoss, type MixedEffectsOptions, type MixedEffectsResult,
+         type FanovaOptions, type FanovaResult } from "./componentAnalysis.js";

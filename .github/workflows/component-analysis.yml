@@ -1,0 +1,76 @@
+name: Component analysis backends
+on:
+  pull_request:
+  push:
+    branches: [main, 'rc/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            preset: analysis-all
+          - os: macos-14
+            preset: analysis-all
+          - os: windows-2022
+            preset: analysis-windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.11'
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Build the enabled engines
+        shell: bash
+        run: |
+          python -m pip install cmake ninja numpy pytest
+          cmake --preset '${{ matrix.preset }}'
+          cmake --build --preset '${{ matrix.preset }}' --target n4m_c n4m_c_static n4m_cli n4m_ranking_tests n4m_fanova_tests n4m_mixed_effects_tests --parallel 3
+      - name: Execute native and Python contracts
+        shell: bash
+        env:
+          N4M_ANALYSIS_PRESET: ${{ matrix.preset }}
+          PYTHONPATH: bindings/python/src
+        run: |
+          ctest --test-dir 'build/${{ matrix.preset }}' -C Release -R 'n4m_ranking_tests|n4m_fanova_tests|mixed_effects' --output-on-failure
+          python scripts/test_component_backends.py
+      - name: Test installed static dependency closure
+        shell: bash
+        run: |
+          cmake --install 'build/${{ matrix.preset }}' --config Release --prefix "$RUNNER_TEMP/n4m-analysis-install"
+          export N4M_INSTALL_PREFIX="$RUNNER_TEMP/n4m-analysis-install"
+          cd cpp/tests/installed_component_analysis
+          cmake --preset installed-static
+          cmake --build --preset installed-static --config Release
+          ctest --preset installed-static -C Release
+  wasm:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7.0.0
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: wasm32-unknown-emscripten
+      - uses: actions/setup-node@v6.4.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: pip install cmake ninja
+      - run: cmake --preset emscripten-analysis
+      - run: cmake --build --preset emscripten-analysis --target n4m_wasm --parallel 3
+      - working-directory: bindings/js
+        env:
+          N4M_WASM_PRESET: emscripten-analysis
+        run: |
+          npm ci
+          npm run build
+          npm run stage:wasm
+          node test/run_component_analysis.mjs
+          node test/run_ranking.mjs

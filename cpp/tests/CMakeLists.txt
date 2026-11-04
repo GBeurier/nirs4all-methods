@@ -290,3 +290,37 @@ target_compile_features(n4m_fit_witness PRIVATE cxx_std_17)
 set_target_properties(n4m_fit_witness PROPERTIES
     CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
 n4m_add_warnings(n4m_fit_witness)
+
+# Ranking tests exercise the public ABI, with a C11-compatible header guard.
+add_executable(n4m_ranking_tests test_ranking.cpp include_check_ranking.c)
+target_link_libraries(n4m_ranking_tests PRIVATE n4m_c)
+target_include_directories(n4m_ranking_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+n4m_add_warnings(n4m_ranking_tests)
+add_test(NAME n4m_ranking_tests COMMAND n4m_ranking_tests)
+
+add_executable(n4m_fanova_tests test_fanova.cpp include_check_fanova.c)
+target_link_libraries(n4m_fanova_tests PRIVATE n4m_c)
+target_include_directories(n4m_fanova_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+n4m_add_warnings(n4m_fanova_tests)
+add_test(NAME n4m_fanova_tests COMMAND n4m_fanova_tests)
+
+# Fast qualification of the same production sources without unrelated engines.
+add_executable(n4m_fanova_kernel_tests test_fanova.cpp include_check_fanova.c
+    ../src/core/component_analysis/fanova.cpp ../src/c_api/c_api_fanova.cpp
+    ../src/core/common/matrix_view.cpp)
+target_include_directories(n4m_fanova_kernel_tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/cpp/include
+    ${CMAKE_SOURCE_DIR}/cpp/src ${PROJECT_BINARY_DIR}/generated)
+target_include_directories(n4m_fanova_kernel_tests SYSTEM PRIVATE
+    ${CMAKE_SOURCE_DIR}/cpp/backends/rfr/include)
+target_compile_definitions(n4m_fanova_kernel_tests PRIVATE
+    N4M_STATIC=1
+    N4M_WITH_RFR=$<BOOL:${N4M_WITH_RFR}>)
+n4m_add_warnings(n4m_fanova_kernel_tests)
+add_test(NAME n4m_fanova_kernel_tests COMMAND n4m_fanova_kernel_tests)
+
+add_executable(n4m_mixed_effects_tests test_mixed_effects.cpp include_check_mixed_effects.c)
+target_link_libraries(n4m_mixed_effects_tests PRIVATE n4m_c)
+target_include_directories(n4m_mixed_effects_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+n4m_add_warnings(n4m_mixed_effects_tests)
+add_test(NAME mixed_effects COMMAND n4m_mixed_effects_tests)

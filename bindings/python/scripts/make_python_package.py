@@ -459,6 +459,10 @@ def test_context_ownership():
             SRC_PKG / "tests" / "test_optimizer_smoke.py",
             out / "tests" / "test_optimizer_smoke.py",
         )
+        shutil.copy2(
+            SRC_PKG / "tests" / "test_component_analysis.py",
+            out / "tests" / "test_component_analysis.py",
+        )
     print(f"generated {out.relative_to(REPO)}  (name={name}, module={module})")
     return out
 

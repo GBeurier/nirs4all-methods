@@ -1,0 +1,10 @@
+[package]
+name = "n4m-ranking-mixeff-probe"
+version = "0.0.0"
+edition = "2021"
+[lib]
+crate-type = ["staticlib"]
+[dependencies]
+mixeff-rs = { path = "../mixeff", default-features = false }
+[profile.dev]
+debug = 0

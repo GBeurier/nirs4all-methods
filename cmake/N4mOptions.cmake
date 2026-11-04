@@ -29,6 +29,9 @@ option(N4M_AOM_WITH_LAPACKE "Use LAPACKE for AOM Ridge eigenpaths when supplied 
 option(N4M_WITH_OPENMP  "Build optional OpenMP backend" OFF)
 option(N4M_WITH_CUDA    "Build optional CUDA backend"   OFF)
 
+option(N4M_WITH_MIXEFF "Statically link the pinned Rust Gaussian mixed-effects engine" OFF)
+option(N4M_WITH_RFR "Compile the vendored random-forest fANOVA engine" OFF)
+
 # ---- Diagnostics ----------------------------------------------------------
 option(N4M_ENABLE_ASAN             "Enable AddressSanitizer (clang/gcc only)"            OFF)
 option(N4M_ENABLE_UBSAN            "Enable UndefinedBehaviorSanitizer"                   OFF)

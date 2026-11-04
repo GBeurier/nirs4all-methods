@@ -41,6 +41,8 @@ permissions:
 jobs:
   build-and-publish:
     runs-on: ubuntu-22.04
+    env:
+      N4M_WASM_PRESET: emscripten-analysis
     steps:
       - uses: actions/checkout@v7.0.0
 
@@ -59,10 +61,14 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           package-manager-cache: false
 
-      - name: Build the WASM module (emscripten preset)
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: wasm32-unknown-emscripten
+
+      - name: Build the WASM module (static analysis engines)
         run: |
-          cmake --preset emscripten
-          cmake --build --preset emscripten --target n4m_wasm
+          cmake --preset emscripten-analysis
+          cmake --build --preset emscripten-analysis --target n4m_wasm
 
       - name: Build + stage + smoke-test the JS binding
         working-directory: bindings/js

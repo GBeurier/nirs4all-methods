@@ -131,3 +131,10 @@ Licensed under the BSD-3-Clause license; the algorithms reproduced here are
 attributed to the NumPy project. The n4m source files are CECILL-2.1 OR
 AGPL-3.0-or-later (see the repository LICENSING.md); BSD-3 is permissive and compatible.
 ```
+
+
+## Optional component-analysis static engines
+
+The analysis-enabled artifacts statically link mixeff-rs 1.0.0-rc.5 (MIT, default features disabled; no NLopt) and the reviewed pyrfr/rfr header closure at 1ba17650e734edd3ea536efc91d32815c4874e72 (BSD-3-Clause, with cereal and RapidJSON notices). No code from the restricted-license Python fANOVA package is included.
+
+Full binary redistribution notices are bundled in `LICENSES/mixeff-rs.txt`, `LICENSES/mixeff-dependencies.txt`, `LICENSES/rust-standard-library.txt`, `LICENSES/rfr.txt`, `LICENSES/rfr-cereal.txt` and `LICENSES/rfr-rapidjson.txt`. The Rust dependency manifest and exact header checksums live under `cpp/backends/` in the source distribution.

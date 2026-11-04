@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://methods.nirs4all.org/contracts/ranking.v1.json",
+  "title": "Comparable-block native ranking result v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "method",
+    "variant",
+    "options",
+    "score_direction",
+    "uncertainty_kind",
+    "candidates",
+    "coverage",
+    "inference",
+    "convergence",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "n4m.ranking/1"
+    },
+    "method": {
+      "enum": [
+        "average_rank",
+        "elo",
+        "bradley_terry",
+        "trueskill",
+        "trueskill_1v1",
+        "openskill",
+        "weng_lin_bradley_terry"
+      ]
+    },
+    "variant": {
+      "enum": [
+        "average_rank",
+        "elo",
+        "bradley_terry",
+        "trueskill_1v1",
+        "weng_lin_bradley_terry"
+      ]
+    },
+    "options": {
+      "type": "object"
+    },
+    "score_direction": {
+      "enum": [
+        "lower_is_better",
+        "higher_is_better"
+      ]
+    },
+    "uncertainty_kind": {
+      "enum": [
+        "approximate_posterior_sd",
+        null
+      ]
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "score",
+          "uncertainty",
+          "average_rank",
+          "rank",
+          "index",
+          "observations",
+          "matches",
+          "component",
+          "wins",
+          "ties",
+          "losses"
+        ],
+        "properties": {
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "uncertainty": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "average_rank": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "rank": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "observations": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "matches": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "component": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "wins": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "losses": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "blocks",
+        "complete_blocks",
+        "paired_comparisons",
+        "connected_components"
+      ],
+      "properties": {
+        "blocks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "complete_blocks": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "paired_comparisons": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "connected_components": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "inference": {
+      "type": "object",
+      "required": [
+        "friedman_statistic",
+        "degrees_of_freedom",
+        "friedman_p_value",
+        "p_value_method",
+        "reason"
+      ],
+      "properties": {
+        "friedman_statistic": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "degrees_of_freedom": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "friedman_p_value": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "p_value_method": {
+          "const": "chi_square_approximation"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "convergence": {
+      "type": "object",
+      "required": [
+        "converged",
+        "iterations"
+      ],
+      "properties": {
+        "converged": {
+          "type": "boolean"
+        },
+        "iterations": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -52,6 +52,8 @@ add_library(n4m_core OBJECT
     core/iriv_selection.cpp
     core/variable_importance.cpp
     core/variable_selection.cpp
+    core/ranking/ranking.cpp
+    core/component_analysis/fanova.cpp
     core/config.cpp
     core/estimator/registry.cpp
     core/estimator/linear_adapters.cpp
@@ -322,7 +324,7 @@ if(N4M_BUILD_STATIC)
             ${CMAKE_SOURCE_DIR}/cpp/src
     )
     target_compile_features(n4m_c_static PUBLIC cxx_std_17)
-    target_compile_definitions(n4m_c_static PRIVATE N4M_STATIC=1)
+    target_compile_definitions(n4m_c_static PUBLIC N4M_STATIC=1)
     set_target_properties(n4m_c_static PROPERTIES
         OUTPUT_NAME "n4m_static"
         POSITION_INDEPENDENT_CODE ON
@@ -353,3 +355,5 @@ if(N4M_BUILD_STATIC)
     endif()
     n4m_add_warnings(n4m_c_static)
 endif()
+
+include(${PROJECT_SOURCE_DIR}/cmake/ComponentBackends.cmake)

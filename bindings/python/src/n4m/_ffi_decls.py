@@ -12,7 +12,7 @@ from ctypes import (
     c_int64, c_size_t, c_uint8, c_uint32, c_uint64, c_void_p,
 )
 
-from ._types import MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, SplitResult, TransferMetrics
+from ._types import MixedEffectsOptionsV1, MixedEffectsSummaryV1, FanovaOptionsV1, FanovaSummaryV1, MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, RankingOptionsV1, SplitResult, TransferMetrics
 
 # Symbols: tuple of (symbol_name, argtypes_tuple, restype).
 # restype = None for void; argtypes = () for parameter-less.
@@ -144,6 +144,7 @@ SYMBOLS = (
     ("n4m_check_abi_compatibility", (c_uint32, c_uint32), c_int),
     ("n4m_cluster_hdbscan", (c_void_p, POINTER(MatrixView), c_int64, c_int64, c_int32, c_int32, POINTER(c_int64), POINTER(c_double), POINTER(c_double), POINTER(c_int64), POINTER(c_double), POINTER(c_int64), POINTER(c_int64), POINTER(c_int64), POINTER(c_int64), POINTER(c_double), POINTER(c_double), POINTER(c_double)), c_int),
     ("n4m_cluster_jaccard_matrix", (c_void_p, POINTER(c_int64), POINTER(c_int64), c_int64, c_int64, c_int64, POINTER(c_double), POINTER(c_int64), POINTER(c_int64), POINTER(c_int64)), c_int),
+    ("n4m_component_normalize_loss_v1", (POINTER(c_double), POINTER(c_double), c_int64, POINTER(c_double)), c_int),
     ("n4m_config_clone", (c_void_p, POINTER(c_void_p)), c_int),
     ("n4m_config_create", (POINTER(c_void_p),), c_int),
     ("n4m_config_destroy", (c_void_p,), None),
@@ -321,6 +322,9 @@ SYMBOLS = (
     ("n4m_estimators_sparse_pls_da_fit", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(c_int32), c_int64, POINTER(c_void_p)), c_int),
     ("n4m_estimators_sparse_simpls_fit", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_double, POINTER(c_void_p)), c_int),
     ("n4m_estimators_weighted_pls_fit", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), POINTER(c_double), c_int64, POINTER(c_void_p)), c_int),
+    ("n4m_fanova_backend_available_v1", (), c_int),
+    ("n4m_fanova_fit_v1", (POINTER(MatrixView), POINTER(MatrixView), POINTER(MatrixView), POINTER(c_uint32), POINTER(MatrixView), POINTER(MatrixView), POINTER(FanovaOptionsV1), POINTER(c_double), c_int64, POINTER(c_double), c_int64, POINTER(FanovaSummaryV1)), c_int),
+    ("n4m_fanova_options_init_v1", (POINTER(FanovaOptionsV1),), c_int),
     ("n4m_feature_selection_bipls_select", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_void_p, c_int32, c_int32, POINTER(c_void_p)), c_int),
     ("n4m_feature_selection_bve_select", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_void_p, c_int32, c_int32, POINTER(c_void_p)), c_int),
     ("n4m_feature_selection_cars_select", (c_void_p, c_void_p, POINTER(MatrixView), POINTER(MatrixView), c_void_p, c_int32, c_int32, POINTER(c_void_p)), c_int),
@@ -411,6 +415,9 @@ SYMBOLS = (
     ("n4m_metrics_regression_metrics_rpd", (POINTER(c_double), POINTER(c_double), c_int64, POINTER(c_double)), c_int),
     ("n4m_metrics_regression_metrics_rpiq", (POINTER(c_double), POINTER(c_double), c_int64, POINTER(c_double)), c_int),
     ("n4m_metrics_regression_metrics_sep", (POINTER(c_double), POINTER(c_double), c_int64, POINTER(c_double)), c_int),
+    ("n4m_mixed_effects_backend_available_v1", (), c_int),
+    ("n4m_mixed_effects_fit_v1", (POINTER(MatrixView), POINTER(MatrixView), POINTER(MatrixView), POINTER(MixedEffectsOptionsV1), POINTER(c_double), c_int64, POINTER(c_double), c_int64, POINTER(c_double), c_int64, POINTER(c_double), c_int64, POINTER(MixedEffectsSummaryV1)), c_int),
+    ("n4m_mixed_effects_options_init_v1", (POINTER(MixedEffectsOptionsV1),), c_int),
     ("n4m_model_destroy", (c_void_p,), None),
     ("n4m_model_export_size", (c_void_p, POINTER(c_size_t)), c_int),
     ("n4m_model_export_to_buffer", (c_void_p, c_void_p, c_size_t, POINTER(c_size_t)), c_int),
@@ -599,6 +606,9 @@ SYMBOLS = (
     ("n4m_procedure_run", (c_void_p, c_int32, c_void_p, c_void_p, POINTER(c_void_p)), c_int),
     ("n4m_random_multivariate_normal", (c_void_p, c_uint64, POINTER(c_double), POINTER(MatrixView), c_int64, POINTER(c_double)), c_int),
     ("n4m_random_permutations", (c_void_p, c_uint64, c_int64, c_int64, POINTER(c_int64)), c_int),
+    ("n4m_ranking_compute_v1", (POINTER(MatrixView), POINTER(c_uint8), POINTER(RankingOptionsV1), POINTER(c_double), c_int64, POINTER(c_double), c_int64), c_int),
+    ("n4m_ranking_options_init_v1", (POINTER(RankingOptionsV1),), c_int),
+    ("n4m_ranking_relative_gain_v1", (POINTER(c_double), POINTER(c_double), POINTER(c_uint8), POINTER(c_double), c_int64, POINTER(c_double), c_int64), c_int),
     ("n4m_rng_pcg64_advance", (c_void_p, c_uint64), c_int),
     ("n4m_rng_pcg64_create", (c_uint64, POINTER(c_void_p)), c_int),
     ("n4m_rng_pcg64_destroy", (c_void_p,), None),

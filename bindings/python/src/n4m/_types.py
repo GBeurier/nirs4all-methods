@@ -325,3 +325,97 @@ __all__ = [
     "Status",
     "TransferMetrics",
 ]
+
+
+class RankingOptionsV1(Structure):
+    """Mirror of the versioned native ranking options; defaults come from C++."""
+
+    _fields_ = [
+        ("struct_size", c_uint64),
+        ("method", c_int32),
+        ("higher_is_better", c_int32),
+        ("tie_tolerance", c_double),
+        ("initial_mean", c_double),
+        ("k_factor", c_double),
+        ("elo_scale", c_double),
+        ("prior_sigma", c_double),
+        ("beta", c_double),
+        ("dynamics", c_double),
+        ("draw_margin", c_double),
+        ("regularization", c_double),
+        ("convergence_tolerance", c_double),
+        ("max_iterations", c_int64),
+    ]
+
+
+import ctypes as _component_ct
+
+
+class MixedEffectsOptionsV1(_component_ct.Structure):
+    """Value layout from mixed_effects.h."""
+    _fields_ = [
+        ("struct_size", _component_ct.c_uint64),
+        ("reml", _component_ct.c_int32),
+        ("reserved", _component_ct.c_int32),
+        ("max_evaluations", _component_ct.c_int64),
+        ("tolerance", _component_ct.c_double),
+        ("rank_tolerance", _component_ct.c_double),
+        ("boundary_tolerance", _component_ct.c_double),
+    ]
+
+
+class MixedEffectsSummaryV1(_component_ct.Structure):
+    """Value layout from mixed_effects.h."""
+    _fields_ = [
+        ("struct_size", _component_ct.c_uint64),
+        ("fit_state", _component_ct.c_int32),
+        ("reason", _component_ct.c_int32),
+        ("converged", _component_ct.c_int32),
+        ("singular", _component_ct.c_int32),
+        ("boundary", _component_ct.c_int32),
+        ("optimizer_status", _component_ct.c_int32),
+        ("observations", _component_ct.c_int64),
+        ("fixed_effects", _component_ct.c_int64),
+        ("group_terms", _component_ct.c_int64),
+        ("design_rank", _component_ct.c_int64),
+        ("total_group_levels", _component_ct.c_int64),
+        ("evaluations", _component_ct.c_int64),
+        ("objective", _component_ct.c_double),
+        ("log_likelihood", _component_ct.c_double),
+        ("residual_df", _component_ct.c_double),
+        ("condition_number", _component_ct.c_double),
+    ]
+
+
+class FanovaOptionsV1(_component_ct.Structure):
+    """Value layout from fanova.h."""
+    _fields_ = [
+        ("struct_size", _component_ct.c_uint64),
+        ("num_trees", _component_ct.c_int32),
+        ("max_depth", _component_ct.c_int32),
+        ("min_samples_leaf", _component_ct.c_int32),
+        ("max_features", _component_ct.c_int32),
+        ("seed", _component_ct.c_uint64),
+        ("max_order", _component_ct.c_int32),
+        ("reserved", _component_ct.c_int32),
+        ("max_marginal_evaluations", _component_ct.c_int64),
+    ]
+
+
+class FanovaSummaryV1(_component_ct.Structure):
+    """Value layout from fanova.h."""
+    _fields_ = [
+        ("struct_size", _component_ct.c_uint64),
+        ("fit_state", _component_ct.c_int32),
+        ("reserved", _component_ct.c_int32),
+        ("observations", _component_ct.c_int64),
+        ("features", _component_ct.c_int64),
+        ("trees", _component_ct.c_int64),
+        ("informative_trees", _component_ct.c_int64),
+        ("marginal_evaluations", _component_ct.c_int64),
+        ("mean_tree_variance", _component_ct.c_double),
+        ("remainder_fraction", _component_ct.c_double),
+        ("train_rmse", _component_ct.c_double),
+        ("validation_rmse", _component_ct.c_double),
+        ("validation_r2", _component_ct.c_double),
+    ]

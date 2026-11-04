@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "installed-static",
+      "binaryDir": "${sourceDir}/../../../build/installed-component-analysis",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_PREFIX_PATH": "$env{N4M_INSTALL_PREFIX}"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "installed-static",
+      "configurePreset": "installed-static"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "installed-static",
+      "configurePreset": "installed-static",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

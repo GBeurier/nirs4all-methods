@@ -125,6 +125,7 @@ n4m_backend_to_string
 n4m_check_abi_compatibility
 n4m_cluster_hdbscan
 n4m_cluster_jaccard_matrix
+n4m_component_normalize_loss_v1
 n4m_config_clone
 n4m_config_create
 n4m_config_destroy
@@ -302,6 +303,9 @@ n4m_estimators_so_pls_fit
 n4m_estimators_sparse_pls_da_fit
 n4m_estimators_sparse_simpls_fit
 n4m_estimators_weighted_pls_fit
+n4m_fanova_backend_available_v1
+n4m_fanova_fit_v1
+n4m_fanova_options_init_v1
 n4m_feature_selection_bipls_select
 n4m_feature_selection_bve_select
 n4m_feature_selection_cars_select
@@ -392,6 +396,9 @@ n4m_metrics_regression_metrics_rmse
 n4m_metrics_regression_metrics_rpd
 n4m_metrics_regression_metrics_rpiq
 n4m_metrics_regression_metrics_sep
+n4m_mixed_effects_backend_available_v1
+n4m_mixed_effects_fit_v1
+n4m_mixed_effects_options_init_v1
 n4m_model_destroy
 n4m_model_export_size
 n4m_model_export_to_buffer
@@ -580,6 +587,9 @@ n4m_preflight_summary_compute
 n4m_procedure_run
 n4m_random_multivariate_normal
 n4m_random_permutations
+n4m_ranking_compute_v1
+n4m_ranking_options_init_v1
+n4m_ranking_relative_gain_v1
 n4m_rng_pcg64_advance
 n4m_rng_pcg64_create
 n4m_rng_pcg64_destroy

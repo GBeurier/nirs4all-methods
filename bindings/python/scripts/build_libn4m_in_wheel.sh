@@ -26,6 +26,16 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 cd "${ROOT}"
 
 PRESET="${PLS4ALL_BUILD_PRESET:-dev-release}"
+if [[ "${N4M_WHEEL_ANALYSIS:-0}" == 1 ]]; then
+    bash bindings/python/scripts/setup_analysis_rust.sh
+    export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+    export RUSTUP_TOOLCHAIN=1.96.0
+    case "$(uname -s)" in
+        Darwin*) PRESET=analysis-macos-universal2 ;;
+        MINGW*|CYGWIN*|MSYS*) PRESET=analysis-windows ;;
+        *) PRESET=analysis-all ;;
+    esac
+fi
 BUILD_DIR="build/${PRESET}"
 SRC_LIB_DIR="bindings/python/src/pls4all/lib"
 # The bindings/python tree ships BOTH the slim `pls4all` module and the full
@@ -104,6 +114,23 @@ case "$(uname -s)" in
     *)
         echo "ERROR: unrecognised platform $(uname -s)" >&2
         exit 1
+        ;;
+esac
+
+# Runtime wheels need dynamic exports, not local debug/linker symbol tables.
+# Rust static archives remain build inputs and are never copied into the wheel.
+case "$(uname -s)" in
+    Linux*)
+        if command -v strip >/dev/null 2>&1; then
+            for binary in "${SRC_LIB_DIR}/"libn4m.so.*; do
+                [[ -L "$binary" ]] || strip --strip-unneeded "$binary"
+            done
+        fi
+        ;;
+    Darwin*)
+        for binary in "${SRC_LIB_DIR}/"libn4m*.dylib; do
+            [[ -L "$binary" ]] || strip -S -x "$binary"
+        done
         ;;
 esac
 
