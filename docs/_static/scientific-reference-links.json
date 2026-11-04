@@ -1852,6 +1852,92 @@
       "links": [
         {
           "kind": "url",
+          "value": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.friedmanchisquare.html"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_ranking.mjs"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_ranking.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/ranking/ranking.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/ranking_contract.v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/ranking_reference_v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/generate_ranking_fixtures.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.jmlr.org/papers/v12/weng11a.html"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.microsoft.com/en-us/research/project/trueskill-ranking-system/"
+        }
+      ],
+      "page": "model_selection_ranking"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/0197-2456(86)90046-2"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/0197-2456(86)90046-2"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_ranking.mjs"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_ranking.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/ranking/ranking.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_ranking.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/RANKING.md"
+        },
+        {
+          "kind": "url",
+          "value": "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-10"
+        }
+      ],
+      "page": "model_selection_relative_gain"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/moment_facade.py"
         },
         {

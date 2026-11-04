@@ -140,6 +140,8 @@ mb_pls
 median_pruner
 mir_pls
 missing_aware_nipals
+model_selection_ranking
+model_selection_relative_gain
 models_ensembles_moment_stack
 models_pls_pls_regression
 models_regularized_ridge
@@ -588,6 +590,13 @@ wvc_threshold_select
 |--------|----------------------|-----------|------|
 | [`linear_sum_assignment`](diagnostics_linear_sum_assignment.md) | `n4m.optimize.linear_sum_assignment` | `n4m.optimize` | C |
 
+## ranking
+
+| Method | Fully-qualified name | Namespace | Refs |
+|--------|----------------------|-----------|------|
+| [`paired_relative_gain`](model_selection_relative_gain.md) | `n4m.ranking.paired_relative_gain` | `n4m.ranking` | C, Py |
+| [`rank`](model_selection_ranking.md) | `n4m.ranking.rank` | `n4m.ranking` | C, Py, ref |
+
 ## stats
 
 | Method | Fully-qualified name | Namespace | Refs |
@@ -599,13 +608,6 @@ wvc_threshold_select
 | [`permdisp`](diagnostics_permdisp.md) | `n4m.stats.permdisp` | `n4m.stats` | C |
 | [`regression_scores`](diagnostics_regression_scores.md) | `n4m.stats.regression_scores` | `n4m.stats` | C |
 | [`one_way_reml`](diagnostics_variance_components.md) | `n4m.stats.variance_components.one_way_reml` | `n4m.stats.variance_components` | C |
-
-## ranking
-
-| Method | Fully-qualified name | Namespace | Refs |
-|--------|----------------------|-----------|------|
-| [`rank`](../RANKING.md) | `n4m.ranking.rank` | `n4m.ranking` | C, Py, JS |
-| [`paired_relative_gain`](../RANKING.md) | `n4m.ranking.paired_relative_gain` | `n4m.ranking` | C, Py |
 
 ## utilities
 

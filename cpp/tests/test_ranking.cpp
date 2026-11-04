@@ -71,7 +71,7 @@ void disconnected_and_missing() {
     N4M_TEST_REQUIRE(n4m_ranking_compute_v1(&v, m, &o, c.data(), 60, s.data(), 9) == N4M_OK);
     // Candidate 4 co-occurs with 0/1, so graph has three components including absent 5.
     N4M_TEST_REQUIRE(s[3] == 3 && c[5] == c[15] && c[25] != c[5]);
-    for (int j = 0; j < 6; ++j)
+    for (size_t j = 0; j < 6; ++j)
         N4M_TEST_REQUIRE(std::isnan(c[j * 10 + 9]));
     N4M_TEST_REQUIRE(std::isnan(c[50]) && std::isnan(c[51]) && std::isnan(c[52]));
 }
@@ -156,7 +156,7 @@ void relative_gains() {
     const double wide[] = {1e-300, 1e300};
     const n4m_status_t wide_status =
         n4m_ranking_relative_gain_v1(equal_a, equal_b, paired, wide, 2, out.data(), 8);
-    if (std::numeric_limits<long double>::min_exponent < -2100) {
+    if constexpr (std::numeric_limits<long double>::min_exponent < -2100) {
         N4M_TEST_REQUIRE(wide_status == N4M_OK);
         N4M_TEST_REQUIRE(out[3] == .5 && out[5] == 0 && out[6] == 0 && out[7] == 0);
         N4M_TEST_REQUIRE(std::abs(out[4] / 1e-150 - 1) < 1e-14);
