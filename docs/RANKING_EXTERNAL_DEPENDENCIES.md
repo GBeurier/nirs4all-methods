@@ -8,9 +8,9 @@ Assessed on 4 November 2026. This document concerns optional compiled backends f
 pipeline component effects, alongside the dependency-free ranking algorithms.
 It does not change their API or implementation.
 
-## Delivery decision and host-visible status
+## Historical probe-stage delivery decision and host-visible status
 
-**No external statistical backend is shipped by this batch.** The implemented
+**Historical probe-stage decision, superseded by the implementations linked above:** no external statistical backend was shipped in that earlier batch. The implemented
 work here is reproducible source inspection and disposable compilation/linkage
 probes. A successful probe establishes technical feasibility for that exact
 configuration; it does not establish scientific parity, ABI qualification or

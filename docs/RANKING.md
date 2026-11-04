@@ -3,8 +3,9 @@
 `n4m.ranking.rank` and the JavaScript `rank` function share dependency-free
 C++17 kernels through the versioned public C ABI in `n4m/ranking.h`.
 No reference package is required at runtime. Python and JS/WASM are supported;
-R and MATLAB wrappers for this new surface are deferred. General mixed-effects
-models and fANOVA are also deferred; see `RANKING_EXTERNAL_DEPENDENCIES.md`.
+R and MATLAB wrappers for this new surface are deferred. Gaussian mixed effects
+and forest fANOVA have separate optional static backends and thin Python/JS
+bindings in `n4m.component_analysis`; see `MIXED_EFFECTS.md` and `FANOVA.md`.
 
 ## Comparison identity and transitivity
 
