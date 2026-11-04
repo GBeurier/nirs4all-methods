@@ -145,6 +145,24 @@ void relative_gains() {
                      && std::isnan(out[4]));
     N4M_TEST_REQUIRE(n4m_ranking_relative_gain_v1(a, b, m, vars, 3, out.data(), 8) == N4M_OK);
     N4M_TEST_REQUIRE(out[5] >= 0 && out[4] > 0);
+    // Genuine counterexample: subtracting sw2/sw from sw rounds C to zero.
+    const double equal_a[] = {2, 2}, equal_b[] = {1, 1}, dominant[] = {1e-16, 1};
+    const uint8_t paired[] = {1, 1};
+    N4M_TEST_REQUIRE(
+        n4m_ranking_relative_gain_v1(equal_a, equal_b, paired, dominant, 2, out.data(), 8)
+        == N4M_OK);
+    N4M_TEST_REQUIRE(out[3] == .5 && out[5] == 0 && out[6] == 0 && out[7] == 0);
+    N4M_TEST_REQUIRE(std::abs(out[4] / 1e-8 - 1) < 1e-14);
+    const double wide[] = {1e-300, 1e300};
+    const n4m_status_t wide_status =
+        n4m_ranking_relative_gain_v1(equal_a, equal_b, paired, wide, 2, out.data(), 8);
+    if (std::numeric_limits<long double>::min_exponent < -2100) {
+        N4M_TEST_REQUIRE(wide_status == N4M_OK);
+        N4M_TEST_REQUIRE(out[3] == .5 && out[5] == 0 && out[6] == 0 && out[7] == 0);
+        N4M_TEST_REQUIRE(std::abs(out[4] / 1e-150 - 1) < 1e-14);
+    } else {
+        N4M_TEST_REQUIRE(wide_status == N4M_ERR_UNSUPPORTED);
+    }
     const double zero[] = {0, 1, 1};
     N4M_TEST_REQUIRE(n4m_ranking_relative_gain_v1(zero, b, m, nullptr, 3, out.data(), 8)
                      == N4M_ERR_INVALID_ARGUMENT);
