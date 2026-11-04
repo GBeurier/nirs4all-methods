@@ -314,6 +314,7 @@ target_include_directories(n4m_fanova_kernel_tests PRIVATE
 target_include_directories(n4m_fanova_kernel_tests SYSTEM PRIVATE
     ${CMAKE_SOURCE_DIR}/cpp/backends/rfr/include)
 target_compile_definitions(n4m_fanova_kernel_tests PRIVATE
+    N4M_STATIC=1
     N4M_WITH_RFR=$<BOOL:${N4M_WITH_RFR}>)
 n4m_add_warnings(n4m_fanova_kernel_tests)
 add_test(NAME n4m_fanova_kernel_tests COMMAND n4m_fanova_kernel_tests)
