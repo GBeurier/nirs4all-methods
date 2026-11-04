@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -31,7 +32,12 @@ subprocess.run(
     check=True,
     cwd=root,
 )
-results = {"platform": sys.platform, "native": {}, "wasm": {}}
+version_header = (root / "cpp/include/n4m/n4m_version.h").read_text()
+abi = ".".join(
+    re.search(r"#define N4M_ABI_VERSION_" + part + r"\s+(\d+)", version_header)[1]
+    for part in ["MAJOR", "MINOR", "PATCH"]
+)
+results = {"platform": sys.platform, "abi": abi, "native": {}, "wasm": {}}
 with tempfile.TemporaryDirectory(prefix="n4m-analysis-size-") as scratch:
     scratch = Path(scratch)
     package = scratch / "package"
@@ -43,7 +49,7 @@ with tempfile.TemporaryDirectory(prefix="n4m-analysis-size-") as scratch:
     libdir = package / "src/n4m/lib"
     libdir.mkdir(parents=True)
     for label in ["baseline", "mixed", "fanova", "all"]:
-        source = root / f"build/analysis-{label}/cpp/src/libn4m.so.2.22.0"
+        source = root / f"build/analysis-{label}/cpp/src/libn4m.so.{abi}"
         target = libdir / "libn4m.so"
         shutil.copyfile(source, target)
         unstripped = target.stat().st_size
