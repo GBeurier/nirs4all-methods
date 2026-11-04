@@ -63,3 +63,8 @@ sources. Cases cover additive continuous functions, a categorical XOR interactio
 categorical uniform-domain variance, constant response refusal, held-out metrics,
 strided views, seed reproducibility, repeated fits, invalid input atomicity and
 query-budget refusal.
+
+Seed repeatability is defined within the same compiled artifact. C++ standard
+library random-distribution implementations may differ between toolchains;
+native/WASM qualification uses mathematical decomposition oracles and numerical
+tolerances, rather than promising identical continuous-tree thresholds.
