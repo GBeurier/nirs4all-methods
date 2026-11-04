@@ -1,5 +1,20 @@
 # ABI — Changes Log
 
+## 2026-11-04 — ABI 2.21.0: comparable-block ranking
+
+Add `n4m_ranking_options_init_v1`, `n4m_ranking_compute_v1`, and
+`n4m_ranking_relative_gain_v1`, with a fixed 104-byte versioned options
+structure and caller-owned numeric result buffers. Existing signatures and
+serialized model formats remain unchanged. The ranking surface includes
+available-case mean ranks, complete-block tie-corrected Friedman with an
+explicit chi-square approximation, Elo, regularized batch Bradley-Terry,
+pairwise TrueSkill1 and Weng-Lin Bradley-Terry, plus paired positive-loss
+relative gains with optional supplied-effect-variance DL random effects.
+Python and JS/WASM bind the C ABI. See [RANKING.md](../RANKING.md) for
+matching, connectivity, dependence, approximation and unsupported-variant
+contracts. All three platform symbol snapshots are updated; ABI minor and
+Python/Rust loader floors are synchronized.
+
 ## 2026-10-20 — ABI 2.20.0 unchanged: precision where long double is double (released in 1.3.8)
 
 No symbol or signature change. `n4m_stats_permanova` computes its stratum

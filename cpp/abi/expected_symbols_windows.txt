@@ -580,6 +580,9 @@ n4m_preflight_summary_compute
 n4m_procedure_run
 n4m_random_multivariate_normal
 n4m_random_permutations
+n4m_ranking_compute_v1
+n4m_ranking_options_init_v1
+n4m_ranking_relative_gain_v1
 n4m_rng_pcg64_advance
 n4m_rng_pcg64_create
 n4m_rng_pcg64_destroy

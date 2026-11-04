@@ -1,0 +1,84 @@
+{
+  "schema_version": "n4m.ranking/1",
+  "method": "trueskill",
+  "variant": "trueskill_1v1",
+  "options": {
+    "higher_is_better": false,
+    "tie_tolerance": 0.0,
+    "initial_mean": 25.0,
+    "k_factor": 32.0,
+    "elo_scale": 400.0,
+    "prior_sigma": 8.333333333333334,
+    "beta": 4.166666666666667,
+    "dynamics": 0.0,
+    "draw_margin": 0.740466587452148,
+    "regularization": 1.0,
+    "convergence_tolerance": 1e-08,
+    "max_iterations": 10000
+  },
+  "score_direction": "higher_is_better",
+  "uncertainty_kind": "approximate_posterior_sd",
+  "candidates": [
+    {
+      "index": 0,
+      "score": 29.395575650817896,
+      "uncertainty": 7.171141464453259,
+      "average_rank": 1.0,
+      "observations": 1,
+      "matches": 1,
+      "component": 0,
+      "wins": 1,
+      "ties": 0,
+      "losses": 0,
+      "rank": 1.0
+    },
+    {
+      "index": 1,
+      "score": 25.045275021667738,
+      "uncertainty": 6.264391690011152,
+      "average_rank": 1.5,
+      "observations": 2,
+      "matches": 2,
+      "component": 0,
+      "wins": 1,
+      "ties": 0,
+      "losses": 1,
+      "rank": 2.0
+    },
+    {
+      "index": 2,
+      "score": 19.003095980011427,
+      "uncertainty": 6.872301565701747,
+      "average_rank": 2.0,
+      "observations": 1,
+      "matches": 1,
+      "component": 0,
+      "wins": 0,
+      "ties": 0,
+      "losses": 1,
+      "rank": 3.0
+    }
+  ],
+  "coverage": {
+    "blocks": 2,
+    "complete_blocks": 0,
+    "paired_comparisons": 2,
+    "connected_components": 1
+  },
+  "inference": {
+    "friedman_statistic": null,
+    "degrees_of_freedom": null,
+    "friedman_p_value": null,
+    "p_value_method": "chi_square_approximation",
+    "reason": "chi_square_approximation_on_complete_blocks; host_must_assess_independence"
+  },
+  "convergence": {
+    "converged": true,
+    "iterations": 1
+  },
+  "warnings": [
+    "Mean ranks use all observed blocks; Friedman uses complete blocks only.",
+    "Friedman p-value uses a chi-square approximation and assumes independent blocks.",
+    "Pairwise replay within each block is a composite approximation; posterior SD does not account for dependence between comparisons or repeated folds."
+  ]
+}

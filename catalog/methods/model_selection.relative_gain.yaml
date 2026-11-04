@@ -1,0 +1,44 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "model_selection.relative_gain"
+family: "model_selection.ranking"
+category: "utilities"
+subcategory: "ranking"
+since_abi: "2.21.0"
+abi_symbols:
+  - "n4m_ranking_relative_gain_v1"
+tu:
+  - "cpp/src/core/ranking/ranking.cpp"
+  - "cpp/src/c_api/c_api_ranking.cpp"
+headers:
+  - "cpp/include/n4m/ranking.h"
+carry_along_tu:
+  - "cpp/src/core/common/distributions.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+parity:
+  fixtures: []
+  tolerance_row: "ranking_v1"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "model_selection.relative_gain"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.ranking"
+    class: "paired_relative_gain"
+    legacy_aliases: []
+publications:
+  - "https://www.cochrane.org/authors/handbooks-and-manuals/handbook/current/chapter-10"
+notes: "Paired strictly-positive loss relative gains and optional DerSimonian-Laird random effects, only with caller-supplied sampling variances of the relative effects. No fold-derived uncertainty."
+c_surface:
+  - "n4m_ranking_relative_gain_v1"
+fq_name: "n4m.ranking.paired_relative_gain"
+leaf: "paired_relative_gain"
+legacy_ids:
+  - "model_selection.relative_gain"
+namespace: "ranking"

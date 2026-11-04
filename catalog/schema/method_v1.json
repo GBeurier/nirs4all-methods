@@ -194,6 +194,14 @@
             "legacy_aliases": {"type": "array", "items": {"type": "string"}}
           }
         },
+        "js": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "function": {"type": "string"},
+            "legacy_aliases": {"type": "array", "items": {"type": "string"}}
+          }
+        },
         "r": {
           "type": "object",
           "additionalProperties": false,
