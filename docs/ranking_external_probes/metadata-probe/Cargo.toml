@@ -1,0 +1,7 @@
+[package]
+name = "ranking-metadata-probe"
+version = "0.0.0"
+edition = "2021"
+[dependencies]
+glmm = { path = "../glmm", default-features = false }
+plant-breeding-lmm-core = { path = "../openblup/crates/core", default-features = false }
