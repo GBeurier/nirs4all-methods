@@ -47,6 +47,7 @@ from . import (  # noqa: F401
     metrics,
     model_selection,
     outlier_detection,
+    ranking,
     transform,
 )
 from ._impl.compat import _SKLEARN_AVAILABLE

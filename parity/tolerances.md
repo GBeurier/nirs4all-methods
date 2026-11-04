@@ -84,3 +84,15 @@ This convention mirrors the 📐 icon used in the per-method benchmark dashboard
 | `pls4all-linux-vs-pls4all-macos-arm64`     | 📐 pls4all REFERENCE_CPU (Linux x86_64) | pls4all REFERENCE_CPU (macOS arm64) | any   | any                 | **1e-11** | **1e-11** | all                                          | cross-platform sanity |
 
 The `tolerance_table_row` key in each fixture's `comparison_policy` block points to a row by name. The comparator resolves missing per-field tolerances against this row.
+
+### ranking_v1
+
+`ranking_reference_v1.json` compares the native pairwise TrueSkill1 and
+Weng-Lin Bradley-Terry kernels to trueskill 0.4.5 (SciPy normal backend) and
+openskill 6.2.0 (`BradleyTerryFull`, two singleton teams, tau=0, kappa=1e-12).
+Batch Bradley-Terry uses an independent SciPy 1.18.1 L2-logistic optimization;
+Friedman uses SciPy's tie-corrected statistic. Posterior means/SDs and BT
+strengths use absolute tolerance 2e-8 and relative tolerance 2e-9. These fixtures
+cover single wins, ties, a connected incomplete cross-dataset bridge, and three
+candidates with tied outcomes. No full multiplayer or TrueSkill2 parity is
+claimed. Relative-gain DL validation additionally checks exact rational weights.

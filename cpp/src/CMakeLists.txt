@@ -52,6 +52,7 @@ add_library(n4m_core OBJECT
     core/iriv_selection.cpp
     core/variable_importance.cpp
     core/variable_selection.cpp
+    core/ranking/ranking.cpp
     core/config.cpp
     core/estimator/registry.cpp
     core/estimator/linear_adapters.cpp

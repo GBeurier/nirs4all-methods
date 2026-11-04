@@ -325,3 +325,24 @@ __all__ = [
     "Status",
     "TransferMetrics",
 ]
+
+
+class RankingOptionsV1(Structure):
+    """Mirror of the versioned native ranking options; defaults come from C++."""
+
+    _fields_ = [
+        ("struct_size", c_uint64),
+        ("method", c_int32),
+        ("higher_is_better", c_int32),
+        ("tie_tolerance", c_double),
+        ("initial_mean", c_double),
+        ("k_factor", c_double),
+        ("elo_scale", c_double),
+        ("prior_sigma", c_double),
+        ("beta", c_double),
+        ("dynamics", c_double),
+        ("draw_margin", c_double),
+        ("regularization", c_double),
+        ("convergence_tolerance", c_double),
+        ("max_iterations", c_int64),
+    ]

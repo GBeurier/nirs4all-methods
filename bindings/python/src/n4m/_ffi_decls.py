@@ -12,7 +12,7 @@ from ctypes import (
     c_int64, c_size_t, c_uint8, c_uint32, c_uint64, c_void_p,
 )
 
-from ._types import MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, SplitResult, TransferMetrics
+from ._types import MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, RankingOptionsV1, SplitResult, TransferMetrics
 
 # Symbols: tuple of (symbol_name, argtypes_tuple, restype).
 # restype = None for void; argtypes = () for parameter-less.
@@ -599,6 +599,9 @@ SYMBOLS = (
     ("n4m_procedure_run", (c_void_p, c_int32, c_void_p, c_void_p, POINTER(c_void_p)), c_int),
     ("n4m_random_multivariate_normal", (c_void_p, c_uint64, POINTER(c_double), POINTER(MatrixView), c_int64, POINTER(c_double)), c_int),
     ("n4m_random_permutations", (c_void_p, c_uint64, c_int64, c_int64, POINTER(c_int64)), c_int),
+    ("n4m_ranking_compute_v1", (POINTER(MatrixView), POINTER(c_uint8), POINTER(RankingOptionsV1), POINTER(c_double), c_int64, POINTER(c_double), c_int64), c_int),
+    ("n4m_ranking_options_init_v1", (POINTER(RankingOptionsV1),), c_int),
+    ("n4m_ranking_relative_gain_v1", (POINTER(c_double), POINTER(c_double), POINTER(c_uint8), POINTER(c_double), c_int64, POINTER(c_double), c_int64), c_int),
     ("n4m_rng_pcg64_advance", (c_void_p, c_uint64), c_int),
     ("n4m_rng_pcg64_create", (c_uint64, POINTER(c_void_p)), c_int),
     ("n4m_rng_pcg64_destroy", (c_void_p,), None),

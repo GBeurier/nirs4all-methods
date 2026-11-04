@@ -290,3 +290,10 @@ target_compile_features(n4m_fit_witness PRIVATE cxx_std_17)
 set_target_properties(n4m_fit_witness PROPERTIES
     CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
 n4m_add_warnings(n4m_fit_witness)
+
+# Ranking tests exercise the public ABI, with a C11-compatible header guard.
+add_executable(n4m_ranking_tests test_ranking.cpp include_check_ranking.c)
+target_link_libraries(n4m_ranking_tests PRIVATE n4m_c)
+target_include_directories(n4m_ranking_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+n4m_add_warnings(n4m_ranking_tests)
+add_test(NAME n4m_ranking_tests COMMAND n4m_ranking_tests)
