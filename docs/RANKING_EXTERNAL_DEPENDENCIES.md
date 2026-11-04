@@ -1,5 +1,9 @@
 # Pipeline component analysis: external engine feasibility
 
+Historical assessment preceding the approved optional implementations. The earlier
+delivery decision below is superseded by [Mixed effects](MIXED_EFFECTS.md) and
+[fANOVA](FANOVA.md); current availability is reported by the compiled capabilities.
+
 Assessed on 4 November 2026. This document concerns optional compiled backends for
 pipeline component effects, alongside the dependency-free ranking algorithms.
 It does not change their API or implementation.
