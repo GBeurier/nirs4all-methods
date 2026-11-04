@@ -38,6 +38,11 @@ OUTPUT = REPO_ROOT / "bindings" / "python" / "src" / "n4m" / "_ffi_decls.py"
 # Concrete ctypes value structs that cross the ABI by pointer. Everything else
 # named ``n4m_*_t`` is an opaque/forward-declared handle -> c_void_p.
 VALUE_STRUCTS = {
+    "n4m_mixed_effects_options_v1_t": "MixedEffectsOptionsV1",
+    "n4m_mixed_effects_summary_v1_t": "MixedEffectsSummaryV1",
+    "n4m_fanova_options_v1_t": "FanovaOptionsV1",
+    "n4m_fanova_summary_v1_t": "FanovaSummaryV1",
+
     "n4m_ranking_options_v1_t": "RankingOptionsV1",
     "n4m_matrix_view_t": "MatrixView",
     "n4m_linear_predictor_spec_t": "LinearPredictorSpec",
@@ -88,7 +93,7 @@ from ctypes import (
     c_int64, c_size_t, c_uint8, c_uint32, c_uint64, c_void_p,
 )
 
-from ._types import MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, RankingOptionsV1, SplitResult, TransferMetrics
+from ._types import MixedEffectsOptionsV1, MixedEffectsSummaryV1, FanovaOptionsV1, FanovaSummaryV1, MatrixView, LinearPredictorSpec, SerializedModelInfoV1, SerializedPipelineInfoV1, FilterStats, OptimizerOptions, RankingOptionsV1, SplitResult, TransferMetrics
 
 # Symbols: tuple of (symbol_name, argtypes_tuple, restype).
 # restype = None for void; argtypes = () for parameter-less.
