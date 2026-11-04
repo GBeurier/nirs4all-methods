@@ -30,7 +30,7 @@ jobs:
         run: |
           python -m pip install cmake ninja numpy pytest
           cmake --preset '${{ matrix.preset }}'
-          cmake --build --preset '${{ matrix.preset }}' --target n4m_c n4m_ranking_tests n4m_fanova_tests n4m_mixed_effects_tests --parallel 3
+          cmake --build --preset '${{ matrix.preset }}' --target n4m_c n4m_c_static n4m_cli n4m_ranking_tests n4m_fanova_tests n4m_mixed_effects_tests --parallel 3
       - name: Execute native and Python contracts
         shell: bash
         env:
@@ -39,6 +39,15 @@ jobs:
         run: |
           ctest --test-dir 'build/${{ matrix.preset }}' -C Release -R 'n4m_ranking_tests|n4m_fanova_tests|mixed_effects' --output-on-failure
           python scripts/test_component_backends.py
+      - name: Test installed static dependency closure
+        shell: bash
+        run: |
+          cmake --install 'build/${{ matrix.preset }}' --config Release --prefix "$RUNNER_TEMP/n4m-analysis-install"
+          export N4M_INSTALL_PREFIX="$RUNNER_TEMP/n4m-analysis-install"
+          cd cpp/tests/installed_component_analysis
+          cmake --preset installed-static
+          cmake --build --preset installed-static --config Release
+          ctest --preset installed-static -C Release
   wasm:
     runs-on: ubuntu-22.04
     steps:

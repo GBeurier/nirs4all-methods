@@ -3,7 +3,6 @@
   "configurePresets": [
     {
       "name": "installed-static",
-      "generator": "Ninja",
       "binaryDir": "${sourceDir}/../../../build/installed-component-analysis",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
@@ -12,9 +11,18 @@
     }
   ],
   "buildPresets": [
-    {"name": "installed-static", "configurePreset": "installed-static"}
+    {
+      "name": "installed-static",
+      "configurePreset": "installed-static"
+    }
   ],
   "testPresets": [
-    {"name": "installed-static", "configurePreset": "installed-static", "output": {"outputOnFailure": true}}
+    {
+      "name": "installed-static",
+      "configurePreset": "installed-static",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }

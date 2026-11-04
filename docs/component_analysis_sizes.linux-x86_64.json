@@ -1,46 +1,47 @@
 {
   "platform": "linux",
+  "abi": "2.22.0",
   "native": {
     "baseline": {
       "release_library_bytes": 5986480,
       "stripped_library_bytes": 4876504,
       "library_gzip_bytes": 1950422,
-      "wheel_bytes": 2325141
+      "wheel_bytes": 2325057
     },
     "mixed": {
       "release_library_bytes": 12145168,
       "stripped_library_bytes": 6877712,
       "library_gzip_bytes": 2876032,
-      "wheel_bytes": 3252788,
+      "wheel_bytes": 3252705,
       "increment_bytes": {
         "release_library_bytes": 6158688,
         "stripped_library_bytes": 2001208,
         "library_gzip_bytes": 925610,
-        "wheel_bytes": 927647
+        "wheel_bytes": 927648
       }
     },
     "fanova": {
       "release_library_bytes": 6172576,
       "stripped_library_bytes": 5015976,
       "library_gzip_bytes": 2014306,
-      "wheel_bytes": 2388837,
+      "wheel_bytes": 2388752,
       "increment_bytes": {
         "release_library_bytes": 186096,
         "stripped_library_bytes": 139472,
         "library_gzip_bytes": 63884,
-        "wheel_bytes": 63696
+        "wheel_bytes": 63695
       }
     },
     "all": {
       "release_library_bytes": 12324272,
       "stripped_library_bytes": 7009000,
       "library_gzip_bytes": 2938833,
-      "wheel_bytes": 3317523,
+      "wheel_bytes": 3317438,
       "increment_bytes": {
         "release_library_bytes": 6337792,
         "stripped_library_bytes": 2132496,
         "library_gzip_bytes": 988411,
-        "wheel_bytes": 992382
+        "wheel_bytes": 992381
       }
     }
   },
