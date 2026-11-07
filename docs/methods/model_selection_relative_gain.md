@@ -4,11 +4,11 @@ _Namespace_: **`n4m.ranking`** · _Fully-qualified_: `n4m.ranking.paired_relativ
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_ranking_relative_gain_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h#L70). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_ranking_relative_gain_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h#L73). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.ranking import paired_relative_gain`
 
-**Signature:** [`paired_relative_gain(baseline: ArrayLike, candidate: ArrayLike, *, present: ArrayLike | None = None, variances: ArrayLike | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ranking.py#L209)
+**Signature:** [`paired_relative_gain(baseline: ArrayLike, candidate: ArrayLike, *, present: ArrayLike | None = None, variances: ArrayLike | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ranking.py#L214)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

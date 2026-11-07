@@ -16,7 +16,7 @@ Robust SNV using median + k * MAD.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_robust_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L46) · [`n4m_transform_robust_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L49) · [`n4m_transform_robust_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L50). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_robust_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L50) · [`n4m_transform_robust_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L53) · [`n4m_transform_robust_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L54). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
@@ -24,7 +24,7 @@ Robust SNV using median + k * MAD.
 from n4m.transform.scatter import RNV
 ```
 
-Source signature: [`RNV(with_center: bool = True, with_scale: bool = True, k: float = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L77).
+Source signature: [`RNV(with_center: bool = True, with_scale: bool = True, k: float = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L110).
 
 **R (source-verified):** [`robust_snv_transform(X, with_center = TRUE, with_scale = TRUE, k = 1.4826)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
 

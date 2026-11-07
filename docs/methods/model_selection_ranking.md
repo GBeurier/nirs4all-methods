@@ -4,7 +4,7 @@ _Namespace_: **`n4m.ranking`** · _Fully-qualified_: `n4m.ranking.rank` · _Cata
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_ranking_options_init_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h#L37) · [`n4m_ranking_compute_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h#L54). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_ranking_options_init_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h#L37) · [`n4m_ranking_compute_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/ranking.h#L57). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.ranking import rank`
 
