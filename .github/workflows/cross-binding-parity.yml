@@ -227,6 +227,7 @@ jobs:
           octave --no-gui --no-history --eval "cd bindings/matlab; build_mex"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_parity"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_n4m_namespace"
+          octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_snv_parameter_contract"
           octave --no-gui --no-history --eval "addpath('${{ github.workspace }}/bindings/matlab'); cd bindings/matlab/test; test_optimizer"
 
       - name: Octave optimizer HPO golden traces

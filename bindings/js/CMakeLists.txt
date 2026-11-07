@@ -87,8 +87,66 @@ target_link_options(n4m_wasm PRIVATE
     -O2
 )
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/n4m.js"
-    "${CMAKE_CURRENT_BINARY_DIR}/n4m.wasm"
-    DESTINATION "${CMAKE_INSTALL_LIBDIR}/nirs4all-methods-js"
-    OPTIONAL)
+# This branch contributes no target, options, output, or install changes in the
+# default/native profiles. Qualification artifacts never replace package assets.
+if(N4M_WASM_EH_MODEL STREQUAL "native-experimental")
+    set(_n4m_eh_output "${CMAKE_CURRENT_BINARY_DIR}/native-eh-candidate")
+    set(_n4m_eh_preflight "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_native_eh_preflight.js")
+    set_target_properties(n4m_wasm PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${_n4m_eh_output}")
+    target_link_options(n4m_wasm PRIVATE "SHELL:--pre-js ${_n4m_eh_preflight}")
+    set_property(TARGET n4m_wasm APPEND PROPERTY LINK_DEPENDS "${_n4m_eh_preflight}")
+
+    # The sole extra CXX object is an allocator fault fixture. Both modules link
+    # the same owner archive (143 owner CXX objects); no guard or math is copied.
+    add_executable(n4m_wasm_eh_boundary_tests EXCLUDE_FROM_ALL
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_multimodal_layout.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_spectral.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/wasm_entry.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/test/native_eh_fault_injection.cpp")
+    target_link_libraries(n4m_wasm_eh_boundary_tests PRIVATE n4m_c_static)
+    target_compile_options(n4m_wasm_eh_boundary_tests PRIVATE
+        "$<$<COMPILE_LANGUAGE:CXX>:-fwasm-exceptions>")
+    set_target_properties(n4m_wasm_eh_boundary_tests PROPERTIES
+        OUTPUT_NAME "n4m-eh-boundary-tests"
+        SUFFIX ".js"
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+        RUNTIME_OUTPUT_DIRECTORY "${_n4m_eh_output}")
+    get_target_property(_n4m_eh_boundary_options n4m_wasm LINK_OPTIONS)
+    # Keep every normal option, replacing only the test export list.
+    list(FILTER _n4m_eh_boundary_options EXCLUDE REGEX "EXPORTED_FUNCTIONS=")
+    set(_n4m_eh_test_exports ${_js_export_list}
+        "_n4m_test_eh_arm" "_n4m_test_eh_allocations"
+        "_n4m_test_eh_throws" "_n4m_test_eh_armed"
+        "_n4m_test_eh_memory_snapshot")
+    string(REPLACE ";" "," _n4m_eh_test_export_flag "${_n4m_eh_test_exports}")
+    target_link_options(n4m_wasm_eh_boundary_tests PRIVATE
+        ${_n4m_eh_boundary_options}
+        "SHELL:-s EXPORTED_FUNCTIONS=${_n4m_eh_test_export_flag}")
+    set_property(TARGET n4m_wasm_eh_boundary_tests APPEND PROPERTY
+        LINK_DEPENDS "${_n4m_eh_preflight}")
+
+    # Inline private build metadata, not an owner/scientific/state schema. No
+    # additional product template is needed or installed. Pair/archive hashes
+    # must be supplied and checked by the independent qualification launcher.
+    foreach(_n4m_eh_kind IN ITEMS normal boundary)
+        set(_n4m_eh_sidecar "n4m-runtime-capabilities.json")
+        set(_n4m_eh_test_only false)
+        if(_n4m_eh_kind STREQUAL "boundary")
+            set(_n4m_eh_sidecar "n4m-eh-boundary-tests-capabilities.json")
+            set(_n4m_eh_test_only true)
+        endif()
+        file(GENERATE OUTPUT "${_n4m_eh_output}/${_n4m_eh_sidecar}" CONTENT
+"{\n  \"ehModel\": \"native-experimental\",\n  \"encoding\": \"wasm-legacy-eh\",\n  \"experimental\": true,\n  \"requiredFeature\": \"wasm-exception-handling\",\n  \"opcodes\": [\"try\", \"catch\", \"throw\", \"catch_all\", \"rethrow\", \"delegate\"],\n  \"traceStack\": true,\n  \"qualificationOnly\": ${_n4m_eh_test_only},\n  \"ownerArchive\": \"$<TARGET_FILE:n4m_c_static>\"\n}\n")
+    endforeach()
+else()
+    # bindings/js is added before the top-level GNUInstallDirs include, so a first
+    # configure would otherwise see an empty CMAKE_INSTALL_LIBDIR here.
+    include(GNUInstallDirs)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/n4m.js"
+        "${CMAKE_CURRENT_BINARY_DIR}/n4m.wasm"
+        DESTINATION "${CMAKE_INSTALL_LIBDIR}/nirs4all-methods-js"
+        OPTIONAL)
+endif()

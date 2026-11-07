@@ -339,7 +339,7 @@ class RecursivePlsAdapter final : public ModelAdapter {
 std::int32_t narrow(std::int64_t v) {
     if (v > std::numeric_limits<std::int32_t>::max() ||
         v < std::numeric_limits<std::int32_t>::min()) {
-        throw std::out_of_range("integer parameter exceeds int32");
+        throw IntegerNarrowingError("integer parameter exceeds int32");
     }
     return static_cast<std::int32_t>(v);
 }

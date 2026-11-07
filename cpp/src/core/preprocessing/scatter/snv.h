@@ -30,7 +30,8 @@ typedef struct n4m_pp_snv_state_t n4m_pp_snv_state_t;
 
 /* Allocate a new SNV state. `with_mean` / `with_std` are booleans (any
  * non-zero int means enabled); `ddof` must be 0 or positive but is not
- * upper-bounded here (the apply step skips std division when ddof >= cols). */
+ * upper-bounded here. A nonempty apply with scaling refuses ddof >= cols
+ * before writing output/bounds; centering-only does not use variance. */
 n4m_pp_snv_state_t* n4m_pp_snv_state_new(int with_mean, int with_std, int ddof);
 
 /* Release a state allocated by n4m_pp_snv_state_new. NULL-safe. */

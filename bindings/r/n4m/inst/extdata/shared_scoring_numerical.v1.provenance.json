@@ -1,0 +1,11 @@
+{
+  "source_repository": "https://github.com/GBeurier/dag-ml.git",
+  "source_commit_at_fixture_creation": "ea7760926fafdc8cc008200fa3dfea55d93d1aeb",
+  "source_commit_note": "Creation base commit; fixture is introduced as an uncommitted phase-2 slice on top of this commit.",
+  "source_path": "examples/fixtures/criteria/shared_scoring_numerical.v1.json",
+  "copy_path": "bindings/r/n4m/inst/extdata/shared_scoring_numerical.v1.json",
+  "sha256": "bb6e5650505f44d9e529d46f3f051d848d9a35fbc4552ea72e785d1ccd4e9d94",
+  "hash_scope": "Exact UTF-8 file bytes including trailing newline; distinct from TCV1 semantic canonicalization/fingerprints.",
+  "crate_copy_path": "crates/dag-ml-core/tests/fixtures/shared_scoring_numerical.v1.json",
+  "copied_from": "parity/fixtures/shared_scoring_numerical.v1.json"
+}

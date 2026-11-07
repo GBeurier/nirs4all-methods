@@ -8,7 +8,7 @@ _Namespace_: **`n4m.component_analysis`** · _Fully-qualified_: `n4m.component_a
 
 **Python (verified public re-export):** `from n4m.component_analysis import fanova`
 
-**Signature:** [`fanova(X: ArrayLike, y: ArrayLike, feature_types: ArrayLike, bounds: ArrayLike, *, n_trees: int = 32, max_depth: int = 10, min_samples_leaf: int = 2, max_features: int = 0, seed: int = 42, max_order: int = 2, max_marginal_evaluations: int = 1000000, X_valid: ArrayLike | None = None, y_valid: ArrayLike | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/component_analysis.py#L212)
+**Signature:** [`fanova(X: ArrayLike, y: ArrayLike, feature_types: ArrayLike, bounds: ArrayLike, *, n_trees: int = 32, max_depth: int | None = None, min_samples_leaf: int = 2, max_features: int = 0, seed: int | None = None, max_order: int = 2, max_marginal_evaluations: int = 1000000, X_valid: ArrayLike | None = None, y_valid: ArrayLike | None = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/component_analysis.py#L212)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -23,10 +23,10 @@ _Namespace_: **`n4m.component_analysis`** · _Fully-qualified_: `n4m.component_a
 | `feature_types` | `ArrayLike` | `required` |
 | `bounds` | `ArrayLike` | `required` |
 | `n_trees` | `int` | `32` |
-| `max_depth` | `int` | `10` |
+| `max_depth` | `int \| None` | `None` |
 | `min_samples_leaf` | `int` | `2` |
 | `max_features` | `int` | `0` |
-| `seed` | `int` | `42` |
+| `seed` | `int \| None` | `None` |
 | `max_order` | `int` | `2` |
 | `max_marginal_evaluations` | `int` | `1000000` |
 | `X_valid` | `ArrayLike \| None` | `None` |

@@ -1,5 +1,118 @@
 # ABI — Changes Log
 
+## 2026-11-07 — ABI 2.22.0: Gaussian mixed effects, forest fANOVA, loss normalization
+
+Additive (unreleased); existing signatures, serialized model formats and the
+2.21.0 ranking symbols keep their meaning. Seven new public symbols, present in
+all three `cpp/abi/expected_symbols_*.txt` snapshots (ten new symbols since
+2.20.0 together with the three 2.21.0 ranking symbols):
+
+```c
+n4m_status_t n4m_mixed_effects_options_init_v1(n4m_mixed_effects_options_v1_t* options);
+int          n4m_mixed_effects_backend_available_v1(void);
+n4m_status_t n4m_mixed_effects_fit_v1(/* X, y, groups, options, beta, covariance, standard_errors, variances, summary */);
+n4m_status_t n4m_fanova_options_init_v1(n4m_fanova_options_v1_t* options);
+int          n4m_fanova_backend_available_v1(void);
+n4m_status_t n4m_fanova_fit_v1(/* X, y, bounds, types, X_validation, y_validation, options, main_effects, pair_effects, summary */);
+n4m_status_t n4m_component_normalize_loss_v1(/* values, baselines, n, out */);
+```
+
+The 2.21.0 ranking symbols are listed in the entry below. The sum since 2.20.0
+is three ranking, three mixed-effects, three fANOVA and one loss-normalization
+symbol.
+
+- **Versioned structs** with `struct_size` set by the caller (an `init_v1` call
+  fills the defaults; a size mismatch returns `N4M_ERR_ABI_MISMATCH`):
+  `n4m_mixed_effects_options_v1_t` 48 bytes, `n4m_mixed_effects_summary_v1_t`
+  112 bytes, `n4m_fanova_options_v1_t` 48 bytes and `n4m_fanova_summary_v1_t`
+  96 bytes. Output buffers are caller-owned.
+- **Optional backends.** Mixed effects (pinned Rust `mixeff-rs`) and fANOVA
+  (vendored `automl/random_forest_run` headers) are compile-time options
+  (`N4M_WITH_MIXEFF`, `N4M_WITH_RFR`; presets `analysis-baseline`,
+  `analysis-fanova`, `analysis-mixed`, `analysis-all`), statically linked, with
+  no runtime plugin.
+  Builds without a backend keep every symbol, so the ABI surface does not
+  depend on the build. `*_backend_available_v1()` returns 0 there, and
+  `*_fit_v1` returns `N4M_ERR_BACKEND_UNAVAILABLE` after the null-pointer and
+  `struct_size` checks. Python and JS/WASM report this as a structured
+  `state: "unavailable"` result. R, Octave/MATLAB and Rust expose only the C ABI
+  for these procedures; no idiomatic wrapper exists there.
+- **Semantics.** Mixed effects fits a Gaussian random-intercept model by ML or
+  REML (the caller owns the fixed-effect intercept column) and reports
+  conditional plug-in standard errors, not confidence intervals or p-values.
+  fANOVA fits a fresh regression forest and returns exact uniform-product
+  main-effect and pairwise variance fractions of that surrogate with the tree
+  dispersion; it cannot express conditional or inactive dimensions. Native
+  limits are in `docs/MIXED_EFFECTS.md` and `docs/FANOVA.md`.
+- **WASM exception model.** When `N4M_WITH_MIXEFF` is enabled for Emscripten
+  (the `emscripten-analysis` build), every C++ translation unit and the link use
+  `-fwasm-exceptions` to match Rust's panic-unwind runtime. The resulting
+  module needs host support for WebAssembly exception handling; the default
+  WASM build is unchanged.
+- **Ranking behaviour (2.21.0 surface, unreleased):** `average_rank` emits
+  `global_rank` only when every block is complete; see `docs/RANKING.md`.
+
+## Pending owner qualification — ABI unchanged: checked integer narrowing
+
+Generic adapter narrowing from int64 to int32 now reports
+`N4M_ERR_INVALID_ARGUMENT` with `integer parameter exceeds int32`, instead of
+classifying that specific checked-input failure as INTERNAL255. Other standard
+exceptions remain internal errors; out-of-memory remains status9. Integer
+storage, legitimate64-bit values, public symbols, signatures, layouts, numerical
+kernels and ABI version are unchanged.
+
+The Emscripten owner build enables JavaScript-based exception catching in C++
+objects and propagates the final-link requirement. This restores C ABI status
+translation for raw generic calls; it does not catch aborts in JavaScript or
+change frontend runtime pins. Qualification and release-cohort refresh remain
+required before replacing any accepted/default WASM or glue artifact.
+
+## 2026-11-04 — ABI unchanged: scalar checkpoint grid membership
+
+Checkpoint loading now rejects stored scalar stepped-grid history values that
+are not canonical grid values. Loading preserves valid stored value bits and
+does not repair off-grid values. Public symbols, signatures, ABI version and
+checkpoint wire format remain unchanged.
+
+## 2026-11-04 — ABI unchanged: non-integer FLOAT stepped grids
+
+The scalar stepped-grid initial-index check and near-ULP reconstruction now
+avoid over-quarter extra candidates and double-rounding artifacts. Enqueue uses
+shared candidate snapping for non-integer FLOAT grids. This supersedes the
+retained T4e statement about unchanged initial-index behavior. Public symbols,
+signatures, ABI version and checkpoint wire format remain unchanged.
+
+## 2026-11-04 — ABI unchanged: scalar stepped-grid proposals
+
+Scalar stepped-grid proposals use exact integer-grid reconstruction when the
+bounds and step are exact integers within the binary64 integer range. For other FLOAT grids, the optional next candidate is rejected when its exact
+excess exceeds a quarter step. Non-integer FLOAT grids with q >= 2^50 retain
+their existing initial-index behavior. Integer-valued FLOAT enqueue inputs on integer grids are checked
+against that grid exactly. These changes preserve public symbols, signatures,
+ABI version and checkpoint wire format. Existing checkpoint values are not
+repaired or newly checked for grid membership during load.
+
+## 2026-11-04 — ABI unchanged: optimizer domain validation and proposals
+
+Optimizer creation now rejects non-log floating and sorted-tuple domains whose
+binary64 span overflows. Existing checkpoints for those invalid spaces are
+rejected on load. Collapsed log-coordinate inverses use a linear fallback, and
+integer sorted tuples calculate the sampled offset before adding the lower bound.
+These changes preserve the public symbols, signatures, ABI version and checkpoint
+wire format; valid existing checkpoints remain supported.
+
+## 2026-11-03 — ABI unchanged: scalar metric nonfinite-input rejection
+
+Intentional behavior change: all eight `n4m_metrics_regression_metrics_*`
+entrypoints now return `N4M_ERR_INVALID_ARGUMENT` for NaN or +/-Inf in either
+input array, leaving the caller's output unchanged. Validation is confined to
+the common `check_inputs` in `nirs_metrics.c`. Previously these inputs could
+return `N4M_OK` with a NaN result. Finite degenerate ratio inputs may still
+produce intentional +Inf outputs. The separate `n4m_stats_regression_scores`
+ABI retains its NaN R² convention for constant targets. No public symbols,
+signatures, version constants or symbol snapshots change. See the
+[shared scoring contract](../SHARED_SCORING_CONTRACT.md).
+
 ## 2026-11-04 — ABI 2.21.0: comparable-block ranking
 
 Add `n4m_ranking_options_init_v1`, `n4m_ranking_compute_v1`, and
@@ -1693,3 +1806,14 @@ SPLITMIX64 reproduces n4m's historical streams bit-for-bit — leaving it unset
 changes nothing. Snapshots regenerated for all three platforms
 (expected_symbols_{linux,macos,windows}.txt). Engines verified bit-exact:
 docs/dev/RNG_TIER0_INVENTORY.md, cpp/tests/test_rng_engine.cpp.
+
+### SNV variance-domain and host parameter correction (first V1)
+
+No ABI signature or export change. Nonempty SNV with scaling now refuses
+`ddof >= n_features` as `N4M_ERR_INVALID_ARGUMENT` before output/bound writes,
+including constant and nonfinite rows. This intentionally corrects the
+previously documented skip of variance division. Centering-only/no-op accepts
+any nonnegative C-int ddof. Valid constant fallback, default bits, arithmetic
+and nonfinite propagation remain unchanged. Host SNV parameters refuse lossy
+coercions; WASM's legacy ppCreate SNV accepts only its documented empty vector.
+Root batch release notes must carry this behavior change before publication.

@@ -572,6 +572,9 @@ class GpEiSampler : public Optimizer {
 // Resolve MINIMIZE/MAXIMIZE from a metric (used when direction == AUTO).
 n4m_opt_direction_t direction_for_metric(n4m_metric_t metric);
 
+// True when an in-range scalar value is already the canonical value of its grid.
+bool scalar_grid_contains(const ParamSpec& p, double value);
+
 // Validate every currently-defined optimizer option before a sampler or pruner
 // is constructed. Malformed values are INVALID_ARGUMENT, valid-but-reserved
 // behaviour is NOT_IMPLEMENTED, and unsupported option combinations are

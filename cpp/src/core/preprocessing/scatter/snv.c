@@ -112,6 +112,7 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
         dmax = fmax(dmax, d);
     }
     if (bound) *bound = (double)NAN;
+    /* The apply boundary requires a positive denominator when scaling. */
     const int scale = state->with_std && denom_count > 0 && dmax > 0.0;
     if (!scale) {
         /* Centre only (or no SD available): x - mean at the original scale. */
@@ -164,6 +165,9 @@ n4m_status_t n4m_pp_snv_apply_bounded(const n4m_pp_snv_state_t* state,
         return N4M_ERR_NULL_POINTER;
     }
     if (rows < 0 || cols < 0) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    if (rows > 0 && cols > 0 && state->with_std && state->ddof >= cols) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     const int64_t denom_count = (int64_t)cols - (int64_t)state->ddof;

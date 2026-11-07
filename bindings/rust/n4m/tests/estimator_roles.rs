@@ -162,7 +162,10 @@ fn regression_data() -> (Vec<f64>, Vec<f64>) {
 fn manifest_is_typed_and_matches_json() {
     let json = roles::manifest_json().unwrap();
     let manifest: Value = serde_json::from_str(&json).unwrap();
-    assert_eq!(manifest["abi"], { let (major, minor, patch) = n4m::runtime_abi_version().unwrap(); format!("{}.{}.{}", major, minor, patch) });
+    assert_eq!(manifest["abi"], {
+        let (major, minor, patch) = n4m::runtime_abi_version().unwrap();
+        format!("{}.{}.{}", major, minor, patch)
+    });
     let methods = roles::methods().unwrap();
     for method in &methods {
         assert!(json.contains(&format!("\"method_id\":\"{}\"", method.method_id)));

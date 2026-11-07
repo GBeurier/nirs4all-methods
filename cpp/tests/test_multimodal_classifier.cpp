@@ -284,8 +284,28 @@ void malformed_and_expected_recipe() {
     f.specs[0].weight = 0.25; reject(bytes);
 }
 }
+
+static void i32_head_preflight() {
+    std::puts("MI32_MULTIMODAL_V1/earlier-head-domain-refusal");
+    Context ctx;
+    Fixture f;
+    Recipe r(ctx, f);
+    REQUIRE(n4m_params_set_int(r.params, "n_components", int64_t{2147483648}) == N4M_OK);
+    n4m_multimodal_classifier_t* raw = nullptr;
+    const auto status = n4m_multimodal_classifier_create(ctx.value, &r.value, &raw);
+    REQUIRE(raw == nullptr);
+    REQUIRE(status == N4M_ERR_INVALID_ARGUMENT);
+    // This existing recipe check precedes encoder fitting and adapter narrowing.
+    REQUIRE(std::strcmp(n4m_context_last_error(ctx.value),
+                        "invalid multimodal classifier component/iteration count")
+            == 0);
+    REQUIRE(n4m_params_set_int(r.params, "n_components", 2) == N4M_OK);
+    auto valid = create(ctx, r);
+    REQUIRE(valid != nullptr);
+}
+
 int main() {
-    try { binary_and_multiclass(); vocabulary_and_regression_conservation(); malformed_and_expected_recipe(); }
+    try { i32_head_preflight(); binary_and_multiclass(); vocabulary_and_regression_conservation(); malformed_and_expected_recipe(); }
     catch (const std::exception& e) { std::fprintf(stderr, "%s\n", e.what()); return 1; }
     return 0;
 }

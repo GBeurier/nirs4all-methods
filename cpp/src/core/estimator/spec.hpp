@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,13 @@
 #include "n4m/estimator.h"
 
 namespace n4m::estimator {
+
+// Only checked adapter integer narrowing is an input error at the C boundary.
+// Other standard-library out_of_range exceptions remain internal errors.
+class IntegerNarrowingError final : public std::out_of_range {
+public:
+    using std::out_of_range::out_of_range;
+};
 
 struct ParamSpec {
     const char* name;

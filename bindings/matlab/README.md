@@ -266,3 +266,19 @@ results do not qualify this new surface.
   convert layout. Batch work into full-block calls rather than per-row loops.
 - The shared public subset targets the MATLAB/Octave intersection. Any runtime
   divergence must be documented in `COMPAT.md`.
+
+### SNV options and scalar types
+
+`n4m.snv_transform` accepts exactly `with_mean`, `with_std` and `ddof` option
+names. It passes original scalars to the preprocessing MEX. Flags must be
+full real scalar logical or exact numeric 0/1; ddof must be a nonlogical
+full real exact numeric integer in `[0, INT32_MAX]`. Strings, sparse/complex
+values, vectors, fractions and nonfinite parameters refuse before SNV C calls.
+Nonempty scaled input additionally requires ddof below the feature count;
+centering-only/no-op does not use variance.
+
+The unchanged generic role MEX validates each parameter in struct order,
+so earlier valid setters may run before a later invalid parameter. An
+above-i32 integer reaches its setter and is refused by the native adapter
+as a status before any SNV transform. Native call/counter qualification is
+per route. Octave execution does not certify a licensed MATLAB runtime.

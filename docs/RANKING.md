@@ -32,9 +32,16 @@ assert result["coverage"]["connected_components"] == 1
 assert [c["rank"] for c in result["candidates"]] == [1.0, 2.0, 3.0]
 ```
 
-There is no required full-candidate intersection for ratings. Only the Friedman
+There is no required full-candidate intersection for the pairwise-evidence
+methods (`elo`, `bradley_terry`, `trueskill`, `openskill`). Only the Friedman
 statistic uses complete blocks. Disconnected comparison graphs have no global
-rank. Candidate scores remain available, but their relative origins/priors do
+rank. `average_rank` is different: it is not a pairwise-evidence method, and
+within-block ranks from blocks with different numbers of present candidates lie
+on different scales (a block with one present candidate yields rank 1 without any
+comparison). Its global rank is therefore emitted only when every block is
+complete; on any incomplete design the per-candidate mean rank stays available as
+a descriptive score, but `rank` is null and the host should use `bradley_terry` or
+`trueskill` for incomplete comparisons. Candidate scores remain available, but their relative origins/priors do
 not establish an ordering between disconnected groups. Entirely absent
 candidates are explicitly null and count as isolated graph nodes.
 
@@ -84,8 +91,11 @@ at the best value: `[0, .75, 1.5]` at tolerance 1 has ranks `[1.5, 1.5, 3]`.
 Tolerance closeness is nontransitive, so pairwise ties can differ from rank
 groups in that example. Global score ranks use exact score equality.
 
-Mean ranks include every observed block; the number of candidates per block
-can differ, and coverage must be inspected before comparing these means.
+Mean ranks include every observed block as a descriptive statistic; the number of
+candidates per block can differ, so on incomplete designs these means are not a
+valid cross-candidate comparison and no `average_rank` global rank is emitted
+(for example, rows `[A=2,B=1,-]`, `[-,B=2,C=1]` and nine rows with only A give mean
+ranks A=1.1, B=1.5, C=1.0 although A lost its only comparison to B).
 Friedman's tie-corrected statistic uses complete blocks only. Its p-value is
 a chi-square approximation with k-1 degrees of freedom, conditional on
 independent blocks and adequate sample size; the host must assess both.

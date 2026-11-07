@@ -11,6 +11,10 @@ endforeach()
 if(N4M_WITH_RFR)
     target_include_directories(n4m_core SYSTEM PRIVATE
         "${PROJECT_SOURCE_DIR}/cpp/backends/rfr/include")
+    # rfr includes cereal's JSON archive (never used by n4m), whose vendored RapidJSON
+    # derives member iterators from the C++17-deprecated std::iterator (MSVC C4996/STL4015).
+    # RapidJSON's own switch selects plain pointer iterators; vendored bytes stay unchanged.
+    target_compile_definitions(n4m_core PRIVATE CEREAL_RAPIDJSON_NOMEMBERITERATORCLASS)
 endif()
 if(N4M_WITH_MIXEFF)
     find_program(N4M_CARGO_EXECUTABLE cargo REQUIRED)

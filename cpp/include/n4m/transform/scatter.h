@@ -16,7 +16,11 @@ extern "C" {
  * signal. Finite rows are rescaled by powers of two and summed with
  * compensation, so they neither overflow nor underflow; a non-finite result
  * for a finite row gives N4M_ERR_NUMERICAL_FAILURE. Rows containing NaN/Inf
- * propagate them. n4m_preflight_snv_compute adds per-row rounding bounds. */
+ * propagate them. For nonempty input with with_std enabled, ddof must be less
+ * than the feature count; otherwise transform returns N4M_ERR_INVALID_ARGUMENT
+ * before any output write, including for constant or non-finite rows.
+ * With with_std disabled, every nonnegative C-int ddof is valid.
+ * n4m_preflight_snv_compute adds per-row rounding bounds. */
 typedef struct n4m_pp_snv_handle_t n4m_pp_snv_handle_t;
 N4M_API n4m_status_t n4m_transform_snv_create(n4m_pp_snv_handle_t** out,
                                         int with_mean, int with_std, int ddof);

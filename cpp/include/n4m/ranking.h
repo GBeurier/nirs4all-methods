@@ -40,7 +40,10 @@ N4M_API n4m_status_t n4m_ranking_options_init_v1(n4m_ranking_options_v1_t* optio
  * with exactly 0/1 entries; masked input values may be nonfinite. candidates
  * is caller-owned, row-major candidates*10: score, posterior_sd (NaN unless
  * Bayesian), mean_rank, observations, matches, connected_component (0-based), wins, ties, losses,
- * global_rank. Global rank is NaN for disconnected graphs or candidates with no matches. Score ties
+ * global_rank. Global rank is NaN for disconnected graphs or candidates with no matches. For
+ * AVERAGE_RANK it is also NaN unless every block is complete (complete_blocks == blocks): mean
+ * within-block ranks of incomplete blocks lie on different scales, so they stay descriptive scores.
+ * Score ties
  * in global rank use exact equality, with averaged ordinal ranks. A candidate with no observations
  * has NaN score/SD/rank. Bayesian SD is an algorithm posterior approximation, NOT a frequentist
  * standard error. summary has 9 doubles: blocks, complete_blocks, pair_count, components, Friedman

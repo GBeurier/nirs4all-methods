@@ -5,10 +5,11 @@
 #' Applies libn4m's SNV operator row-wise to a numeric matrix.
 #'
 #' @param X Numeric matrix.
-#' @param with_mean Logical; center each row before scaling.
-#' @param with_std Logical; scale each row by its standard deviation.
-#' @param ddof Integer degrees-of-freedom correction for the row standard
-#'   deviation.
+#' @param with_mean Unclassed logical or exact numeric 0/1 scalar; center each row.
+#' @param with_std Unclassed logical or exact numeric 0/1 scalar; scale by row SD.
+#' @param ddof Unclassed exact numeric/integer scalar in [0, INT32_MAX], not
+#'   logical or missing. When scaling, it must be smaller than the feature count.
+#'   Centering alone does not use variance and accepts the full nonnegative range.
 #' @return Numeric matrix with the same shape as `X`.
 #' @export
 snv_transform <- function(X, with_mean = TRUE, with_std = TRUE, ddof = 0L) {
@@ -16,9 +17,9 @@ snv_transform <- function(X, with_mean = TRUE, with_std = TRUE, ddof = 0L) {
     storage.mode(X) <- "double"
     .Call("r_n4m_snv_transform",
           X,
-          as.logical(with_mean),
-          as.logical(with_std),
-          as.integer(ddof),
+          with_mean,
+          with_std,
+          ddof,
           PACKAGE = "n4m")
 }
 

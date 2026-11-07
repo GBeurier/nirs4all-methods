@@ -17,3 +17,16 @@ def test_continuum_uses_canonical_stone_brooks_solver():
         rtol=0,
         atol=1e-12,
     )
+
+
+def test_pls_solver_canonical_names_and_kernel_alias():
+    from pls4all import Solver
+    from pls4all.sklearn import PLSRegression
+    from pls4all.sklearn._base import _resolve_solver
+    for solver in Solver:
+        assert _resolve_solver(solver.name.lower()) == solver
+    x = np.array([[1., 3., 8., 20.], [10., 11., 13., 18.], [-7., -3., 2., 9.], [5., 5., 5., 5.]])
+    y = np.array([1., 2., 4., 3.])
+    expected = PLSRegression(n_components=1, solver=Solver.KERNEL_ALGORITHM).fit(x, y).predict(x)
+    for token in ("kernel_algorithm", "kernel-algorithm", "kernel"):
+        np.testing.assert_array_equal(PLSRegression(n_components=1, solver=token).fit(x, y).predict(x), expected)

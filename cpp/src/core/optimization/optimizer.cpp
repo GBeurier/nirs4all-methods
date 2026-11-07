@@ -4,6 +4,7 @@
 // Optimizer (random sampler, none pruner) + the sampler factory.
 
 #include "core/optimization/optimizer.hpp"
+#include "core/common/double_double.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -96,6 +97,10 @@ n4m_status_t SearchSpace::validate(n4m_sampler_kind_t sampler, std::string* erro
                     return fail(N4M_ERR_INVALID_ARGUMENT,
                                 "floating search-space grid is not representable: " + p.name);
                 }
+                if (!std::isfinite(p.high - p.low)) {
+                    return fail(N4M_ERR_INVALID_ARGUMENT,
+                                "floating search-space span overflows binary64: " + p.name);
+                }
                 break;
             case N4M_PARAM_LOG_FLOAT:
                 if (!finite_domain() || p.is_int || !p.is_log || p.low <= 0.0 ||
@@ -164,6 +169,10 @@ n4m_status_t SearchSpace::validate(n4m_sampler_kind_t sampler, std::string* erro
                      (!exact_integer(p.low) || !exact_integer(p.high)))) {
                     return fail(N4M_ERR_INVALID_ARGUMENT,
                                 "malformed sorted-tuple search-space domain: " + p.name);
+                }
+                if (!std::isfinite(p.high - p.low)) {
+                    return fail(N4M_ERR_INVALID_ARGUMENT,
+                                "sorted-tuple search-space span overflows binary64: " + p.name);
                 }
                 break;
             default:
@@ -448,12 +457,71 @@ double Optimizer::sample_numeric(const ParamSpec& p) {
 
 namespace {
 
+constexpr double kMaxExactInteger = 9007199254740992.0;  // 2^53
+
+bool exact_integer_grid(const ParamSpec& p) {
+    const auto exact = [](double v) {
+        return std::trunc(v) == v && std::abs(v) <= kMaxExactInteger;
+    };
+    return p.step > 0.0 && !p.is_log && exact(p.low) && exact(p.high) && exact(p.step);
+}
+
+std::int64_t integer_grid_max_index(const ParamSpec& p) {
+    return (static_cast<std::int64_t>(p.high) - static_cast<std::int64_t>(p.low)) /
+           static_cast<std::int64_t>(p.step);
+}
+
+// Exact floor(u * count) for finite u in [0,1) and count <= 2^54 + 1.
+std::uint64_t exact_unit_index(double u, std::uint64_t count) {
+    int exponent = 0;
+    const double fraction = std::frexp(u, &exponent);
+    const auto significand = static_cast<std::uint64_t>(std::ldexp(fraction, 53));
+    const int shift = 53 - exponent;
+    const std::uint64_t a0 = significand & 0xffffffffU, a1 = significand >> 32;
+    const std::uint64_t b0 = count & 0xffffffffU, b1 = count >> 32;
+    const std::uint64_t p00 = a0 * b0, p01 = a0 * b1, p10 = a1 * b0, p11 = a1 * b1;
+    const std::uint64_t mid = (p00 >> 32) + (p01 & 0xffffffffU) + (p10 & 0xffffffffU);
+    const std::uint64_t low = (mid << 32) | (p00 & 0xffffffffU);
+    const std::uint64_t high = p11 + (p01 >> 32) + (p10 >> 32) + (mid >> 32);
+    if (shift >= 128) return 0;
+    if (shift >= 64) return high >> (shift - 64);
+    return (high << (64 - shift)) | (low >> shift);
+}
+
+double integer_grid_value(const ParamSpec& p, double u) {
+    if (std::isnan(u)) return u;  // strict trial validation still refuses it
+    const std::int64_t q = integer_grid_max_index(p);
+    const std::int64_t index =
+        q < INT64_C(9007199254740992)
+            ? static_cast<std::int64_t>(std::floor(u * (static_cast<double>(q) + 1.0)))
+            : static_cast<std::int64_t>(exact_unit_index(u, static_cast<std::uint64_t>(q) + 1U));
+    return static_cast<double>(static_cast<std::int64_t>(p.low) +
+                               index * static_cast<std::int64_t>(p.step));
+}
+
+// high-low is split exactly, so a rounded next cannot pass as an aligned bound.
+double grid_excess(const ParamSpec& p, double index) {
+    const DD span = dd_two_sum(p.high, -p.low);
+    return std::fma(index, p.step, -span.hi) - span.lo;
+}
+
 double ulp_size(double value) {
     if (!std::isfinite(value)) return std::numeric_limits<double>::infinity();
     const double toward_positive = std::nextafter(value, std::numeric_limits<double>::infinity());
     const double toward_negative = std::nextafter(value, -std::numeric_limits<double>::infinity());
     return std::max(std::abs(toward_positive - value),
                     std::abs(value - toward_negative));
+}
+
+// Below this spacing, two roundings of low + index*step can exceed the tolerance.
+bool near_ulp_grid(const ParamSpec& p) {
+    return p.step < 8.0 * std::max(ulp_size(p.low), ulp_size(p.high));
+}
+
+double grid_index_below(double index) {
+    return index > kMaxExactInteger
+               ? std::nextafter(index, -std::numeric_limits<double>::infinity())
+               : index - 1.0;
 }
 
 double grid_value_tolerance(const ParamSpec& p, double value, double snapped) {
@@ -466,27 +534,33 @@ double grid_value_tolerance(const ParamSpec& p, double value, double snapped) {
 }
 
 double grid_max_index(const ParamSpec& p) {
+    if (exact_integer_grid(p)) return static_cast<double>(integer_grid_max_index(p));
     const double ratio = (p.high - p.low) / p.step;
     double index = std::floor(std::nextafter(ratio, std::numeric_limits<double>::infinity()));
     if (!std::isfinite(index) || index < 0.0) return 0.0;
 
     // Correct the at-most-one-cell ambiguity introduced by binary64 division
     // at an aligned high bound. The same ULP-capped rule is used by enqueue().
-    double snapped = p.low + index * p.step;
-    if (snapped > p.high + grid_value_tolerance(p, p.high, snapped) && index > 0.0) {
-        index -= 1.0;
-        snapped = p.low + index * p.step;
+    while (index > 0.0) {
+        const double snapped = p.low + index * p.step;
+        if (snapped <= p.high + grid_value_tolerance(p, p.high, snapped) &&
+            grid_excess(p, index) <= p.step * 0.25) {
+            break;
+        }
+        index = grid_index_below(index);
     }
     const double next = p.low + (index + 1.0) * p.step;
     if (std::isfinite(next) &&
-        next <= p.high + grid_value_tolerance(p, p.high, next)) {
+        next <= p.high + grid_value_tolerance(p, p.high, next) &&
+        grid_excess(p, index + 1.0) <= p.step * 0.25) {
         index += 1.0;
     }
     return index;
 }
 
 double grid_value(const ParamSpec& p, double index) {
-    const double value = p.low + index * p.step;
+    const double value = near_ulp_grid(p) ? std::fma(index, p.step, p.low)
+                                          : p.low + index * p.step;
     if (value > p.high &&
         value <= p.high + grid_value_tolerance(p, p.high, value)) {
         return p.high;
@@ -494,11 +568,58 @@ double grid_value(const ParamSpec& p, double index) {
     return value;
 }
 
+bool snap_to_grid(const ParamSpec& p, double value, double* snapped_out) {
+    const double max_index = grid_max_index(p);
+    const double approx = std::round((value - p.low) / p.step);
+    const DD offset = dd_two_sum(value, -p.low);
+    const double residual = std::fma(approx, p.step, -offset.hi) - offset.lo;
+    const double exact = approx - std::round(residual / p.step);
+    for (const double index : {exact, approx, std::min(exact, max_index)}) {
+        if (index < 0.0 || index > max_index) continue;
+        const double snapped = grid_value(p, index);
+        const double tolerance = grid_value_tolerance(p, value, snapped);
+        if (std::abs(value - snapped) <= tolerance && snapped <= p.high + tolerance) {
+            *snapped_out = snapped;
+            return true;
+        }
+    }
+    return false;
+}
+
+// value must already satisfy the axis range and integer checks.
+bool snap_scalar_grid_value(const ParamSpec& p, double value, double* snapped) {
+    if (p.step <= 0.0 || p.is_log) {
+        *snapped = value;
+        return true;
+    }
+    if (exact_integer_grid(p) && std::trunc(value) == value) {
+        const auto integer = static_cast<std::int64_t>(value);
+        if ((integer - static_cast<std::int64_t>(p.low)) %
+                static_cast<std::int64_t>(p.step) != 0) {
+            return false;
+        }
+        *snapped = static_cast<double>(integer);
+        return true;
+    }
+    return !p.is_int && snap_to_grid(p, value, snapped);
+}
+
+double sorted_tuple_element(const ParamSpec& p, double u) {
+    if (p.tuple_element_is_int) return p.low + std::floor(u * (p.high - p.low + 1.0));
+    return p.low + u * (p.high - p.low);
+}
+
 }  // namespace
+
+bool scalar_grid_contains(const ParamSpec& p, double value) {
+    double snapped = 0.0;
+    return snap_scalar_grid_value(p, value, &snapped) && snapped == value;
+}
 
 double Optimizer::numeric_from_unit(const ParamSpec& p, double u) const {
     if (u < 0.0) u = 0.0;
     if (u >= 1.0) u = std::nextafter(1.0, 0.0);
+    if (exact_integer_grid(p)) return integer_grid_value(p, u);
     if (p.step > 0.0 && !p.is_log) {
         const double max_index = grid_max_index(p);
         double index = std::floor(u * (max_index + 1.0));
@@ -511,6 +632,11 @@ double Optimizer::numeric_from_unit(const ParamSpec& p, double u) const {
         const double hi = std::log(p.high);
         v = std::exp(lo + u * (hi - lo));
         if (p.is_int) v = std::round(v);
+        if (v < p.low) {
+            v = p.low;
+        } else if (v > p.high) {
+            v = p.high;
+        }
     } else if (p.is_int) {
         v = std::floor(p.low + u * (p.high - p.low + 1.0));
         if (v > p.high) v = p.high;
@@ -522,9 +648,13 @@ double Optimizer::numeric_from_unit(const ParamSpec& p, double u) const {
 
 double Optimizer::unit_from_numeric(const ParamSpec& p, double value) const {
     if (p.high <= p.low) return 0.0;
-    double u;
+    double log_width = 0.0;
     if (p.is_log && p.low > 0.0 && p.high > 0.0 && value > 0.0) {
-        u = (std::log(value) - std::log(p.low)) / (std::log(p.high) - std::log(p.low));
+        log_width = std::log(p.high) - std::log(p.low);
+    }
+    double u;
+    if (log_width > 0.0) {
+        u = (std::log(value) - std::log(p.low)) / log_width;
     } else {
         u = (value - p.low) / (p.high - p.low);
     }
@@ -575,9 +705,7 @@ void Optimizer::decode_candidate(const std::vector<double>& u, ::n4m_trial_s& t,
             vals.reserve(static_cast<std::size_t>(p.tuple_length));
             for (std::int32_t i = 0; i < p.tuple_length; ++i) {
                 const double uu = n4m_rng_next_double(&rng_);
-                double v = p.low + uu * (p.high - p.low);
-                if (p.tuple_element_is_int) v = std::floor(p.low + uu * (p.high - p.low + 1.0));
-                vals.push_back(v);
+                vals.push_back(sorted_tuple_element(p, uu));
             }
             std::sort(vals.begin(), vals.end());
             for (std::int32_t i = 0; i < p.tuple_length; ++i) {
@@ -629,11 +757,7 @@ bool Optimizer::sample(::n4m_trial_s& t,
                 vals.reserve(static_cast<std::size_t>(p.tuple_length));
                 for (std::int32_t i = 0; i < p.tuple_length; ++i) {
                     const double u = n4m_rng_next_double(&rng_);
-                    double v = p.low + u * (p.high - p.low);
-                    if (p.tuple_element_is_int) {
-                        v = std::floor(p.low + u * (p.high - p.low + 1.0));
-                    }
-                    vals.push_back(v);
+                    vals.push_back(sorted_tuple_element(p, u));
                 }
                 std::sort(vals.begin(), vals.end());
                 for (std::int32_t i = 0; i < p.tuple_length; ++i) {
@@ -898,10 +1022,8 @@ n4m_status_t Optimizer::enqueue(std::vector<std::pair<std::string, double>> para
                     std::trunc(kv.second) != kv.second) {
                     return N4M_ERR_INVALID_ARGUMENT;
                 }
-                const auto value = static_cast<std::int64_t>(kv.second);
-                const auto low = static_cast<std::int64_t>(p->low);
-                const auto step = static_cast<std::int64_t>(p->step);
-                if (step <= 0 || (value - low) % step != 0) {
+                double snapped = 0.0;
+                if (!snap_scalar_grid_value(*p, kv.second, &snapped)) {
                     return N4M_ERR_INVALID_ARGUMENT;
                 }
                 break;
@@ -911,18 +1033,11 @@ n4m_status_t Optimizer::enqueue(std::vector<std::pair<std::string, double>> para
                 if (kv.second < p->low || kv.second > p->high) {
                     return N4M_ERR_INVALID_ARGUMENT;
                 }
-                if (p->step > 0.0) {
-                    const double grid_index = (kv.second - p->low) / p->step;
-                    const double nearest = std::round(grid_index);
-                    const double snapped = grid_value(*p, nearest);
-                    const double tolerance = grid_value_tolerance(*p, kv.second, snapped);
-                    const double max_index = grid_max_index(*p);
-                    if (nearest < 0.0 || std::abs(kv.second - snapped) > tolerance ||
-                        nearest > max_index || snapped > p->high + tolerance) {
-                        return N4M_ERR_INVALID_ARGUMENT;
-                    }
-                    kv.second = snapped;
+                double snapped = 0.0;
+                if (!snap_scalar_grid_value(*p, kv.second, &snapped)) {
+                    return N4M_ERR_INVALID_ARGUMENT;
                 }
+                kv.second = snapped;
                 break;
             }
             case N4M_PARAM_CATEGORICAL:

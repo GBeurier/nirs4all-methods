@@ -98,6 +98,14 @@ native loss-normalization helper performs arithmetic only; it does not choose or
 justify a baseline. A descriptive adjusted coefficient is conditional on this
 observed design and does not establish a causal preprocessing contribution.
 
+The fit does not test comparison-graph connectivity. With candidate indicator
+columns and block random intercepts, a disconnected comparison design (candidate
+groups never observed in a shared block) keeps full fixed-effect rank and is still
+fitted, so candidate contrasts across the disconnected groups rest on the
+assumption that block effects are exchangeable. The ranking API withholds
+global ranks for such designs; hosts should check connectivity first, for example with the
+`component` output of `n4m.ranking.rank`, before presenting those contrasts.
+
 ## Numerical evidence and reproducibility
 
 `cargo test --locked --manifest-path cpp/backends/mixeff/Cargo.toml` executes real

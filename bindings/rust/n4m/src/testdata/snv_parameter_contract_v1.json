@@ -1,0 +1,984 @@
+{
+  "schema": "n4m.snv-parameter-contract.v1",
+  "matrix": [
+    [
+      1.0,
+      3.0,
+      8.0,
+      20.0
+    ],
+    [
+      10.0,
+      11.0,
+      13.0,
+      18.0
+    ],
+    [
+      -7.0,
+      -3.0,
+      2.0,
+      9.0
+    ],
+    [
+      5.0,
+      5.0,
+      5.0,
+      5.0
+    ]
+  ],
+  "references": [
+    {
+      "id": "mean1-std1-ddof0",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 0
+      },
+      "values": [
+        [
+          -0.9481996460700349,
+          -0.6772854614785964,
+          0.0,
+          1.6254851075486312
+        ],
+        [
+          -0.9733285267845753,
+          -0.6488856845230502,
+          0.0,
+          1.6222142113076254
+        ],
+        [
+          -1.2136122284241928,
+          -0.5440330679142934,
+          0.29294088272308105,
+          1.4647044136154053
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "mean1-std1-ddof1",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 1
+      },
+      "values": [
+        [
+          -0.8211649813560639,
+          -0.5865464152543313,
+          0.0,
+          1.4077113966103951
+        ],
+        [
+          -0.8429272304235246,
+          -0.5619514869490164,
+          0.0,
+          1.404878717372541
+        ],
+        [
+          -1.0510190201587941,
+          -0.4711464573125628,
+          0.25369424624522613,
+          1.2684712312261308
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "mean1-std1-ddof3",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 3
+      },
+      "values": [
+        [
+          -0.47409982303501746,
+          -0.3386427307392982,
+          0.0,
+          0.8127425537743156
+        ],
+        [
+          -0.48666426339228763,
+          -0.3244428422615251,
+          0.0,
+          0.8111071056538127
+        ],
+        [
+          -0.6068061142120964,
+          -0.2720165339571467,
+          0.14647044136154053,
+          0.7323522068077026
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "mean0-std1-ddof0",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 0
+      },
+      "values": [
+        [
+          0.13545709229571928,
+          0.4063712768871578,
+          1.0836567383657543,
+          2.7091418459143854
+        ],
+        [
+          3.244428422615251,
+          3.568871264876776,
+          4.217756949399826,
+          5.839971160707452
+        ],
+        [
+          -1.1717635308923242,
+          -0.5021843703824247,
+          0.33478958025494976,
+          1.5065531111472739
+        ],
+        [
+          5.0,
+          5.0,
+          5.0,
+          5.0
+        ]
+      ]
+    },
+    {
+      "id": "mean0-std1-ddof1",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 1
+      },
+      "values": [
+        [
+          0.11730928305086626,
+          0.3519278491525988,
+          0.93847426440693,
+          2.346185661017325
+        ],
+        [
+          2.809757434745082,
+          3.09073317821959,
+          3.6526846651686067,
+          5.057563382541147
+        ],
+        [
+          -1.0147769849809045,
+          -0.4349044221346734,
+          0.2899362814231156,
+          1.3047132664040202
+        ],
+        [
+          5.0,
+          5.0,
+          5.0,
+          5.0
+        ]
+      ]
+    },
+    {
+      "id": "mean1-std0-ddof0",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 0
+      },
+      "values": [
+        [
+          -7.0,
+          -5.0,
+          0.0,
+          12.0
+        ],
+        [
+          -3.0,
+          -2.0,
+          0.0,
+          5.0
+        ],
+        [
+          -7.25,
+          -3.25,
+          1.75,
+          8.75
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "mean1-std0-ddof4",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 4
+      },
+      "values": [
+        [
+          -7.0,
+          -5.0,
+          0.0,
+          12.0
+        ],
+        [
+          -3.0,
+          -2.0,
+          0.0,
+          5.0
+        ],
+        [
+          -7.25,
+          -3.25,
+          1.75,
+          8.75
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "mean1-std0-ddof2147483647",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 2147483647
+      },
+      "values": [
+        [
+          -7.0,
+          -5.0,
+          0.0,
+          12.0
+        ],
+        [
+          -3.0,
+          -2.0,
+          0.0,
+          5.0
+        ],
+        [
+          -7.25,
+          -3.25,
+          1.75,
+          8.75
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    },
+    {
+      "id": "mean0-std0-ddof5",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 5
+      },
+      "values": [
+        [
+          1.0,
+          3.0,
+          8.0,
+          20.0
+        ],
+        [
+          10.0,
+          11.0,
+          13.0,
+          18.0
+        ],
+        [
+          -7.0,
+          -3.0,
+          2.0,
+          9.0
+        ],
+        [
+          5.0,
+          5.0,
+          5.0,
+          5.0
+        ]
+      ]
+    }
+  ],
+  "domains": [
+    {
+      "id": "mean0-std0-ddof-1",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": -1
+      },
+      "create_status": 1,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std0-ddof0",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 0
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std0-ddof1",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 1
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std0-ddof3",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 3
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std0-ddof4",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 4
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std0-ddof5",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 5
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std0-ddof2147483647",
+      "params": {
+        "with_mean": false,
+        "with_std": false,
+        "ddof": 2147483647
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std1-ddof-1",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": -1
+      },
+      "create_status": 1,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std1-ddof0",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 0
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std1-ddof1",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 1
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std1-ddof3",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 3
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean0-std1-ddof4",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 4
+      },
+      "create_status": 0,
+      "transform_status": 1
+    },
+    {
+      "id": "mean0-std1-ddof5",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 5
+      },
+      "create_status": 0,
+      "transform_status": 1
+    },
+    {
+      "id": "mean0-std1-ddof2147483647",
+      "params": {
+        "with_mean": false,
+        "with_std": true,
+        "ddof": 2147483647
+      },
+      "create_status": 0,
+      "transform_status": 1
+    },
+    {
+      "id": "mean1-std0-ddof-1",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": -1
+      },
+      "create_status": 1,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std0-ddof0",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 0
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std0-ddof1",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 1
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std0-ddof3",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 3
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std0-ddof4",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 4
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std0-ddof5",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 5
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std0-ddof2147483647",
+      "params": {
+        "with_mean": true,
+        "with_std": false,
+        "ddof": 2147483647
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std1-ddof-1",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": -1
+      },
+      "create_status": 1,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std1-ddof0",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 0
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std1-ddof1",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 1
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std1-ddof3",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 3
+      },
+      "create_status": 0,
+      "transform_status": 0
+    },
+    {
+      "id": "mean1-std1-ddof4",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 4
+      },
+      "create_status": 0,
+      "transform_status": 1
+    },
+    {
+      "id": "mean1-std1-ddof5",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 5
+      },
+      "create_status": 0,
+      "transform_status": 1
+    },
+    {
+      "id": "mean1-std1-ddof2147483647",
+      "params": {
+        "with_mean": true,
+        "with_std": true,
+        "ddof": 2147483647
+      },
+      "create_status": 0,
+      "transform_status": 1
+    }
+  ],
+  "typed_values": [
+    {
+      "id": "string-false",
+      "parameter": "with_std",
+      "tag": "literal",
+      "value": "false",
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "string-true",
+      "parameter": "with_mean",
+      "tag": "literal",
+      "value": "true",
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "flag-0",
+      "parameter": "with_std",
+      "tag": "literal",
+      "value": 0,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": true,
+        "octave": true
+      }
+    },
+    {
+      "id": "flag-1",
+      "parameter": "with_std",
+      "tag": "literal",
+      "value": 1,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": true,
+        "octave": true
+      }
+    },
+    {
+      "id": "flag-2",
+      "parameter": "with_std",
+      "tag": "literal",
+      "value": 2,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "null-with_mean",
+      "parameter": "with_mean",
+      "tag": "literal",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "null-with_std",
+      "parameter": "with_std",
+      "tag": "literal",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "null-ddof",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "fraction",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": 1.9,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "whole-float",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": 1.0,
+      "admit": {
+        "python": false,
+        "javascript": true,
+        "r": true,
+        "octave": true
+      }
+    },
+    {
+      "id": "bool-ddof",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": true,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "string-ddof",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": "1",
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "negative",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": -1,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "overflow-i32",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": 2147483648,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "wrap-i32",
+      "parameter": "ddof",
+      "tag": "literal",
+      "value": 4294967296,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "nan",
+      "parameter": "ddof",
+      "tag": "nan",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "infinity",
+      "parameter": "ddof",
+      "tag": "infinity",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": false,
+        "r": false,
+        "octave": false
+      }
+    },
+    {
+      "id": "timedelta-unitless",
+      "parameter": "ddof",
+      "tag": "np.timedelta64",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": null,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "timedelta-seconds",
+      "parameter": "ddof",
+      "tag": "np.timedelta64[s]",
+      "value": null,
+      "admit": {
+        "python": false,
+        "javascript": null,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "integer-enum",
+      "parameter": "ddof",
+      "tag": "IntEnum",
+      "value": 1,
+      "admit": {
+        "python": true,
+        "javascript": null,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "numpy-integer",
+      "parameter": "ddof",
+      "tag": "np.int64",
+      "value": 1,
+      "admit": {
+        "python": true,
+        "javascript": null,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "numpy-unsigned",
+      "parameter": "ddof",
+      "tag": "np.uint32",
+      "value": 1,
+      "admit": {
+        "python": true,
+        "javascript": null,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "bigint",
+      "parameter": "ddof",
+      "tag": "bigint",
+      "value": 1,
+      "admit": {
+        "python": null,
+        "javascript": false,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "boxed-number",
+      "parameter": "ddof",
+      "tag": "boxed-number",
+      "value": 1,
+      "admit": {
+        "python": null,
+        "javascript": false,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "factor",
+      "parameter": "ddof",
+      "tag": "factor",
+      "value": "z",
+      "admit": {
+        "python": null,
+        "javascript": null,
+        "r": false,
+        "octave": null
+      }
+    },
+    {
+      "id": "difftime",
+      "parameter": "ddof",
+      "tag": "difftime",
+      "value": 1,
+      "admit": {
+        "python": null,
+        "javascript": null,
+        "r": false,
+        "octave": null
+      }
+    },
+    {
+      "id": "numpy-boolean",
+      "parameter": "with_std",
+      "tag": "np.bool_",
+      "value": false,
+      "admit": {
+        "python": true,
+        "javascript": null,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "boxed-boolean",
+      "parameter": "with_std",
+      "tag": "boxed-boolean",
+      "value": false,
+      "admit": {
+        "python": null,
+        "javascript": false,
+        "r": null,
+        "octave": null
+      }
+    },
+    {
+      "id": "missing-r-flag",
+      "parameter": "with_std",
+      "tag": "NA",
+      "value": null,
+      "admit": {
+        "python": null,
+        "javascript": null,
+        "r": false,
+        "octave": null
+      }
+    }
+  ],
+  "default_bits": {
+    "native_e7": "eb62bec8a657eebf3a6b638f52ace5bf000000000000000012e710acfc01fa3f2eb7d9dd8125efbf74cf3be9abc3e4bf000000000000000051c38ae396f4f93fb0b8f1a7f46af3bf4f4d5409b868e1bf903fbd1d8bbfd23f748f2ce56d6ff73f0000000000000000000000000000000000000000000000000000000000000000",
+    "wasm_8b0": "eb62bec8a657eebf3a6b638f52ace5bf000000000000000012e710acfc01fa3f2eb7d9dd8125efbf74cf3be9abc3e4bf000000000000000051c38ae396f4f93fb0b8f1a7f46af3bf4f4d5409b868e1bf903fbd1d8bbfd23f748f2ce56d6ff73f0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "provenance": {
+    "numpy_version": "2.4.6",
+    "native_sha256": "e7f53f7b3859988a17a9eed9beeda2e6321aabe3b3c6f43ef08e63c1b383d11c",
+    "wasm_sha256": "8b048f1cb30881b48599dbe697bafa18bc73ecf27e4eea790ce58f09cfbd9bd1",
+    "original_receipts": {
+      "probes/native.stdout": "09092fdea9d2ae4c826b829fc3d50ab4ce6ed6e01aedf2e894ace2529c42b795",
+      "probes/native.receipt.json": "fb771fd90f8d9517d3c3e026d9b4b97485a19c09d4caad2055a288c2c82284f0",
+      "probes/v22.21.1.stdout": "3e23b97221d92345287441f82101989f24c0f43d61146fe78506b691ee71a622",
+      "probes/v22.21.1.receipt.json": "6862af0dddb920eec373940a3ca26a80d066acbf11fa50224b7cfe739a89637c"
+    }
+  }
+}

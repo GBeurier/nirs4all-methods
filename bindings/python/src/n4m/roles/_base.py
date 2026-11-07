@@ -35,6 +35,7 @@ else:
 from .._errors import N4MError, check
 from .._ffi import lib
 from .._matrix import as_f64_2d, numpy_to_view
+from .._parameter_validation import _validate_snv_role
 from .._types import FitInputsV1, MethodInfoV1, Status
 
 CAP_TRANSFORM = 1 << 0
@@ -352,6 +353,7 @@ class NativeMethod(BaseEstimator):
     # -- construction -------------------------------------------------------
 
     def _native_params(self, ctx: _Context) -> ctypes.c_void_p:
+        _validate_snv_role(self)
         index = ctypes.c_int32()
         check(
             lib.n4m_method_find(self._method_id.encode(), ctypes.byref(index)),

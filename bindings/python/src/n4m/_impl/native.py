@@ -9,8 +9,8 @@ arrays, and destroy the handle. The scikit-learn compatible estimators live in
 
 from __future__ import annotations
 
-import ctypes
 import csv
+import ctypes
 import hashlib
 import json
 import time
@@ -23,6 +23,7 @@ import numpy as np
 from .._errors import check
 from .._ffi import lib, library_path
 from .._matrix import as_f64_2d, empty_like_f64, empty_like_i32, numpy_to_view
+from .._parameter_validation import _int32_parameter
 from .._rng import PCG64
 from .._types import FilterStats, MatrixView, SplitResult, TransferMetrics
 from .._validation import (
@@ -552,8 +553,9 @@ def _set_model_config(
     scale_y: bool | None = None,
 ) -> None:
     if n_components is not None:
+        n_components = _int32_parameter("n_components", n_components)
         check(
-            lib.n4m_config_set_n_components(cfg, ctypes.c_int32(int(n_components))),
+            lib.n4m_config_set_n_components(cfg, ctypes.c_int32(n_components)),
             "n4m_config_set_n_components",
         )
     _set_config_bool(cfg, "center_x", center_x)
@@ -642,6 +644,8 @@ def _fit_method_result(
     scale_y: bool | None = None,
     as_model: bool = False,
 ) -> dict[str, np.ndarray | float | bytes]:
+    if n_components is not None:
+        n_components = _int32_parameter("n_components", n_components)
     X_arr = as_f64_2d(X)
     y_arr = _as_y_matrix(y, X_arr.shape[0])
     ctx = ctypes.c_void_p()
@@ -8738,7 +8742,7 @@ def di_pls(
         ctypes.c_double(float(di_lambda)),
         matrices=("coefficients", "predictions", "x_mean", "y_mean"),
         scalars=("rmse_source",),
-        n_components=int(n_components),
+        n_components=n_components,
         solver=1,  # SIMPLS; the native DI-PLS kernel requires this solver.
         center_x=True,
         scale_x=False,
@@ -8796,7 +8800,14 @@ def robust_pls(
     center_y: bool | None = None,
     scale_y: bool | None = None,
 ) -> dict[str, np.ndarray | float]:
-    """Fit native robust SIMPLS with Huber weights and return its MethodResult."""
+    """Fit native robust PLS with integral int32 options.
+
+    Boolean and nonintegral options raise TypeError; options outside signed
+    int32 raise ValueError before native allocation. Representable option
+    domains, including nonpositive iteration defaults, remain native-owned.
+    """
+    max_irls_iter = _int32_parameter("max_irls_iter", max_irls_iter)
+    n_components = _int32_parameter("n_components", n_components)
     if not np.isfinite(float(huber_k)) or float(huber_k) <= 0.0:
         raise ValueError("huber_k must be strictly positive and finite")
     return _fit_method_result(
@@ -8804,7 +8815,7 @@ def robust_pls(
         X,
         y,
         ctypes.c_double(float(huber_k)),
-        ctypes.c_int32(int(max_irls_iter)),
+        ctypes.c_int32(max_irls_iter),
         matrices=("coefficients", "predictions", "x_mean", "y_mean"),
         scalars=("rmse", "huber_k"),
         n_components=n_components,
@@ -9160,16 +9171,6 @@ def _split_result_to_arrays(result: SplitResult) -> tuple[np.ndarray, np.ndarray
     test = np.ctypeslib.as_array(result.test_idx, shape=(int(result.n_test),)).copy()
     lib.n4m_split_result_destroy(ctypes.byref(result))
     return train, test
-
-
-def snv(X, with_mean: bool = True, with_std: bool = True, ddof: int = 0):
-    return transform(
-        "n4m_transform_snv",
-        X,
-        ctypes.c_int(with_mean),
-        ctypes.c_int(with_std),
-        ctypes.c_int(ddof),
-    )
 
 
 def lsnv(

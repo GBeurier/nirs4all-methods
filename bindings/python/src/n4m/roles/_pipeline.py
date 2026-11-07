@@ -225,11 +225,10 @@ class RolePipeline(BaseEstimator):
         parsed = [_parse_step(step) for step in self.steps]
         handle = ctypes.c_void_p()
         with _Context() as ctx:
-            params = [
-                method_class(method_id)(**values)._native_params(ctx)
-                for method_id, values in parsed
-            ]
+            params = []
             try:
+                for method_id, values in parsed:
+                    params.append(method_class(method_id)(**values)._native_params(ctx))
                 ids = (ctypes.c_char_p * len(parsed))(*(m.encode() for m, _ in parsed))
                 ctx.check(
                     lib.n4m_role_pipeline_create(

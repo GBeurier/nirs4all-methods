@@ -858,6 +858,10 @@ struct OptimizerCheckpointAccess {
                     std::trunc(actual.second.value) != actual.second.value) {
                     return false;
                 }
+                if (spec.kind != N4M_PARAM_SORTED_TUPLE &&
+                    !scalar_grid_contains(spec, actual.second.value)) {
+                    return false;
+                }
             }
         }
         if (!optimizer.constraints_ok(trial)) return false;

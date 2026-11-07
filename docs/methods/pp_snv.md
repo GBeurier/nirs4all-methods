@@ -16,7 +16,7 @@ Standard Normal Variate normalisation.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L21) · [`n4m_transform_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L23) · [`n4m_transform_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L24). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L25) · [`n4m_transform_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L27) · [`n4m_transform_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L28). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
@@ -24,7 +24,7 @@ Standard Normal Variate normalisation.
 from n4m.transform.scatter import SNV
 ```
 
-Source signature: [`SNV(with_mean: bool = True, with_std: bool = True, ddof: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L21).
+Source signature: [`SNV(with_mean: bool = True, with_std: bool = True, ddof: int = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L22).
 
 **R (source-verified):** [`snv_transform(X, with_mean = TRUE, with_std = TRUE, ddof = 0L)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
 
@@ -56,7 +56,7 @@ Reducing additive and multiplicative scatter caused by particle size or optical 
 
 ### Limits and validation
 
-Near-constant spectra have unstable scale, and SNV removes absolute row amplitude that may contain analyte information. It does not remove wavelength-dependent baselines.
+Near-constant spectra have unstable scale, and SNV removes absolute row amplitude that may contain analyte information. It does not remove wavelength-dependent baselines. For nonempty input, scaling requires `0 <= ddof < n_features`; an invalid denominator is refused before output or bound writes, even for constant or non-finite rows. A valid constant row keeps the zero-standard-deviation fallback. With `with_std=False`, variance is unused and any nonnegative C-int `ddof` remains valid. With centering disabled but scaling enabled, SD is still computed about the row mean.
 
 ### Implementation
 

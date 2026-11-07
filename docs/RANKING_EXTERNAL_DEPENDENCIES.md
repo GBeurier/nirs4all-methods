@@ -45,7 +45,9 @@ same dataset/split; folds are not independent experimental replications.
 The fANOVA configuration uses `double`, one fixed RSS split/tree family, bounded
 numbers of trees/depth/features, explicit seed, explicit numeric bounds and
 categorical levels. The initial safe domain is an independent product of declared
-parameter domains, with inactive/conditional parameters rejected. Split IDs are
+parameter domains. The shipped ABI cannot express inactive/conditional
+parameters and does not detect them; hosts must stratify by structural choice
+or not call it (see `FANOVA.md`). Split IDs are
 blocking variables, not ordered continuous hyperparameters. The response must
 use a declared per-task normalization before pooling incompatible metric scales.
 No ConfigSpace, Python/SWIG, plotting or runtime plugins are needed.
@@ -199,7 +201,8 @@ mathematics, independently, or obtain the required rights.
 Inference: rfr is the shortest candidate for an optional compiled backend. It
 saves tree fitting and marginal integration work. Before shipping, independent
 variance assembly, declared integration measures, interaction accounting,
-conditional-domain rejection, constant-response handling, holdout checks,
+conditional-domain handling (the shipped ABI has no conditional dimensions; see
+`FANOVA.md`), constant-response handling, holdout checks,
 resource limits and Emscripten builds still require tests. The four-row probe
 proves none of those general properties.
 

@@ -133,7 +133,7 @@ export function fanova(X: Matrix,y: Matrix,featureTypes:Uint32Array,bounds:Matri
         const {n_trees=32,X_valid,y_valid,...rest}=options;
         if ((X_valid===undefined)!==(y_valid===undefined)) throw new Error("X_valid and y_valid are required together");
         const opt=a.options("n4m_fanova_options_init_v1",48,FANOVA_OPTIONS,
-            {num_trees:n_trees,max_depth:10,seed:42,...rest});
+            {num_trees:n_trees,...rest});
         const resolved=a.fields(opt,FANOVA_OPTIONS);
         const base={schema_version:"n4m.fanova/1" as const,options:resolved,domain_measure:"uniform_product" as const,
             aggregation:"mean_per_tree_normalized_components" as const,uncertainty_kind:"tree_dispersion_not_confidence" as const,

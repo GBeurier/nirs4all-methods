@@ -30,10 +30,16 @@ assert(isequal(replay.exportStates(), states));
 
 expect_refusal(@() model.predict(X, featureNames([2 1 3])), 'reordered');
 expect_refusal(@() model.predict(X(:, 1:2)), 'columns');
-expect_refusal(@() model.setFeatureNames(featureNames), 'fitted');
+predictionBeforeNamesRefusal = model.predict(X, featureNames);
+expect_refusal(@() model.setFeatureNames(featureNames), 'before fit or import', ...
+    'n4m:role_pipeline');
+predictionAfterNamesRefusal = model.predict(X, featureNames);
+assert(isequal(typecast(predictionBeforeNamesRefusal(:), 'uint64'), ...
+    typecast(predictionAfterNamesRefusal(:), 'uint64')));
 expect_refusal(@() model.fit(X, Y, struct('groups', int64(1:6))), 'groups');
 assert_close(model.predict(X, featureNames), Y); % failed refit did not erase state
-expect_refusal(@() model.fit(X, Y(1:5, :)), 'rows');
+expect_refusal(@() model.fit(X, Y(1:5, :)), ...
+    'fit input has an incompatible length ''y''', 'n4m:role_pipeline');
 assert_close(model.predict(X, featureNames), Y);
 expect_refusal(@() model.fit(sparse(X), Y), 'full real');
 expect_refusal(@() model.fit(complex(X, ones(size(X))), Y), 'full real');
@@ -223,12 +229,15 @@ assert(isequal(size(actual), size(expected)));
 assert(all(abs(double(actual(:)) - double(expected(:))) <= 1e-9));
 end
 
-function expect_refusal(call, fragment)
+function expect_refusal(call, fragment, identifier)
 caught = false;
 try
     call();
 catch failure
     caught = true;
+    if nargin >= 3
+        assert(strcmp(failure.identifier, identifier));
+    end
     assert(~isempty(strfind(lower(failure.message), lower(fragment)))); %#ok<STREMP>
 end
 assert(caught, 'Expected native/binding refusal did not occur');

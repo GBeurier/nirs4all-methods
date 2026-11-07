@@ -132,8 +132,25 @@ export function cString(s: string): Alloc {
     return { ptr, free: () => m._free(ptr) };
 }
 
+/** SNV host types must survive marshalling without coercion or i32 overflow. */
+function validateSnvParams(method: NativeMethod): void {
+    if (method.methodId !== "preprocessing.scatter.snv") return;
+    for (const name of ["with_mean", "with_std"]) {
+        const value = method.params[name];
+        if (value !== undefined && typeof value !== "boolean") {
+            throw new TypeError(`SNV ${name} must be a boolean`);
+        }
+    }
+    const ddof = method.params.ddof;
+    if (ddof !== undefined && (typeof ddof !== "number" ||
+        !Number.isSafeInteger(ddof) || ddof < 0 || ddof > 2147483647)) {
+        throw new TypeError("SNV ddof must be an integer number in [0, INT32_MAX]");
+    }
+}
+
 /** Validated native parameters of a method; the caller destroys them. */
 export function nativeParams(ctx: number, method: NativeMethod): number {
+    validateSnvParams(method);
     const m = getModule();
     const indexPtr = m._malloc(4);
     const out = m._malloc(4);
