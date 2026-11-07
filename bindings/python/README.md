@@ -173,3 +173,20 @@ This produces `build/dev-release/cpp/src/libn4m.so` (`.dylib` / `.dll` on
 macOS / Windows), which the loader rules above pick up.
 
 See <https://github.com/GBeurier/nirs4all-methods> for the full project.
+
+### SNV scalar contract
+
+`n4m.transform.scatter.SNV` and generated `n4m.roles.SNV` share strict private
+scalar admission: flags are Python/NumPy booleans; `ddof` is a nonboolean
+Integral with `operator.index` in `[0, INT32_MAX]`. NumPy integer scalars and
+IntEnum are admitted; timedelta64, strings, fractional/whole floats and booleans
+as ddof are refused before native parameter setters. Legacy SNV revalidates
+current attributes before fit/transform, recreates changed handles, and applies
+`set_params` atomically, including without sklearn. The unused unexported
+`n4m._impl.native.snv` function is removed; use the public SNV classes.
+
+When scaling nonempty data, `ddof < n_features` is required by libn4m before
+output writes. Centering-only/no-op accepts any valid nonnegative ddof;
+uncentered scaling uses SD about the row mean. Valid constant rows retain
+their zero-SD fallback. `pls4all` accepts canonical Solver tokens including
+`kernel_algorithm` and keeps `kernel` and existing aliases/defaults unchanged.

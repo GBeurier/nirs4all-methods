@@ -35,6 +35,9 @@ n4m_status_t guarded(n4m_context_t* ctx, Fn&& fn) noexcept {
     } catch (const std::bad_alloc&) {
         set_error(ctx, "out of memory");
         return N4M_ERR_OUT_OF_MEMORY;
+    } catch (const n4m::estimator::IntegerNarrowingError& e) {
+        set_error(ctx, e.what());
+        return N4M_ERR_INVALID_ARGUMENT;
     } catch (const std::exception& e) {
         set_error(ctx, e.what());
         return N4M_ERR_INTERNAL;

@@ -1327,3 +1327,175 @@ fn c_strings(values: &[&str]) -> Result<(Vec<CString>, Vec<*const c_char>), Erro
     let ptrs = owned.iter().map(|v| v.as_ptr()).collect();
     Ok((owned, ptrs))
 }
+
+#[cfg(test)]
+mod snv_parameter_contract {
+    use super::*;
+    use serde_json::Value;
+
+    fn fixture() -> Value {
+        serde_json::from_str(include_str!("testdata/snv_parameter_contract_v1.json"))
+            .expect("shared SNV contract fixture")
+    }
+
+    fn numbers(value: &Value) -> Vec<f64> {
+        value
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|row| row.as_array().unwrap().iter().map(|v| v.as_f64().unwrap()))
+            .collect()
+    }
+
+    #[test]
+    fn snv_shared_literals_and_reload() {
+        let doc = fixture();
+        assert_eq!(doc["schema"], "n4m.snv-parameter-contract.v1");
+        let x = numbers(&doc["matrix"]);
+        let xv = MatrixRef::row_major(&x, 4, 4).unwrap();
+        let ctx = Context::new().unwrap();
+        for row in doc["references"].as_array().unwrap() {
+            let mut params = Params::new(&ctx, "preprocessing.scatter.snv").unwrap();
+            params
+                .set_bool("with_mean", row["params"]["with_mean"].as_bool().unwrap())
+                .unwrap();
+            params
+                .set_bool("with_std", row["params"]["with_std"].as_bool().unwrap())
+                .unwrap();
+            params
+                .set_int("ddof", row["params"]["ddof"].as_i64().unwrap())
+                .unwrap();
+            let mut est = Estimator::new(&ctx, "preprocessing.scatter.snv", Some(&params)).unwrap();
+            est.fit(&ctx, &FitInputs::new(xv)).unwrap();
+            let got = est.transform(&ctx, xv).unwrap().data;
+            let expected = numbers(&row["values"]);
+            for (a, b) in got.iter().zip(&expected) {
+                assert!((a - b).abs() <= 1e-12, "{}: {a} vs {b}", row["id"]);
+            }
+            if row["id"] == "mean1-std1-ddof0" {
+                let bits: String = got
+                    .iter()
+                    .flat_map(|v| v.to_le_bytes())
+                    .map(|b| format!("{b:02x}"))
+                    .collect();
+                assert_eq!(bits, doc["default_bits"]["native_e7"].as_str().unwrap());
+            }
+            let bytes = est.to_n4me(&ctx, false).unwrap();
+            let loaded = Estimator::from_n4me(&ctx, &bytes).unwrap();
+            assert_eq!(
+                loaded.transform(&ctx, xv).unwrap().data,
+                got,
+                "{} replay",
+                row["id"]
+            );
+        }
+    }
+
+    #[test]
+    fn snv_shared_extent_refusals_and_typed_setters() {
+        let doc = fixture();
+        let x = numbers(&doc["matrix"]);
+        let xv = MatrixRef::row_major(&x, 4, 4).unwrap();
+        let ctx = Context::new().unwrap();
+        let mut failures = Vec::new();
+        for row in doc["domains"].as_array().unwrap() {
+            let mut params = Params::new(&ctx, "preprocessing.scatter.snv").unwrap();
+            params
+                .set_bool("with_mean", row["params"]["with_mean"].as_bool().unwrap())
+                .unwrap();
+            params
+                .set_bool("with_std", row["params"]["with_std"].as_bool().unwrap())
+                .unwrap();
+            let set = params.set_int("ddof", row["params"]["ddof"].as_i64().unwrap());
+            if row["create_status"] == 1 {
+                if !matches!(set, Err(ref error) if error.status == 1) {
+                    failures.push(format!("{}: negative ddof setter", row["id"]));
+                }
+                continue;
+            }
+            set.unwrap();
+            let mut est = Estimator::new(&ctx, "preprocessing.scatter.snv", Some(&params)).unwrap();
+            est.fit(&ctx, &FitInputs::new(xv)).unwrap();
+            let got = est.transform(&ctx, xv);
+            let status = got.as_ref().err().map_or(0, |error| error.status);
+            if i64::from(status) != row["transform_status"].as_i64().unwrap() {
+                failures.push(format!("{}: status {status}", row["id"]));
+            }
+            if row["transform_status"].as_i64() == Some(1) {
+                let bytes = est.to_n4me(&ctx, false).unwrap();
+                let loaded = Estimator::from_n4me(&ctx, &bytes).unwrap();
+                let replay_status = loaded
+                    .transform(&ctx, xv)
+                    .err()
+                    .map_or(0, |error| error.status);
+                if replay_status != 1 {
+                    failures.push(format!(
+                        "{}: imported state status {replay_status}",
+                        row["id"]
+                    ));
+                }
+            }
+        }
+        let mut params = Params::new(&ctx, "preprocessing.scatter.snv").unwrap();
+        assert!(params.set_double("ddof", 1.9).is_err());
+        assert!(params.set_bool("ddof", true).is_err());
+        assert!(params.set_int("with_std", 1).is_err());
+        for failure in &failures {
+            eprintln!("FAIL {failure}");
+        }
+        assert!(
+            failures.is_empty(),
+            "{} shared extent failures",
+            failures.len()
+        );
+    }
+
+    #[test]
+    fn snv_role_pipeline_nondefault_and_invalid_extent() {
+        let doc = fixture();
+        let x = numbers(&doc["matrix"]);
+        let xv = MatrixRef::row_major(&x, 4, 4).unwrap();
+        let y: Vec<f64> = x.chunks_exact(4).map(|r| r[0] + r[2]).collect();
+        let yv = MatrixRef::row_major(&y, 4, 1).unwrap();
+        let ctx = Context::new().unwrap();
+        let mut params = Params::new(&ctx, "preprocessing.scatter.snv").unwrap();
+        params.set_bool("with_std", false).unwrap();
+        params.set_int("ddof", i64::from(i32::MAX)).unwrap();
+        let mut pipeline = RolePipeline::new(
+            &ctx,
+            &[
+                ("preprocessing.scatter.snv", Some(&params)),
+                ("models.regularized.ridge", None),
+            ],
+        )
+        .unwrap();
+        pipeline.fit(&ctx, &FitInputs::new(xv).y(yv)).unwrap();
+        let mut snv = Estimator::new(&ctx, "preprocessing.scatter.snv", Some(&params)).unwrap();
+        snv.fit(&ctx, &FitInputs::new(xv)).unwrap();
+        let centered = snv.transform(&ctx, xv).unwrap();
+        let zv = MatrixRef::row_major(&centered.data, 4, 4).unwrap();
+        let mut ridge = Estimator::new(&ctx, "models.regularized.ridge", None).unwrap();
+        ridge.fit(&ctx, &FitInputs::new(zv).y(yv)).unwrap();
+        assert_eq!(
+            pipeline.predict(&ctx, xv, None).unwrap().data,
+            ridge.predict(&ctx, zv).unwrap().data
+        );
+        params.set_bool("with_std", true).unwrap();
+        params.set_int("ddof", 4).unwrap();
+        let mut invalid = RolePipeline::new(
+            &ctx,
+            &[
+                ("preprocessing.scatter.snv", Some(&params)),
+                ("models.regularized.ridge", None),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            invalid
+                .fit(&ctx, &FitInputs::new(xv).y(yv))
+                .unwrap_err()
+                .status,
+            1
+        );
+    }
+}

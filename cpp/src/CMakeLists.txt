@@ -356,4 +356,42 @@ if(N4M_BUILD_STATIC)
     n4m_add_warnings(n4m_c_static)
 endif()
 
+# C ABI guards translate C++ exceptions to statuses in every Emscripten consumer.
+# The default (no Rust backend) stays JavaScript EH. N4M_WITH_MIXEFF builds link the
+# Rust panic-unwind archive, which forces native Wasm EH for every C++ object, so the
+# analysis package requires browser Wasm exception-handling support. N4M_WASM_EH_MODEL
+# stays the private qualification selector; neither choice changes the C ABI,
+# numerical profiles or owner state.
+set(N4M_WASM_EH_MODEL "javascript" CACHE STRING
+    "Wasm exception model: javascript (default; native Wasm EH is forced by N4M_WITH_MIXEFF) or private native-experimental")
+set_property(CACHE N4M_WASM_EH_MODEL PROPERTY STRINGS javascript native-experimental)
+if(NOT N4M_WASM_EH_MODEL STREQUAL "javascript" AND
+   NOT N4M_WASM_EH_MODEL STREQUAL "native-experimental")
+    message(FATAL_ERROR "Unknown N4M_WASM_EH_MODEL: ${N4M_WASM_EH_MODEL}")
+endif()
+if(N4M_WASM_EH_MODEL STREQUAL "native-experimental" AND NOT EMSCRIPTEN)
+    message(FATAL_ERROR "N4M_WASM_EH_MODEL=native-experimental requires Emscripten")
+endif()
+
+# OBJECT sources and C API sources are compiled separately; link-only enabling
+# cannot restore omitted catches. Native targets keep their existing profile.
+if(EMSCRIPTEN)
+    set(_n4m_eh_flag -fexceptions)
+    if(N4M_WITH_MIXEFF OR N4M_WASM_EH_MODEL STREQUAL "native-experimental")
+        set(_n4m_eh_flag -fwasm-exceptions)
+    endif()
+    message(STATUS "n4m Wasm EH flag: ${_n4m_eh_flag} "
+            "(N4M_WASM_EH_MODEL=${N4M_WASM_EH_MODEL}, N4M_WITH_MIXEFF=${N4M_WITH_MIXEFF})")
+    foreach(_n4m_eh_target IN ITEMS n4m_core n4m_c n4m_c_static)
+        if(TARGET ${_n4m_eh_target})
+            target_compile_options(${_n4m_eh_target} PRIVATE
+                "$<$<COMPILE_LANGUAGE:CXX>:${_n4m_eh_flag}>")
+        endif()
+    endforeach()
+    target_link_options(n4m_c PUBLIC ${_n4m_eh_flag})
+    if(TARGET n4m_c_static)
+        target_link_options(n4m_c_static INTERFACE ${_n4m_eh_flag})
+    endif()
+endif()
+
 include(${PROJECT_SOURCE_DIR}/cmake/ComponentBackends.cmake)

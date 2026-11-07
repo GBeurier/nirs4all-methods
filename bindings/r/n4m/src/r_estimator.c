@@ -12,11 +12,14 @@
 #define R_NO_REMAP
 #include <R.h>
 #include <Rinternals.h>
+#include <R_ext/Visibility.h>
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "n4m/n4m.h"
+
+attribute_hidden int r_snv_parameters(SEXP values, const char** bad);
 
 static void r_est_finalize(SEXP ptr) {
     n4m_estimator_t* est = (n4m_estimator_t*)R_ExternalPtrAddr(ptr);
@@ -92,6 +95,8 @@ static n4m_status_t r_est_set_params(n4m_params_t* params, int32_t index, SEXP v
     info.struct_size = sizeof(info);
     n4m_status_t st = n4m_method_info_v1(index, &info);
     if (st != N4M_OK) return st;
+    if (strcmp(info.method_id, "preprocessing.scatter.snv") == 0 && !r_snv_parameters(values, bad))
+        return N4M_ERR_INVALID_ARGUMENT;
     for (R_xlen_t i = 0; i < XLENGTH(values); ++i) {
         const char* name = CHAR(STRING_ELT(names, i));
         SEXP v = VECTOR_ELT(values, i);

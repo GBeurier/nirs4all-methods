@@ -47,7 +47,7 @@ n4m_matrix_view_t contiguous_view(const n4m_matrix_view_t& X, std::vector<double
 std::int32_t to_i32(std::int64_t v) {
     if (v > std::numeric_limits<std::int32_t>::max() ||
         v < std::numeric_limits<std::int32_t>::min()) {
-        throw std::out_of_range("integer parameter exceeds int32");
+        throw IntegerNarrowingError("integer parameter exceeds int32");
     }
     return static_cast<std::int32_t>(v);
 }

@@ -1,0 +1,697 @@
+{
+  "profile": "dagml.shared-scoring.numerical.v1",
+  "schema_version": 1,
+  "owner": "DAG-ML",
+  "layout": "Row-major finite numeric arrays; n_outputs columns. Row identities are sample:<index>. target_row_order permutes targets and identities together.",
+  "tolerance": {
+    "absolute": 1e-12,
+    "relative": 1e-12
+  },
+  "implementations": {
+    "dag_coordinator": "Public score_regression_prediction_block / score_prediction_with_class_probabilities; owns identities, observed-cell filtering and macro reduction.",
+    "dag_builtin_provider": "Public builtin_metric_registry with MetricEvaluationTask; per-output decomposition and macro reduction.",
+    "methods_scalar_abi": "n4m_metrics_regression_metrics_*; unweighted finite one-dimensional kernels only; no identity, masks or classification API.",
+    "methods_stats_abi": "n4m_stats_regression_scores; separate context ABI: four outputs RMSE, MAE, R2 significand, R2 exponent. Constant targets yield NaN R2. Only small finite domain cases here.",
+    "methods_scalar_per_output_adapter": "Test adapter extracts each output and filters observed cells if masked before calling scalar kernels; no full-case ABI parity claim.",
+    "methods_stats_per_output_adapter": "Same test-only extraction/filtering for the separate stats ABI; no matrix or mask ABI support."
+  },
+  "applicability_statuses": {
+    "supported": "Executable numerical contract on this implementation.",
+    "rejects": "Executable invalid-input refusal, not unsupported.",
+    "not_applicable": "No corresponding input/semantic surface; never counted as a parity pass."
+  },
+  "out_of_scope": [
+    "internal compute_regression_metrics (not a public scalar evaluation ABI)",
+    "optimization metric enum (no standalone evaluation ABI)",
+    "full Python reference artifacts and alternate implementations"
+  ],
+  "cases": [
+    {
+      "name": "finite_scalar",
+      "kind": "regression",
+      "meaning": "SSE=2, SAE=2, SST=8 over three rows; RMSE=sqrt(2/3), MAE=2/3, R2=3/4.",
+      "n_outputs": 1,
+      "y_true": [
+        0,
+        2,
+        4
+      ],
+      "y_pred": [
+        1,
+        2,
+        3
+      ],
+      "expected": {
+        "rmse_per_output": [
+          0.816496580927726
+        ],
+        "mae_per_output": [
+          0.6666666666666666
+        ],
+        "r2_per_output": [
+          0.75
+        ],
+        "rmse": 0.816496580927726,
+        "mae": 0.6666666666666666,
+        "r2": 0.75
+      },
+      "stats_r2_per_output": [
+        0.75
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "supported",
+        "methods_stats_abi": "supported",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "constant_perfect",
+      "kind": "regression",
+      "meaning": "Zero residual and zero target variance: DAG/scalar R2=1; stats R2 is undefined (NaN).",
+      "n_outputs": 1,
+      "y_true": [
+        3,
+        3
+      ],
+      "y_pred": [
+        3,
+        3
+      ],
+      "expected": {
+        "rmse_per_output": [
+          0
+        ],
+        "mae_per_output": [
+          0
+        ],
+        "r2_per_output": [
+          1
+        ],
+        "rmse": 0,
+        "mae": 0,
+        "r2": 1
+      },
+      "stats_r2_per_output": [
+        "NaN"
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "supported",
+        "methods_stats_abi": "supported",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "constant_imperfect",
+      "kind": "regression",
+      "meaning": "Unit residual magnitudes and zero target variance: DAG/scalar R2=0; stats R2 is NaN.",
+      "n_outputs": 1,
+      "y_true": [
+        3,
+        3
+      ],
+      "y_pred": [
+        2,
+        4
+      ],
+      "expected": {
+        "rmse_per_output": [
+          1
+        ],
+        "mae_per_output": [
+          1
+        ],
+        "r2_per_output": [
+          0
+        ],
+        "rmse": 1,
+        "mae": 1,
+        "r2": 0
+      },
+      "stats_r2_per_output": [
+        "NaN"
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "supported",
+        "methods_stats_abi": "supported",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "one_row_perfect",
+      "kind": "regression",
+      "meaning": "One observed row has zero target variance, including when perfectly predicted.",
+      "n_outputs": 1,
+      "y_true": [
+        3
+      ],
+      "y_pred": [
+        3
+      ],
+      "expected": {
+        "rmse_per_output": [
+          0
+        ],
+        "mae_per_output": [
+          0
+        ],
+        "r2_per_output": [
+          1
+        ],
+        "rmse": 0,
+        "mae": 0,
+        "r2": 1
+      },
+      "stats_r2_per_output": [
+        "NaN"
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "supported",
+        "methods_stats_abi": "supported",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "one_row_imperfect",
+      "kind": "regression",
+      "meaning": "One residual of magnitude two: RMSE=MAE=2; zero target variance.",
+      "n_outputs": 1,
+      "y_true": [
+        3
+      ],
+      "y_pred": [
+        5
+      ],
+      "expected": {
+        "rmse_per_output": [
+          2
+        ],
+        "mae_per_output": [
+          2
+        ],
+        "r2_per_output": [
+          0
+        ],
+        "rmse": 2,
+        "mae": 2,
+        "r2": 0
+      },
+      "stats_r2_per_output": [
+        "NaN"
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "supported",
+        "methods_stats_abi": "supported",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "multi_output_macro",
+      "kind": "regression",
+      "meaning": "Output residual magnitudes are 1 and 3. Macro RMSE=(1+3)/2=2; flattened RMSE=sqrt((1+9)/2)=sqrt(5). Each SSE equals its SST.",
+      "n_outputs": 2,
+      "y_true": [
+        0,
+        0,
+        2,
+        6
+      ],
+      "y_pred": [
+        1,
+        3,
+        3,
+        9
+      ],
+      "expected": {
+        "rmse_per_output": [
+          1,
+          3
+        ],
+        "mae_per_output": [
+          1,
+          3
+        ],
+        "r2_per_output": [
+          0,
+          0
+        ],
+        "rmse": 2,
+        "mae": 2,
+        "r2": 0,
+        "flattened_rmse": 2.23606797749979
+      },
+      "stats_r2_per_output": [
+        0,
+        0
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "supported",
+        "methods_stats_per_output_adapter": "supported"
+      },
+      "adapter_operation": "extract_per_output"
+    },
+    {
+      "name": "masked_per_output",
+      "kind": "regression",
+      "meaning": "True means observed. Output 0 uses rows 0,2 (SSE=2,SST=8); output 1 uses rows 0,1 (SSE=8,SST=50). Finite sentinels must not affect scoring. Macro RMSE=3/2, pooled observed RMSE=sqrt(5/2).",
+      "n_outputs": 2,
+      "y_true": [
+        1,
+        10,
+        -999,
+        20,
+        5,
+        999
+      ],
+      "y_pred": [
+        2,
+        12,
+        4,
+        18,
+        6,
+        100
+      ],
+      "expected": {
+        "rmse_per_output": [
+          1,
+          2
+        ],
+        "mae_per_output": [
+          1,
+          2
+        ],
+        "r2_per_output": [
+          0.75,
+          0.84
+        ],
+        "rmse": 1.5,
+        "mae": 1.5,
+        "r2": 0.795,
+        "flattened_rmse": 1.5811388300841898
+      },
+      "stats_r2_per_output": [
+        0.75,
+        0.84
+      ],
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "supported",
+        "methods_stats_per_output_adapter": "supported"
+      },
+      "validity_mask": [
+        true,
+        true,
+        false,
+        true,
+        true,
+        false
+      ],
+      "target_row_order": [
+        2,
+        0,
+        1
+      ],
+      "adapter_operation": "coordinator_filter_observed_per_output",
+      "provider_error_contains": "unsupported missing mask"
+    },
+    {
+      "name": "imbalanced_classification",
+      "kind": "classification",
+      "meaning": "Supports (6,2,2), recalls (1,1/2,0): accuracy=7/10, balanced accuracy=1/2, support-weighted F1=(6*4/5+2*2/3)/10=46/75. Class codes are identities, not ordered magnitudes.",
+      "n_outputs": 1,
+      "y_true": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        2,
+        2
+      ],
+      "y_pred": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "class_labels": [
+        2,
+        0,
+        1
+      ],
+      "expected": {
+        "accuracy": 0.7,
+        "balanced_accuracy": 0.5,
+        "f1": 0.6133333333333333
+      },
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "remapped_classification",
+      "kind": "classification",
+      "meaning": "Supports (6,2,2), recalls (1,1/2,0): accuracy=7/10, balanced accuracy=1/2, support-weighted F1=(6*4/5+2*2/3)/10=46/75. Class codes are identities, not ordered magnitudes.",
+      "n_outputs": 1,
+      "y_true": [
+        40,
+        40,
+        40,
+        40,
+        40,
+        40,
+        -7,
+        -7,
+        12,
+        12
+      ],
+      "y_pred": [
+        40,
+        40,
+        40,
+        40,
+        40,
+        40,
+        -7,
+        40,
+        40,
+        40
+      ],
+      "class_labels": [
+        12,
+        40,
+        -7
+      ],
+      "expected": {
+        "accuracy": 0.7,
+        "balanced_accuracy": 0.5,
+        "f1": 0.6133333333333333
+      },
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "predicted_only_class",
+      "kind": "classification",
+      "meaning": "A predicted-only class has no true support. Balanced accuracy averages only true classes; support-weighted F1 gives predicted-only class zero weight.",
+      "n_outputs": 1,
+      "y_true": [
+        0,
+        0,
+        1
+      ],
+      "y_pred": [
+        0,
+        2,
+        2
+      ],
+      "class_labels": [
+        2,
+        1,
+        0
+      ],
+      "expected": {
+        "accuracy": 0.3333333333333333,
+        "balanced_accuracy": 0.25,
+        "f1": 0.4444444444444444
+      },
+      "applicability": {
+        "dag_coordinator": "supported",
+        "dag_builtin_provider": "supported",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "missing_identity",
+      "kind": "refusal",
+      "meaning": "Prediction identity absent from the target identity set is refused; positional pairing is forbidden.",
+      "base_case": "finite_scalar",
+      "operation": "missing_target_identity",
+      "error_contains": "missing from target block",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "not_applicable",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "sample_weights_rmse",
+      "kind": "refusal",
+      "meaning": "Built-in sample weights are unsupported and must be refused. F1 support weighting is class support, not sample weights.",
+      "base_case": "finite_scalar",
+      "operation": "sample_weights",
+      "metric": "rmse",
+      "error_contains": "unsupported sample weights",
+      "applicability": {
+        "dag_coordinator": "not_applicable",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "sample_weights_mae",
+      "kind": "refusal",
+      "meaning": "Built-in sample weights are unsupported and must be refused. F1 support weighting is class support, not sample weights.",
+      "base_case": "finite_scalar",
+      "operation": "sample_weights",
+      "metric": "mae",
+      "error_contains": "unsupported sample weights",
+      "applicability": {
+        "dag_coordinator": "not_applicable",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "sample_weights_r2",
+      "kind": "refusal",
+      "meaning": "Built-in sample weights are unsupported and must be refused. F1 support weighting is class support, not sample weights.",
+      "base_case": "finite_scalar",
+      "operation": "sample_weights",
+      "metric": "r2",
+      "error_contains": "unsupported sample weights",
+      "applicability": {
+        "dag_coordinator": "not_applicable",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "sample_weights_accuracy",
+      "kind": "refusal",
+      "meaning": "Built-in sample weights are unsupported and must be refused. F1 support weighting is class support, not sample weights.",
+      "base_case": "imbalanced_classification",
+      "operation": "sample_weights",
+      "metric": "accuracy",
+      "error_contains": "unsupported sample weights",
+      "applicability": {
+        "dag_coordinator": "not_applicable",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "sample_weights_balanced_accuracy",
+      "kind": "refusal",
+      "meaning": "Built-in sample weights are unsupported and must be refused. F1 support weighting is class support, not sample weights.",
+      "base_case": "imbalanced_classification",
+      "operation": "sample_weights",
+      "metric": "balanced_accuracy",
+      "error_contains": "unsupported sample weights",
+      "applicability": {
+        "dag_coordinator": "not_applicable",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "sample_weights_f1",
+      "kind": "refusal",
+      "meaning": "Built-in sample weights are unsupported and must be refused. F1 support weighting is class support, not sample weights.",
+      "base_case": "imbalanced_classification",
+      "operation": "sample_weights",
+      "metric": "f1",
+      "error_contains": "unsupported sample weights",
+      "applicability": {
+        "dag_coordinator": "not_applicable",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "not_applicable",
+        "methods_stats_abi": "not_applicable",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "nonfinite_NaN_y_true",
+      "kind": "refusal",
+      "meaning": "Nonfinite inputs are rejected, even when an output may intentionally be infinite for finite degenerate inputs. Token is injected in memory; JSON transports only finite numbers.",
+      "base_case": "finite_scalar",
+      "operation": "nonfinite_input",
+      "input_field": "y_true",
+      "input_token": "NaN",
+      "error_contains": "non-finite",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "rejects",
+        "methods_stats_abi": "rejects",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "nonfinite_NaN_y_pred",
+      "kind": "refusal",
+      "meaning": "Nonfinite inputs are rejected, even when an output may intentionally be infinite for finite degenerate inputs. Token is injected in memory; JSON transports only finite numbers.",
+      "base_case": "finite_scalar",
+      "operation": "nonfinite_input",
+      "input_field": "y_pred",
+      "input_token": "NaN",
+      "error_contains": "non-finite",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "rejects",
+        "methods_stats_abi": "rejects",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "nonfinite_positive_Inf_y_true",
+      "kind": "refusal",
+      "meaning": "Nonfinite inputs are rejected, even when an output may intentionally be infinite for finite degenerate inputs. Token is injected in memory; JSON transports only finite numbers.",
+      "base_case": "finite_scalar",
+      "operation": "nonfinite_input",
+      "input_field": "y_true",
+      "input_token": "+Inf",
+      "error_contains": "non-finite",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "rejects",
+        "methods_stats_abi": "rejects",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "nonfinite_positive_Inf_y_pred",
+      "kind": "refusal",
+      "meaning": "Nonfinite inputs are rejected, even when an output may intentionally be infinite for finite degenerate inputs. Token is injected in memory; JSON transports only finite numbers.",
+      "base_case": "finite_scalar",
+      "operation": "nonfinite_input",
+      "input_field": "y_pred",
+      "input_token": "+Inf",
+      "error_contains": "non-finite",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "rejects",
+        "methods_stats_abi": "rejects",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "nonfinite_negative_Inf_y_true",
+      "kind": "refusal",
+      "meaning": "Nonfinite inputs are rejected, even when an output may intentionally be infinite for finite degenerate inputs. Token is injected in memory; JSON transports only finite numbers.",
+      "base_case": "finite_scalar",
+      "operation": "nonfinite_input",
+      "input_field": "y_true",
+      "input_token": "-Inf",
+      "error_contains": "non-finite",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "rejects",
+        "methods_stats_abi": "rejects",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    },
+    {
+      "name": "nonfinite_negative_Inf_y_pred",
+      "kind": "refusal",
+      "meaning": "Nonfinite inputs are rejected, even when an output may intentionally be infinite for finite degenerate inputs. Token is injected in memory; JSON transports only finite numbers.",
+      "base_case": "finite_scalar",
+      "operation": "nonfinite_input",
+      "input_field": "y_pred",
+      "input_token": "-Inf",
+      "error_contains": "non-finite",
+      "applicability": {
+        "dag_coordinator": "rejects",
+        "dag_builtin_provider": "rejects",
+        "methods_scalar_abi": "rejects",
+        "methods_stats_abi": "rejects",
+        "methods_scalar_per_output_adapter": "not_applicable",
+        "methods_stats_per_output_adapter": "not_applicable"
+      }
+    }
+  ],
+  "canonicalization": "TCV1-unicode-17.0.0",
+  "file_integrity": "Pinned SHA-256 is over exact UTF-8 file bytes, including trailing newline; it is not a TCV1 semantic fingerprint."
+}

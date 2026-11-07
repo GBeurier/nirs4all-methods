@@ -598,8 +598,8 @@ class NativeRobustPLSRegressor(_NativeDirectMomentRegressor):
         scale_y: bool | None = None,
     ) -> None:
         self.huber_k = float(huber_k)
-        self.max_irls_iter = int(max_irls_iter)
-        self.n_components = int(n_components)
+        self.max_irls_iter = max_irls_iter
+        self.n_components = n_components
         self.center_x = center_x
         self.scale_x = scale_x
         self.center_y = center_y
@@ -619,7 +619,7 @@ class NativeRobustPLSRegressor(_NativeDirectMomentRegressor):
         )
 
     def _config_diagnostics(self) -> dict[str, object]:
-        return {
+        options = {
             "huber_k": self.huber_k,
             "max_irls_iter": self.max_irls_iter,
             "n_components": self.n_components,
@@ -628,6 +628,11 @@ class NativeRobustPLSRegressor(_NativeDirectMomentRegressor):
             "center_y": self.center_y,
             "scale_y": self.scale_y,
         }
+        for name in ("max_irls_iter", "n_components"):
+            value = options[name]
+            if isinstance(value, np.integer) and not isinstance(value, np.timedelta64):
+                options[name] = value.item()
+        return options
 
 
 class NativeRidgePLSRegressor(_NativeDirectMomentRegressor):

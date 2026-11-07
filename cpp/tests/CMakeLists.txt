@@ -4,6 +4,7 @@
 # Each subsequent phase appends its test files to the source list.
 
 add_executable(n4m_tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/core/preprocessing/scatter/snv.c
     main.cpp
     test_augmenters_noise_drift.cpp
     test_augmenters_phase17.cpp
@@ -315,7 +316,8 @@ target_include_directories(n4m_fanova_kernel_tests SYSTEM PRIVATE
     ${CMAKE_SOURCE_DIR}/cpp/backends/rfr/include)
 target_compile_definitions(n4m_fanova_kernel_tests PRIVATE
     N4M_STATIC=1
-    N4M_WITH_RFR=$<BOOL:${N4M_WITH_RFR}>)
+    N4M_WITH_RFR=$<BOOL:${N4M_WITH_RFR}>
+    CEREAL_RAPIDJSON_NOMEMBERITERATORCLASS)
 n4m_add_warnings(n4m_fanova_kernel_tests)
 add_test(NAME n4m_fanova_kernel_tests COMMAND n4m_fanova_kernel_tests)
 

@@ -13,6 +13,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -651,6 +653,236 @@ void verify_metrics_parity() {
     }
 }
 
+// Shared DAG-owned phase-2 contract. Expected numbers are analytical fixture
+// values; no Python/reference implementation runs during this native gate.
+std::vector<double>
+shared_numbers(const std::string& body, const std::string& key, std::size_t lo, std::size_t hi) {
+    using namespace n4m_testing;
+    std::size_t pos = find_value_for_key(body, key, lo, hi);
+    N4M_TEST_REQUIRE(body[pos++] == '[');
+    std::vector<double> values;
+    for (;;) {
+        skip_ws(body, pos);
+        N4M_TEST_REQUIRE(pos < hi);
+        if (body[pos] == ']')
+            return values;
+        if (body.compare(pos, 5, "\"NaN\"") == 0) {
+            values.push_back(std::numeric_limits<double>::quiet_NaN());
+            pos += 5;
+        } else if (body.compare(pos, 4, "true") == 0) {
+            values.push_back(1.0);
+            pos += 4;
+        } else if (body.compare(pos, 5, "false") == 0) {
+            values.push_back(0.0);
+            pos += 5;
+        } else {
+            char* end = nullptr;
+            const double value = std::strtod(body.c_str() + pos, &end);
+            N4M_TEST_REQUIRE(end != body.c_str() + pos);
+            values.push_back(value);
+            pos = static_cast<std::size_t>(end - body.c_str());
+        }
+        skip_ws(body, pos);
+        if (body[pos] == ',')
+            ++pos;
+        else
+            N4M_TEST_REQUIRE(body[pos] == ']');
+    }
+}
+
+std::string
+shared_string(const std::string& body, const std::string& key, std::size_t lo, std::size_t hi) {
+    auto pos = n4m_testing::find_value_for_key(body, key, lo, hi);
+    return n4m_testing::parse_string(body, pos);
+}
+
+double
+shared_number(const std::string& body, const std::string& key, std::size_t lo, std::size_t hi) {
+    return std::strtod(body.c_str() + n4m_testing::find_value_for_key(body, key, lo, hi), nullptr);
+}
+
+void shared_close(double got, double want, double abs_tol, double rel_tol) {
+    if (std::isnan(want)) {
+        N4M_TEST_REQUIRE(std::isnan(got));
+    } else {
+        N4M_TEST_REQUIRE(std::isfinite(got));
+        N4M_TEST_REQUIRE(std::abs(got - want) <= abs_tol + rel_tol * std::abs(want));
+    }
+}
+
+using ScalarMetric = n4m_status_t (*)(const double*, const double*, int64_t, double*);
+const ScalarMetric shared_scalar_metrics[] = {n4m_metrics_regression_metrics_rmse,
+                                              n4m_metrics_regression_metrics_mae,
+                                              n4m_metrics_regression_metrics_r2,
+                                              n4m_metrics_regression_metrics_bias,
+                                              n4m_metrics_regression_metrics_sep,
+                                              n4m_metrics_regression_metrics_rpd,
+                                              n4m_metrics_regression_metrics_rpiq,
+                                              n4m_metrics_regression_metrics_nrmse};
+
+void test_shared_scoring_contract() {
+    using namespace n4m_testing;
+    const auto body =
+        slurp(std::string(N4M_PARITY_FIXTURE_DIR) + "/shared_scoring_numerical.v1.json");
+    const double abs_tol = shared_number(body, "absolute", 0, body.size());
+    const double rel_tol = shared_number(body, "relative", 0, body.size());
+    const auto range = find_cases_array(body);
+    const auto cases = list_case_object_spans(body, range.first, range.second);
+    N4M_TEST_REQUIRE(cases.size() == 23);
+    std::vector<double> base_true, base_pred;
+    std::size_t direct_scalar_cases = 0, adapter_cases = 0, adapter_outputs = 0;
+    std::size_t rejection_cases = 0;
+    for (const auto& span : cases) {
+        const auto lo = span.first, hi = span.second;
+        const auto name = shared_string(body, "name", lo, hi);
+        const auto kind = shared_string(body, "kind", lo, hi);
+        const auto scalar_status = shared_string(body, "methods_scalar_abi", lo, hi);
+        const auto stats_status = shared_string(body, "methods_stats_abi", lo, hi);
+        if (kind == "regression") {
+            const auto yt = shared_numbers(body, "y_true", lo, hi);
+            const auto yp = shared_numbers(body, "y_pred", lo, hi);
+            const auto width = static_cast<std::size_t>(shared_number(body, "n_outputs", lo, hi));
+            N4M_TEST_REQUIRE(width > 0 && yt.size() == yp.size() && yt.size() % width == 0);
+            if (name == "finite_scalar") {
+                base_true = yt;
+                base_pred = yp;
+            }
+            std::vector<double> mask(yt.size(), 1.0);
+            const auto scalar_adapter =
+                shared_string(body, "methods_scalar_per_output_adapter", lo, hi);
+            const auto stats_adapter =
+                shared_string(body, "methods_stats_per_output_adapter", lo, hi);
+            if (scalar_status == "not_applicable") {
+                N4M_TEST_REQUIRE(stats_status == "not_applicable");
+                if (scalar_adapter != "supported" || stats_adapter != "supported") {
+                    N4M_TEST_REQUIRE(scalar_adapter == "not_applicable");
+                    N4M_TEST_REQUIRE(stats_adapter == "not_applicable");
+                    continue;
+                }
+                const auto operation = shared_string(body, "adapter_operation", lo, hi);
+                if (operation == "coordinator_filter_observed_per_output") {
+                    mask = shared_numbers(body, "validity_mask", lo, hi);
+                    N4M_TEST_REQUIRE(mask.size() == yt.size());
+                } else {
+                    N4M_TEST_REQUIRE(operation == "extract_per_output" && width > 1);
+                }
+                ++adapter_cases;
+                adapter_outputs += width;
+            } else {
+                N4M_TEST_REQUIRE(scalar_status == "supported" && stats_status == "supported");
+                N4M_TEST_REQUIRE(width == 1);
+                N4M_TEST_REQUIRE(body.find("\"validity_mask\"", lo) >= hi);
+                N4M_TEST_REQUIRE(scalar_adapter == "not_applicable");
+                N4M_TEST_REQUIRE(stats_adapter == "not_applicable");
+                ++direct_scalar_cases;
+            }
+            const char* keys[] = {"rmse_per_output", "mae_per_output", "r2_per_output"};
+            double macro_rmse = 0.0;
+            std::vector<double> pooled_true, pooled_pred;
+            for (std::size_t column = 0; column < width; ++column) {
+                std::vector<double> truth, pred;
+                for (std::size_t i = column; i < yt.size(); i += width) {
+                    if (mask[i] != 0.0) {
+                        truth.push_back(yt[i]);
+                        pred.push_back(yp[i]);
+                    }
+                }
+                N4M_TEST_REQUIRE(!truth.empty());
+                const auto n = static_cast<int64_t>(truth.size());
+                double scores[3] = {};
+                for (std::size_t metric = 0; metric < 3; ++metric) {
+                    const auto want = shared_numbers(body, keys[metric], lo, hi);
+                    N4M_TEST_REQUIRE(want.size() == width);
+                    N4M_TEST_REQUIRE(
+                        shared_scalar_metrics[metric](truth.data(), pred.data(), n, &scores[metric])
+                        == N4M_OK);
+                    shared_close(scores[metric], want[column], abs_tol, rel_tol);
+                }
+                macro_rmse += scores[0] / static_cast<double>(width);
+                // Separate stats ABI: four outputs, with NaN for constant-target R2.
+                n4m_context_t* ctx = nullptr;
+                N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+                double stats[4] = {};
+                const auto status =
+                    n4m_stats_regression_scores(ctx, truth.data(), pred.data(), n, stats);
+                n4m_context_destroy(ctx);
+                N4M_TEST_REQUIRE(status == N4M_OK);
+                shared_close(stats[0], scores[0], abs_tol, rel_tol);
+                shared_close(stats[1], scores[1], abs_tol, rel_tol);
+                const auto stats_r2 = shared_numbers(body, "stats_r2_per_output", lo, hi);
+                shared_close(stats[2], stats_r2[column], abs_tol, rel_tol);
+                N4M_TEST_REQUIRE(stats[3] == 0.0);
+                pooled_true.insert(pooled_true.end(), truth.begin(), truth.end());
+                pooled_pred.insert(pooled_pred.end(), pred.begin(), pred.end());
+            }
+            shared_close(macro_rmse, shared_number(body, "rmse", lo, hi), abs_tol, rel_tol);
+            if (width > 1) {
+                double flat = -1.0;
+                N4M_TEST_REQUIRE(
+                    n4m_metrics_regression_metrics_rmse(pooled_true.data(),
+                                                        pooled_pred.data(),
+                                                        static_cast<int64_t>(pooled_true.size()),
+                                                        &flat)
+                    == N4M_OK);
+                shared_close(flat, shared_number(body, "flattened_rmse", lo, hi), abs_tol, rel_tol);
+                N4M_TEST_REQUIRE(std::abs(flat - macro_rmse) > 0.01);
+            }
+        } else if (kind == "refusal" && scalar_status == "rejects") {
+            N4M_TEST_REQUIRE(stats_status == "rejects");
+            N4M_TEST_REQUIRE(shared_string(body, "operation", lo, hi) == "nonfinite_input");
+            N4M_TEST_REQUIRE(!base_true.empty());
+            const auto token = shared_string(body, "input_token", lo, hi);
+            const double value = token == "NaN"    ? std::numeric_limits<double>::quiet_NaN()
+                                 : token == "+Inf" ? std::numeric_limits<double>::infinity()
+                                                   : -std::numeric_limits<double>::infinity();
+            const bool in_truth = shared_string(body, "input_field", lo, hi) == "y_true";
+            for (std::size_t position = 0; position < base_true.size(); ++position) {
+                auto truth = base_true, pred = base_pred;
+                (in_truth ? truth : pred)[position] = value;
+                for (auto metric : shared_scalar_metrics) {
+                    double out = 12345.25;
+                    N4M_TEST_REQUIRE(
+                        metric(truth.data(), pred.data(), static_cast<int64_t>(truth.size()), &out)
+                        == N4M_ERR_INVALID_ARGUMENT);
+                    N4M_TEST_REQUIRE(out == 12345.25);
+                }
+                n4m_context_t* ctx = nullptr;
+                N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+                double out[4] = {12345.25, 12345.25, 12345.25, 12345.25};
+                const auto status = n4m_stats_regression_scores(
+                    ctx, truth.data(), pred.data(), static_cast<int64_t>(truth.size()), out);
+                n4m_context_destroy(ctx);
+                N4M_TEST_REQUIRE(status == N4M_ERR_INVALID_ARGUMENT);
+                for (double v : out)
+                    N4M_TEST_REQUIRE(v == 12345.25);
+            }
+            ++rejection_cases;
+        } else {
+            // Classification (including weighted F1), masks, identities and
+            // sample weights are not a scalar ABI parity pass.
+            N4M_TEST_REQUIRE(scalar_status == "not_applicable");
+            N4M_TEST_REQUIRE(stats_status == "not_applicable");
+        }
+    }
+    N4M_TEST_REQUIRE(direct_scalar_cases == 5 && rejection_cases == 6);
+    N4M_TEST_REQUIRE(adapter_cases == 2 && adapter_outputs == 4);
+    std::cout << "Shared scoring: " << direct_scalar_cases << " direct scalar cases, "
+              << rejection_cases << " nonfinite rejection cases, " << adapter_cases
+              << " adapter cases (" << adapter_outputs
+              << " output checks); not_applicable cases are not full-case parity passes\n";
+}
+
+void test_metric_finite_degenerate_ratios_remain_infinite() {
+    const double truth[] = {-1.0, 1.0};
+    const ScalarMetric ratios[] = {n4m_metrics_regression_metrics_rpd,
+                                   n4m_metrics_regression_metrics_rpiq,
+                                   n4m_metrics_regression_metrics_nrmse};
+    for (auto metric : ratios) {
+        double out = -123.0;
+        N4M_TEST_REQUIRE(metric(truth, truth, 2, &out) == N4M_OK);
+        N4M_TEST_REQUIRE(std::isinf(out) && out > 0.0);
+    }
+}
 // ---------------------------------------------------------------------------
 // T² / Q parity tests.
 // ---------------------------------------------------------------------------
@@ -818,6 +1050,8 @@ void register_metrics_tests(n4m_testing::Runner& r) {
     r.run("q_residuals_constant_columns",  test_q_residuals_constant_columns);
     r.run("q_residuals_negative_h0",       test_q_residuals_negative_h0);
     r.run("wide_pca_diagnostics_constant_band_parity", test_wide_pca_diagnostics_constant_band_parity);
+    r.run("shared_scoring_contract", test_shared_scoring_contract);
+    r.run("metric_finite_degenerate_ratios", test_metric_finite_degenerate_ratios_remain_infinite);
     r.run("metrics_parity",                verify_metrics_parity);
     r.run("hotelling_t2_parity",           verify_hotelling_t2_parity);
     r.run("q_residuals_parity",            verify_q_residuals_parity);

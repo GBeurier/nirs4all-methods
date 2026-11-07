@@ -24,6 +24,27 @@ assert.ok(complete.inference.friedman_p_value > 0 && complete.inference.friedman
 assert.deepEqual(complete.candidates.map(x => x.rank), [1,2]);
 assert.throws(() => rank(scores, Uint8Array.of(1,2,0,1,1,0,0,0,1)), /presence mask/);
 assert.throws(() => rank(scores, mask, { tie_tolerance: -1 }));
+// Incomplete but connected design: A=2,B=1 ; B=2,C=1 ; nine rows with only A present.
+// Mean ranks A=1.1, B=1.5, C=1.0 are descriptive; the average_rank global rank is withheld.
+{
+    const rows = 11, data = new Float64Array(rows * 3), present = new Uint8Array(rows * 3);
+    data.set([2,1,0, 0,2,1]);
+    present.set([1,1,0, 0,1,1]);
+    for (let r = 2; r < rows; r++) { data[r * 3] = 2; present[r * 3] = 1; }
+    const incomplete = rank({ rows, cols: 3, data }, present, { method: 'average_rank' });
+    assert.equal(incomplete.coverage.complete_blocks, 0);
+    assert.equal(incomplete.coverage.connected_components, 1);
+    assert.deepEqual(incomplete.candidates.map(x => Math.round(x.average_rank * 1e9) / 1e9), [1.1, 1.5, 1]);
+    assert.deepEqual(incomplete.candidates.map(x => x.rank), [null, null, null]);
+    assert.ok(incomplete.warnings.some(w => w.includes('Incomplete design')));
+    const bt = rank({ rows, cols: 3, data }, present, { method: 'bradley_terry' });
+    assert.deepEqual(bt.candidates.map(x => x.rank), [3, 2, 1]);
+    assert.ok(!bt.warnings.some(w => w.includes('Incomplete design')));
+    const full = rank({ rows: 2, cols: 3, data: Float64Array.of(1,2,3, 1,2,3) }, Uint8Array.of(1,1,1,1,1,1),
+                      { method: 'average_rank' });
+    assert.deepEqual(full.candidates.map(x => x.rank), [1, 2, 3]);
+    assert.ok(!full.warnings.some(w => w.includes('Incomplete design')));
+}
 console.log('JS native ranking: methods, missingness, disconnected graph and validation OK');
 
 // Production C ABI counterexample: dominant inverse-variance weight must not

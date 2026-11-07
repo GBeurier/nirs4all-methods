@@ -9,6 +9,8 @@
 #include "mex.h"
 #include "n4m/n4m.h"
 
+#include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -67,11 +69,28 @@ static int mode_from_arg(const mxArray* arg) {
     return (int)mxGetScalar(arg);
 }
 
+/* Only SNV uses these strict scalar codecs; other operators are unchanged. */
+static int snv_scalar(const mxArray* value, int flag) {
+    if (mxGetNumberOfElements(value) != 1 || mxIsComplex(value) || mxIsSparse(value)
+        || !(mxIsNumeric(value) || (flag && mxIsLogical(value)))) {
+        mexErrMsgIdAndTxt("n4m:parameter",
+                          "SNV expects one full real numeric scalar or boolean flag");
+    }
+    const double x = mxGetScalar(value);
+    if (!isfinite(x) || x < 0 || x > INT_MAX || x != floor(x) || (flag && x != 0 && x != 1)) {
+        mexErrMsgIdAndTxt("n4m:parameter", "SNV flags must be 0/1; ddof must be in [0, INT32_MAX]");
+    }
+    return (int)x;
+}
+
 static void run_snv(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) {
     if (nrhs != 5) {
         mexErrMsgIdAndTxt("pls4all:nargin", "Usage: n4m_preprocess_mex('snv', X, with_mean, with_std, ddof)");
     }
     (void)nlhs;
+    const int mean = snv_scalar(prhs[2], 1);
+    const int scale = snv_scalar(prhs[3], 1);
+    const int ddof = snv_scalar(prhs[4], 0);
     int rows = 0, cols = 0;
     double* X = colmajor_to_rowmajor(prhs[1], &rows, &cols);
     double* out = (double*)malloc((size_t)rows * (size_t)cols * sizeof(double));
@@ -82,11 +101,7 @@ static void run_snv(int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[]) 
     }
 
     n4m_pp_snv_handle_t* handle = NULL;
-    n4m_status_t status = n4m_transform_snv_create(
-        &handle,
-        mxGetScalar(prhs[2]) != 0.0 ? 1 : 0,
-        mxGetScalar(prhs[3]) != 0.0 ? 1 : 0,
-        (int)mxGetScalar(prhs[4]));
+    n4m_status_t status = n4m_transform_snv_create(&handle, mean, scale, ddof);
     if (status == N4M_OK) {
         n4m_matrix_view_t xv = rowmajor_view(X, rows, cols);
         n4m_matrix_view_t ov = rowmajor_view(out, rows, cols);

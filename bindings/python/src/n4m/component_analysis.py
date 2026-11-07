@@ -216,28 +216,34 @@ def fanova(
     bounds: ArrayLike,
     *,
     n_trees: int = 32,
-    max_depth: int = 10,
+    max_depth: int | None = None,
     min_samples_leaf: int = 2,
     max_features: int = 0,
-    seed: int = 42,
+    seed: int | None = None,
     max_order: int = 2,
     max_marginal_evaluations: int = 1_000_000,
     X_valid: ArrayLike | None = None,
     y_valid: ArrayLike | None = None,
 ) -> dict[str, Any]:
-    """Exact uniform-domain per-tree fANOVA of a newly fitted regression forest."""
+    """Exact uniform-domain per-tree fANOVA of a newly fitted regression forest.
+
+    ``max_depth`` and ``seed`` default to ``None``, which keeps the native
+    ``n4m_fanova_options_init_v1`` values (currently ``max_depth=8`` and
+    ``seed=0``); the effective values are reported in ``options``.
+    """
+    requested = {
+        "num_trees": n_trees,
+        "max_depth": max_depth,
+        "min_samples_leaf": min_samples_leaf,
+        "max_features": max_features,
+        "seed": seed,
+        "max_order": max_order,
+        "max_marginal_evaluations": max_marginal_evaluations,
+    }
     opt, resolved = _options(
         FanovaOptionsV1,
         lib.n4m_fanova_options_init_v1,
-        {
-            "num_trees": n_trees,
-            "max_depth": max_depth,
-            "min_samples_leaf": min_samples_leaf,
-            "max_features": max_features,
-            "seed": seed,
-            "max_order": max_order,
-            "max_marginal_evaluations": max_marginal_evaluations,
-        },
+        {key: value for key, value in requested.items() if value is not None},
     )
     base = {
         "schema_version": "n4m.fanova/1",

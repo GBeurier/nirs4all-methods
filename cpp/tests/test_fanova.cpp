@@ -259,7 +259,7 @@ void declared_measure_and_extreme_ranges() {
         f.y[i] = (i % 2) ? -1 : 1;
     }
     N4M_TEST_REQUIRE(f.fit() == N4M_OK);
-    if (std::numeric_limits<long double>::max_exponent > 1024) {
+    if constexpr (std::numeric_limits<long double>::max_exponent > 1024) {
         N4M_TEST_REQUIRE(f.summary.fit_state == N4M_FANOVA_FITTED);
         N4M_TEST_REQUIRE(std::abs(f.mains[0] - 1) < 1e-12 && f.mains[2] == 0);
     } else {

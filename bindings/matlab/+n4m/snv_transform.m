@@ -6,7 +6,7 @@ function Xout = snv_transform(X, varargin)
 
 opts = parse_options(varargin{:});
 Xout = n4m.n4m_preprocess_mex( ...
-    'snv', double(X), logical_scalar(opts.with_mean), logical_scalar(opts.with_std), int32(opts.ddof));
+    'snv', double(X), opts.with_mean, opts.with_std, opts.ddof);
 end
 
 function opts = parse_options(varargin)
@@ -16,10 +16,9 @@ if mod(numel(varargin), 2) ~= 0
 end
 for idx = 1:2:numel(varargin)
     name = char(varargin{idx});
+    if ~isfield(opts, name)
+        error('n4m:parameter', 'Unknown SNV option: %s', name);
+    end
     opts.(name) = varargin{idx + 1};
 end
-end
-
-function value = logical_scalar(x)
-value = double(logical(x));
 end

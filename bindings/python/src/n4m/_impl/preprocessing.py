@@ -9,6 +9,7 @@ import numpy as np
 
 from .._errors import check
 from .._ffi import lib
+from .._parameter_validation import _snv_parameters
 from .estimator_base import StatefulOperator, StatelessOperator
 
 # Boundary-mode lookups for the operators that accept a string mode.
@@ -25,18 +26,50 @@ class SNV(StatelessOperator):
 
     def __init__(self, with_mean: bool = True, with_std: bool = True, ddof: int = 0):
         super().__init__()
-        self.with_mean = bool(with_mean)
-        self.with_std = bool(with_std)
-        self.ddof = int(ddof)
+        _snv_parameters(with_mean, with_std, ddof)
+        self.with_mean = with_mean
+        self.with_std = with_std
+        self.ddof = ddof
+        self._handle_config = None
+
+    def set_params(self, **params):
+        names = ("with_mean", "with_std", "ddof")
+        unknown = set(params) - set(names)
+        if unknown:
+            raise ValueError(f"Unknown SNV parameter(s): {sorted(unknown)}")
+        merged = {name: params.get(name, getattr(self, name)) for name in names}
+        config = _snv_parameters(**merged)
+        for name, value in merged.items():
+            setattr(self, name, value)
+        if self._handle_config != config:
+            self._invalidate_handle()
+        return self
+
+    def _invalidate_handle(self) -> None:
+        # SNV has no learned state; a new configuration preserves an earlier fit.
+        was_fitted: bool = self._fitted
+        self._destroy()
+        self._fitted: bool = was_fitted
+
+    def _ensure_handle(self):
+        config = _snv_parameters(self.with_mean, self.with_std, self.ddof)
+        if self._handle_config != config:
+            self._invalidate_handle()
+        handle = super()._ensure_handle()
+        self._handle_config = config
+        return handle
 
     def _create_handle(self):
+        with_mean, with_std, ddof = _snv_parameters(
+            self.with_mean, self.with_std, self.ddof
+        )
         h = ctypes.c_void_p()
         check(
             lib.n4m_transform_snv_create(
                 ctypes.byref(h),
-                ctypes.c_int(1 if self.with_mean else 0),
-                ctypes.c_int(1 if self.with_std else 0),
-                ctypes.c_int(self.ddof),
+                ctypes.c_int(with_mean),
+                ctypes.c_int(with_std),
+                ctypes.c_int(ddof),
             ),
             "n4m_transform_snv_create",
         )

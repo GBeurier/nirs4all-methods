@@ -224,6 +224,136 @@ bindings/js/
     └── run_new_pack.mjs  # broad-model-pack smoke
 ```
 
+### SNV parameter fidelity
+
+`ppCreate("StandardNormalVariate")` supports only omitted params or an actual
+empty Array. Every other value, including typed arrays and default-looking
+nonempty vectors, refuses before module access. Use the existing named `SNV`
+and `RolePipeline` APIs for `with_mean`, `with_std` and `ddof`; no positional
+SNV codec exists. Named-role flags must be real booleans. ddof must be a finite
+integer number in `[0, INT32_MAX]`; null, strings, boxed scalars and bigint do
+not silently coerce. Admission precedes native lookup/allocation/setters.
+
+The owner rejects an invalid variance denominator on nonempty scaled input,
+while centering-only remains valid. Out-of-range raw WASM integer setters
+can still reach the generic exception-disabled i32 adapter abort: that
+separate raw-ABI issue is not qualified by the SNV host validator.
+
+
+### Checked raw integer narrowing
+
+The generic raw C ABI stores integer parameters as int64. A kernel that needs
+int32 rejects an out-of-range value with `N4M_ERR_INVALID_ARGUMENT` and
+`integer parameter exceeds int32`, rather than truncating it. This check occurs
+when the adapter uses the value (for example, SNV fit), not necessarily at
+parameter storage or estimator creation. Genuine wide parameters such as seeds
+remain int64. Named SNV host admission and positional `ppCreate` are separate;
+SNV positional options still require an empty array.
+
+Emscripten C++ objects use JavaScript-based `-fexceptions`, and the owner CMake
+static target propagates the matching final-link option. Embedders that discard
+CMake usage requirements must preserve this profile. This does not select native
+Wasm EH or change browser/Node runtime requirements. Always deploy a matching
+WASM/glue pair; default assets are refreshed only as part of the agreed release.
+This JavaScript-EH default applies to builds without the Rust mixed-effects
+backend. Builds with `N4M_WITH_MIXEFF` (the `emscripten-analysis` package) link a
+Rust panic-unwind archive, so CMake compiles and links every C++ object with
+native Wasm exception handling instead, whatever `N4M_WASM_EH_MODEL` says, and that
+package requires browser/Node Wasm exception-handling support. This is a build
+requirement of the analysis package only; it does not promote the private
+native-experimental candidate below.
+
+`npm test` includes `test/run_raw_i32_status.mjs`. With no qualification variables,
+it uses this package's `dist/n4m.js` and `dist/n4m.wasm`. Qualification supplies all
+four of `N4M_WASM_PATH`, `N4M_WASM_GLUE_PATH`, `N4M_EXPECTED_WASM_SHA256` and
+`N4M_EXPECTED_GLUE_SHA256`; partial configuration or a hash mismatch fails before
+module execution. The script isolates raw cases in children and checks statuses,
+output guards, failed-refit preservation and repeated-refusal memory stability.
+`--parity` emits valid existing SNV fixture outputs and retained positive
+robust-PLS/selector controls as exact bytes for comparison with the retained baseline. An abort is a failure, never a typed refusal.
+
+## Private Native Wasm EH candidate (not a shipping profile)
+
+`N4M_WASM_EH_MODEL` defaults to `javascript`. Only the explicit Emscripten
+`-DN4M_WASM_EH_MODEL=native-experimental` selects the private experiment;
+unknown values or a native-experimental request on a non-Emscripten toolchain
+are refused. One matching compile/link mode covers all 143 linked owner C++
+objects. C sources require no C++ exception option. No math, public ABI/status,
+owner state format, scientific profile, or default package asset changes.
+
+Experimental outputs live only in `native-eh-candidate/` in the existing JS
+binary directory. The normal pair has a private capability sidecar and a
+candidate-only pre-js gate. Before candidate instantiation, the gate requires
+the legacy `try`, `catch`, `throw`, `catch_all`, `rethrow`, and `delegate`
+instruction set, plus JS i32 `WebAssembly.Tag`/`Exception`, `is`, `getArg`, and
+`traceStack`. Missing WebAssembly refuses with `RuntimeUnavailable`; a present
+runtime lacking this feature refuses with `Unsupported`, both naming
+`wasm-exception-handling`. Artifact corruption and unrelated instantiation
+errors are not reclassified. There is no retry, alternate engine or JS-EH
+fallback. The public `loadModule` assigns its cached module only after the
+factory resolves; direct factory loading has the same pre-js admission gate.
+The emitted `__cpp_exception` tag is checked after instantiation as a runtime
+witness, not used as a host-refusal decision.
+
+The explicit, `EXCLUDE_FROM_ALL` target `n4m_wasm_eh_boundary_tests` links the
+same owner archive plus one private allocator fixture. Only this separate pair
+has fault-injection exports. It checks real owner guards returning 9 for
+`std::bad_alloc` and 255 for a non-allocating test exception, then same-module
+valid recovery. It is never installed or staged into package/default assets.
+`test/run_native_eh_candidate.mjs` requires exact pair, sidecar, archive,
+public-entrypoint and fixture paths/hashes; its missing-feature simulations
+are isolated and labelled. These source tests still require an independently
+admitted real build and runtime qualification.
+
+Earlier Node 22.21.1/24.16.0 synthetic feature observations do not qualify this
+candidate, browsers, workers or other platforms. Browser adoption and frontend
+pins/assets require a joint maintainer batch. EH execution requirements are
+separate from `native-workflow@1`, `native-conformal@1` and fitted-state
+readability, none of which grants execution permission. Cleanup while foreign
+JS aborts unwind is not claimed equivalent across EH modes. The previous
+JS-EH pair's binary/glue size and four of six fixed timing failures remain;
+this experiment grants no cost waiver. Future candidate qualification retains
+all C1–C10 conditions, the six causal mutants, byte anchors and unchanged 1.25
+size/per-row timing limits. No candidate runtime or browser support is claimed
+from source or configuration alone.
+
+### Private qualification corrections (source only)
+
+The private fixture now snapshots both live C++ `new` allocations and allocator
+in-use bytes (`mallinfo().uordblks`) into caller-provided storage. Successful
+ordinary/aligned `new` increments the first metric; matching non-null deletes
+decrement it. The second metric also covers malloc-backed exception storage.
+Both must increase with a live valid owner object and return **exactly** to the
+same baseline after warmup, valid destroy, every injected fault and every
+recovery. No leak allowance or unchecked exception warmup is accepted.
+Linear-memory capacity is retained only as an additional bounded check; its
+stability alone is not cleanup evidence. These assertions remain unexecuted.
+
+One valid `create` in the same module/run determines the allocation count,
+verified by a second valid create. `n4m_test_eh_arm(fault, skip)` then visits
+every allocation index for both real exception types, including allocation
+sites with resolved parameters and adapters already live. Each must return the
+owner status/diagnostic with null output and exactly one injected throw, then
+permit valid create/fit/transform with unchanged byte anchors. A bounded repeat
+continues the same exact memory checks. Only the private boundary pair exposes
+the single added memory-snapshot export; the normal pair does not.
+
+Both Module and sidecar declare `encoding: wasm-legacy-eh`. This is a declared
+requirement, not proof of emitted code. A future pinned installed disassembler
+must decode the complete actual binary and compare its EH encoding/opcodes to
+the preflight coverage; unexpected encoding/opcodes require a reviewed source
+successor. The launcher additionally checks absence of `invoke_` imports and
+isolated corrupt-artifact errors distinct from host-capability refusals.
+
+The explicit `--tests-first-js-eh` route admits the exact old JS-EH pair using
+an independently admitted notes-only sidecar. It loads the real factory and
+checks actual context/metadata calls, then must fail at
+`NATIVE_EH_REQUIRED_CONTRACT_ABSENT` before later C++ tag requirements. A missing
+file, import error or another assertion is not that red. No red is claimed from
+source alone. Full recomposed Python qualification must keep the accepted R
+availability environment and three R selectors, isolated pytest plugins/cache
+and fresh bounded basetemps. All prior cost failures and required gates remain.
+
 ## Ranking candidates
 
 `rank(scores, present, options)` sends a row-major `Matrix` of scores and a

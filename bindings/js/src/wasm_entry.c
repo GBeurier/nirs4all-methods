@@ -1398,6 +1398,8 @@ void* n4m_wasm_pp_create(const char* op, const double* params, int n_params) {
     if (n_params < 0 || (n_params > 0 && params == NULL)) return NULL;
     int kind = pp_kind_for(op, params, n_params);
     if (kind == 0) return NULL;
+    if (kind == PPK_SNV && n_params != 0)
+        return NULL;
 
     struct n4m_wasm_pp_s* w =
         (struct n4m_wasm_pp_s*)malloc(sizeof(struct n4m_wasm_pp_s));

@@ -46,6 +46,10 @@ function checkDims(X: Float64Array, n: number, p: number): void {
 
 /** Create a preprocessing operator by catalog type token + numeric params. */
 export function ppCreate(op: string, params: number[] = []): PpOperator {
+    if (op === "StandardNormalVariate" && !(params === undefined ||
+        (Array.isArray(params) && params.length === 0))) {
+        throw new TypeError("SNV accepts only an empty parameter Array; use SNV/RolePipeline for options");
+    }
     const m = getModule();
     let pPtr = 0;
     let ptr = 0;

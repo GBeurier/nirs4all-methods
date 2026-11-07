@@ -3266,6 +3266,1604 @@ mod tests {
         assert_eq!(resumed.trials(0).unwrap()[0].status, TrialStatus::Completed);
     }
     #[test]
+    fn log_domain_checkpoint_is_bounded() {
+        let ctx = Context::new().unwrap();
+        for (low, high) in [
+            (1e-5, 1e-2),
+            (5., 5000.),
+            (7., 7000.),
+            (50., 50000.),
+            (1000., 1e6),
+            (1e18, 9e18),
+            (2e19, 9e20),
+            (1e21, 9e21),
+            (1e15, 1e16),
+            (0.5, 2.5),
+            (1., 1000.),
+        ] {
+            let mut space = SearchSpace::new().unwrap();
+            space.add_float("scale", low, high, 0., true).unwrap();
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler: Sampler::Sobol,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let trial = opt.ask().unwrap();
+            let value = trial.float("scale").unwrap();
+            assert!(value.is_finite() && value >= low && value <= high);
+            let running = Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+            assert_eq!(running.trials(0).unwrap()[0].status, TrialStatus::Running);
+            opt.tell(trial.id().unwrap(), 0.5).unwrap();
+            running.tell(trial.id().unwrap(), 0.5).unwrap();
+            assert_eq!(opt.trials(0).unwrap()[0].status, TrialStatus::Completed);
+            let completed = Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+            assert_eq!(
+                completed.trials(0).unwrap()[0].status,
+                TrialStatus::Completed
+            );
+            let expected = opt.ask().unwrap();
+            for restored in [&running, &completed] {
+                let actual = restored.ask().unwrap();
+                assert_eq!(actual.id().unwrap(), expected.id().unwrap());
+                assert_eq!(
+                    actual.float("scale").unwrap().to_bits(),
+                    expected.float("scale").unwrap().to_bits()
+                );
+            }
+        }
+    }
+    #[test]
+    fn log_adaptive_and_integer_are_bounded() {
+        let ctx = Context::new().unwrap();
+        for (low, high) in [(1e15_f64, 1e16_f64), (2e19, 9e20)] {
+            for sampler in [Sampler::Cmaes, Sampler::Tpe] {
+                let mut space = SearchSpace::new().unwrap();
+                space
+                    .add_float("scale", low, high, 0., true)
+                    .unwrap()
+                    .add_float("aux", 0., 1., 0., false)
+                    .unwrap();
+                let opt = Optimizer::new(
+                    &ctx,
+                    &space,
+                    &OptimizerOptions {
+                        sampler,
+                        seed: 19,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                for i in 0..60 {
+                    let trial = opt.ask().unwrap();
+                    let v = trial.float("scale").unwrap();
+                    assert!(v.is_finite() && v >= low && v <= high);
+                    let id = trial.id().unwrap();
+                    if i != 59 {
+                        opt.tell(id, -v.ln()).unwrap();
+                        continue;
+                    }
+                    let running =
+                        Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+                    let statuses = running.trials(0).unwrap();
+                    assert_eq!(statuses.last().unwrap().status, TrialStatus::Running);
+                    assert!(statuses[..statuses.len() - 1]
+                        .iter()
+                        .all(|t| t.status == TrialStatus::Completed));
+                    opt.tell(id, -v.ln()).unwrap();
+                    running.tell(id, -v.ln()).unwrap();
+                    let completed =
+                        Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+                    assert!(completed
+                        .trials(0)
+                        .unwrap()
+                        .iter()
+                        .all(|t| t.status == TrialStatus::Completed));
+                    let expected = opt.ask().unwrap();
+                    for restored in [&running, &completed] {
+                        let actual = restored.ask().unwrap();
+                        assert_eq!(actual.id().unwrap(), expected.id().unwrap());
+                        for name in ["scale", "aux"] {
+                            assert_eq!(
+                                actual.float(name).unwrap().to_bits(),
+                                expected.float(name).unwrap().to_bits()
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        let mut space = SearchSpace::new().unwrap();
+        space
+            .add_int(
+                "scale",
+                1_000_000_000_000_000,
+                9_007_199_254_740_991,
+                1,
+                true,
+            )
+            .unwrap();
+        let opt = Optimizer::new(
+            &ctx,
+            &space,
+            &OptimizerOptions {
+                sampler: Sampler::Sobol,
+                seed: 19,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let trial = opt.ask().unwrap();
+        let v = trial.int("scale").unwrap();
+        assert!((1_000_000_000_000_000..=9_007_199_254_740_991).contains(&v));
+        let running = Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+        assert_eq!(running.trials(0).unwrap()[0].status, TrialStatus::Running);
+        let id = trial.id().unwrap();
+        opt.tell(id, 0.5).unwrap();
+        running.tell(id, 0.5).unwrap();
+        let completed = Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+        assert_eq!(
+            completed.trials(0).unwrap()[0].status,
+            TrialStatus::Completed
+        );
+        let expected = opt.ask().unwrap();
+        for restored in [&running, &completed] {
+            let actual = restored.ask().unwrap();
+            assert_eq!(actual.id().unwrap(), expected.id().unwrap());
+            assert_eq!(actual.int("scale").unwrap(), expected.int("scale").unwrap());
+        }
+    }
+    #[test]
+    fn overflow_space_and_genuine_old_empty_checkpoints_are_refused() {
+        let ctx = Context::new().unwrap();
+        for encoded in [
+            "4e344d4f50540d0a0100000020000000e800000000000000c0000000000000002a4561ca5cd613b13c0000000000000001000000010000007801000000763b7730d142eeff763b7730d142ee7f000000000000000000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000eb9af1ffa822dc3e00000000000000000000000000000000000000000000000000000000e41aeb13812ec382",
+            "4e344d4f50540d0a0100000020000000e800000000000000c00000000000000061667f6d1e6e72713c0000000000000001000000010000007806000000763b7730d142eeff763b7730d142ee7f000000000000000000000000000000000000000000000200000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000fb3f8cb2ac6bdc3e000000000000000000000000000000000000000000000000000000008f9e37096cfc04b1",
+        ] {
+            let bytes: Vec<u8> = (0..encoded.len()).step_by(2)
+                .map(|i| u8::from_str_radix(&encoded[i..i + 2], 16).unwrap()).collect();
+            let error = Optimizer::load_n4mopt(&ctx, &bytes).unwrap_err();
+            assert_eq!(error.kind, ErrorKind::CorruptBuffer);
+            assert!(error.message.contains("optimizer checkpoint option/search-space contract mismatch"));
+        }
+        let mut space = SearchSpace::new().unwrap();
+        space.add_float("x", -1.7e308, 1.7e308, 0., false).unwrap();
+        assert_eq!(
+            Optimizer::new(&ctx, &space, &OptimizerOptions::default())
+                .unwrap_err()
+                .kind,
+            ErrorKind::InvalidArgument
+        );
+    }
+    fn domain_rust_stages(
+        low: f64,
+        high: f64,
+        integer: bool,
+        tuple_len: i32,
+        sampler: Sampler,
+        seed: u64,
+        log_axis: bool,
+    ) {
+        let ctx = Context::new().unwrap();
+        for (count, running) in [
+            (0, false),
+            (1, true),
+            (1, false),
+            (12, true),
+            (12, false),
+            (13, true),
+        ] {
+            let mut space = SearchSpace::new().unwrap();
+            if tuple_len > 0 {
+                space
+                    .add_sorted_tuple("x", tuple_len, low, high, integer)
+                    .unwrap();
+            } else if integer {
+                space
+                    .add_int("x", low as i64, high as i64, 1, true)
+                    .unwrap();
+            } else {
+                space.add_float("x", low, high, 0., log_axis).unwrap();
+            }
+            space.add_float("aux", 0., 1., 0., false).unwrap();
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler,
+                    seed,
+                    direction: Direction::Minimize,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let mut pending = -1;
+            for j in 0..count {
+                let trial = opt.ask().unwrap();
+                pending = trial.id().unwrap();
+                domain_rust_validate(&trial, low, high, integer, tuple_len);
+                if !(running && j == count - 1) {
+                    opt.tell(pending, (j % 7) as f64 / 7.).unwrap();
+                }
+            }
+            let restored = Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+            let mut expected_history = opt.trials(0).unwrap();
+            let mut restored_history = restored.trials(0).unwrap();
+            for record in &mut expected_history {
+                record.duration = 0.;
+            }
+            for record in &mut restored_history {
+                record.duration = 0.;
+            }
+            assert_eq!(expected_history, restored_history);
+            if running {
+                opt.tell(pending, 0.5).unwrap();
+                restored.tell(pending, 0.5).unwrap();
+            }
+            for j in 0..6 {
+                let a = opt.ask().unwrap();
+                let b = restored.ask().unwrap();
+                domain_rust_validate(&a, low, high, integer, tuple_len);
+                domain_rust_validate(&b, low, high, integer, tuple_len);
+                assert_eq!(a.id().unwrap(), b.id().unwrap());
+                if tuple_len > 0 {
+                    for k in 0..tuple_len {
+                        let name = format!("x#{k}");
+                        assert_eq!(
+                            a.float(&name).unwrap().to_bits(),
+                            b.float(&name).unwrap().to_bits()
+                        );
+                    }
+                } else if integer {
+                    assert_eq!(a.int("x").unwrap(), b.int("x").unwrap());
+                } else {
+                    assert_eq!(
+                        a.float("x").unwrap().to_bits(),
+                        b.float("x").unwrap().to_bits()
+                    );
+                }
+                assert_eq!(
+                    a.float("aux").unwrap().to_bits(),
+                    b.float("aux").unwrap().to_bits()
+                );
+                opt.tell(a.id().unwrap(), (j % 7) as f64 / 7.).unwrap();
+                restored.tell(b.id().unwrap(), (j % 7) as f64 / 7.).unwrap();
+            }
+        }
+    }
+    fn domain_rust_validate(trial: &Trial<'_>, low: f64, high: f64, integer: bool, tuple_len: i32) {
+        if tuple_len > 0 {
+            let mut previous = low;
+            for k in 0..tuple_len {
+                let value = trial.float(&format!("x#{k}")).unwrap();
+                assert!(value.is_finite() && value >= previous && value <= high);
+                if integer {
+                    assert_eq!(value, value.trunc());
+                }
+                previous = value;
+            }
+        } else if integer {
+            let value = trial.int("x").unwrap() as f64;
+            assert!(value >= low && value <= high);
+        } else {
+            let value = trial.float("x").unwrap();
+            assert!(value.is_finite() && value >= low && value <= high);
+        }
+    }
+    #[test]
+    fn domain_collapsed_log_stages() {
+        let q = (1_u64 << 53) as f64;
+        let n = |v: f64, count: u64| f64::from_bits(v.to_bits() + count);
+        let domains = [
+            (0.1, n(0.1, 1), false),
+            (1e300, 1e300 * (1. + 1e-14), false),
+            (1e-5, n(1e-5, 2), false),
+            (1e15, 1e15 + 1., true),
+            (1e15, 1e15 + 2., true),
+            (q - 2., q, true),
+            (1e15, 1e15 + 3., true),
+            (1., n(1., 1), false),
+            (5., 5., false),
+            (0.5, 2.5, false),
+            (1., 1000., false),
+        ];
+        for (low, high, integer) in domains {
+            for sampler in [Sampler::GpEi, Sampler::Tpe] {
+                for seed in [19, 3] {
+                    domain_rust_stages(low, high, integer, 0, sampler, seed, true);
+                }
+            }
+        }
+    }
+    #[test]
+    fn domain_integer_tuple_stages() {
+        let p = (1_u64 << 52) as f64;
+        let q = (1_u64 << 53) as f64;
+        let domains = [
+            (0., 10.),
+            (-5., 5.),
+            (1000., 1002.),
+            (-1000., -998.),
+            (2_f64.powi(40), 2_f64.powi(40) + 2.),
+            (2_f64.powi(50), 2_f64.powi(50) + 2.),
+            (2_f64.powi(51), 2_f64.powi(51) + 2.),
+            (-2_f64.powi(51) - 2., -2_f64.powi(51)),
+            (p, p),
+            (p, p + 1.),
+            (p, p + 2.),
+            (p + 1000., p + 1003.),
+            (q - 3., q - 1.),
+            (q - 2., q),
+            (-q, -q + 2.),
+            (-q, -q),
+            (-p - 2., -p),
+            (-q, q),
+            (-q + 1., q - 1.),
+        ];
+        let samplers = [
+            Sampler::Random,
+            Sampler::Sobol,
+            Sampler::Lhs,
+            Sampler::Ternary,
+            Sampler::Ga,
+            Sampler::Pso,
+            Sampler::Cmaes,
+            Sampler::Tpe,
+            Sampler::GpEi,
+        ];
+        for (low, high) in domains {
+            for sampler in samplers {
+                for len in [1, 3] {
+                    domain_rust_stages(low, high, true, len, sampler, 19, false);
+                }
+            }
+        }
+    }
+    #[test]
+    fn domain_float_span_matrix() {
+        let max = f64::MAX;
+        let power = 2_f64.powi(1023);
+        let bad = [
+            (-1.7e308, 1.7e308),
+            (-max, max),
+            (-power, max / 2.),
+            (-power, power),
+        ];
+        let good = [
+            (-max / 2., max / 2.),
+            (0., max),
+            (-8e307, 8e307),
+            (-power, f64::from_bits((max / 2.).to_bits() - 1)),
+        ];
+        let ctx = Context::new().unwrap();
+        for (low, high) in bad {
+            for tuple in [false, true] {
+                for aux in [false, true] {
+                    let mut space = SearchSpace::new().unwrap();
+                    if tuple {
+                        space.add_sorted_tuple("x", 2, low, high, false).unwrap();
+                    } else {
+                        space.add_float("x", low, high, 0., false).unwrap();
+                    }
+                    if aux {
+                        space.add_float("aux", 0., 1., 0., false).unwrap();
+                    }
+                    assert_eq!(
+                        Optimizer::new(&ctx, &space, &OptimizerOptions::default())
+                            .unwrap_err()
+                            .kind,
+                        ErrorKind::InvalidArgument
+                    );
+                }
+            }
+        }
+        let samplers = [
+            Sampler::Random,
+            Sampler::Sobol,
+            Sampler::Lhs,
+            Sampler::Ternary,
+            Sampler::Ga,
+            Sampler::Pso,
+            Sampler::Cmaes,
+            Sampler::Tpe,
+            Sampler::GpEi,
+        ];
+        for (low, high) in good {
+            for sampler in samplers {
+                for len in [0, 2] {
+                    domain_rust_stages(low, high, false, len, sampler, 19, false);
+                }
+            }
+        }
+    }
+    #[test]
+    fn domain_log_enqueue_and_gp_guard() {
+        let ctx = Context::new().unwrap();
+        for sampler in [Sampler::Random, Sampler::Tpe, Sampler::GpEi] {
+            let mut space = SearchSpace::new().unwrap();
+            space
+                .add_int("x", 1_000_000_000_000_000, 1_000_000_000_000_002, 1, true)
+                .unwrap();
+            space.add_float("aux", 0., 1., 0., false).unwrap();
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            if sampler == Sampler::GpEi {
+                assert_eq!(
+                    opt.enqueue(&[("x", 1e15), ("aux", 0.25)]).unwrap_err().kind,
+                    ErrorKind::Unsupported
+                );
+            } else {
+                for value in [1e15, 1e15 + 2., 1e15 + 1.] {
+                    opt.enqueue(&[("x", value), ("aux", 0.25)]).unwrap();
+                }
+                for value in [1e15, 1e15 + 2., 1e15 + 1.] {
+                    let trial = opt.ask().unwrap();
+                    assert_eq!(trial.int("x").unwrap() as f64, value);
+                    opt.tell(trial.id().unwrap(), 0.5).unwrap();
+                }
+            }
+        }
+        for sampler in [Sampler::Random, Sampler::Tpe, Sampler::GpEi] {
+            let low = 1e300_f64;
+            let high = low * (1. + 1e-14);
+            let middle = low + (high - low) / 2.;
+            assert!(middle > low && middle < high);
+            let mut space = SearchSpace::new().unwrap();
+            space.add_float("x", low, high, 0., true).unwrap();
+            space.add_float("aux", 0., 1., 0., false).unwrap();
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            if sampler == Sampler::GpEi {
+                assert_eq!(
+                    opt.enqueue(&[("x", low), ("aux", 0.25)]).unwrap_err().kind,
+                    ErrorKind::Unsupported
+                );
+            } else {
+                for value in [low, high, middle] {
+                    opt.enqueue(&[("x", value), ("aux", 0.25)]).unwrap();
+                }
+                for value in [low, high, middle] {
+                    let t = opt.ask().unwrap();
+                    assert_eq!(t.float("x").unwrap().to_bits(), value.to_bits());
+                    opt.tell(t.id().unwrap(), 0.5).unwrap();
+                }
+            }
+        }
+        let mut space = SearchSpace::new().unwrap();
+        space.add_float("x", 0., 1., 0., false).unwrap();
+        let opt = Optimizer::new(
+            &ctx,
+            &space,
+            &OptimizerOptions {
+                sampler: Sampler::GpEi,
+                seed: 19,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let trial = opt.ask().unwrap();
+        let pattern = trial.float("x").unwrap().to_le_bytes();
+        let blob = opt.save_n4mopt().unwrap();
+        let hits: Vec<usize> = (0..blob.len() - 8)
+            .filter(|i| blob[*i..*i + 8] == pattern)
+            .collect();
+        assert_eq!(hits.len(), 2);
+        for bad in [f64::NAN, -0.1, 1.5] {
+            let mut data = blob.clone();
+            data[hits[1]..hits[1] + 8].copy_from_slice(&bad.to_le_bytes());
+            let mut hash = 14695981039346656037_u64;
+            for byte in &data[..data.len() - 8] {
+                hash = (hash ^ u64::from(*byte)).wrapping_mul(1099511628211);
+            }
+            let offset = data.len() - 8;
+            data[offset..].copy_from_slice(&hash.to_le_bytes());
+            assert_eq!(
+                Optimizer::load_n4mopt(&ctx, &data).unwrap_err().kind,
+                ErrorKind::CorruptBuffer
+            );
+        }
+    }
+    #[test]
+    fn domain_gp_collapsed_unit_checkpoint_bits() {
+        let ctx = Context::new().unwrap();
+        let mut space = SearchSpace::new().unwrap();
+        space
+            .add_float("x", 0.1, f64::from_bits(0.1_f64.to_bits() + 1), 0., true)
+            .unwrap();
+        let opt = Optimizer::new(
+            &ctx,
+            &space,
+            &OptimizerOptions {
+                sampler: Sampler::GpEi,
+                seed: 19,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let pattern = 0x3fefffffffffffff_u64.to_le_bytes();
+        for n in 1..=3 {
+            let trial = opt.ask().unwrap();
+            opt.tell(trial.id().unwrap(), 0.5).unwrap();
+            let blob = opt.save_n4mopt().unwrap();
+            assert_eq!(
+                blob.windows(8).filter(|window| *window == pattern).count(),
+                n
+            );
+            Optimizer::load_n4mopt(&ctx, &blob).unwrap();
+        }
+    }
+    #[test]
+    fn domain_random_scalar_tuple_oracle_and_uniformity() {
+        let ctx = Context::new().unwrap();
+        let low = 1_i64 << 52;
+        let high = low + 1;
+        let mut scalar_space = SearchSpace::new().unwrap();
+        scalar_space.add_int("x", low, high, 1, false).unwrap();
+        let options = OptimizerOptions {
+            sampler: Sampler::Random,
+            seed: 19,
+            ..Default::default()
+        };
+        let scalar = Optimizer::new(&ctx, &scalar_space, &options).unwrap();
+        let mut expected = Vec::new();
+        for _ in 0..6000 {
+            let trial = scalar.ask().unwrap();
+            expected.push(trial.int("x").unwrap());
+            scalar.tell(trial.id().unwrap(), 0.).unwrap();
+        }
+        for len in [1_i32, 3] {
+            let mut tuple_space = SearchSpace::new().unwrap();
+            tuple_space
+                .add_sorted_tuple("x", len, low as f64, high as f64, true)
+                .unwrap();
+            let tuple = Optimizer::new(&ctx, &tuple_space, &options).unwrap();
+            let mut upper = 0;
+            for group in 0..6000 / len {
+                let mut values =
+                    expected[(group * len) as usize..((group + 1) * len) as usize].to_vec();
+                values.sort();
+                let trial = tuple.ask().unwrap();
+                for j in 0..len {
+                    let actual = trial.float(&format!("x#{j}")).unwrap();
+                    assert_eq!(actual, values[j as usize] as f64);
+                    if len == 1 && actual == high as f64 {
+                        upper += 1;
+                    }
+                }
+                tuple.tell(trial.id().unwrap(), 0.).unwrap();
+            }
+            if len == 1 {
+                assert!((upper as f64 / 6000. - 0.5).abs() <= 0.03);
+            }
+        }
+    }
+    // Reference generated with Python integers from the seed-19 raw unit stream.
+    #[test]
+    fn scalar_grid_integer_distribution() {
+        let ctx = Context::new().unwrap();
+        let h = 1_i64 << 53;
+        let expected = [
+            h,
+            h - 2,
+            h - 1,
+            h - 2,
+            h,
+            h,
+            h - 1,
+            h - 1,
+            h - 2,
+            h - 1,
+            h,
+            h,
+            h,
+            h,
+            h,
+            h,
+        ];
+        for integer in [true, false] {
+            let mut space = SearchSpace::new().unwrap();
+            if integer {
+                space.add_int("x", h - 2, h, 1, false).unwrap();
+            } else {
+                space
+                    .add_float("x", (h - 2) as f64, h as f64, 1., false)
+                    .unwrap();
+            }
+            let options = OptimizerOptions {
+                sampler: Sampler::Random,
+                seed: 19,
+                ..Default::default()
+            };
+            let opt = Optimizer::new(&ctx, &space, &options).unwrap();
+            let mut counts = [0; 3];
+            for i in 0..6000 {
+                let trial = opt.ask().unwrap();
+                let x = if integer {
+                    trial.int("x").unwrap()
+                } else {
+                    trial.float("x").unwrap() as i64
+                };
+                assert!((h - 2..=h).contains(&x));
+                if i < expected.len() {
+                    assert_eq!(x, expected[i]);
+                }
+                counts[(x - (h - 2)) as usize] += 1;
+                opt.tell(trial.id().unwrap(), 0.).unwrap();
+            }
+            assert_eq!(counts, [2015, 2005, 1980]);
+        }
+    }
+    #[test]
+    fn scalar_grid_staged_samplers() {
+        let ctx = Context::new().unwrap();
+        let h = 1_i64 << 53;
+        for (low, high, step) in [(h - 3, h, 2), (-h, h, 3)] {
+            for integer in [true, false] {
+                for sampler in [
+                    Sampler::Random,
+                    Sampler::Sobol,
+                    Sampler::Lhs,
+                    Sampler::Ternary,
+                    Sampler::Ga,
+                    Sampler::Pso,
+                    Sampler::Cmaes,
+                    Sampler::Tpe,
+                    Sampler::GpEi,
+                ] {
+                    for (count, running) in [
+                        (0, false),
+                        (1, true),
+                        (1, false),
+                        (12, true),
+                        (12, false),
+                        (13, true),
+                    ] {
+                        let mut space = SearchSpace::new().unwrap();
+                        if integer {
+                            space.add_int("x", low, high, step, false).unwrap();
+                        } else {
+                            space
+                                .add_float("x", low as f64, high as f64, step as f64, false)
+                                .unwrap();
+                        }
+                        space.add_float("aux", 0., 1., 0., false).unwrap();
+                        let opt = Optimizer::new(
+                            &ctx,
+                            &space,
+                            &OptimizerOptions {
+                                sampler,
+                                seed: 19,
+                                ..Default::default()
+                            },
+                        )
+                        .unwrap();
+                        let validate = |t: &Trial<'_>| {
+                            let x = if integer {
+                                t.int("x").unwrap()
+                            } else {
+                                t.float("x").unwrap() as i64
+                            };
+                            assert!(x >= low && x <= high && (x - low) % step == 0);
+                        };
+                        let mut pending = -1;
+                        for j in 0..count {
+                            let t = opt.ask().unwrap();
+                            validate(&t);
+                            pending = t.id().unwrap();
+                            if !(running && j == count - 1) {
+                                opt.tell(pending, (j % 7) as f64 / 7.).unwrap();
+                            }
+                        }
+                        let copy =
+                            Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+                        if running {
+                            opt.tell(pending, 0.5).unwrap();
+                            copy.tell(pending, 0.5).unwrap();
+                        }
+                        for j in 0..6 {
+                            let a = opt.ask().unwrap();
+                            let b = copy.ask().unwrap();
+                            validate(&a);
+                            validate(&b);
+                            assert_eq!(a.id().unwrap(), b.id().unwrap());
+                            if integer {
+                                assert_eq!(a.int("x").unwrap(), b.int("x").unwrap());
+                            } else {
+                                assert_eq!(
+                                    a.float("x").unwrap().to_bits(),
+                                    b.float("x").unwrap().to_bits()
+                                );
+                            }
+                            assert_eq!(
+                                a.float("aux").unwrap().to_bits(),
+                                b.float("aux").unwrap().to_bits()
+                            );
+                            opt.tell(a.id().unwrap(), (j % 7) as f64 / 7.).unwrap();
+                            copy.tell(b.id().unwrap(), (j % 7) as f64 / 7.).unwrap();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #[test]
+    fn scalar_grid_wide_pinned_oracle() {
+        let expected: [i64; 16] = [
+            4239843483439303,
+            -6906221722996298,
+            -2457079771300949,
+            -7517534437616789,
+            5116916499969259,
+            8257295123674171,
+            -417271150248371,
+            1254295467694255,
+            -4530896056998680,
+            452284686773314,
+            7284296237484454,
+            7676065770718294,
+            5637129696437785,
+            6717941993400823,
+            5031873289515835,
+            4454328880214974,
+        ];
+        let h = 1_i64 << 53;
+        let ctx = Context::new().unwrap();
+        for integer in [true, false] {
+            let mut space = SearchSpace::new().unwrap();
+            if integer {
+                space.add_int("x", -h, h, 3, false).unwrap();
+            } else {
+                space
+                    .add_float("x", -h as f64, h as f64, 3., false)
+                    .unwrap();
+            }
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler: Sampler::Random,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            for x in expected {
+                let t = opt.ask().unwrap();
+                let value = if integer {
+                    t.int("x").unwrap()
+                } else {
+                    t.float("x").unwrap() as i64
+                };
+                assert_eq!(value, x);
+                opt.tell(t.id().unwrap(), 0.).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn scalar_grid_enqueue_integer_float() {
+        let ctx = Context::new().unwrap();
+        let h = (1_u64 << 53) as f64;
+        let p = (1_u64 << 52) as f64;
+        for (low, high, step, accepted, rejected) in [
+            (-h, h, 3., vec![1., 7., 13., h - 1.], vec![]),
+            (p, p + 16., 8., vec![p + 8.], vec![p + 1., p + 7., p + 9.]),
+            (h - 3., h, 2., vec![], vec![h]),
+        ] {
+            let mut space = SearchSpace::new().unwrap();
+            space.add_float("x", low, high, step, false).unwrap();
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler: Sampler::Random,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            for x in rejected {
+                assert_eq!(
+                    opt.enqueue(&[("x", x)]).unwrap_err().kind,
+                    ErrorKind::InvalidArgument
+                );
+            }
+            for x in accepted {
+                opt.enqueue(&[("x", x)]).unwrap();
+                let t = opt.ask().unwrap();
+                assert_eq!(t.float("x").unwrap().to_bits(), x.to_bits());
+                opt.tell(t.id().unwrap(), 0.).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn scalar_grid_near_ulp_distribution() {
+        let ctx = Context::new().unwrap();
+        let top = 2_f64.powi(60);
+        let p = 2_f64.powi(52);
+        let domains = [
+            (1. - 2_f64.powi(-52), 1., 2_f64.powi(-53), 3),
+            (0.5 - 2_f64.powi(-53), 0.5, 2_f64.powi(-54), 3),
+            (top - 256., top, 128., 3),
+            (1. - 3. * 2_f64.powi(-53), 1., 2_f64.powi(-53), 4),
+            (p, p + 4., 1.5, 3),
+        ];
+        for (low, high, step, cells) in domains {
+            let mut space = SearchSpace::new().unwrap();
+            space.add_float("x", low, high, step, false).unwrap();
+            let opt = Optimizer::new(
+                &ctx,
+                &space,
+                &OptimizerOptions {
+                    sampler: Sampler::Random,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let mut counts = std::collections::BTreeMap::new();
+            for _ in 0..6000 {
+                let t = opt.ask().unwrap();
+                let x = t.float("x").unwrap();
+                assert!(x >= low && x <= high);
+                *counts.entry(x.to_bits()).or_insert(0) += 1;
+                opt.tell(t.id().unwrap(), 0.).unwrap();
+            }
+            assert_eq!(counts.len(), cells);
+            for count in counts.values() {
+                assert!((*count as f64 / 6000. - 1. / cells as f64).abs() <= 0.03);
+            }
+        }
+    }
+    #[test]
+    fn scalar_grid_integer_matrix_pinned_oracle() {
+        let ctx = Context::new().unwrap();
+        let cases: [(i64, i64, i64, [i64; 16]); 16] = [
+            (
+                9007199254740990,
+                9007199254740992,
+                1,
+                [
+                    9007199254740992,
+                    9007199254740990,
+                    9007199254740991,
+                    9007199254740990,
+                    9007199254740992,
+                    9007199254740992,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740990,
+                    9007199254740991,
+                    9007199254740992,
+                    9007199254740992,
+                    9007199254740992,
+                    9007199254740992,
+                    9007199254740992,
+                    9007199254740992,
+                ],
+            ),
+            (
+                9007199254740989,
+                9007199254740992,
+                2,
+                [
+                    9007199254740991,
+                    9007199254740989,
+                    9007199254740989,
+                    9007199254740989,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740989,
+                    9007199254740991,
+                    9007199254740989,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740991,
+                    9007199254740991,
+                ],
+            ),
+            (
+                9007199254740987,
+                9007199254740992,
+                3,
+                [
+                    9007199254740990,
+                    9007199254740987,
+                    9007199254740987,
+                    9007199254740987,
+                    9007199254740990,
+                    9007199254740990,
+                    9007199254740987,
+                    9007199254740990,
+                    9007199254740987,
+                    9007199254740990,
+                    9007199254740990,
+                    9007199254740990,
+                    9007199254740990,
+                    9007199254740990,
+                    9007199254740990,
+                    9007199254740990,
+                ],
+            ),
+            (
+                4503599627370496,
+                4503599627370503,
+                8,
+                [
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                    4503599627370496,
+                ],
+            ),
+            (
+                562949953421312,
+                562949953421315,
+                4,
+                [
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                    562949953421312,
+                ],
+            ),
+            (
+                281474976710656,
+                281474976710659,
+                4,
+                [
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                    281474976710656,
+                ],
+            ),
+            (
+                -9007199254740992,
+                9007199254740992,
+                1,
+                [
+                    4239843483439302,
+                    -6906221722996298,
+                    -2457079771300950,
+                    -7517534437616788,
+                    5116916499969258,
+                    8257295123674170,
+                    -417271150248372,
+                    1254295467694256,
+                    -4530896056998678,
+                    452284686773314,
+                    7284296237484452,
+                    7676065770718292,
+                    5637129696437782,
+                    6717941993400820,
+                    5031873289515832,
+                    4454328880214974,
+                ],
+            ),
+            (
+                -9007199254740992,
+                9007199254740992,
+                3,
+                [
+                    4239843483439303,
+                    -6906221722996298,
+                    -2457079771300949,
+                    -7517534437616789,
+                    5116916499969259,
+                    8257295123674171,
+                    -417271150248371,
+                    1254295467694255,
+                    -4530896056998680,
+                    452284686773314,
+                    7284296237484454,
+                    7676065770718294,
+                    5637129696437785,
+                    6717941993400823,
+                    5031873289515835,
+                    4454328880214974,
+                ],
+            ),
+            (
+                -9007199254740992,
+                9007199254740992,
+                7,
+                [
+                    4239843483439301,
+                    -6906221722996299,
+                    -2457079771300949,
+                    -7517534437616788,
+                    5116916499969263,
+                    8257295123674173,
+                    -417271150248369,
+                    1254295467694258,
+                    -4530896056998679,
+                    452284686773314,
+                    7284296237484458,
+                    7676065770718299,
+                    5637129696437781,
+                    6717941993400823,
+                    5031873289515831,
+                    4454328880214979,
+                ],
+            ),
+            (
+                -1,
+                9007199254740992,
+                1,
+                [
+                    6623521369090147,
+                    1050488765872346,
+                    3275059741720020,
+                    744832408562101,
+                    7062057877355125,
+                    8632247189207581,
+                    4294964052246309,
+                    5130747361217624,
+                    2238151598871156,
+                    4729741970757153,
+                    8145747746112722,
+                    8341632512729642,
+                    7322164475589387,
+                    7862570624070906,
+                    7019536272128412,
+                    6730764067477983,
+                ],
+            ),
+            (
+                -3,
+                9007199254740992,
+                1,
+                [
+                    6623521369090146,
+                    1050488765872344,
+                    3275059741720019,
+                    744832408562099,
+                    7062057877355125,
+                    8632247189207581,
+                    4294964052246308,
+                    5130747361217623,
+                    2238151598871154,
+                    4729741970757152,
+                    8145747746112722,
+                    8341632512729642,
+                    7322164475589387,
+                    7862570624070906,
+                    7019536272128412,
+                    6730764067477982,
+                ],
+            ),
+            (
+                0,
+                9007199254740992,
+                1,
+                [
+                    6623521369090147,
+                    1050488765872347,
+                    3275059741720021,
+                    744832408562102,
+                    7062057877355125,
+                    8632247189207581,
+                    4294964052246310,
+                    5130747361217624,
+                    2238151598871157,
+                    4729741970757153,
+                    8145747746112722,
+                    8341632512729642,
+                    7322164475589387,
+                    7862570624070906,
+                    7019536272128412,
+                    6730764067477983,
+                ],
+            ),
+            (
+                0,
+                9007199254740990,
+                1,
+                [
+                    6623521369090146,
+                    1050488765872346,
+                    3275059741720020,
+                    744832408562101,
+                    7062057877355124,
+                    8632247189207580,
+                    4294964052246309,
+                    5130747361217623,
+                    2238151598871156,
+                    4729741970757152,
+                    8145747746112721,
+                    8341632512729641,
+                    7322164475589386,
+                    7862570624070905,
+                    7019536272128411,
+                    6730764067477982,
+                ],
+            ),
+            (
+                -9007199254740992,
+                9007199254740992,
+                5,
+                [
+                    4239843483439303,
+                    -6906221722996302,
+                    -2457079771300952,
+                    -7517534437616792,
+                    5116916499969258,
+                    8257295123674168,
+                    -417271150248372,
+                    1254295467694253,
+                    -4530896056998682,
+                    452284686773313,
+                    7284296237484453,
+                    7676065770718293,
+                    5637129696437783,
+                    6717941993400818,
+                    5031873289515833,
+                    4454328880214973,
+                ],
+            ),
+            (
+                -9007199254740992,
+                9007199254740992,
+                9,
+                [
+                    4239843483439309,
+                    -6906221722996304,
+                    -2457079771300952,
+                    -7517534437616792,
+                    5116916499969262,
+                    8257295123674177,
+                    -417271150248368,
+                    1254295467694255,
+                    -4530896056998680,
+                    452284686773311,
+                    7284296237484460,
+                    7676065770718297,
+                    5637129696437782,
+                    6717941993400826,
+                    5031873289515838,
+                    4454328880214977,
+                ],
+            ),
+            (
+                -9007199254740992,
+                9007199254740992,
+                11,
+                [
+                    4239843483439303,
+                    -6906221722996307,
+                    -2457079771300954,
+                    -7517534437616794,
+                    5116916499969255,
+                    8257295123674171,
+                    -417271150248378,
+                    1254295467694250,
+                    -4530896056998682,
+                    452284686773307,
+                    7284296237484456,
+                    7676065770718293,
+                    5637129696437781,
+                    6717941993400817,
+                    5031873289515834,
+                    4454328880214975,
+                ],
+            ),
+        ];
+        for (low, high, step, expected) in cases {
+            for integer in [true, false] {
+                let mut space = SearchSpace::new().unwrap();
+                if integer {
+                    space.add_int("x", low, high, step, false).unwrap();
+                } else {
+                    space
+                        .add_float("x", low as f64, high as f64, step as f64, false)
+                        .unwrap();
+                }
+                let opt = Optimizer::new(
+                    &ctx,
+                    &space,
+                    &OptimizerOptions {
+                        sampler: Sampler::Random,
+                        seed: 19,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                for value in expected {
+                    let t = opt.ask().unwrap();
+                    let x = if integer {
+                        t.int("x").unwrap()
+                    } else {
+                        t.float("x").unwrap() as i64
+                    };
+                    assert_eq!(x, value);
+                    opt.tell(t.id().unwrap(), 0.).unwrap();
+                }
+            }
+        }
+    }
+    #[test]
+    fn t4f_r1_r2_adaptive_bounds() {
+        let ctx = Context::new().unwrap();
+        let c = 2_f64.powi(-53);
+        let domains = [
+            (-1., 1. - 2_f64.powi(-52), 3. * c, 400),
+            (-0.5, 0.5 - c, 1.5 * c, 400),
+            (
+                1.3094115832905704,
+                9.007642868376131e21,
+                3.020767460720702,
+                240,
+            ),
+            (
+                1.3552258541085935,
+                3.1816648682723785e21,
+                9.932851196532727,
+                240,
+            ),
+        ];
+        for (low, high, step, count) in domains {
+            for sampler in [Sampler::Cmaes, Sampler::Pso, Sampler::Ga, Sampler::Tpe] {
+                let mut s = SearchSpace::new().unwrap();
+                s.add_float("x", low, high, step, false).unwrap();
+                s.add_float("aux", 0., 1., 0., false).unwrap();
+                let o = Optimizer::new(
+                    &ctx,
+                    &s,
+                    &OptimizerOptions {
+                        sampler,
+                        seed: 19,
+                        direction: Direction::Minimize,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                let mut outside = 0;
+                for _ in 0..count {
+                    let t = o.ask().unwrap();
+                    let x = t.float("x").unwrap();
+                    if x < low || x > high {
+                        outside += 1;
+                    }
+                    o.tell(t.id().unwrap(), -x).unwrap();
+                }
+                assert_eq!(outside, 0);
+                Optimizer::load_n4mopt(&ctx, &o.save_n4mopt().unwrap()).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn t4f_r3_own_enqueue() {
+        let ctx = Context::new().unwrap();
+        let c = 2_f64.powi(-53);
+        let domains = [
+            (-1., 1., 3. * c),
+            (-2_f64.powi(43), 2_f64.powi(43), 3. / 1024.),
+            (-2_f64.powi(54), 2_f64.powi(54), 6.),
+            (-1., 1., 1.25 * c),
+            (-1., 1., 1.5 * c),
+        ];
+        for (low, high, step) in domains {
+            let mut s = SearchSpace::new().unwrap();
+            s.add_float("x", low, high, step, false).unwrap();
+            let a = Optimizer::new(
+                &ctx,
+                &s,
+                &OptimizerOptions {
+                    sampler: Sampler::Random,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let b = Optimizer::new(
+                &ctx,
+                &s,
+                &OptimizerOptions {
+                    sampler: Sampler::Random,
+                    seed: 3,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            for _ in 0..300 {
+                let t = a.ask().unwrap();
+                let x = t.float("x").unwrap();
+                b.enqueue(&[("x", x)]).unwrap();
+                let u = b.ask().unwrap();
+                assert_eq!(x.to_bits(), u.float("x").unwrap().to_bits());
+                a.tell(t.id().unwrap(), 0.).unwrap();
+                b.tell(u.id().unwrap(), 0.).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn t4f_r4_pinned_rational_vectors() {
+        let ctx = Context::new().unwrap();
+        let c = 2_f64.powi(-53);
+        let domains = [
+            (-1., 1., 3. * c),
+            (-2_f64.powi(43), 2_f64.powi(43), 3. / 1024.),
+            (-2_f64.powi(54), 2_f64.powi(54), 6.),
+        ];
+        let vectors: [[u64; 16]; 3] = [
+            [
+                0x3fde203af977a18e,
+                0xbfe8892c0c8a0e4a,
+                0xbfd17566ede808aa,
+                0xbfeab52861bdac95,
+                0x3fe22dcef65374eb,
+                0x3fed55f756a6f43b,
+                0xbfa7b8182af81b30,
+                0x3fc1d319af2e62bc,
+                0xbfe018d371fddb18,
+                0x3fa9b59bc17ac420,
+                0x3fe9e10761ac89a6,
+                0x3feb455755894456,
+                0x3fe406f0891be619,
+                0x3fe7ddeec22369f7,
+                0x3fe1e0764bf9f33b,
+                0x3fdfa660853c677c,
+            ],
+            [
+                0x428e203af977a18e,
+                0xc298892c0c8a0e4a,
+                0xc2817566ede808aa,
+                0xc29ab52861bdac95,
+                0x42922dcef65374eb,
+                0x429d55f756a6f43b,
+                0xc257b8182af81b30,
+                0x4271d319af2e62bc,
+                0xc29018d371fddb18,
+                0x4259b59bc17ac420,
+                0x4299e10761ac89a6,
+                0x429b455755894456,
+                0x429406f0891be619,
+                0x4297ddeec22369f7,
+                0x4291e0764bf9f33b,
+                0x428fa660853c677c,
+            ],
+            [
+                0x433e203af977a18e,
+                0xc348892c0c8a0e4a,
+                0xc3317566ede808aa,
+                0xc34ab52861bdac95,
+                0x43422dcef65374eb,
+                0x434d55f756a6f43b,
+                0xc307b8182af81b30,
+                0x4321d319af2e62bc,
+                0xc34018d371fddb18,
+                0x4309b59bc17ac420,
+                0x4349e10761ac89a6,
+                0x434b455755894456,
+                0x434406f0891be619,
+                0x4347ddeec22369f7,
+                0x4341e0764bf9f33b,
+                0x433fa660853c677c,
+            ],
+        ];
+        for (j, (low, high, step)) in domains.into_iter().enumerate() {
+            let mut s = SearchSpace::new().unwrap();
+            s.add_float("x", low, high, step, false).unwrap();
+            let o = Optimizer::new(
+                &ctx,
+                &s,
+                &OptimizerOptions {
+                    sampler: Sampler::Random,
+                    seed: 19,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            for expected in vectors[j] {
+                let t = o.ask().unwrap();
+                assert_eq!(t.float("x").unwrap().to_bits(), expected);
+                o.tell(t.id().unwrap(), 0.).unwrap();
+            }
+        }
+    }
+    #[test]
+    fn t4f_staged_checkpoints_all_samplers() {
+        let ctx = Context::new().unwrap();
+        let c = 2_f64.powi(-53);
+        for (low, high, step) in [
+            (-1., 1. - 2_f64.powi(-52), 3. * c),
+            (-0.5, 0.5 - c, 1.5 * c),
+            (-1., 1., 3. * c),
+            (-2_f64.powi(43), 2_f64.powi(43), 3. / 1024.),
+            (-2_f64.powi(54), 2_f64.powi(54), 6.),
+            (-1., 1., 1.25 * c),
+            (-1., 1., 1.5 * c),
+        ] {
+            for sampler in [
+                Sampler::Random,
+                Sampler::Sobol,
+                Sampler::Lhs,
+                Sampler::Ternary,
+                Sampler::Ga,
+                Sampler::Pso,
+                Sampler::Cmaes,
+                Sampler::Tpe,
+                Sampler::GpEi,
+            ] {
+                for (count, running) in [
+                    (0, false),
+                    (1, true),
+                    (1, false),
+                    (12, true),
+                    (12, false),
+                    (13, true),
+                ] {
+                    let mut space = SearchSpace::new().unwrap();
+                    space.add_float("x", low, high, step, false).unwrap();
+                    space.add_float("aux", 0., 1., 0., false).unwrap();
+                    let opt = Optimizer::new(
+                        &ctx,
+                        &space,
+                        &OptimizerOptions {
+                            sampler,
+                            seed: 19,
+                            ..Default::default()
+                        },
+                    )
+                    .unwrap();
+                    let mut pending = -1;
+                    for i in 0..count {
+                        let t = opt.ask().unwrap();
+                        let x = t.float("x").unwrap();
+                        assert!(x >= low && x <= high);
+                        pending = t.id().unwrap();
+                        if !(running && i == count - 1) {
+                            opt.tell(pending, (i % 7) as f64 / 7.).unwrap();
+                        }
+                    }
+                    let copy = Optimizer::load_n4mopt(&ctx, &opt.save_n4mopt().unwrap()).unwrap();
+                    if running {
+                        opt.tell(pending, 0.5).unwrap();
+                        copy.tell(pending, 0.5).unwrap();
+                    }
+                    for i in 0..6 {
+                        let a = opt.ask().unwrap();
+                        let b = copy.ask().unwrap();
+                        assert_eq!(a.id().unwrap(), b.id().unwrap());
+                        for name in ["x", "aux"] {
+                            assert_eq!(
+                                a.float(name).unwrap().to_bits(),
+                                b.float(name).unwrap().to_bits()
+                            );
+                        }
+                        assert!(a.float("x").unwrap() >= low && a.float("x").unwrap() <= high);
+                        opt.tell(a.id().unwrap(), (i % 7) as f64 / 7.).unwrap();
+                        copy.tell(b.id().unwrap(), (i % 7) as f64 / 7.).unwrap();
+                    }
+                }
+            }
+        }
+    }
+    #[test]
+    fn t4f_queued_checkpoint() {
+        let ctx = Context::new().unwrap();
+        let c = 2_f64.powi(-53);
+        for (low, high, step) in [
+            (-1., 1. - 2_f64.powi(-52), 3. * c),
+            (-0.5, 0.5 - c, 1.5 * c),
+            (-1., 1., 3. * c),
+            (-2_f64.powi(43), 2_f64.powi(43), 3. / 1024.),
+            (-2_f64.powi(54), 2_f64.powi(54), 6.),
+            (-1., 1., 1.25 * c),
+            (-1., 1., 1.5 * c),
+        ] {
+            for sampler in [
+                Sampler::Random,
+                Sampler::Sobol,
+                Sampler::Lhs,
+                Sampler::Ternary,
+                Sampler::Ga,
+                Sampler::Pso,
+                Sampler::Cmaes,
+                Sampler::Tpe,
+                Sampler::GpEi,
+            ] {
+                let mut space = SearchSpace::new().unwrap();
+                space.add_float("x", low, high, step, false).unwrap();
+                space.add_float("aux", 0., 1., 0., false).unwrap();
+                let o = Optimizer::new(
+                    &ctx,
+                    &space,
+                    &OptimizerOptions {
+                        sampler,
+                        seed: 19,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                if [Sampler::Ga, Sampler::Pso, Sampler::Cmaes, Sampler::GpEi].contains(&sampler) {
+                    assert_eq!(
+                        o.enqueue(&[("x", low), ("aux", 0.25)]).unwrap_err().kind,
+                        ErrorKind::Unsupported
+                    );
+                    continue;
+                }
+                o.enqueue(&[("x", low), ("aux", 0.25)]).unwrap();
+                let copy = Optimizer::load_n4mopt(&ctx, &o.save_n4mopt().unwrap()).unwrap();
+                for i in 0..6 {
+                    let a = o.ask().unwrap();
+                    let b = copy.ask().unwrap();
+                    assert_eq!(a.id().unwrap(), b.id().unwrap());
+                    for name in ["x", "aux"] {
+                        assert_eq!(
+                            a.float(name).unwrap().to_bits(),
+                            b.float(name).unwrap().to_bits()
+                        );
+                    }
+                    if i == 0 {
+                        assert_eq!(a.float("x").unwrap().to_bits(), low.to_bits());
+                    }
+                    o.tell(a.id().unwrap(), 0.5).unwrap();
+                    copy.tell(b.id().unwrap(), 0.5).unwrap();
+                }
+            }
+        }
+    }
+    #[test]
     fn malformed_checkpoint_fails_before_load() {
         let ctx = Context::new().unwrap();
         let e = Optimizer::load_n4mopt(&ctx, b"N4MOPT\r\n").unwrap_err();
@@ -3751,6 +5349,81 @@ mod tests {
             let right = restored.ask().unwrap();
             assert_eq!(left.id().unwrap(), right.id().unwrap());
             assert_eq!(left.int("k").unwrap(), right.int("k").unwrap());
+        }
+    }
+
+    // These are genuine trial-record mutations, with checksums recomputed.
+    #[test]
+    fn checkpoint_scalar_grid_rejects_offgrid_history() {
+        fn decode(h: &str) -> Vec<u8> {
+            (0..h.len())
+                .step_by(2)
+                .map(|i| u8::from_str_radix(&h[i..i + 2], 16).unwrap())
+                .collect()
+        }
+        let ctx = Context::new().unwrap();
+        let invalid = [
+            "4e344d4f50540d0a010000002000000050010000000000002201000000000000fefd47e44137aed63c000000000000000100000001000000780000000000000000000000000000000000002440000000000000084001000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000db5912a55f50163f010000000000000002000000000000000100000000000000000000000100000001000000780000000000001c40ffffffff000000000101000000000000000000d03f01f44d02eab9c4f23e00000000000000000000000000000100000000000000f87c41c9ec45f73e00000000000000000000000000000000000000000000000000000079f206fca54cbe86",
+            "4e344d4f50540d0a010000002000000050010000000000002201000000000000fefd47e44137aed63c000000000000000100000001000000780000000000000000000000000000000000002440000000000000084001000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a00000013000000000000000000000000000000000000000000000000000000130000000000000049d81abe4359f13e010000000000000001000000000000000100000000000000000000000100000001000000780000000000001c40ffffffff00000000010000000000000000000000000000000000000000000000000000000000000000000000ffffffffffffffff2dd5cd116e3cdc3e00000000000000000000000000000000000000000000000000000055db2ba5873406ea",
+            "4e344d4f50540d0a0100000020000000500100000000000022010000000000007279c6e12b96c67b3c00000000000000010000000100000078010000000000000000000000000000000000f03f9a9999999999b93f00000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a00000013000000000000000000000000000000000000000000000000000000130000000000000086c613419c87f33e01000000000000000200000000000000010000000000000000000000010000000100000078333333333333d33fffffffff000000000101000000000000000000d03f0155a485752ab3dd3e00000000000000000000000000000100000000000000f008a9065ab4e23e0000000000000000000000000000000000000000000000000000008453efa0f3c528c4",
+            "4e344d4f50540d0a01000000200000005001000000000000220100000000000086412335e4f789433c0000000000000001000000010000007801000000000000000000f0bf000000000000f03f000000000000b83c00000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a00000013000000000000000000000000000000000000000000000000000000130000000000000060062128d08aec3e01000000000000000200000000000000010000000000000000000000010000000100000078ffffffffffffefbfffffffff000000000101000000000000000000d03f01aff75f0ab6e1d53e0000000000000000000000000000010000000000000068c24a93bf6cdc3e000000000000000000000000000000000000000000000000000000b80d6507cf98d4c0",
+            "4e344d4f50540d0a0100000020000000e001000000000000b1010000000000009e900a20946c3bd2af0000000000000002000000040000006d6f64650400000000000000000000000000000000000000000000000000000000000000000002000000030000006f6666020000006f6e020000000000000000000000000000000000f03f0000000000010000007801000000000000000000f03f0000000000001440000000000000004000000000000000000000000000000000000000010000000300000002000000010000007800000000040000006d6f6465020000006f6e0d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000ddfd5cfab8b2fb3e0100000000000000020000000000000001000000000000000000000002000000040000006d6f6465000000000000000000000000030000006f66660101000000780000000000001040ffffffff000000000001000000000000000000d03f0101153dd995e2df3e000000000000000000000000000001000000000000003f384ef356a9e53e000000000000000000000000000000000000000000000000000000006c2ea3ac43e1c8c2",
+            "4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000840ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000bd0d7ae11a381dfd",
+            "4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000840ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90",
+        ];
+        for h in invalid {
+            let err = Optimizer::load_n4mopt(&ctx, &decode(h)).unwrap_err();
+            assert_eq!(err.kind, ErrorKind::CorruptBuffer);
+        }
+        let good = decode("4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000040ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90");
+        let a = Optimizer::load_n4mopt(&ctx, &good).unwrap();
+        let b = Optimizer::load_n4mopt(&ctx, &good).unwrap();
+        for _ in 0..6 {
+            let x = a.ask().unwrap();
+            let y = b.ask().unwrap();
+            assert_eq!(x.id().unwrap(), y.id().unwrap());
+            assert_eq!(
+                x.float("x").unwrap().to_bits(),
+                y.float("x").unwrap().to_bits()
+            );
+            a.tell(x.id().unwrap(), 0.5).unwrap();
+            b.tell(y.id().unwrap(), 0.5).unwrap();
+        }
+    }
+
+    #[test]
+    fn checkpoint_scalar_grid_stale_control() {
+        let h="4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000840ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90";
+        let data: Vec<u8> = (0..h.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&h[i..i + 2], 16).unwrap())
+            .collect();
+        let ctx = Context::new().unwrap();
+        assert_eq!(
+            Optimizer::load_n4mopt(&ctx, &data).unwrap_err().kind,
+            ErrorKind::CorruptBuffer
+        );
+    }
+    #[test]
+    fn checkpoint_scalar_grid_valid_control() {
+        let h="4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000040ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90";
+        let data: Vec<u8> = (0..h.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&h[i..i + 2], 16).unwrap())
+            .collect();
+        let ctx = Context::new().unwrap();
+        let a = Optimizer::load_n4mopt(&ctx, &data).unwrap();
+        let b = Optimizer::load_n4mopt(&ctx, &data).unwrap();
+        for _ in 0..6 {
+            let x = a.ask().unwrap();
+            let y = b.ask().unwrap();
+            assert_eq!(x.id().unwrap(), y.id().unwrap());
+            assert_eq!(
+                x.float("x").unwrap().to_bits(),
+                y.float("x").unwrap().to_bits()
+            );
+            a.tell(x.id().unwrap(), 0.5).unwrap();
+            b.tell(y.id().unwrap(), 0.5).unwrap();
         }
     }
 }

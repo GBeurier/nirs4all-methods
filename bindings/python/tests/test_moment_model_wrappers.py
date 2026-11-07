@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import csv
+import ctypes
 import json
 import os
 import subprocess
 import sys
+from enum import IntEnum
 from pathlib import Path
 
 import n4m
@@ -45,7 +47,7 @@ from n4m._impl import (
     NativeWeightedPLSRegressor,
     native,
 )
-from sklearn.base import is_regressor
+from sklearn.base import clone, is_regressor
 
 
 def _dataset():
@@ -6021,3 +6023,393 @@ def test_native_aom_pls_and_pop_pls_sklearn_regressors_replay_coefficients():
         assert fitted.result_["input_coefficients"].shape == (X.shape[1], 1)
         assert fitted.get_diagnostics()["n_operators"] == 2
         assert fitted.selected_n_components_ in {1, 2}
+
+
+# These admission tests use the ordinary native ABI and no optional build profile.
+class _I32IndexOnly:
+    def __index__(self):
+        return 2
+
+
+class _I32IntOnly:
+    def __int__(self):
+        return 2
+
+
+class _I32Count(IntEnum):
+    TWO = 2
+
+
+class _I32StopBeforeFit(Exception):
+    """Stop at the real fit boundary without executing a large option."""
+
+
+def _i32_tiny_data():
+    X = np.array(
+        [
+            [1, 3, 5, 2],
+            [2, 4, 6, 9],
+            [3, 1, 0, 4],
+            [9, 8, 1, 2],
+            [4, 4, 7, 1],
+            [0, 2, 3, 8],
+        ],
+        dtype=np.float64,
+    )
+    return X, X[:, 0] - X[:, 2]
+
+
+@pytest.fixture
+def _i32_native_calls(monkeypatch):
+    events = []
+    policy = {"forbid": set(), "stop_fit": False}
+
+    def observe(name):
+        real = getattr(native.lib, name)
+
+        def forwarding(*args):
+            event = {"name": name}
+            if name == "n4m_config_set_n_components":
+                event["value"] = args[1].value
+            elif name == "n4m_estimators_robust_pls_fit":
+                event["value"] = args[5].value
+            events.append(event)
+            assert name not in policy["forbid"], f"unexpected native entry: {name}"
+            if name.endswith("robust_pls_fit") and policy["stop_fit"]:
+                raise _I32StopBeforeFit
+            status = real(*args)
+            event["status"] = int(status)
+            return status
+
+        monkeypatch.setattr(native.lib, name, forwarding)
+
+    for name in (
+        "n4m_context_create",
+        "n4m_config_create",
+        "n4m_config_set_n_components",
+        "n4m_estimators_robust_pls_fit",
+    ):
+        observe(name)
+    return events, policy
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        -(2**31),
+        -1,
+        0,
+        2**31 - 1,
+        np.int32(2),
+        np.int64(5),
+        np.uint32(2),
+        np.uint64(5),
+        _I32Count.TWO,
+    ],
+)
+def test_i32_parameter_exact_integral_values(value):
+    from n4m._parameter_validation import _int32_parameter
+
+    admitted = _int32_parameter("option", value)
+    assert type(admitted) is int
+    assert admitted == value
+
+
+_I32_INVALID_TYPES = [
+    True,
+    np.bool_(False),
+    2.5,
+    5.0,
+    np.float64(5),
+    float("nan"),
+    float("inf"),
+    "5",
+    b"5",
+    None,
+    2 + 0j,
+    np.array(2),
+    np.timedelta64(1),
+    np.timedelta64(1, "D"),
+    _I32IndexOnly(),
+    _I32IntOnly(),
+]
+_I32_OUT_OF_RANGE = [
+    -(2**31) - 1,
+    2**31,
+    2**32 + 5,
+    2**32 + 2,
+    -(2**64),
+    2**100,
+    np.int64(2**32 + 5),
+    np.uint64(2**63),
+]
+
+
+@pytest.mark.parametrize("field", ["max_irls_iter", "n_components"])
+@pytest.mark.parametrize("value", _I32_INVALID_TYPES)
+def test_i32_robust_rejects_original_types_before_native(
+    field,
+    value,
+    _i32_native_calls,
+):
+    from n4m.estimators.regression.robust import robust_pls
+
+    events, policy = _i32_native_calls
+    policy["forbid"] = {"n4m_context_create", "n4m_config_create"}
+    X, y = _i32_tiny_data()
+    with pytest.raises(TypeError, match=field):
+        robust_pls(X, y, **{field: value})
+    assert events == []
+
+
+@pytest.mark.parametrize("field", ["max_irls_iter", "n_components"])
+@pytest.mark.parametrize("value", _I32_OUT_OF_RANGE)
+def test_i32_robust_rejects_range_before_native(field, value, _i32_native_calls):
+    events, policy = _i32_native_calls
+    policy["forbid"] = {"n4m_context_create", "n4m_config_create"}
+    X, y = _i32_tiny_data()
+    before = X.copy(), y.copy()
+    with pytest.raises(ValueError, match=field):
+        native.robust_pls(X, y, **{field: value})
+    assert events == []
+    np.testing.assert_array_equal(X, before[0])
+    np.testing.assert_array_equal(y, before[1])
+
+
+@pytest.mark.parametrize("function", [native.pcr, native.cppls])
+@pytest.mark.parametrize("value", [True, 2.5, np.timedelta64(1), 2**32 + 2])
+def test_i32_common_components_precede_array_conversion(
+    function,
+    value,
+    _i32_native_calls,
+):
+    class Unconverted:
+        def __array__(self, *args, **kwargs):
+            pytest.fail("component admission must precede array conversion")
+
+    events, policy = _i32_native_calls
+    policy["forbid"] = {"n4m_context_create", "n4m_config_create"}
+    error = ValueError if type(value) is int else TypeError
+    with pytest.raises(error, match="n_components"):
+        function(Unconverted(), None, n_components=value)
+    assert events == []
+
+
+@pytest.mark.parametrize("value", [True, 2.5, np.timedelta64(1), 2**32 + 2])
+def test_i32_setter_defense_without_native_handle(value, _i32_native_calls):
+    events, policy = _i32_native_calls
+    policy["forbid"] = {"n4m_config_set_n_components"}
+    error = ValueError if type(value) is int else TypeError
+    with pytest.raises(error, match="n_components"):
+        native._set_model_config(ctypes.c_void_p(), n_components=value)
+    native._set_model_config(ctypes.c_void_p(), n_components=None)
+    assert events == []
+
+
+@pytest.mark.parametrize("value", [0, -1, -(2**31), np.int64(0)])
+def test_i32_components_domain_remains_native(value, _i32_native_calls):
+    events, policy = _i32_native_calls
+    policy["forbid"] = {"n4m_estimators_robust_pls_fit"}
+    X, y = _i32_tiny_data()
+    with pytest.raises(n4m.N4MError) as exc:
+        native.robust_pls(X, y, n_components=value)
+    assert exc.value.status == 1
+    assert events[-1] == {
+        "name": "n4m_config_set_n_components",
+        "value": int(value),
+        "status": 1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("max_irls_iter", -(2**31)),
+        ("max_irls_iter", -1),
+        ("max_irls_iter", 0),
+        ("max_irls_iter", 2**31 - 1),
+        ("n_components", 2**31 - 1),
+    ],
+)
+def test_i32_endpoints_forward_without_large_fit(field, value, _i32_native_calls):
+    events, policy = _i32_native_calls
+    policy["stop_fit"] = True
+    X, y = _i32_tiny_data()
+    with pytest.raises(_I32StopBeforeFit):
+        native.robust_pls(X, y, **{field: value})
+    setter, fit = events[-2:]
+    assert setter["value"] == (value if field == "n_components" else 2)
+    assert setter["status"] == 0
+    assert fit["value"] == (value if field == "max_irls_iter" else 5)
+    assert "status" not in fit
+
+
+@pytest.mark.parametrize("field", ["max_irls_iter", "n_components"])
+@pytest.mark.parametrize(
+    "value", [True, np.bool_(True), 2.5, 5.0, np.timedelta64(1), 2**32 + 5]
+)
+def test_i32_robust_constructor_clone_and_set_params(
+    field,
+    value,
+    _i32_native_calls,
+):
+    from n4m.estimators.regression.robust import RobustPLS
+
+    events, policy = _i32_native_calls
+    policy["forbid"] = {"n4m_context_create", "n4m_config_create"}
+    model = RobustPLS(**{field: value})
+    assert model.get_params()[field] is value
+    copied = clone(model)
+    assert type(copied.get_params()[field]) is type(value)
+    X, y = _i32_tiny_data()
+    error = ValueError if type(value) is int else TypeError
+    for candidate in (model, copied, RobustPLS().set_params(**{field: value})):
+        with pytest.raises(error, match=field):
+            candidate.fit(X, y)
+        assert not hasattr(candidate, "result_")
+    assert events == []
+
+
+def test_i32_robust_valid_numpy_diagnostics_and_public_aliases(_i32_native_calls):
+    from n4m._impl import moment_facade
+    from n4m.estimators.regression.robust import RobustPLS, robust_pls
+
+    assert robust_pls is native.robust_pls is moment_facade.robust_pls
+    assert RobustPLS is NativeRobustPLSRegressor
+    X, y = _i32_tiny_data()
+    reference = robust_pls(X, y, n_components=2, max_irls_iter=5)
+    n_components, iterations = np.int64(2), np.int64(5)
+    model = clone(RobustPLS(n_components=n_components, max_irls_iter=iterations))
+    model.fit(X, y)
+    for key in reference:
+        np.testing.assert_allclose(
+            model.result_[key], reference[key], rtol=1e-12, atol=1e-12
+        )
+    diagnostics = model.get_diagnostics()
+    for field in ("n_components", "max_irls_iter"):
+        assert type(diagnostics[field]) is int
+    json.dumps(diagnostics)
+    events, _ = _i32_native_calls
+    fits = [
+        event for event in events if event["name"] == "n4m_estimators_robust_pls_fit"
+    ]
+    assert (
+        fits == [{"name": "n4m_estimators_robust_pls_fit", "value": 5, "status": 0}] * 2
+    )
+
+
+@pytest.fixture
+def _i32_no_native_entry(monkeypatch):
+    events = []
+    policy = {"forbid": True}
+
+    def observe(name, real):
+        def forwarding(*args):
+            events.append(name)
+            if policy["forbid"]:
+                pytest.fail(f"unexpected native entry: {name}")
+            return real(*args)
+
+        return forwarding
+
+    for name, real in vars(native.lib).copy().items():
+        if name.startswith("n4m_") and callable(real):
+            monkeypatch.setattr(native.lib, name, observe(name, real))
+    return events
+
+
+@pytest.mark.parametrize(
+    "function",
+    [
+        native.pcr,
+        native.cppls,
+        native.di_pls,
+        native.weighted_pls,
+        native.robust_pls,
+        native.ridge_pls,
+        native.continuum_regression,
+        native.ecr,
+    ],
+)
+@pytest.mark.parametrize("value", [np.timedelta64(2), np.timedelta64(2, "D")])
+def test_i32_w1_all_component_family_refuses_temporal_before_native(
+    function,
+    value,
+    _i32_no_native_entry,
+):
+    from n4m.domain_adaptation.invariant import di_pls
+
+    assert di_pls is native.di_pls
+    events = _i32_no_native_entry
+    X, y = _i32_tiny_data()
+    before = X.copy(), y.copy()
+    extra = {"X_target": X.copy()} if function is native.di_pls else {}
+    entry = di_pls if function is native.di_pls else function
+    with pytest.raises(TypeError, match="n_components"):
+        entry(X, y, n_components=value, **extra)
+    assert events == []
+    np.testing.assert_array_equal(X, before[0])
+    np.testing.assert_array_equal(y, before[1])
+
+
+@pytest.mark.parametrize("value", [True, np.bool_(True), 2.5, "x", 0, -1])
+def test_i32_w1_di_pls_preserves_existing_domain_refusals(value, _i32_no_native_entry):
+    from n4m.domain_adaptation.invariant import di_pls
+
+    events = _i32_no_native_entry
+    X, y = _i32_tiny_data()
+    with pytest.raises(ValueError, match="n_components must be a positive integer"):
+        di_pls(X, y, X_target=X.copy(), n_components=value)
+    assert events == []
+
+
+@pytest.mark.parametrize("field", ["n_components", "max_irls_iter"])
+@pytest.mark.parametrize(
+    "value", ["x", True, np.bool_(True), np.timedelta64(2), np.timedelta64(2, "D")]
+)
+def test_i32_w2_diagnostics_preserve_invalid_current_params_and_fit(
+    field,
+    value,
+    _i32_native_calls,
+):
+    from n4m.estimators.regression.robust import RobustPLS
+
+    X, y = _i32_tiny_data()
+    model = RobustPLS().fit(X, y)
+    result = model.result_
+    coefficients = model.coef_.copy()
+    predictions = model.predict(X).copy()
+    model.set_params(**{field: value})
+    events, policy = _i32_native_calls
+    events.clear()
+    policy["forbid"] = {"n4m_context_create", "n4m_config_create"}
+    diagnostics = model.get_diagnostics()
+    assert diagnostics[field] is value
+    assert model.get_params()[field] is value
+    assert model.result_ is result
+    np.testing.assert_array_equal(model.coef_, coefficients)
+    np.testing.assert_array_equal(model.predict(X), predictions)
+    with pytest.raises(TypeError, match=field):
+        model.fit(X, y)
+    assert model.result_ is result
+    np.testing.assert_array_equal(model.coef_, coefficients)
+    np.testing.assert_array_equal(model.predict(X), predictions)
+    assert events == []
+
+
+@pytest.mark.parametrize("integer", [np.int64, np.uint32, np.uint64])
+def test_i32_w2_diagnostics_numpy_integer_json_after_set_params(integer):
+    from n4m.estimators.regression.robust import RobustPLS
+
+    X, y = _i32_tiny_data()
+    model = RobustPLS(n_components=integer(2), max_irls_iter=integer(5)).fit(X, y)
+    predictions = model.predict(X).copy()
+    components, iterations = integer(1), integer(3)
+    model.set_params(n_components=components, max_irls_iter=iterations)
+    diagnostics = model.get_diagnostics()
+    for field, expected in (("n_components", 1), ("max_irls_iter", 3)):
+        assert type(diagnostics[field]) is int
+        assert json.loads(json.dumps(diagnostics))[field] == expected
+    assert model.n_components is components
+    assert model.max_irls_iter is iterations
+    np.testing.assert_array_equal(model.predict(X), predictions)

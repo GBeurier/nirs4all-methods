@@ -65,6 +65,33 @@ def test_bridge_and_disconnected_global_ranks(method):
     assert all(c["rank"] is None for c in separate["candidates"])
 
 
+def test_average_rank_global_rank_requires_complete_design():
+    # A=2,B=1 ; B=2,C=1 ; nine rows with only A present (lower is better).
+    # Mean ranks are A=1.1, B=1.5, C=1.0, but A lost its only comparison to B.
+    x = np.zeros((11, 3))
+    present = np.zeros((11, 3), dtype=bool)
+    x[0, :2], present[0, :2] = [2, 1], True
+    x[1, 1:], present[1, 1:] = [2, 1], True
+    x[2:, 0], present[2:, 0] = 2, True
+    result = ranking.rank(x, present=present, method="average_rank")
+    assert result["coverage"]["connected_components"] == 1
+    assert result["coverage"]["complete_blocks"] == 0
+    assert [c["average_rank"] for c in result["candidates"]] == pytest.approx(
+        [1.1, 1.5, 1.0]
+    )
+    assert [c["score"] for c in result["candidates"]] == pytest.approx([1.1, 1.5, 1.0])
+    assert all(c["rank"] is None for c in result["candidates"])
+    assert any("Incomplete design" in w for w in result["warnings"])
+    # Pairwise-evidence methods order B above A on the same input.
+    bt = ranking.rank(x, present=present, method="bradley_terry")
+    assert [c["rank"] for c in bt["candidates"]] == [3, 2, 1]
+    assert not any("Incomplete design" in w for w in bt["warnings"])
+    # Complete designs keep the global rank and emit no such warning.
+    complete = ranking.rank([[1, 2, 3], [1, 2, 3]])
+    assert [c["rank"] for c in complete["candidates"]] == [1, 2, 3]
+    assert not any("Incomplete design" in w for w in complete["warnings"])
+
+
 def test_strided_layout_direction_and_explicit_absence():
     x = np.arange(24.0).reshape(4, 6)[:, ::2]
     for view in (x, np.asfortranarray(x), x[::-1]):

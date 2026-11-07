@@ -107,6 +107,8 @@ export function rank(scores: Matrix, present: Uint8Array, options: RankingOption
         ];
         if (METHODS[method].code >= 3) warnings.push(
             "Pairwise replay within each block is a composite approximation; posterior SD does not account for dependence between comparisons or repeated folds.");
+        if (METHODS[method].code === 0 && values[s + 1]! < values[s]!) warnings.push(
+            "Incomplete design: mean ranks are descriptive and average_rank global ranks are unavailable; use bradley_terry or trueskill for incomplete comparisons.");
         if (values[s + 3]! > 1) warnings.push("Disconnected comparison graph: global ranks are unavailable.");
         if (values[s + 6] === 0) warnings.push("Bradley-Terry did not converge; global ranks are unavailable.");
         return { schema_version: "n4m.ranking/1", method, variant: METHODS[method].variant, options: resolved,

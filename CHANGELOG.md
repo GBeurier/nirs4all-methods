@@ -16,10 +16,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   transitive connected comparisons, coverage, convergence and uncertainty
   metadata. Add paired positive-loss relative gains and optional
   caller-supplied-effect-variance DerSimonian-Laird meta-analysis in C/Python.
+- `average_rank` emits a global rank only when every block is complete; on
+  incomplete designs the mean ranks stay descriptive and Python/JS add a
+  warning. Friedman and the pairwise-evidence methods are unchanged.
 - Versioned result schema, independent numerical fixtures, native and actual
-  WASM validation. R/MATLAB ranking wrappers, general mixed effects and fANOVA
-  remain deferred; see `docs/RANKING.md` and
-  `docs/RANKING_EXTERNAL_DEPENDENCIES.md`.
+  WASM validation. R/MATLAB ranking wrappers are deferred; see
+  `docs/RANKING.md` and `docs/RANKING_EXTERNAL_DEPENDENCIES.md`.
+- ABI 2.22 optional static analysis backends: Gaussian random-intercept mixed
+  effects (ML/REML, conditional plug-in standard errors) and forest fANOVA
+  (exact uniform-product variance fractions of a fresh regression forest), plus
+  paired loss normalization. Python and JS/WASM bind them; R, Octave and Rust
+  have the C ABI only. Backend-off builds keep the symbols and return
+  `N4M_ERR_BACKEND_UNAVAILABLE`. The analysis WASM build uses
+  `-fwasm-exceptions`. See `docs/MIXED_EFFECTS.md`, `docs/FANOVA.md` and
+  `docs/abi/changes_log.md`.
+- Python and JS `fanova` now use the native option defaults (`max_depth=8`,
+  `seed=0`) unless the caller passes values.
 
 ## [1.3.14] - 2026-11-03
 

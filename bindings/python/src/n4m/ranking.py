@@ -16,7 +16,7 @@ import math
 from typing import Any
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy.typing import ArrayLike, NDArray
 
 from ._errors import N4MError
 from ._ffi import lib
@@ -127,7 +127,7 @@ def rank(
         0,
     )
     candidates = np.empty((x.shape[1], 10), dtype=np.float64)
-    summary = np.empty(9, dtype=np.float64)
+    summary: NDArray[np.float64] = np.empty(9, dtype=np.float64)
     _check(
         lib.n4m_ranking_compute_v1(
             ct.byref(view),
@@ -167,6 +167,11 @@ def rank(
         warnings.append(
             "Pairwise replay within each block is a composite approximation; "
             "posterior SD does not account for dependence between comparisons or repeated folds."
+        )
+    if options.method == 0 and summary[1] < summary[0]:
+        warnings.append(
+            "Incomplete design: mean ranks are descriptive and average_rank global ranks are "
+            "unavailable; use bradley_terry or trueskill for incomplete comparisons."
         )
     if summary[3] > 1:
         warnings.append("Disconnected comparison graph: global ranks are unavailable.")
@@ -232,7 +237,7 @@ def paired_relative_gain(
     )
     if var is not None and var.shape != a.shape:
         raise ValueError("variances must have the same shape as losses")
-    out = np.empty(8, dtype=np.float64)
+    out: NDArray[np.float64] = np.empty(8, dtype=np.float64)
     _check(
         lib.n4m_ranking_relative_gain_v1(
             a.ctypes.data_as(_DOUBLE),

@@ -61,6 +61,34 @@ void transitive_incomplete_bridge() {
         N4M_TEST_REQUIRE(c[3] == 1 && c[13] == 2 && c[23] == 1);
     }
 }
+void average_rank_incomplete_withholds_global_rank() {
+    // Rows: A=2,B=1 ; B=2,C=1 ; nine singleton rows with only A present (lower is better).
+    // Mean ranks A=1.1, B=1.5, C=1.0 would order C < A < B although A lost its only
+    // comparison to B, so the average-rank global rank must stay NaN on this design.
+    std::vector<double> x(11 * 3, 0.0);
+    std::vector<uint8_t> m(11 * 3, 0);
+    x[0] = 2, x[1] = 1, m[0] = m[1] = 1;
+    x[4] = 2, x[5] = 1, m[4] = m[5] = 1;
+    for (size_t r = 2; r < 11; ++r)
+        x[r * 3] = 2, m[r * 3] = 1;
+    auto v = view(x.data(), 11, 3);
+    std::array<double, 30> c;
+    std::array<double, 9> s;
+    auto o = defaults();
+    N4M_TEST_REQUIRE(n4m_ranking_compute_v1(&v, m.data(), &o, c.data(), 30, s.data(), 9)
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(s[0] == 11 && s[1] == 0 && s[2] == 2 && s[3] == 1);
+    N4M_TEST_REQUIRE(std::abs(c[0] - 1.1) < 1e-12 && std::abs(c[10] - 1.5) < 1e-12
+                     && std::abs(c[20] - 1.0) < 1e-12);
+    N4M_TEST_REQUIRE(c[3] == 10 && c[4] == 1 && c[6] == 0 && c[8] == 1);
+    for (size_t j = 0; j < 3; ++j)
+        N4M_TEST_REQUIRE(std::isnan(c[j * 10 + 9]));
+    // Rating methods use only pairwise evidence: B beats A on the same input.
+    o = defaults(2);
+    N4M_TEST_REQUIRE(n4m_ranking_compute_v1(&v, m.data(), &o, c.data(), 30, s.data(), 9)
+                     == N4M_OK);
+    N4M_TEST_REQUIRE(c[10] > c[0] && c[9] == 3 && c[19] == 2 && c[29] == 1);
+}
 void disconnected_and_missing() {
     const double x[] = {1, 2, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0};
     const uint8_t m[] = {1, 1, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0};
@@ -173,6 +201,8 @@ int main() {
     r.run("complete ranks and Friedman", complete_ranks);
     r.run("tied ranks and complete subset", ties_and_complete_subset);
     r.run("cross-dataset transitive incomplete bridge", transitive_incomplete_bridge);
+    r.run("average rank withholds global rank on incomplete design",
+          average_rank_incomplete_withholds_global_rank);
     r.run("disconnected and missing", disconnected_and_missing);
     r.run("Elo closed form and direction", elo_golden_and_direction);
     r.run("arbitrary stride and overflow", arbitrary_stride);

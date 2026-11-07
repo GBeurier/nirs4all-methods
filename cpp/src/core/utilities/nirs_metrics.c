@@ -25,6 +25,13 @@ static n4m_status_t check_inputs(const double* y_true, const double* y_pred,
     if (n <= 0) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
+    /* Reject nonfinite inputs before any kernel can write the caller's output.
+     * Finite degenerate ratios may still intentionally produce +Inf. */
+    for (int64_t i = 0; i < n; ++i) {
+        if (!isfinite(y_true[i]) || !isfinite(y_pred[i])) {
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
+    }
     return N4M_OK;
 }
 

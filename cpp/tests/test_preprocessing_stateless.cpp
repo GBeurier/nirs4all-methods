@@ -20,6 +20,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -28,6 +30,7 @@
 
 #include "fixture_parser.hpp"
 #include "harness.hpp"
+#include "../src/core/preprocessing/scatter/snv.h"
 
 #ifndef N4M_PARITY_FIXTURE_DIR
 #  error "N4M_PARITY_FIXTURE_DIR must be defined"
@@ -122,6 +125,85 @@ void test_snv_numerical_guards() {
     N4M_TEST_REQUIRE(n4m_transform_snv_create(&h, 0, 1, 0) == N4M_OK);
     for (double v : apply(std::vector<double>(4, 0.1), 1, 4)) N4M_TEST_REQUIRE(v == 0.1);
     n4m_transform_snv_destroy(h);
+}
+
+// The private kernel is compiled as an own test source so bounds are tested
+// directly without adding an ABI export or routing through fixed Preflight.
+void test_snv_variance_domain() {
+    std::vector<std::string> failures;
+    const double data[3][4] = {
+        {1, 3, 8, 20}, {5, 5, 5, 5}, {1, std::numeric_limits<double>::quiet_NaN(), 8, 20}};
+    int checked = 0;
+    for (int mean : {0, 1})
+        for (int scale : {0, 1})
+            for (int ddof : {0, 1, 3, 4, 5, std::numeric_limits<int>::max()})
+                for (int kind : {0, 1, 2})
+                    for (bool inplace : {false, true}) {
+                        double x[4], out[4], saved[4], bound = 12345.0;
+                        std::memcpy(x, data[kind], sizeof x);
+                        for (double& value : out)
+                            value = -12345.0;
+                        double* dest = inplace ? x : out;
+                        std::memcpy(saved, dest, sizeof saved);
+                        auto* state = n4m_pp_snv_state_new(mean, scale, ddof);
+                        N4M_TEST_REQUIRE(state != nullptr);
+                        const auto status = n4m_pp_snv_apply_bounded(state, x, 1, 4, dest, &bound);
+                        n4m_pp_snv_state_free(state);
+                        const bool invalid = scale && ddof >= 4;
+                        bool ok = status == (invalid ? N4M_ERR_INVALID_ARGUMENT : N4M_OK);
+                        if (invalid)
+                            ok = ok && std::memcmp(saved, dest, sizeof saved) == 0
+                                 && bound == 12345.0;
+                        if (!invalid && !scale && kind < 2) {
+                            const double center = mean ? (kind == 0 ? 8.0 : 5.0) : 0.0;
+                            for (int j = 0; j < 4; ++j)
+                                ok = ok && dest[j] == data[kind][j] - center;
+                        }
+                        const std::string label =
+                            "mean=" + std::to_string(mean) + "/std=" + std::to_string(scale)
+                            + "/ddof=" + std::to_string(ddof) + "/kind=" + std::to_string(kind)
+                            + "/inplace=" + std::to_string(inplace);
+                        std::printf("snv_domain %s status=%d %s\n",
+                                    label.c_str(),
+                                    status,
+                                    ok ? "PASS" : "FAIL");
+                        if (!ok)
+                            failures.push_back(label);
+                        ++checked;
+                    }
+    auto* state = n4m_pp_snv_state_new(1, 1, 1);
+    double x = 5.0, out = 12345.0, bound = 12345.0;
+    const auto singleton = n4m_pp_snv_apply_bounded(state, &x, 1, 1, &out, &bound);
+    if (singleton != N4M_ERR_INVALID_ARGUMENT || out != 12345.0 || bound != 12345.0)
+        failures.push_back("singleton-invalid-variance");
+    n4m_pp_snv_state_free(state);
+    state = n4m_pp_snv_state_new(1, 1, 0);
+    if (n4m_pp_snv_apply(state, &x, 1, 1, &out) != N4M_OK || out != 0.0)
+        failures.push_back("singleton-valid-constant");
+    n4m_pp_snv_state_free(state);
+    state = n4m_pp_snv_state_new(0, 0, std::numeric_limits<int>::max());
+    if (n4m_pp_snv_apply(state, &x, 1, 1, &out) != N4M_OK || out != x)
+        failures.push_back("singleton-variance-unused");
+    n4m_pp_snv_state_free(state);
+    state = n4m_pp_snv_state_new(1, 1, 0);
+    if (n4m_pp_snv_apply(state, &x, 0, 1, &out) != N4M_OK)
+        failures.push_back("empty-rows");
+    if (n4m_pp_snv_apply(state, &x, 1, 0, &out) != N4M_OK)
+        failures.push_back("empty-cols");
+    if (n4m_pp_snv_apply(state, &x, -1, 1, &out) != N4M_ERR_INVALID_ARGUMENT)
+        failures.push_back("negative-rows");
+    if (n4m_pp_snv_apply(state, nullptr, 1, 1, &out) != N4M_ERR_NULL_POINTER)
+        failures.push_back("null-input");
+    n4m_pp_snv_state_free(state);
+    n4m_pp_snv_handle_t* handle = nullptr;
+    if (n4m_transform_snv_create(&handle, 1, 1, -1) != N4M_ERR_INVALID_ARGUMENT || handle)
+        failures.push_back("negative-constructor");
+    for (const auto& failure : failures)
+        std::fprintf(stderr, "FAIL snv_domain %s\n", failure.c_str());
+    std::printf("snv_domain: %d matrix rows, singleton and shape controls, %zu failures\n",
+                checked,
+                failures.size());
+    N4M_TEST_REQUIRE(failures.empty());
 }
 
 void test_lsnv_smoke() {
@@ -408,6 +490,7 @@ void verify_log_parity() {
 
 void register_preprocessing_stateless_tests(n4m_testing::Runner& r);
 void register_preprocessing_stateless_tests(n4m_testing::Runner& r) {
+    r.run("pp_snv_variance_domain", test_snv_variance_domain);
     r.run("pp_snv_smoke",                  test_snv_smoke);
     r.run("pp_snv_numerical_guards",       test_snv_numerical_guards);
     r.run("pp_snv_parity",                 verify_snv_parity);

@@ -27,6 +27,9 @@ else{
  assert.equal(interaction.state,'ready',JSON.stringify(interaction));assert.ok(interaction.interactions[0].fraction>.95);
  const constant=fanova(X,matrix(Array(64).fill(1),64,1),types,bounds);
  assert.equal(constant.state,'unavailable');assert.equal(constant.reason,'zero_surrogate_variance');
+ // Unset max_depth/seed follow the native n4m_fanova_options_init_v1 defaults; explicit values are preserved.
+ assert.equal(constant.options.max_depth,8);assert.equal(constant.options.seed,0);
+ assert.equal(f.options.max_depth,4);
  assert.equal(JSON.stringify(constant).includes('NaN'),false);
 }
 console.log('component analysis: native normalization, mixed effects and fANOVA bindings passed');

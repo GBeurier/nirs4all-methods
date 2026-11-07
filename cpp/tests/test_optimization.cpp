@@ -5,14 +5,17 @@
 // and the pure-native n4m_finetune_estimator over a real PLS cross-validation).
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "n4m/n4m.h"
@@ -4429,9 +4432,1116 @@ void test_checkpoint_wide_space_and_empty_queue() {
     n4m_context_destroy(context);
 }
 
+void test_log_checkpoint_guard() {
+    n4m_context_t* ctx = nullptr;
+    n4m_search_space_t* space = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "scale", 0.5, 2.5, 0, 1) == N4M_OK);
+    auto opts = default_opts(); opts.sampler = N4M_SAMPLER_SOBOL; opts.seed = 19;
+    n4m_optimizer_t* opt = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &opt) == N4M_OK);
+    n4m_trial_t* first = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &first) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, 0, 0.5) == N4M_OK);
+    n4m_trial_t* trial = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+    double value = 0;
+    N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "scale", &value) == N4M_OK);
+    N4M_TEST_REQUIRE(value > 0.5 && value < 2.5);
+    const auto blob = save_checkpoint(opt);
+    std::uint64_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    std::size_t offset = 0, hits = 0;
+    for (std::size_t i = 0; i + 8 <= blob.size() - 8; ++i) {
+        if (checkpoint_u64(blob, i) == bits) { offset = i; ++hits; }
+    }
+    N4M_TEST_REQUIRE(hits == 1);
+    const double bad[] = {std::nextafter(0.5, -std::numeric_limits<double>::infinity()),
+                          std::nextafter(2.5, std::numeric_limits<double>::infinity()),
+                          std::numeric_limits<double>::quiet_NaN()};
+    for (double v : bad) {
+        auto corrupt = blob;
+        std::memcpy(&bits, &v, sizeof(bits));
+        checkpoint_write_u64(corrupt, offset, bits);
+        checkpoint_refresh_checksum(corrupt);
+        n4m_optimizer_t* rejected = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, corrupt.data(), corrupt.size(), &rejected) == N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(rejected == nullptr);
+    }
+    n4m_optimizer_destroy(opt);
+    n4m_search_space_destroy(space);
+    n4m_context_destroy(ctx);
+}
+
+void test_log_domain_roundtrip() {
+    const double domains[][2] = {{1e-5, 1e-2}, {5, 5000}, {7, 7000}, {50, 50000},
+        {1000, 1e6}, {1e18, 9e18}, {2e19, 9e20}, {1e21, 9e21},
+        {1e15, 1e16}, {0.5, 2.5}, {1, 1000}};
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    auto run = [&](double low, double high, n4m_sampler_kind_t sampler, int count, bool integer) {
+        n4m_search_space_t* space = nullptr;
+        N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        if (integer) {
+            N4M_TEST_REQUIRE(n4m_search_space_add_int(space, "scale", 1000000000000000LL,
+                                                     9007199254740991LL, 1, 1) == N4M_OK);
+        } else {
+            N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "scale", low, high, 0, 1) == N4M_OK);
+        }
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "aux", 0, 1, 0, 0) == N4M_OK);
+        auto opts = default_opts();
+        opts.sampler = sampler;
+        opts.direction = N4M_OPT_MINIMIZE;
+        opts.seed = 19;
+        n4m_optimizer_t* opt = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &opt) == N4M_OK);
+        for (int i = 0; i < count; ++i) {
+            n4m_trial_t* trial = nullptr;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+            double value = 0;
+            if (integer) {
+                std::int64_t v = 0;
+                N4M_TEST_REQUIRE(n4m_trial_get_int(trial, "scale", &v) == N4M_OK);
+                value = static_cast<double>(v);
+            } else {
+                N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "scale", &value) == N4M_OK);
+            }
+            N4M_TEST_REQUIRE(std::isfinite(value) && value >= low && value <= high);
+            if (i == 0 && ((low == 0.5 && high == 2.5) || (low == 1 && high == 1000))) {
+                N4M_TEST_REQUIRE(std::memcmp(&value, &low, sizeof(value)) == 0);
+            }
+            std::int64_t id = -1;
+            N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+            if (i == count - 1) {
+                auto blob = save_checkpoint(opt);
+                n4m_optimizer_t* restored = nullptr;
+                N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, blob.data(), blob.size(), &restored) == N4M_OK);
+                int32_t same = 0;
+                N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(opt, restored, &same) == N4M_OK);
+                N4M_TEST_REQUIRE(same == 1);
+                N4M_TEST_REQUIRE(n4m_optimizer_tell(restored, id, -std::log(value)) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, -std::log(value)) == N4M_OK);
+                auto completed_blob = save_checkpoint(opt);
+                n4m_optimizer_t* completed = nullptr;
+                N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, completed_blob.data(), completed_blob.size(), &completed) == N4M_OK);
+                same = 0;
+                N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(opt, completed, &same) == N4M_OK);
+                N4M_TEST_REQUIRE(same == 1);
+                n4m_trial_t* expected = nullptr;
+                N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &expected) == N4M_OK);
+                for (n4m_optimizer_t* copy : {restored, completed}) {
+                    n4m_trial_t* actual = nullptr;
+                    N4M_TEST_REQUIRE(n4m_optimizer_ask(copy, &actual) == N4M_OK);
+                    std::int64_t expected_id = -1, actual_id = -1;
+                    N4M_TEST_REQUIRE(n4m_trial_get_id(expected, &expected_id) == N4M_OK);
+                    N4M_TEST_REQUIRE(n4m_trial_get_id(actual, &actual_id) == N4M_OK);
+                    N4M_TEST_REQUIRE(expected_id == actual_id);
+                    if (integer) {
+                        std::int64_t expected_value = 0, actual_value = 0;
+                        N4M_TEST_REQUIRE(n4m_trial_get_int(expected, "scale", &expected_value) == N4M_OK);
+                        N4M_TEST_REQUIRE(n4m_trial_get_int(actual, "scale", &actual_value) == N4M_OK);
+                        N4M_TEST_REQUIRE(expected_value == actual_value);
+                    } else {
+                        double expected_value = 0, actual_value = 0;
+                        N4M_TEST_REQUIRE(n4m_trial_get_float(expected, "scale", &expected_value) == N4M_OK);
+                        N4M_TEST_REQUIRE(n4m_trial_get_float(actual, "scale", &actual_value) == N4M_OK);
+                        N4M_TEST_REQUIRE(std::memcmp(&expected_value, &actual_value, sizeof(double)) == 0);
+                    }
+                    double expected_aux = 0, actual_aux = 0;
+                    N4M_TEST_REQUIRE(n4m_trial_get_float(expected, "aux", &expected_aux) == N4M_OK);
+                    N4M_TEST_REQUIRE(n4m_trial_get_float(actual, "aux", &actual_aux) == N4M_OK);
+                    N4M_TEST_REQUIRE(std::memcmp(&expected_aux, &actual_aux, sizeof(double)) == 0);
+                }
+                n4m_optimizer_destroy(completed);
+                n4m_optimizer_destroy(restored);
+                break;
+            }
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, -std::log(value)) == N4M_OK);
+        }
+        n4m_optimizer_destroy(opt);
+        n4m_search_space_destroy(space);
+    };
+    for (const auto& d : domains) run(d[0], d[1], N4M_SAMPLER_SOBOL, 2, false);
+    run(1e15, 9007199254740991., N4M_SAMPLER_SOBOL, 2, true);
+    for (const auto sampler : {N4M_SAMPLER_CMAES, N4M_SAMPLER_TPE}) {
+        run(1e15, 1e16, sampler, 60, false);
+        run(2e19, 9e20, sampler, 60, false);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_domain_overflow_contract() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    const double max = std::numeric_limits<double>::max();
+    const double power = std::ldexp(1.0, 1023);
+    const double bad[][2] = {{-1.7e308, 1.7e308}, {-max, max}, {-power, max / 2}, {-power, power}};
+    const double good[][2] = {{-max / 2, max / 2}, {0, max}, {-8e307, 8e307},
+                              {-power, std::nextafter(max / 2, 0.0)}};
+    auto check = [&](const double* bounds, bool tuple, bool aux, bool valid) {
+        n4m_search_space_t* space = nullptr;
+        N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        if (tuple) {
+            N4M_TEST_REQUIRE(n4m_search_space_add_sorted_tuple(space, "x", 2, bounds[0], bounds[1], 0) == N4M_OK);
+        } else {
+            N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", bounds[0], bounds[1], 0, 0) == N4M_OK);
+        }
+        if (aux) N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "aux", 0, 1, 0, 0) == N4M_OK);
+        auto options = default_opts(); options.seed = 19;
+        n4m_optimizer_t* opt = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &options, &opt) ==
+                         (valid ? N4M_OK : N4M_ERR_INVALID_ARGUMENT));
+        if (valid) {
+            auto blob = save_checkpoint(opt);
+            n4m_optimizer_t* restored = nullptr;
+            N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, blob.data(), blob.size(), &restored) == N4M_OK);
+            n4m_optimizer_destroy(restored);
+            n4m_optimizer_destroy(opt);
+        } else N4M_TEST_REQUIRE(opt == nullptr);
+        n4m_search_space_destroy(space);
+    };
+    for (const auto& domain : bad) for (bool tuple : {false, true}) for (bool aux : {false, true}) check(domain, tuple, aux, false);
+    for (const auto& domain : good) for (bool tuple : {false, true}) check(domain, tuple, false, true);
+    {
+        const std::uint8_t data[] = {0x4e,0x34,0x4d,0x4f,0x50,0x54,0x0d,0x0a,0x01,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0xe8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x2a,0x45,0x61,0xca,0x5c,0xd6,0x13,0xb1,0x3c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x78,0x01,0x00,0x00,0x00,0x76,0x3b,0x77,0x30,0xd1,0x42,0xee,0xff,0x76,0x3b,0x77,0x30,0xd1,0x42,0xee,0x7f,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0d,0x9a,0x23,0xbd,0x0a,0x81,0x22,0x90,0x34,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0a,0x00,0x00,0x00,0x13,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x13,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xeb,0x9a,0xf1,0xff,0xa8,0x22,0xdc,0x3e,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xe4,0x1a,0xeb,0x13,0x81,0x2e,0xc3,0x82};
+        n4m_optimizer_t* rejected = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, data, sizeof(data), &rejected) == N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(rejected == nullptr);
+        N4M_TEST_REQUIRE(std::string(n4m_context_last_error(ctx)).find(
+            "optimizer checkpoint option/search-space contract mismatch") != std::string::npos);
+    }
+    {
+        const std::uint8_t data[] = {0x4e,0x34,0x4d,0x4f,0x50,0x54,0x0d,0x0a,0x01,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0xe8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x61,0x66,0x7f,0x6d,0x1e,0x6e,0x72,0x71,0x3c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x78,0x06,0x00,0x00,0x00,0x76,0x3b,0x77,0x30,0xd1,0x42,0xee,0xff,0x76,0x3b,0x77,0x30,0xd1,0x42,0xee,0x7f,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0d,0x9a,0x23,0xbd,0x0a,0x81,0x22,0x90,0x34,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0a,0x00,0x00,0x00,0x13,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x13,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xfb,0x3f,0x8c,0xb2,0xac,0x6b,0xdc,0x3e,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x8f,0x9e,0x37,0x09,0x6c,0xfc,0x04,0xb1};
+        n4m_optimizer_t* rejected = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, data, sizeof(data), &rejected) == N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(rejected == nullptr);
+        N4M_TEST_REQUIRE(std::string(n4m_context_last_error(ctx)).find(
+            "optimizer checkpoint option/search-space contract mismatch") != std::string::npos);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_domain_collapsed_gp_roundtrip() {
+    n4m_context_t* ctx = nullptr; n4m_search_space_t* space = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", 0.1, std::nextafter(0.1, 1.0), 0, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "aux", 0, 1, 0, 0) == N4M_OK);
+    auto options = default_opts(); options.sampler = N4M_SAMPLER_GP_EI; options.seed = 19;
+    n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &options, &opt) == N4M_OK);
+    n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+    auto blob = save_checkpoint(opt); n4m_optimizer_t* restored = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, blob.data(), blob.size(), &restored) == N4M_OK);
+    int32_t same = 0; N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(opt, restored, &same) == N4M_OK && same == 1);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, 0, 0.5) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_optimizer_tell(restored, 0, 0.5) == N4M_OK);
+    for (int i = 0; i < 12; ++i) {
+        n4m_trial_t *a = nullptr, *b = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &a) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_optimizer_ask(restored, &b) == N4M_OK);
+        std::int64_t aid = -1, bid = -1;
+        N4M_TEST_REQUIRE(n4m_trial_get_id(a, &aid) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_trial_get_id(b, &bid) == N4M_OK && aid == bid);
+        for (const char* name : {"x", "aux"}) {
+            double av = 0, bv = 0;
+            N4M_TEST_REQUIRE(n4m_trial_get_float(a, name, &av) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_float(b, name, &bv) == N4M_OK);
+            N4M_TEST_REQUIRE(std::memcmp(&av, &bv, sizeof(av)) == 0);
+        }
+        N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, aid, 0.5) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_optimizer_tell(restored, bid, 0.5) == N4M_OK);
+    }
+    n4m_optimizer_destroy(restored); n4m_optimizer_destroy(opt); n4m_search_space_destroy(space); n4m_context_destroy(ctx);
+}
+
+void test_domain_integer_tuple_bounds() {
+    const n4m_sampler_kind_t samplers[] = {N4M_SAMPLER_RANDOM, N4M_SAMPLER_SOBOL, N4M_SAMPLER_LHS,
+        N4M_SAMPLER_TERNARY, N4M_SAMPLER_GA, N4M_SAMPLER_PSO, N4M_SAMPLER_CMAES, N4M_SAMPLER_TPE, N4M_SAMPLER_GP_EI};
+    const double low = 4503599627370496.0, high = low + 1;
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (auto sampler : samplers) for (int length : {1, 3}) {
+        n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_sorted_tuple(space, "x", length, low, high, 1) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "aux", 0, 1, 0, 0) == N4M_OK);
+        auto options = default_opts(); options.sampler = sampler; options.seed = 19;
+        n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &options, &opt) == N4M_OK);
+        for (int i = 0; i < 60; ++i) {
+            n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+            double last = low;
+            for (int j = 0; j < length; ++j) {
+                double value = 0; const std::string name = "x#" + std::to_string(j);
+                N4M_TEST_REQUIRE(n4m_trial_get_float(trial, name.c_str(), &value) == N4M_OK);
+                N4M_TEST_REQUIRE(std::isfinite(value) && value == std::trunc(value) && value >= last && value <= high);
+                last = value;
+            }
+            std::int64_t id = -1; N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, 0.5) == N4M_OK);
+        }
+        n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void domain_compare_history(n4m_optimizer_t* left, n4m_optimizer_t* right) {
+    n4m_method_result_t *a = nullptr, *b = nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_get_trials(left, 0, &a) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_optimizer_get_trials(right, 0, &b) == N4M_OK);
+    for (const char* key : {"trial_ids_i64", "trial_ask_sequence", "trial_terminal_sequence",
+                            "trial_intermediate_offsets", "trial_intermediate_sequence"}) {
+        const std::int64_t *x = nullptr, *y = nullptr; std::int64_t nx = 0, ny = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_int64_vector(a, key, &x, &nx) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_method_result_get_int64_vector(b, key, &y, &ny) == N4M_OK);
+        N4M_TEST_REQUIRE(nx >= 0 && ny >= 0);
+        N4M_TEST_REQUIRE(nx == ny && (nx == 0 || std::memcmp(x, y, sizeof(*x) * static_cast<std::size_t>(nx)) == 0));
+    }
+    for (const char* key : {"trial_status", "trial_scores", "trial_rung", "trial_param_values",
+                            "trial_intermediate_scores"}) {
+        const double *x = nullptr, *y = nullptr; std::int64_t rx = 0, cx = 0, ry = 0, cy = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_double_matrix(a, key, &x, &rx, &cx) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_method_result_get_double_matrix(b, key, &y, &ry, &cy) == N4M_OK);
+        N4M_TEST_REQUIRE(rx >= 0 && cx >= 0 && ry >= 0 && cy >= 0);
+        N4M_TEST_REQUIRE(rx == ry && cx == cy
+                         && (rx * cx == 0
+                             || std::memcmp(x, y, sizeof(*x) * static_cast<std::size_t>(rx) * static_cast<std::size_t>(cx)) == 0));
+    }
+    for (const char* key : {"trial_param_active", "trial_intermediate_steps", "trial_intermediate_should_prune"}) {
+        const std::int32_t *x = nullptr, *y = nullptr; std::int32_t nx = 0, ny = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_int_vector(a, key, &x, &nx) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_method_result_get_int_vector(b, key, &y, &ny) == N4M_OK);
+        N4M_TEST_REQUIRE(nx >= 0 && ny >= 0);
+        N4M_TEST_REQUIRE(nx == ny && (nx == 0 || std::memcmp(x, y, sizeof(*x) * static_cast<std::size_t>(nx)) == 0));
+    }
+    n4m_method_result_destroy(a); n4m_method_result_destroy(b);
+}
+
+void domain_stages(double low, double high, bool integer, int tuple_length,
+                   n4m_sampler_kind_t sampler, std::uint64_t seed, bool log_axis = true, double grid_step = 0, bool enforce_integral_step = true) {
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (const auto& stage : {std::pair<int, bool>{0, false}, {1, true}, {1, false},
+                              {12, true}, {12, false}, {13, true}}) {
+        n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        if (tuple_length) {
+            N4M_TEST_REQUIRE(n4m_search_space_add_sorted_tuple(space, "x", tuple_length, low, high, integer) == N4M_OK);
+        } else if (integer) {
+            N4M_TEST_REQUIRE(n4m_search_space_add_int(space, "x", static_cast<int64_t>(low), static_cast<int64_t>(high), grid_step > 0 ? static_cast<int64_t>(grid_step) : 1, grid_step > 0 ? 0 : 1) == N4M_OK);
+        } else {
+            N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", low, high, grid_step, log_axis ? 1 : 0) == N4M_OK);
+        }
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "aux", 0, 1, 0, 0) == N4M_OK);
+        auto opts = default_opts(); opts.sampler = sampler; opts.seed = seed; opts.direction = N4M_OPT_MINIMIZE;
+        n4m_optimizer_t* original = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &original) == N4M_OK);
+        auto inspect = [&](n4m_trial_t* trial) {
+            double last = low;
+            if (tuple_length) {
+                for (int j = 0; j < tuple_length; ++j) {
+                    auto name = "x#" + std::to_string(j); double value = 0;
+                    N4M_TEST_REQUIRE(n4m_trial_get_float(trial, name.c_str(), &value) == N4M_OK);
+                    N4M_TEST_REQUIRE(std::isfinite(value) && value >= last && value <= high);
+                    if (integer) N4M_TEST_REQUIRE(value == std::trunc(value));
+                    last = value;
+                }
+            } else if (integer) {
+                std::int64_t value = 0; N4M_TEST_REQUIRE(n4m_trial_get_int(trial, "x", &value) == N4M_OK);
+                N4M_TEST_REQUIRE(static_cast<double>(value) >= low && static_cast<double>(value) <= high);
+                if (grid_step > 0) N4M_TEST_REQUIRE((value - static_cast<std::int64_t>(low)) % static_cast<std::int64_t>(grid_step) == 0);
+            } else {
+                double value = 0; N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "x", &value) == N4M_OK);
+                N4M_TEST_REQUIRE(std::isfinite(value) && value >= low && value <= high);
+                if (grid_step > 0 && enforce_integral_step) N4M_TEST_REQUIRE((static_cast<std::int64_t>(value) - static_cast<std::int64_t>(low)) % static_cast<std::int64_t>(grid_step) == 0);
+            }
+        };
+        std::int64_t pending = -1;
+        for (int j = 0; j < stage.first; ++j) {
+            n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(original, &trial) == N4M_OK);
+            inspect(trial); N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &pending) == N4M_OK);
+            if (!(stage.second && j == stage.first - 1)) N4M_TEST_REQUIRE(n4m_optimizer_tell(original, pending, (j % 7) / 7.0) == N4M_OK);
+        }
+        auto blob = save_checkpoint(original); n4m_optimizer_t* restored = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, blob.data(), blob.size(), &restored) == N4M_OK);
+        int32_t same = 0; N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(original, restored, &same) == N4M_OK && same == 1);
+        domain_compare_history(original, restored);
+        if (stage.second) {
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(original, pending, 0.5) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(restored, pending, 0.5) == N4M_OK);
+        }
+        for (int j = 0; j < 6; ++j) {
+            n4m_trial_t *a = nullptr, *b = nullptr;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(original, &a) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(restored, &b) == N4M_OK);
+            inspect(a); inspect(b);
+            std::int64_t id_a = -1, id_b = -1;
+            N4M_TEST_REQUIRE(n4m_trial_get_id(a, &id_a) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_id(b, &id_b) == N4M_OK && id_a == id_b);
+            if (!tuple_length && integer) {
+                std::int64_t x = 0, y = 0;
+                N4M_TEST_REQUIRE(n4m_trial_get_int(a, "x", &x) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_trial_get_int(b, "x", &y) == N4M_OK && x == y);
+            }
+            for (int k = 0; k < (tuple_length ? tuple_length : (integer ? 0 : 1)); ++k) {
+                auto name = tuple_length ? "x#" + std::to_string(k) : "x";
+                double x = 0, y = 0;
+                N4M_TEST_REQUIRE(n4m_trial_get_float(a, name.c_str(), &x) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_trial_get_float(b, name.c_str(), &y) == N4M_OK);
+                N4M_TEST_REQUIRE(std::memcmp(&x, &y, sizeof(x)) == 0);
+            }
+            double x = 0, y = 0;
+            N4M_TEST_REQUIRE(n4m_trial_get_float(a, "aux", &x) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_float(b, "aux", &y) == N4M_OK);
+            N4M_TEST_REQUIRE(std::memcmp(&x, &y, sizeof(x)) == 0);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(original, id_a, (j % 7) / 7.0) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(restored, id_b, (j % 7) / 7.0) == N4M_OK);
+        }
+        n4m_optimizer_destroy(restored); n4m_optimizer_destroy(original); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_domain_finite_span_stages() {
+    const double max = std::numeric_limits<double>::max(), power = std::ldexp(1.0, 1023);
+    const double domains[][2] = {{-max/2,max/2},{0,max},{-8e307,8e307},{-power,std::nextafter(max/2,0.0)}};
+    const n4m_sampler_kind_t samplers[] = {N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    for (const auto& d : domains) for (auto sampler : samplers) for (int length : {0, 2})
+        domain_stages(d[0], d[1], false, length, sampler, 19, false);
+}
+
+void test_domain_full_log_stages() {
+    struct Domain { double low; double high; bool integer; };
+    const double two53 = 9007199254740992.0;
+    const Domain domains[] = {{0.1, std::nextafter(0.1, 1.0), false}, {1e300, 1e300 * (1 + 1e-14), false},
+        {1e-5, std::nextafter(std::nextafter(1e-5, 1.0), 1.0), false},
+        {1e15, 1e15+1, true}, {1e15, 1e15+2, true}, {two53-2, two53, true},
+        {1e15, 1e15+3, true}, {1, std::nextafter(1.0, 2.0), false}, {5, 5, false},
+        {0.5, 2.5, false}, {1, 1000, false}};
+    for (const auto& d : domains) for (auto s : {N4M_SAMPLER_GP_EI, N4M_SAMPLER_TPE})
+        for (std::uint64_t seed : {19ULL, 3ULL}) domain_stages(d.low, d.high, d.integer, 0, s, seed);
+}
+
+void test_domain_full_tuple_stages() {
+    const double p = 4503599627370496.0, q = 9007199254740992.0;
+    const double domains[][2] = {{0,10},{-5,5},{1000,1002},{-1000,-998},
+        {1099511627776.0,1099511627778.0},{1125899906842624.0,1125899906842626.0},
+        {2251799813685248.0,2251799813685250.0},{-2251799813685250.0,-2251799813685248.0},
+        {p,p},{p,p+1},{p,p+2},{p+1000,p+1003},{q-3,q-1},{q-2,q},{-q,-q+2},{-q,-q},{-p-2,-p},{-q,q},{-q+1,q-1}};
+    const n4m_sampler_kind_t samplers[] = {N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    for (const auto& d : domains) for (auto s : samplers) for (int length : {1, 3})
+        domain_stages(d[0], d[1], true, length, s, 19);
+}
+
+void test_domain_gp_guards() {
+    n4m_context_t* ctx = nullptr; n4m_search_space_t* space = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", 0, 1, 0, 0) == N4M_OK);
+    auto opts = default_opts(); opts.sampler = N4M_SAMPLER_GP_EI; opts.seed = 19;
+    n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &opt) == N4M_OK);
+    const char* name = "x"; const double forced = 0.5;
+    N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, &name, &forced, 1) == N4M_ERR_UNSUPPORTED);
+    n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+    double value = 0; N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "x", &value) == N4M_OK);
+    std::uint64_t bits = 0; std::memcpy(&bits, &value, sizeof(bits));
+    const auto blob = save_checkpoint(opt); std::vector<std::size_t> hits;
+    for (std::size_t j = 0; j + 8 <= blob.size() - 8; ++j)
+        if (checkpoint_u64(blob, j) == bits) hits.push_back(j);
+    N4M_TEST_REQUIRE(hits.size() == 2);
+    for (double bad : {std::numeric_limits<double>::quiet_NaN(), -0.1, 1.5}) {
+        auto damaged = blob; std::memcpy(&bits, &bad, sizeof(bits));
+        checkpoint_write_u64(damaged, hits[1], bits); checkpoint_refresh_checksum(damaged);
+        n4m_optimizer_t* rejected = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, damaged.data(), damaged.size(), &rejected) == N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(rejected == nullptr);
+    }
+    n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+    N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", 0.1, std::nextafter(0.1, 1.), 0, 1) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &opt) == N4M_OK);
+    for (std::size_t n = 1; n <= 3; ++n) {
+        N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+        std::int64_t id = -1; N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, 0.5) == N4M_OK);
+        auto checkpoint = save_checkpoint(opt); std::size_t count = 0;
+        for (std::size_t j = 0; j + 8 <= checkpoint.size(); ++j)
+            if (checkpoint_u64(checkpoint, j) == 0x3fefffffffffffffULL) ++count;
+        N4M_TEST_REQUIRE(count == n);
+        n4m_optimizer_t* restored = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, checkpoint.data(), checkpoint.size(), &restored) == N4M_OK);
+        n4m_optimizer_destroy(restored);
+    }
+    n4m_optimizer_destroy(opt); n4m_search_space_destroy(space); n4m_context_destroy(ctx);
+}
+
+void test_domain_tuple_random_oracle() {
+    constexpr std::int64_t p = 1LL << 52, q = 1LL << 53;
+    const std::int64_t domains[][2] = {
+        {0, 10}, {-5, 5}, {1000, 1002}, {-1000, -998},
+        {1LL << 40, (1LL << 40) + 2}, {1LL << 50, (1LL << 50) + 2},
+        {1LL << 51, (1LL << 51) + 2}, {-(1LL << 51) - 2, -(1LL << 51)},
+        {p, p}, {p, p + 1}, {p, p + 2}, {p + 1000, p + 1003},
+        {q - 3, q - 1}, {q - 2, q}, {-q, -q + 2}, {-q, -q},
+        {-p - 2, -p}, {-q, q}, {-q + 1, q - 1},
+    };
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    int eligible = 0;
+    for (const auto& domain : domains) {
+        const std::int64_t low = domain[0], high = domain[1];
+        if (high >= q || high - low >= q) continue;
+        ++eligible;
+        auto make = [&](bool tuple, int length, n4m_search_space_t** space) {
+            N4M_TEST_REQUIRE(n4m_search_space_create(space) == N4M_OK);
+            if (tuple) N4M_TEST_REQUIRE(n4m_search_space_add_sorted_tuple(*space, "x", length, static_cast<double>(low), static_cast<double>(high), 1) == N4M_OK);
+            else N4M_TEST_REQUIRE(n4m_search_space_add_int(*space, "x", low, high, 1, 0) == N4M_OK);
+            auto opts = default_opts(); opts.sampler = N4M_SAMPLER_RANDOM; opts.seed = 19;
+            n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, *space, &opts, &opt) == N4M_OK); return opt;
+        };
+        for (int length : {1, 3}) {
+            n4m_search_space_t *scalar_space = nullptr, *tuple_space = nullptr;
+            auto* scalar = make(false, 0, &scalar_space); auto* tuple = make(true, length, &tuple_space);
+            int upper = 0; const int groups = 6000 / length;
+            for (int i = 0; i < groups; ++i) {
+                std::vector<std::int64_t> expected;
+                for (int j = 0; j < length; ++j) {
+                    n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(scalar, &trial) == N4M_OK);
+                    std::int64_t value = 0, id = -1;
+                    N4M_TEST_REQUIRE(n4m_trial_get_int(trial, "x", &value) == N4M_OK);
+                    N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+                    expected.push_back(value); N4M_TEST_REQUIRE(n4m_optimizer_tell(scalar, id, 0) == N4M_OK);
+                }
+                std::sort(expected.begin(), expected.end());
+                n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(tuple, &trial) == N4M_OK);
+                for (int j = 0; j < length; ++j) {
+                    const std::string name = "x#" + std::to_string(j); double value = 0;
+                    N4M_TEST_REQUIRE(n4m_trial_get_float(trial, name.c_str(), &value) == N4M_OK);
+                    N4M_TEST_REQUIRE(value == static_cast<double>(expected[static_cast<std::size_t>(j)]));
+                    if (length == 1 && value == static_cast<double>(high)) ++upper;
+                }
+                std::int64_t id = -1; N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_optimizer_tell(tuple, id, 0) == N4M_OK);
+            }
+            if (length == 1 && low == p && high == p + 1)
+                N4M_TEST_REQUIRE(std::abs(upper / 6000.0 - 0.5) <= 0.03);
+            n4m_optimizer_destroy(tuple); n4m_optimizer_destroy(scalar);
+            n4m_search_space_destroy(tuple_space); n4m_search_space_destroy(scalar_space);
+        }
+    }
+    N4M_TEST_REQUIRE(eligible == 16);
+    n4m_context_destroy(ctx);
+}
+
+// Python bigint oracle on the seed-19 raw unit stream, shared across bindings.
+void test_scalar_grid_stages() {
+    constexpr double h = 9007199254740992.0;
+    const n4m_sampler_kind_t samplers[] = {N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,
+        N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    for (auto sampler : samplers) for (bool integer : {true,false}) {
+        domain_stages(h-3,h,integer,0,sampler,19,false,2);
+        domain_stages(-h,h,integer,0,sampler,19,false,3);
+    }
+}
+
+void test_scalar_grid_integer_distribution() {
+    constexpr std::int64_t h = INT64_C(9007199254740992);
+    const std::int64_t expected[] = {h,h-2,h-1,h-2,h,h,h-1,h-1,h-2,h-1,h,h,h,h,h,h};
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (bool integer : {true, false}) {
+        n4m_search_space_t* space = nullptr;
+        N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        if (integer) N4M_TEST_REQUIRE(n4m_search_space_add_int(space, "x", h-2, h, 1, 0) == N4M_OK);
+        else N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", static_cast<double>(h-2), static_cast<double>(h), 1, 0) == N4M_OK);
+        auto opts = default_opts(); opts.sampler = N4M_SAMPLER_RANDOM; opts.seed = 19;
+        n4m_optimizer_t* opt = nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &opt) == N4M_OK);
+        int counts[] = {0,0,0};
+        for (int i=0; i<6000; ++i) {
+            n4m_trial_t* trial = nullptr; std::int64_t id = -1, value = 0;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+            if (integer) N4M_TEST_REQUIRE(n4m_trial_get_int(trial, "x", &value) == N4M_OK);
+            else { double x=0; N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "x", &x) == N4M_OK); value=static_cast<std::int64_t>(x); }
+            N4M_TEST_REQUIRE(value >= h-2 && value <= h);
+            if (i<16) N4M_TEST_REQUIRE(value == expected[i]);
+            ++counts[value-(h-2)];
+            N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, 0) == N4M_OK);
+        }
+        N4M_TEST_REQUIRE(counts[0] == 2015 && counts[1] == 2005 && counts[2] == 1980);
+        n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_scalar_grid_near_ulp_distribution() {
+    const double one = 1.0, half = 0.5, top = std::ldexp(1.0,60), p = std::ldexp(1.0,52);
+    const std::array<std::array<double,4>,5> domains = {{{one-std::ldexp(1.0,-52),one,std::ldexp(1.0,-53),3},
+        {half-std::ldexp(1.0,-53),half,std::ldexp(1.0,-54),3}, {top-256,top,128,3},
+        {one-3*std::ldexp(1.0,-53),one,std::ldexp(1.0,-53),4}, {p,p+4,1.5,3}}};
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (const auto& d : domains) {
+        n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",d[0],d[1],d[2],0) == N4M_OK);
+        auto opts = default_opts(); opts.sampler = N4M_SAMPLER_RANDOM; opts.seed = 19;
+        n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&opt) == N4M_OK);
+        std::map<double,int> counts;
+        for(int i=0;i<6000;++i) { n4m_trial_t* t=nullptr; double x=0; std::int64_t id=-1;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(opt,&t)==N4M_OK); N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&x)==N4M_OK);
+            N4M_TEST_REQUIRE(x>=d[0] && x<=d[1]); ++counts[x];
+            N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK); N4M_TEST_REQUIRE(n4m_optimizer_tell(opt,id,0)==N4M_OK);
+        }
+        N4M_TEST_REQUIRE(counts.size()==static_cast<std::size_t>(d[3]));
+        for (const auto& entry : counts) N4M_TEST_REQUIRE(std::abs(entry.second/6000.0-1.0/d[3])<=0.03);
+        n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_scalar_grid_wide_pinned_oracle() {
+    constexpr std::int64_t h = INT64_C(9007199254740992);
+    const std::int64_t expected[] = {INT64_C(4239843483439303),-INT64_C(6906221722996298),-INT64_C(2457079771300949),-INT64_C(7517534437616789),INT64_C(5116916499969259),INT64_C(8257295123674171),-INT64_C(417271150248371),INT64_C(1254295467694255),-INT64_C(4530896056998680),INT64_C(452284686773314),INT64_C(7284296237484454),INT64_C(7676065770718294),INT64_C(5637129696437785),INT64_C(6717941993400823),INT64_C(5031873289515835),INT64_C(4454328880214974)};
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(bool integer : {true,false}) {
+        n4m_search_space_t* space=nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+        if(integer) N4M_TEST_REQUIRE(n4m_search_space_add_int(space,"x",-h,h,3,0)==N4M_OK);
+        else N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",static_cast<double>(-h),static_cast<double>(h),3,0)==N4M_OK);
+        auto opts=default_opts(); opts.sampler=N4M_SAMPLER_RANDOM;opts.seed=19;
+        n4m_optimizer_t* opt=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&opt)==N4M_OK);
+        for(auto expected_value : expected) { n4m_trial_t* t=nullptr;std::int64_t x=0,id=-1;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(opt,&t)==N4M_OK);
+            if(integer) N4M_TEST_REQUIRE(n4m_trial_get_int(t,"x",&x)==N4M_OK);
+            else {double value=0;N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&value)==N4M_OK);x=static_cast<std::int64_t>(value);}
+            N4M_TEST_REQUIRE(x==expected_value);N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(opt,id,0)==N4M_OK);
+        }
+        n4m_optimizer_destroy(opt);n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_scalar_grid_float_enqueue() {
+    const double h=9007199254740992.0,p=4503599627370496.0;
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(int domain=0;domain<3;++domain) {
+        const double low=domain==0 ? -h : domain==1 ? p : h-3;
+        const double high=domain==0 ? h : domain==1 ? p+16 : h;
+        const double step=domain==0 ? 3 : domain==1 ? 8 : 2;
+        n4m_search_space_t* space=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",low,high,step,0)==N4M_OK);
+        auto opts=default_opts();opts.sampler=N4M_SAMPLER_RANDOM;opts.seed=19;
+        n4m_optimizer_t* opt=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&opt)==N4M_OK);
+        const char* names[]={"x"};
+        const std::vector<double> rejected=domain==0 ? std::vector<double>{} : domain==1 ? std::vector<double>{p+1,p+7,p+9} : std::vector<double>{h};
+        const std::vector<double> accepted=domain==0 ? std::vector<double>{1,7,13,h-1} : domain==1 ? std::vector<double>{p+8} : std::vector<double>{};
+        for(double x : rejected) N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt,names,&x,1)==N4M_ERR_INVALID_ARGUMENT);
+        for(double x : accepted) {N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt,names,&x,1)==N4M_OK);
+            n4m_trial_t* t=nullptr;double actual=0;std::int64_t id=-1;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(opt,&t)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&actual)==N4M_OK);
+            N4M_TEST_REQUIRE(std::memcmp(&x,&actual,sizeof(x))==0);N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(opt,id,0)==N4M_OK);
+        }
+        n4m_optimizer_destroy(opt);n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_scalar_grid_integer_matrix_oracle() {
+    struct Case {std::int64_t low,high,step;std::array<std::int64_t,16> expected;};
+    const Case cases[] = {
+        {INT64_C(9007199254740990),INT64_C(9007199254740992),INT64_C(1),{INT64_C(9007199254740992),INT64_C(9007199254740990),INT64_C(9007199254740991),INT64_C(9007199254740990),INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740990),INT64_C(9007199254740991),INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(9007199254740992)}},
+        {INT64_C(9007199254740989),INT64_C(9007199254740992),INT64_C(2),{INT64_C(9007199254740991),INT64_C(9007199254740989),INT64_C(9007199254740989),INT64_C(9007199254740989),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740989),INT64_C(9007199254740991),INT64_C(9007199254740989),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740991),INT64_C(9007199254740991)}},
+        {INT64_C(9007199254740987),INT64_C(9007199254740992),INT64_C(3),{INT64_C(9007199254740990),INT64_C(9007199254740987),INT64_C(9007199254740987),INT64_C(9007199254740987),INT64_C(9007199254740990),INT64_C(9007199254740990),INT64_C(9007199254740987),INT64_C(9007199254740990),INT64_C(9007199254740987),INT64_C(9007199254740990),INT64_C(9007199254740990),INT64_C(9007199254740990),INT64_C(9007199254740990),INT64_C(9007199254740990),INT64_C(9007199254740990),INT64_C(9007199254740990)}},
+        {INT64_C(4503599627370496),INT64_C(4503599627370503),INT64_C(8),{INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496),INT64_C(4503599627370496)}},
+        {INT64_C(562949953421312),INT64_C(562949953421315),INT64_C(4),{INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312),INT64_C(562949953421312)}},
+        {INT64_C(281474976710656),INT64_C(281474976710659),INT64_C(4),{INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656),INT64_C(281474976710656)}},
+        {-INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(1),{INT64_C(4239843483439302),-INT64_C(6906221722996298),-INT64_C(2457079771300950),-INT64_C(7517534437616788),INT64_C(5116916499969258),INT64_C(8257295123674170),-INT64_C(417271150248372),INT64_C(1254295467694256),-INT64_C(4530896056998678),INT64_C(452284686773314),INT64_C(7284296237484452),INT64_C(7676065770718292),INT64_C(5637129696437782),INT64_C(6717941993400820),INT64_C(5031873289515832),INT64_C(4454328880214974)}},
+        {-INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(3),{INT64_C(4239843483439303),-INT64_C(6906221722996298),-INT64_C(2457079771300949),-INT64_C(7517534437616789),INT64_C(5116916499969259),INT64_C(8257295123674171),-INT64_C(417271150248371),INT64_C(1254295467694255),-INT64_C(4530896056998680),INT64_C(452284686773314),INT64_C(7284296237484454),INT64_C(7676065770718294),INT64_C(5637129696437785),INT64_C(6717941993400823),INT64_C(5031873289515835),INT64_C(4454328880214974)}},
+        {-INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(7),{INT64_C(4239843483439301),-INT64_C(6906221722996299),-INT64_C(2457079771300949),-INT64_C(7517534437616788),INT64_C(5116916499969263),INT64_C(8257295123674173),-INT64_C(417271150248369),INT64_C(1254295467694258),-INT64_C(4530896056998679),INT64_C(452284686773314),INT64_C(7284296237484458),INT64_C(7676065770718299),INT64_C(5637129696437781),INT64_C(6717941993400823),INT64_C(5031873289515831),INT64_C(4454328880214979)}},
+        {-INT64_C(1),INT64_C(9007199254740992),INT64_C(1),{INT64_C(6623521369090147),INT64_C(1050488765872346),INT64_C(3275059741720020),INT64_C(744832408562101),INT64_C(7062057877355125),INT64_C(8632247189207581),INT64_C(4294964052246309),INT64_C(5130747361217624),INT64_C(2238151598871156),INT64_C(4729741970757153),INT64_C(8145747746112722),INT64_C(8341632512729642),INT64_C(7322164475589387),INT64_C(7862570624070906),INT64_C(7019536272128412),INT64_C(6730764067477983)}},
+        {-INT64_C(3),INT64_C(9007199254740992),INT64_C(1),{INT64_C(6623521369090146),INT64_C(1050488765872344),INT64_C(3275059741720019),INT64_C(744832408562099),INT64_C(7062057877355125),INT64_C(8632247189207581),INT64_C(4294964052246308),INT64_C(5130747361217623),INT64_C(2238151598871154),INT64_C(4729741970757152),INT64_C(8145747746112722),INT64_C(8341632512729642),INT64_C(7322164475589387),INT64_C(7862570624070906),INT64_C(7019536272128412),INT64_C(6730764067477982)}},
+        {INT64_C(0),INT64_C(9007199254740992),INT64_C(1),{INT64_C(6623521369090147),INT64_C(1050488765872347),INT64_C(3275059741720021),INT64_C(744832408562102),INT64_C(7062057877355125),INT64_C(8632247189207581),INT64_C(4294964052246310),INT64_C(5130747361217624),INT64_C(2238151598871157),INT64_C(4729741970757153),INT64_C(8145747746112722),INT64_C(8341632512729642),INT64_C(7322164475589387),INT64_C(7862570624070906),INT64_C(7019536272128412),INT64_C(6730764067477983)}},
+        {INT64_C(0),INT64_C(9007199254740990),INT64_C(1),{INT64_C(6623521369090146),INT64_C(1050488765872346),INT64_C(3275059741720020),INT64_C(744832408562101),INT64_C(7062057877355124),INT64_C(8632247189207580),INT64_C(4294964052246309),INT64_C(5130747361217623),INT64_C(2238151598871156),INT64_C(4729741970757152),INT64_C(8145747746112721),INT64_C(8341632512729641),INT64_C(7322164475589386),INT64_C(7862570624070905),INT64_C(7019536272128411),INT64_C(6730764067477982)}},
+        {-INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(5),{INT64_C(4239843483439303),-INT64_C(6906221722996302),-INT64_C(2457079771300952),-INT64_C(7517534437616792),INT64_C(5116916499969258),INT64_C(8257295123674168),-INT64_C(417271150248372),INT64_C(1254295467694253),-INT64_C(4530896056998682),INT64_C(452284686773313),INT64_C(7284296237484453),INT64_C(7676065770718293),INT64_C(5637129696437783),INT64_C(6717941993400818),INT64_C(5031873289515833),INT64_C(4454328880214973)}},
+        {-INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(9),{INT64_C(4239843483439309),-INT64_C(6906221722996304),-INT64_C(2457079771300952),-INT64_C(7517534437616792),INT64_C(5116916499969262),INT64_C(8257295123674177),-INT64_C(417271150248368),INT64_C(1254295467694255),-INT64_C(4530896056998680),INT64_C(452284686773311),INT64_C(7284296237484460),INT64_C(7676065770718297),INT64_C(5637129696437782),INT64_C(6717941993400826),INT64_C(5031873289515838),INT64_C(4454328880214977)}},
+        {-INT64_C(9007199254740992),INT64_C(9007199254740992),INT64_C(11),{INT64_C(4239843483439303),-INT64_C(6906221722996307),-INT64_C(2457079771300954),-INT64_C(7517534437616794),INT64_C(5116916499969255),INT64_C(8257295123674171),-INT64_C(417271150248378),INT64_C(1254295467694250),-INT64_C(4530896056998682),INT64_C(452284686773307),INT64_C(7284296237484456),INT64_C(7676065770718293),INT64_C(5637129696437781),INT64_C(6717941993400817),INT64_C(5031873289515834),INT64_C(4454328880214975)}}
+    };
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(const auto& c : cases) for(bool integer : {true,false}) {
+        n4m_search_space_t* space=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+        if(integer) N4M_TEST_REQUIRE(n4m_search_space_add_int(space,"x",c.low,c.high,c.step,0)==N4M_OK);
+        else N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",static_cast<double>(c.low),static_cast<double>(c.high),static_cast<double>(c.step),0)==N4M_OK);
+        auto opts=default_opts();opts.sampler=N4M_SAMPLER_RANDOM;opts.seed=19;
+        n4m_optimizer_t* opt=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&opt)==N4M_OK);
+        for(auto expected : c.expected) {n4m_trial_t* trial=nullptr;std::int64_t x=0,id=-1;N4M_TEST_REQUIRE(n4m_optimizer_ask(opt,&trial)==N4M_OK);
+            if(integer) N4M_TEST_REQUIRE(n4m_trial_get_int(trial,"x",&x)==N4M_OK);
+            else {double value=0;N4M_TEST_REQUIRE(n4m_trial_get_float(trial,"x",&value)==N4M_OK);x=static_cast<std::int64_t>(value);}
+            N4M_TEST_REQUIRE(x==expected);N4M_TEST_REQUIRE(n4m_trial_get_id(trial,&id)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(opt,id,0)==N4M_OK);
+        }
+        n4m_optimizer_destroy(opt);n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_t4f_r1_r2_adaptive_bounds() {
+    struct D {double low,high,step;int count;};const double c=std::ldexp(1.0,-53);
+    const D ds[]={{-1.,1.-std::ldexp(1.0,-52),3*c,400},{-0.5,0.5-c,1.5*c,400},
+        {1.3094115832905704,9.007642868376131e21,3.020767460720702,240},{1.3552258541085935,3.1816648682723785e21,9.932851196532727,240}};
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(const auto& d:ds)for(auto sampler:{N4M_SAMPLER_CMAES,N4M_SAMPLER_PSO,N4M_SAMPLER_GA,N4M_SAMPLER_TPE}){
+        n4m_search_space_t* s=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&s)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(s,"x",d.low,d.high,d.step,0)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(s,"aux",0,1,0,0)==N4M_OK);
+        auto opts=default_opts();opts.sampler=sampler;opts.seed=19;opts.direction=N4M_OPT_MINIMIZE;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,s,&opts,&o)==N4M_OK);int outside=0;
+        for(int i=0;i<d.count;++i){n4m_trial_t* t=nullptr;double x=0;std::int64_t id=-1;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&t)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&x)==N4M_OK);if(x<d.low||x>d.high)++outside;N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(o,id,-x)==N4M_OK);}
+        N4M_TEST_REQUIRE(outside==0);auto blob=save_checkpoint(o);n4m_optimizer_t* restored=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&restored)==N4M_OK);n4m_optimizer_destroy(restored);n4m_optimizer_destroy(o);n4m_search_space_destroy(s);
+    } n4m_context_destroy(ctx);
+}
+void test_t4f_r3_own_enqueue() {
+    const double c=std::ldexp(1.0,-53);const double ds[][3]={{-1.,1.,3*c},{-std::ldexp(1.0,43),std::ldexp(1.0,43),3./1024},{-std::ldexp(1.0,54),std::ldexp(1.0,54),6.},{-1.,1.,1.25*c},{-1.,1.,1.5*c}};
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(const auto& d:ds){n4m_search_space_t* s=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&s)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(s,"x",d[0],d[1],d[2],0)==N4M_OK);auto opts=default_opts();opts.sampler=N4M_SAMPLER_RANDOM;opts.seed=19;n4m_optimizer_t *a=nullptr,*b=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,s,&opts,&a)==N4M_OK);opts.seed=3;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,s,&opts,&b)==N4M_OK);const char* names[]={"x"};
+        for(int i=0;i<300;++i){n4m_trial_t *t=nullptr,*u=nullptr;double x=0,y=0;std::int64_t id=0,jd=0;N4M_TEST_REQUIRE(n4m_optimizer_ask(a,&t)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&x)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_enqueue(b,names,&x,1)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_ask(b,&u)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(u,"x",&y)==N4M_OK);N4M_TEST_REQUIRE(std::memcmp(&x,&y,sizeof(x))==0);N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(u,&jd)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(a,id,0)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(b,jd,0)==N4M_OK);}
+        n4m_optimizer_destroy(a);n4m_optimizer_destroy(b);n4m_search_space_destroy(s);}n4m_context_destroy(ctx);
+}
+void test_t4f_r4_pinned_rational_vectors() {
+    const double c=std::ldexp(1.0,-53);const double ds[][3]={{-1.,1.,3*c},{-std::ldexp(1.0,43),std::ldexp(1.0,43),3./1024},{-std::ldexp(1.0,54),std::ldexp(1.0,54),6.}};
+    const std::uint64_t values[3][16]={
+        {UINT64_C(0x3fde203af977a18e),UINT64_C(0xbfe8892c0c8a0e4a),UINT64_C(0xbfd17566ede808aa),UINT64_C(0xbfeab52861bdac95),UINT64_C(0x3fe22dcef65374eb),UINT64_C(0x3fed55f756a6f43b),UINT64_C(0xbfa7b8182af81b30),UINT64_C(0x3fc1d319af2e62bc),UINT64_C(0xbfe018d371fddb18),UINT64_C(0x3fa9b59bc17ac420),UINT64_C(0x3fe9e10761ac89a6),UINT64_C(0x3feb455755894456),UINT64_C(0x3fe406f0891be619),UINT64_C(0x3fe7ddeec22369f7),UINT64_C(0x3fe1e0764bf9f33b),UINT64_C(0x3fdfa660853c677c)},
+        {UINT64_C(0x428e203af977a18e),UINT64_C(0xc298892c0c8a0e4a),UINT64_C(0xc2817566ede808aa),UINT64_C(0xc29ab52861bdac95),UINT64_C(0x42922dcef65374eb),UINT64_C(0x429d55f756a6f43b),UINT64_C(0xc257b8182af81b30),UINT64_C(0x4271d319af2e62bc),UINT64_C(0xc29018d371fddb18),UINT64_C(0x4259b59bc17ac420),UINT64_C(0x4299e10761ac89a6),UINT64_C(0x429b455755894456),UINT64_C(0x429406f0891be619),UINT64_C(0x4297ddeec22369f7),UINT64_C(0x4291e0764bf9f33b),UINT64_C(0x428fa660853c677c)},
+        {UINT64_C(0x433e203af977a18e),UINT64_C(0xc348892c0c8a0e4a),UINT64_C(0xc3317566ede808aa),UINT64_C(0xc34ab52861bdac95),UINT64_C(0x43422dcef65374eb),UINT64_C(0x434d55f756a6f43b),UINT64_C(0xc307b8182af81b30),UINT64_C(0x4321d319af2e62bc),UINT64_C(0xc34018d371fddb18),UINT64_C(0x4309b59bc17ac420),UINT64_C(0x4349e10761ac89a6),UINT64_C(0x434b455755894456),UINT64_C(0x434406f0891be619),UINT64_C(0x4347ddeec22369f7),UINT64_C(0x4341e0764bf9f33b),UINT64_C(0x433fa660853c677c)}};
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(int j=0;j<3;++j){const auto& d=ds[j];n4m_search_space_t* s=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&s)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(s,"x",d[0],d[1],d[2],0)==N4M_OK);auto opts=default_opts();opts.sampler=N4M_SAMPLER_RANDOM;opts.seed=19;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,s,&opts,&o)==N4M_OK);
+        for(auto expected:values[j]){n4m_trial_t* t=nullptr;double x=0;std::uint64_t raw=0;std::int64_t id=0;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&t)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&x)==N4M_OK);std::memcpy(&raw,&x,sizeof(x));N4M_TEST_REQUIRE(raw==expected);N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(o,id,0)==N4M_OK);}n4m_optimizer_destroy(o);n4m_search_space_destroy(s);}
+    n4m_context_destroy(ctx);
+}
+
+void test_t4f_staged_all_samplers() {
+    const double c=std::ldexp(1.,-53);const n4m_sampler_kind_t samplers[]={N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    const double ds[][3]={{-1.,1.-std::ldexp(1.,-52),3*c},{-0.5,0.5-c,1.5*c},{-1.,1.,3*c},{-std::ldexp(1.,43),std::ldexp(1.,43),3./1024.},{-std::ldexp(1.,54),std::ldexp(1.,54),6.},{-1.,1.,1.25*c},{-1.,1.,1.5*c}};
+    for(auto sampler:samplers)for(const auto& d:ds)domain_stages(d[0],d[1],false,0,sampler,19,false,d[2],false);
+}
+
+void test_t4f_queued_checkpoint() {
+    const double c=std::ldexp(1.,-53);const double ds[][3]={{-1.,1.-std::ldexp(1.,-52),3*c},{-0.5,0.5-c,1.5*c},{-1.,1.,3*c},{-std::ldexp(1.,43),std::ldexp(1.,43),3./1024.},{-std::ldexp(1.,54),std::ldexp(1.,54),6.},{-1.,1.,1.25*c},{-1.,1.,1.5*c}};const n4m_sampler_kind_t samplers[]={N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(const auto& d:ds)for(auto sampler:samplers){n4m_search_space_t* space=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",d[0],d[1],d[2],0)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"aux",0,1,0,0)==N4M_OK);auto opts=default_opts();opts.sampler=sampler;opts.seed=19;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&o)==N4M_OK);const char* names[]={"x","aux"};double vals[]={d[0],0.25};
+        const bool unsupported=sampler==N4M_SAMPLER_GA||sampler==N4M_SAMPLER_PSO||sampler==N4M_SAMPLER_CMAES||sampler==N4M_SAMPLER_GP_EI;auto status=n4m_optimizer_enqueue(o,names,vals,2);if(unsupported){N4M_TEST_REQUIRE(status==N4M_ERR_UNSUPPORTED);}else{N4M_TEST_REQUIRE(status==N4M_OK);auto blob=save_checkpoint(o);n4m_optimizer_t* copy=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK);int32_t same=0;N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(o,copy,&same)==N4M_OK&&same==1);
+            for(int i=0;i<6;++i){n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=0,bi=0;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&a)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_ask(copy,&b)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(b,&bi)==N4M_OK&&ai==bi);for(const char* name:{"x","aux"}){double x=0,y=0;N4M_TEST_REQUIRE(n4m_trial_get_float(a,name,&x)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(b,name,&y)==N4M_OK);N4M_TEST_REQUIRE(std::memcmp(&x,&y,sizeof(x))==0);if(i==0&&std::string(name)=="x")N4M_TEST_REQUIRE(x==d[0]);}N4M_TEST_REQUIRE(n4m_optimizer_tell(o,ai,0.5)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}n4m_optimizer_destroy(copy);}
+        n4m_optimizer_destroy(o);n4m_search_space_destroy(space);}n4m_context_destroy(ctx);
+}
+
+void test_domain_log_enqueue() {
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (auto sampler : {N4M_SAMPLER_RANDOM, N4M_SAMPLER_TPE, N4M_SAMPLER_GP_EI}) {
+        for (bool integer : {false, true}) {
+            n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+            const double low = integer ? 1e15 : 1e300;
+            const double high = integer ? 1e15 + 2 : 1e300 * (1 + 1e-14);
+            if (integer) N4M_TEST_REQUIRE(n4m_search_space_add_int(space, "x", 1000000000000000LL, 1000000000000002LL, 1, 1) == N4M_OK);
+            else N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", low, high, 0, 1) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "aux", 0, 1, 0, 0) == N4M_OK);
+            auto opts = default_opts(); opts.seed = 19; opts.sampler = sampler;
+            n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &opts, &opt) == N4M_OK);
+            const char* names[] = {"x", "aux"}; const double middle = integer ? low + 1 : low + (high-low)/2;
+            N4M_TEST_REQUIRE(middle > low && middle < high);
+            for (double value : {low, high, middle}) {
+                const double values[] = {value, 0.25};
+                const auto status = n4m_optimizer_enqueue(opt, names, values, 2);
+                N4M_TEST_REQUIRE(status == (sampler == N4M_SAMPLER_GP_EI ? N4M_ERR_UNSUPPORTED : N4M_OK));
+            }
+            if (sampler != N4M_SAMPLER_GP_EI) for (double value : {low, high, middle}) {
+                n4m_trial_t* trial = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+                if (integer) { std::int64_t x = 0; N4M_TEST_REQUIRE(n4m_trial_get_int(trial, "x", &x) == N4M_OK); N4M_TEST_REQUIRE(static_cast<double>(x) == value); }
+                else { double x = 0; N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "x", &x) == N4M_OK); N4M_TEST_REQUIRE(std::memcmp(&x, &value, sizeof(x)) == 0); }
+                std::int64_t id = -1; N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_optimizer_tell(opt, id, 0.5) == N4M_OK);
+            }
+            n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+        }
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_domain_span_oracle() {
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    std::uint64_t state = 19;
+    auto draw = [&]() { state ^= state << 13; state ^= state >> 7; state ^= state << 17; double v = 0; std::memcpy(&v, &state, sizeof(v)); return v; };
+    int count = 0;
+    while (count < 1000) {
+        double low = draw(), high = draw();
+        if (!std::isfinite(low) || !std::isfinite(high)) continue;
+        if (low > high) std::swap(low, high);
+        const bool reject = high / 2 - low / 2 > std::numeric_limits<double>::max() / 2;
+        for (bool tuple : {false, true}) {
+            n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+            if (tuple) N4M_TEST_REQUIRE(n4m_search_space_add_sorted_tuple(space, "x", 2, low, high, 0) == N4M_OK);
+            else N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", low, high, 0, 0) == N4M_OK);
+            auto options = default_opts(); options.seed = 19;
+            n4m_optimizer_t* opt = nullptr;
+            N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &options, &opt) == (reject ? N4M_ERR_INVALID_ARGUMENT : N4M_OK));
+            if (opt != nullptr) n4m_optimizer_destroy(opt);
+            n4m_search_space_destroy(space);
+        }
+        ++count;
+    }
+    n4m_context_destroy(ctx);
+}
+
+
+// Trial records are located by name, value, category metadata and rank.
+std::vector<std::uint8_t> loader_grid_mutate(const std::vector<std::uint8_t>& source,
+                                            double old_value, double new_value, std::size_t rank, std::size_t expected_matches = 3,
+                                            const std::string& name = "x") {
+    const std::size_t value_offset = 4 + name.size();
+    std::vector<std::uint8_t> marker(value_offset + 8 + 4 + 4 + 1, 0);
+    checkpoint_write_u32(marker, 0, static_cast<std::uint32_t>(name.size()));
+    std::copy(name.begin(), name.end(), marker.begin() + 4);
+    std::uint64_t bits = 0; std::memcpy(&bits, &old_value, 8); checkpoint_write_u64(marker, value_offset, bits);
+    checkpoint_write_u32(marker, value_offset + 8, UINT32_MAX); marker.back() = 1;
+    std::vector<std::size_t> hits;
+    for (std::size_t i = 0; i + marker.size() <= source.size() - 8; ++i)
+        if (std::equal(marker.begin(), marker.end(), source.begin() + static_cast<std::ptrdiff_t>(i))) hits.push_back(i + value_offset);
+    N4M_TEST_REQUIRE(hits.size() == expected_matches && rank < hits.size());
+    auto result = source; std::memcpy(&bits, &new_value, 8);
+    checkpoint_write_u64(result, hits[rank], bits); checkpoint_refresh_checksum(result);
+    for (std::size_t i = 0; i < source.size() - 8; ++i)
+        if (i < hits[rank] || i >= hits[rank] + 8) N4M_TEST_REQUIRE(result[i] == source[i]);
+    return result;
+}
+
+void test_loader_grid_status_and_rank() {
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (auto status : {N4M_TRIAL_RUNNING, N4M_TRIAL_COMPLETED, N4M_TRIAL_FAILED,
+                        N4M_TRIAL_CANCELLED, N4M_TRIAL_PRUNED}) {
+        for (std::size_t rank = 0; rank < 3; ++rank) {
+            n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+            N4M_TEST_REQUIRE(n4m_search_space_add_float(space, "x", 0, 4, 2, 0) == N4M_OK);
+            auto options = default_opts(); options.sampler = N4M_SAMPLER_RANDOM;
+            n4m_optimizer_t* opt = nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx, space, &options, &opt) == N4M_OK);
+            for (std::size_t i = 0; i < 3; ++i) {
+                const char* names[] = {"x"}; double values[] = {2};
+                N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt, names, values, 1) == N4M_OK);
+                n4m_trial_t* trial = nullptr; std::int64_t id = -1; double actual = 0;
+                N4M_TEST_REQUIRE(n4m_optimizer_ask(opt, &trial) == N4M_OK);
+                N4M_TEST_REQUIRE(n4m_trial_get_float(trial, "x", &actual) == N4M_OK && actual == 2);
+                N4M_TEST_REQUIRE(n4m_trial_get_id(trial, &id) == N4M_OK);
+                auto current = i == rank ? status : N4M_TRIAL_COMPLETED;
+                if (current != N4M_TRIAL_RUNNING) {
+                    const char* error = (current == N4M_TRIAL_FAILED || current == N4M_TRIAL_CANCELLED)
+                        ? "n4m.error.v1|GRID_TEST|0|fixture" : nullptr;
+                    N4M_TEST_REQUIRE(n4m_optimizer_tell_result(opt, id, current, 0.25, error) == N4M_OK);
+                }
+            }
+            auto damaged = loader_grid_mutate(save_checkpoint(opt), 2, 3, rank);
+            n4m_optimizer_t* out = reinterpret_cast<n4m_optimizer_t*>(1);
+            N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, damaged.data(), damaged.size(), &out) == N4M_ERR_CORRUPT_BUFFER);
+            N4M_TEST_REQUIRE(out == nullptr);
+            n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+        }
+    }
+    n4m_context_destroy(ctx);
+}
+
+
+void test_loader_grid_negative_domains() {
+    struct Case { bool integer; double low, high, step, old_value, new_value; };
+    const double h = std::ldexp(1.0, 53), p = std::ldexp(1.0, 52);
+    const Case cases[] = {
+        {false,0,4,2,2,std::nextafter(2.0, std::numeric_limits<double>::infinity())},
+        {true,0,10,3,6,7}, {true,0,10,3,9,10}, {true,h-3,h,2,h-1,h},
+        {false,0,1,0.1,0.30000000000000004,0.35},
+        {false,0,1,0.1,0.30000000000000004,0.3},
+        {false,0,1,0.1,0.30000000000000004,std::nextafter(0.30000000000000004, std::numeric_limits<double>::infinity())},
+        {false,-1,1,3*std::ldexp(1.0,-53),-1,-1+std::ldexp(1.0,-53)},
+        {false,p,p+16,8,p+8,p+1},
+    };
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (const auto& c : cases) {
+        n4m_search_space_t* space = nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space) == N4M_OK);
+        if (c.integer) N4M_TEST_REQUIRE(n4m_search_space_add_int(space,"x",static_cast<std::int64_t>(c.low),static_cast<std::int64_t>(c.high),static_cast<std::int64_t>(c.step),0) == N4M_OK);
+        else N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",c.low,c.high,c.step,0) == N4M_OK);
+        auto options=default_opts(); options.sampler=N4M_SAMPLER_RANDOM;
+        n4m_optimizer_t* opt=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&options,&opt)==N4M_OK);
+        const char* names[]={"x"}; double values[]={c.old_value};
+        N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt,names,values,1)==N4M_OK);
+        n4m_trial_t* trial=nullptr; std::int64_t id=-1; N4M_TEST_REQUIRE(n4m_optimizer_ask(opt,&trial)==N4M_OK);
+        if (c.integer) { std::int64_t v=0; N4M_TEST_REQUIRE(n4m_trial_get_int(trial,"x",&v)==N4M_OK && static_cast<double>(v)==c.old_value); }
+        else { double v=0; N4M_TEST_REQUIRE(n4m_trial_get_float(trial,"x",&v)==N4M_OK && v==c.old_value); }
+        N4M_TEST_REQUIRE(n4m_trial_get_id(trial,&id)==N4M_OK); N4M_TEST_REQUIRE(n4m_optimizer_tell(opt,id,0.25)==N4M_OK);
+        auto damaged=loader_grid_mutate(save_checkpoint(opt),c.old_value,c.new_value,0,1);
+        n4m_optimizer_t* out=reinterpret_cast<n4m_optimizer_t*>(1);
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,damaged.data(),damaged.size(),&out)==N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(out==nullptr); n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+
+void test_loader_grid_valid_patch_and_signed_zero() {
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for (int j=0;j<2;++j) {
+        const double original=j ? 0.0 : 2.0, replacement=j ? -0.0 : 4.0;
+        n4m_search_space_t* space=nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",0,4,2,0)==N4M_OK);
+        auto options=default_opts(); options.sampler=N4M_SAMPLER_RANDOM;
+        n4m_optimizer_t* opt=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&options,&opt)==N4M_OK);
+        const char* names[]={"x"}; double vals[]={original}; N4M_TEST_REQUIRE(n4m_optimizer_enqueue(opt,names,vals,1)==N4M_OK);
+        n4m_trial_t* trial=nullptr; std::int64_t id=-1; N4M_TEST_REQUIRE(n4m_optimizer_ask(opt,&trial)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_trial_get_id(trial,&id)==N4M_OK); N4M_TEST_REQUIRE(n4m_optimizer_tell(opt,id,0.25)==N4M_OK);
+        auto blob=loader_grid_mutate(save_checkpoint(opt),original,replacement,0,1);
+        n4m_optimizer_t *a=nullptr,*b=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&a)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&b)==N4M_OK);
+        int32_t same=0; N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(opt,a,&same)==N4M_OK && same==1);
+        n4m_method_result_t* history=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_get_trials(a,0,&history)==N4M_OK);
+        const double* values=nullptr; std::int64_t rows=0,cols=0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_double_matrix(history,"trial_param_values",&values,&rows,&cols)==N4M_OK);
+        N4M_TEST_REQUIRE(rows==1 && cols==1 && std::memcmp(values,&replacement,sizeof(double))==0);
+        n4m_method_result_destroy(history); domain_compare_history(a,b);
+        for(int i=0;i<6;++i) { n4m_trial_t *x=nullptr,*y=nullptr; std::int64_t xi=-1,yi=-1; double xv=0,yv=0;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(a,&x)==N4M_OK && n4m_optimizer_ask(b,&y)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_id(x,&xi)==N4M_OK && n4m_trial_get_id(y,&yi)==N4M_OK && xi==yi);
+            N4M_TEST_REQUIRE(n4m_trial_get_float(x,"x",&xv)==N4M_OK && n4m_trial_get_float(y,"x",&yv)==N4M_OK && std::memcmp(&xv,&yv,sizeof(double))==0);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(a,xi,0.5)==N4M_OK && n4m_optimizer_tell(b,yi,0.5)==N4M_OK);
+        }
+        n4m_optimizer_destroy(a); n4m_optimizer_destroy(b); n4m_optimizer_destroy(opt); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+std::vector<std::uint8_t> loader_grid_hex(const std::string& text) {
+    std::vector<std::uint8_t> bytes; N4M_TEST_REQUIRE(text.size() % 2 == 0);
+    for (std::size_t i=0; i<text.size(); i+=2) bytes.push_back(static_cast<std::uint8_t>(std::stoul(text.substr(i,2), nullptr, 16)));
+    return bytes;
+}
+void test_loader_grid_categorical_signed_zero() {
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    n4m_search_space_t* space=nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+    const double choices[]={0,1}; N4M_TEST_REQUIRE(n4m_search_space_add_categorical(space,"x",N4M_CAT_FLOAT,choices,2)==N4M_OK);
+    auto options=default_opts(); options.sampler=N4M_SAMPLER_RANDOM; options.seed=19;
+    n4m_optimizer_t* original=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&options,&original)==N4M_OK);
+    const char* names[]={"x"}; double input[]={0}; N4M_TEST_REQUIRE(n4m_optimizer_enqueue(original,names,input,1)==N4M_OK);
+    n4m_trial_t* trial=nullptr;std::int64_t id=-1;int32_t category=-1;const char* label=nullptr;
+    N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&trial)==N4M_OK);
+    N4M_TEST_REQUIRE(n4m_trial_get_category(trial,"x",&category,&label)==N4M_OK && category==0);
+    N4M_TEST_REQUIRE(n4m_trial_get_id(trial,&id)==N4M_OK && n4m_optimizer_tell(original,id,0.25)==N4M_OK);
+    auto raw=save_checkpoint(original),blob=raw; std::vector<std::uint8_t> marker(17,0);checkpoint_write_u32(marker,0,1);marker[4]='x';
+    std::vector<std::size_t> hits;for(std::size_t i=0;i+marker.size()<=raw.size()-8;++i)
+        if(std::equal(marker.begin(),marker.end(),raw.begin()+static_cast<std::ptrdiff_t>(i))) hits.push_back(i+5);
+    N4M_TEST_REQUIRE(hits.size()==1);checkpoint_write_u64(blob,hits[0],UINT64_C(0x8000000000000000));checkpoint_refresh_checksum(blob);
+    for(std::size_t i=0;i<raw.size()-8;++i)if(i<hits[0]||i>=hits[0]+8)N4M_TEST_REQUIRE(raw[i]==blob[i]);
+    n4m_optimizer_t* copy=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK);int32_t same=0;
+    N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(original,copy,&same)==N4M_OK && same==1);
+    n4m_method_result_t* hist=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_get_trials(copy,0,&hist)==N4M_OK);
+    const double* values=nullptr;std::int64_t rows=0,cols=0;N4M_TEST_REQUIRE(n4m_method_result_get_double_matrix(hist,"trial_param_values",&values,&rows,&cols)==N4M_OK && rows==1 && cols==1 && std::signbit(values[0]));n4m_method_result_destroy(hist);
+    for(int i=0;i<6;++i){n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=-1,bi=-1;int32_t av=-1,bv=-1;const char *al=nullptr,*bl=nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&a)==N4M_OK && n4m_optimizer_ask(copy,&b)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK && n4m_trial_get_id(b,&bi)==N4M_OK && ai==bi);
+        N4M_TEST_REQUIRE(n4m_trial_get_category(a,"x",&av,&al)==N4M_OK && n4m_trial_get_category(b,"x",&bv,&bl)==N4M_OK && av==bv);
+        N4M_TEST_REQUIRE(n4m_optimizer_tell(original,ai,0.5)==N4M_OK && n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}
+    n4m_optimizer_destroy(copy);n4m_optimizer_destroy(original);n4m_search_space_destroy(space);n4m_context_destroy(ctx);
+}
+
+void test_loader_grid_unstepped_controls() {
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(int kind=0;kind<4;++kind) {
+        n4m_search_space_t* space=nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+        if(kind==0) N4M_TEST_REQUIRE(n4m_search_space_add_int(space,"x",1,1000,1,1)==N4M_OK);
+        if(kind==1) N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",1,1000,0,1)==N4M_OK);
+        if(kind==2) N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",0,4,0,0)==N4M_OK);
+        if(kind==3) N4M_TEST_REQUIRE(n4m_search_space_add_sorted_tuple(space,"x",2,0,4,0)==N4M_OK);
+        auto options=default_opts(); options.sampler=N4M_SAMPLER_RANDOM; options.seed=19;
+        n4m_optimizer_t* original=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&options,&original)==N4M_OK);
+        const char* names[]={"x"}; double input[]={kind==2?2.0:10.0};
+        if(kind!=3) N4M_TEST_REQUIRE(n4m_optimizer_enqueue(original,names,input,1)==N4M_OK);
+        n4m_trial_t* trial=nullptr;std::int64_t id=-1;N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&trial)==N4M_OK);
+        double old_value=input[0],replacement=kind==2?3.0:11.0; std::string target="x";
+        if(kind==3) {target="x#0";N4M_TEST_REQUIRE(n4m_trial_get_float(trial,target.c_str(),&old_value)==N4M_OK && old_value>0);replacement=0;}
+        N4M_TEST_REQUIRE(n4m_trial_get_id(trial,&id)==N4M_OK && n4m_optimizer_tell(original,id,0.25)==N4M_OK);
+        auto blob=loader_grid_mutate(save_checkpoint(original),old_value,replacement,0,1,target);n4m_optimizer_t* copy=nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK);int32_t same=0;
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(original,copy,&same)==N4M_OK && same==1);
+        n4m_method_result_t* hist=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_get_trials(copy,0,&hist)==N4M_OK);
+        const double* values=nullptr;std::int64_t rows=0,cols=0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_double_matrix(hist,"trial_param_values",&values,&rows,&cols)==N4M_OK && rows==1 && cols==(kind==3?2:1));
+        N4M_TEST_REQUIRE(std::memcmp(values,&replacement,8)==0);n4m_method_result_destroy(hist);
+        for(int i=0;i<6;++i) {n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=-1,bi=-1;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&a)==N4M_OK && n4m_optimizer_ask(copy,&b)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK && n4m_trial_get_id(b,&bi)==N4M_OK && ai==bi);
+            for(const char* name : kind==3 ? std::vector<const char*>{"x#0","x#1"} : std::vector<const char*>{"x"}) {
+                if(kind==0) {std::int64_t x=0,y=0;N4M_TEST_REQUIRE(n4m_trial_get_int(a,name,&x)==N4M_OK && n4m_trial_get_int(b,name,&y)==N4M_OK && x==y);}
+                else {double x=0,y=0;N4M_TEST_REQUIRE(n4m_trial_get_float(a,name,&x)==N4M_OK && n4m_trial_get_float(b,name,&y)==N4M_OK && std::memcmp(&x,&y,8)==0);}}
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(original,ai,0.5)==N4M_OK && n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}
+        n4m_optimizer_destroy(copy);n4m_optimizer_destroy(original);n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_loader_grid_generated_tolerance_aligned_high() {
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(int k : {5,13,17}) {
+        const double high=std::nextafter(k*0.1,-std::numeric_limits<double>::infinity());
+        n4m_search_space_t* space=nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",0,high,0.1,0)==N4M_OK);
+        auto options=default_opts(); options.sampler=N4M_SAMPLER_RANDOM; options.seed=19;
+        n4m_optimizer_t* original=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&options,&original)==N4M_OK);
+        bool found=false;
+        for(int i=0;i<512 && !found;++i) {n4m_trial_t* trial=nullptr;std::int64_t id=-1;double value=0;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&trial)==N4M_OK); N4M_TEST_REQUIRE(n4m_trial_get_float(trial,"x",&value)==N4M_OK);
+            found=std::memcmp(&value,&high,8)==0; N4M_TEST_REQUIRE(n4m_trial_get_id(trial,&id)==N4M_OK); N4M_TEST_REQUIRE(n4m_optimizer_tell(original,id,0.25)==N4M_OK);}
+        N4M_TEST_REQUIRE(found); auto blob=save_checkpoint(original); n4m_optimizer_t* copy=nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK); int32_t same=0;
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(original,copy,&same)==N4M_OK && same==1); domain_compare_history(original,copy);
+        for(int i=0;i<6;++i) {n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=-1,bi=-1;double av=0,bv=0;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&a)==N4M_OK && n4m_optimizer_ask(copy,&b)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK && n4m_trial_get_id(b,&bi)==N4M_OK && ai==bi);
+            N4M_TEST_REQUIRE(n4m_trial_get_float(a,"x",&av)==N4M_OK && n4m_trial_get_float(b,"x",&bv)==N4M_OK && std::memcmp(&av,&bv,8)==0);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(original,ai,0.5)==N4M_OK && n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}
+        n4m_optimizer_destroy(copy); n4m_optimizer_destroy(original); n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
+}
+
+void test_loader_grid_decimal_queue_replay() {
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    n4m_search_space_t* space=nullptr; N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);
+    N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",0,1,0.1,0)==N4M_OK);
+    auto options=default_opts(); options.sampler=N4M_SAMPLER_RANDOM;
+    n4m_optimizer_t* original=nullptr; N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&options,&original)==N4M_OK);
+    const char* names[]={"x"}; double input[]={0.3}; N4M_TEST_REQUIRE(n4m_optimizer_enqueue(original,names,input,1)==N4M_OK);
+    auto raw=save_checkpoint(original); const double snapped=0.30000000000000004;
+    std::vector<std::uint8_t> marker(13,0); checkpoint_write_u32(marker,0,1); marker[4]='x';
+    std::uint64_t bits=0; std::memcpy(&bits,&snapped,8); checkpoint_write_u64(marker,5,bits);
+    std::vector<std::size_t> hits; for(std::size_t i=0;i+marker.size()<=raw.size()-8;++i)
+        if(std::equal(marker.begin(),marker.end(),raw.begin()+static_cast<std::ptrdiff_t>(i))) hits.push_back(i+5);
+    N4M_TEST_REQUIRE(hits.size()==1);
+    for(double value : {0.3,0.35}) {
+        auto changed=raw; std::memcpy(&bits,&value,8); checkpoint_write_u64(changed,hits[0],bits); checkpoint_refresh_checksum(changed);
+        for(std::size_t i=0;i<raw.size()-8;++i) if(i<hits[0]||i>=hits[0]+8) N4M_TEST_REQUIRE(raw[i]==changed[i]);
+        n4m_optimizer_t* copy=nullptr; auto status=n4m_optimizer_load(ctx,changed.data(),changed.size(),&copy);
+        if(value==0.35) {N4M_TEST_REQUIRE(status==N4M_ERR_CORRUPT_BUFFER && copy==nullptr);continue;}
+        N4M_TEST_REQUIRE(status==N4M_OK && copy!=nullptr); int32_t same=0;
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(original,copy,&same)==N4M_OK && same==1);
+        for(int j=0;j<6;++j) {n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=-1,bi=-1;double av=0,bv=0;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(original,&a)==N4M_OK && n4m_optimizer_ask(copy,&b)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK && n4m_trial_get_id(b,&bi)==N4M_OK && ai==bi);
+            N4M_TEST_REQUIRE(n4m_trial_get_float(a,"x",&av)==N4M_OK && n4m_trial_get_float(b,"x",&bv)==N4M_OK && std::memcmp(&av,&bv,8)==0);
+            if(j==0) N4M_TEST_REQUIRE(std::memcmp(&av,&snapped,8)==0);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(original,ai,0.5)==N4M_OK && n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);
+        }
+        n4m_optimizer_destroy(copy);
+    }
+    n4m_optimizer_destroy(original); n4m_search_space_destroy(space); n4m_context_destroy(ctx);
+}
+
+void test_loader_grid_control_stages() {
+    constexpr double h=9007199254740992.0;
+    const double d=std::numeric_limits<double>::denorm_min();
+    const double cases[][3]={{-h,-h+2,1},{1000,1002,1},{h-3,h-1,1},{h-4,h,2},
+        {140737488355328.0,140737488355331.0,4},{1000,1003,2},
+        {0,1,0.1},{0,0.7,0.1},{0.1,0.7,0.2},{0,0.3,0.1},
+        {-1,1,0.25},{d,5*d,d},{1-std::ldexp(1.,-52),1,std::ldexp(1.,-52)},
+        {1152921504606847000.0,1152921504606848000.0,200}};
+    const n4m_sampler_kind_t samplers[]={N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    for (const auto& c:cases) for(auto sampler:samplers) domain_stages(c[0],c[1],false,0,sampler,19,false,c[2],false);
+}
+
+void test_loader_grid_control_queued() {
+    const double h=9007199254740992.0, d=std::numeric_limits<double>::denorm_min();
+    const double ds[][3]={{-h,-h+2,1},{1000,1002,1},{h-3,h-1,1},{h-4,h,2},
+        {140737488355328.0,140737488355331.0,4},{1000,1003,2},
+        {0,1,0.1},{0,0.7,0.1},{0.1,0.7,0.2},{0,0.3,0.1},
+        {-1,1,0.25},{d,5*d,d},{1-std::ldexp(1.,-52),1,std::ldexp(1.,-52)},
+        {1152921504606847000.0,1152921504606848000.0,200}};
+    const n4m_sampler_kind_t samplers[]={N4M_SAMPLER_RANDOM,N4M_SAMPLER_SOBOL,N4M_SAMPLER_LHS,N4M_SAMPLER_TERNARY,N4M_SAMPLER_GA,N4M_SAMPLER_PSO,N4M_SAMPLER_CMAES,N4M_SAMPLER_TPE,N4M_SAMPLER_GP_EI};
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(const auto& dom:ds)for(auto sampler:samplers){n4m_search_space_t* space=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",dom[0],dom[1],dom[2],0)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"aux",0,1,0,0)==N4M_OK);auto opts=default_opts();opts.sampler=sampler;opts.seed=19;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&o)==N4M_OK);const char* names[]={"x","aux"};double vals[]={dom[0],0.25};
+        const bool unsupported=sampler==N4M_SAMPLER_GA||sampler==N4M_SAMPLER_PSO||sampler==N4M_SAMPLER_CMAES||sampler==N4M_SAMPLER_GP_EI;auto status=n4m_optimizer_enqueue(o,names,vals,2);if(unsupported){N4M_TEST_REQUIRE(status==N4M_ERR_UNSUPPORTED);}else{N4M_TEST_REQUIRE(status==N4M_OK);auto blob=save_checkpoint(o);n4m_optimizer_t* copy=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK);int32_t same=0;N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(o,copy,&same)==N4M_OK&&same==1);
+            for(int i=0;i<6;++i){n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=0,bi=0;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&a)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_ask(copy,&b)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(b,&bi)==N4M_OK&&ai==bi);for(const char* name:{"x","aux"}){double x=0,y=0;N4M_TEST_REQUIRE(n4m_trial_get_float(a,name,&x)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(b,name,&y)==N4M_OK);N4M_TEST_REQUIRE(std::memcmp(&x,&y,sizeof(x))==0);if(i==0&&std::string(name)=="x")N4M_TEST_REQUIRE(x==dom[0]);}N4M_TEST_REQUIRE(n4m_optimizer_tell(o,ai,0.5)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}n4m_optimizer_destroy(copy);}
+        n4m_optimizer_destroy(o);n4m_search_space_destroy(space);}n4m_context_destroy(ctx);
+}
+
+
+void test_loader_grid_retained_positives() {
+    const char* fixtures[]={
+        "4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000040ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90",
+        "4e344d4f50540d0a01000000200000007002000000000000480200000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a0000001300000000000000000000000000000000000000000000000000000067f029fde5e6dd784726ef02764c053f040000000000000007000000000000000400000000000000000000000100000001000000780000000000001040ffffffff000000000101000000000000000000000001ed69c16ab099f13e000000000000000000000000000001000000000000005b5344792bba013f0000000000000000000000000001000000000000000100000001000000780000000000000000ffffffff000000000101000000000000000000d03f011e57379fb9d5d33e000000000000020000000000000003000000000000005542bc1dfd09f03e0000000000000000000000000002000000000000000100000001000000780000000000000040ffffffff000000000101000000000000000000e03f01749c94afefb6c73e00000000000004000000000000000500000000000000f7ece98563dfe33e0000000000000000000000000003000000000000000100000001000000780000000000000000ffffffff00000000010000000000000000000000000000000000000000000000000000000600000000000000ffffffffffffffffc30c41993c21d83e000000000000000000000000000000000000000000ea62d91a7b3f7b9c",
+    };
+    n4m_context_t* ctx=nullptr;N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    for(int k=0;k<2;++k){auto blob=loader_grid_hex(fixtures[k]);n4m_optimizer_t *a=nullptr,*b=nullptr;
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&a)==N4M_OK);
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&b)==N4M_OK);int32_t same=0;
+        N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(a,b,&same)==N4M_OK && same==1);domain_compare_history(a,b);
+        if(k==1) {N4M_TEST_REQUIRE(n4m_optimizer_tell(a,3,0.5)==N4M_OK && n4m_optimizer_tell(b,3,0.5)==N4M_OK);}
+        for(int i=0;i<6;++i){n4m_trial_t *x=nullptr,*y=nullptr;std::int64_t xi=-1,yi=-1;double xv=0,yv=0;
+            N4M_TEST_REQUIRE(n4m_optimizer_ask(a,&x)==N4M_OK && n4m_optimizer_ask(b,&y)==N4M_OK);
+            N4M_TEST_REQUIRE(n4m_trial_get_id(x,&xi)==N4M_OK && n4m_trial_get_id(y,&yi)==N4M_OK && xi==yi);
+            N4M_TEST_REQUIRE(n4m_trial_get_float(x,"x",&xv)==N4M_OK && n4m_trial_get_float(y,"x",&yv)==N4M_OK && std::memcmp(&xv,&yv,8)==0);
+            N4M_TEST_REQUIRE(n4m_optimizer_tell(a,xi,0.5)==N4M_OK && n4m_optimizer_tell(b,yi,0.5)==N4M_OK);}
+        n4m_optimizer_destroy(a);n4m_optimizer_destroy(b);}
+    n4m_context_destroy(ctx);
+}
+
+void test_loader_grid_stale_checksum_control() {
+    auto blob=loader_grid_hex("4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000840ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90");
+    n4m_context_t* ctx=nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx)==N4M_OK);
+    n4m_optimizer_t* out=reinterpret_cast<n4m_optimizer_t*>(1);
+    N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&out)==N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(out==nullptr); n4m_context_destroy(ctx);
+}
+
+void test_loader_grid_genuine_fixture_rejection() {
+    const char* fixtures[] = {
+        "4e344d4f50540d0a010000002000000050010000000000002201000000000000fefd47e44137aed63c000000000000000100000001000000780000000000000000000000000000000000002440000000000000084001000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000db5912a55f50163f010000000000000002000000000000000100000000000000000000000100000001000000780000000000001c40ffffffff000000000101000000000000000000d03f01f44d02eab9c4f23e00000000000000000000000000000100000000000000f87c41c9ec45f73e00000000000000000000000000000000000000000000000000000079f206fca54cbe86",
+        "4e344d4f50540d0a010000002000000050010000000000002201000000000000fefd47e44137aed63c000000000000000100000001000000780000000000000000000000000000000000002440000000000000084001000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a00000013000000000000000000000000000000000000000000000000000000130000000000000049d81abe4359f13e010000000000000001000000000000000100000000000000000000000100000001000000780000000000001c40ffffffff00000000010000000000000000000000000000000000000000000000000000000000000000000000ffffffffffffffff2dd5cd116e3cdc3e00000000000000000000000000000000000000000000000000000055db2ba5873406ea",
+        "4e344d4f50540d0a0100000020000000500100000000000022010000000000007279c6e12b96c67b3c00000000000000010000000100000078010000000000000000000000000000000000f03f9a9999999999b93f00000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a00000013000000000000000000000000000000000000000000000000000000130000000000000086c613419c87f33e01000000000000000200000000000000010000000000000000000000010000000100000078333333333333d33fffffffff000000000101000000000000000000d03f0155a485752ab3dd3e00000000000000000000000000000100000000000000f008a9065ab4e23e0000000000000000000000000000000000000000000000000000008453efa0f3c528c4",
+        "4e344d4f50540d0a01000000200000005001000000000000220100000000000086412335e4f789433c0000000000000001000000010000007801000000000000000000f0bf000000000000f03f000000000000b83c00000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a00000013000000000000000000000000000000000000000000000000000000130000000000000060062128d08aec3e01000000000000000200000000000000010000000000000000000000010000000100000078ffffffffffffefbfffffffff000000000101000000000000000000d03f01aff75f0ab6e1d53e0000000000000000000000000000010000000000000068c24a93bf6cdc3e000000000000000000000000000000000000000000000000000000b80d6507cf98d4c0",
+        "4e344d4f50540d0a0100000020000000e001000000000000b1010000000000009e900a20946c3bd2af0000000000000002000000040000006d6f64650400000000000000000000000000000000000000000000000000000000000000000002000000030000006f6666020000006f6e020000000000000000000000000000000000f03f0000000000010000007801000000000000000000f03f0000000000001440000000000000004000000000000000000000000000000000000000010000000300000002000000010000007800000000040000006d6f6465020000006f6e0d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000ddfd5cfab8b2fb3e0100000000000000020000000000000001000000000000000000000002000000040000006d6f6465000000000000000000000000030000006f66660101000000780000000000001040ffffffff000000000001000000000000000000d03f0101153dd995e2df3e000000000000000000000000000001000000000000003f384ef356a9e53e000000000000000000000000000000000000000000000000000000006c2ea3ac43e1c8c2",
+        "4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000840ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000bd0d7ae11a381dfd",
+        "4e344d4f50540d0a01000000200000006001000000000000330100000000000022b6e27c4643864c3c000000000000000100000001000000780100000000000000000000000000000000001040000000000000004000000000000000000000000000000000000000000000000d9a23bd0a81229034000000000000000000000000000000000000000100000000000000000000000a000000130000000000000000000000000000000000000000000000000000001300000000000000748090c7341c343f010000000000000002000000000000000100000000000000000000000100000001000000780000000000000840ffffffff000000000101000000000000000000d03f01d3f96cf49cbaf33e00000000000000000000000000000100000000000000854533b992c92b3f00000000000000000000000000010000000100000001000000780000000000001040000000000000000000750c03c702595a90",
+    };
+    n4m_context_t* ctx = nullptr; N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (auto fixture : fixtures) {
+        auto blob = loader_grid_hex(fixture); n4m_optimizer_t* out = reinterpret_cast<n4m_optimizer_t*>(1);
+        N4M_TEST_REQUIRE(n4m_optimizer_load(ctx, blob.data(), blob.size(), &out) == N4M_ERR_CORRUPT_BUFFER);
+        N4M_TEST_REQUIRE(out == nullptr);
+    }
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_optimization_tests(n4m_testing::Runner& r) {
+    r.run("optimization: loader grid status and rank", test_loader_grid_status_and_rank);
+    r.run("optimization: loader grid valid patch and signed zero", test_loader_grid_valid_patch_and_signed_zero);
+    r.run("optimization: loader grid negative domains", test_loader_grid_negative_domains);
+    r.run("optimization: loader grid control queued", test_loader_grid_control_queued);
+    r.run("optimization: loader grid categorical signed zero", test_loader_grid_categorical_signed_zero);
+    r.run("optimization: loader grid unstepped controls", test_loader_grid_unstepped_controls);
+    r.run("optimization: loader grid tolerance aligned highs", test_loader_grid_generated_tolerance_aligned_high);
+    r.run("optimization: loader grid decimal queue replay", test_loader_grid_decimal_queue_replay);
+    r.run("optimization: loader grid control stages", test_loader_grid_control_stages);
+    r.run("optimization: loader grid retained positives", test_loader_grid_retained_positives);
+    r.run("optimization: loader grid stale checksum control", test_loader_grid_stale_checksum_control);
+    r.run("optimization: loader grid genuine fixtures", test_loader_grid_genuine_fixture_rejection);
+    r.run("optimization: T4f queued checkpoint", test_t4f_queued_checkpoint);
+    r.run("optimization: T4f staged all samplers", test_t4f_staged_all_samplers);
+    r.run("optimization: T4f R1 R2 adaptive bounds", test_t4f_r1_r2_adaptive_bounds);
+    r.run("optimization: T4f R3 own enqueue", test_t4f_r3_own_enqueue);
+    r.run("optimization: T4f R4 rational vectors", test_t4f_r4_pinned_rational_vectors);
+    r.run("optimization: scalar grid integer matrix", test_scalar_grid_integer_matrix_oracle);
+    r.run("optimization: scalar grid enqueue", test_scalar_grid_float_enqueue);
+    r.run("optimization: scalar grid wide oracle", test_scalar_grid_wide_pinned_oracle);
+    r.run("optimization: scalar grid stages", test_scalar_grid_stages);
+    r.run("optimization: scalar grid integer distribution", test_scalar_grid_integer_distribution);
+    r.run("optimization: scalar grid near ulp distribution", test_scalar_grid_near_ulp_distribution);
+    r.run("optimization: domain log enqueue", test_domain_log_enqueue);
+    r.run("optimization: domain GP guards", test_domain_gp_guards);
+    r.run("optimization: domain tuple random oracle", test_domain_tuple_random_oracle);
+    r.run("optimization: finite span stages", test_domain_finite_span_stages);
+    r.run("optimization: full log domain stages", test_domain_full_log_stages);
+    r.run("optimization: full tuple domain stages", test_domain_full_tuple_stages);
+    r.run("optimization: domain span oracle", test_domain_span_oracle);
+    r.run("optimization: domain overflow contract", test_domain_overflow_contract);
+    r.run("optimization: collapsed gp roundtrip", test_domain_collapsed_gp_roundtrip);
+    r.run("optimization: integer tuple bounds", test_domain_integer_tuple_bounds);
+    r.run("optimization: log checkpoint guard", test_log_checkpoint_guard);
+    r.run("optimization: log domain roundtrip", test_log_domain_roundtrip);
     r.run("optimization: options init", test_options_init);
     r.run("optimization: immutable configuration matches", test_optimizer_configuration_matches);
     r.run("optimization: immutable configuration options", test_optimizer_configuration_options);

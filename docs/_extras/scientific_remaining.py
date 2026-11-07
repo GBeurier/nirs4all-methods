@@ -1099,7 +1099,12 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Reducing additive and multiplicative scatter caused by particle size or optical path "
         "variation in diffuse-reflectance spectra.",
         "Near-constant spectra have unstable scale, and SNV removes absolute row amplitude that "
-        "may contain analyte information. It does not remove wavelength-dependent baselines.",
+        "may contain analyte information. It does not remove wavelength-dependent baselines. "
+        "For nonempty input, scaling requires `0 <= ddof < n_features`; an invalid "
+        "denominator is refused before output or bound writes, even for constant or non-finite "
+        "rows. A valid constant row keeps the zero-standard-deviation fallback. With "
+        "`with_std=False`, variance is unused and any nonnegative C-int `ddof` remains valid. "
+        "With centering disabled but scaling enabled, SD is still computed about the row mean.",
         "`n4m.transform.scatter.SNV` wraps `n4m_transform_snv_*`; row mean/variance and flags "
         "are in `preprocessing/scatter/snv.c`.",
         "https://doi.org/10.1366/0003702894202201; "

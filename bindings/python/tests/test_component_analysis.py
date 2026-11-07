@@ -140,6 +140,21 @@ def test_unaligned_input_buffers_are_marshaled_safely():
             min_samples_leaf=1,
         )
         assert result["state"] == "ready", result
+        # Unset max_depth/seed follow the native n4m_fanova_options_init_v1 defaults.
+        assert result["options"]["max_depth"] == 8
+        assert result["options"]["seed"] == 0
+        explicit = ca.fanova(
+            [[0], [1], [0], [1]],
+            [0, 1, 0, 1],
+            types,
+            [[0, 1]],
+            n_trees=4,
+            min_samples_leaf=1,
+            max_depth=3,
+            seed=42,
+        )
+        assert explicit["options"]["max_depth"] == 3
+        assert explicit["options"]["seed"] == 42
 
 
 def test_release_wheel_contains_enabled_backends_when_requested():

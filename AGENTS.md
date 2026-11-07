@@ -1,70 +1,59 @@
-# Repository Guidelines
+# Methods contributor instructions
 
-## Project Structure & Module Organization
+## Ownership and architecture
 
-`cpp/` contains the C++17 engine: public C ABI headers in `cpp/include/n4m/`,
-internal implementation in `cpp/src/core/`, ABI wrappers in `cpp/src/c_api/`,
-tests in `cpp/tests/`, and exported-symbol snapshots in `cpp/abi/`.
-`bindings/` holds language bindings; Python sources live under
-`bindings/python/src/{n4m,pls4all}` with tests in `bindings/python/tests/`.
-`catalog/` is the method and subset metadata source, with schemas and scripts.
-Use `docs/`, `parity/`, `benchmarks/`, and `.github/` for documentation,
-fixtures, performance/parity tooling, and issue/PR templates.
+- Methods owns numerical implementations, including existing duplicated production numerics, filters/augmentation and splitter algorithms.
+- Bindings adapt generic native fit/transform/predict/export roles, never maintain per-binding algorithm implementations/lists.
+- [DAG](../dag-ml/AGENTS.md) owns execution, variants, fold scheduling, selection and scoring context; [DMD](../dag-ml-data/AGENTS.md) owns data/identity constraints.
+- Preserve the specifically accepted generic identity-aligned conformal exception in DAG; it is not blanket numerical ownership.
+- C++17 is internal; public C11-compatible `n4m_*` headers contain no STL/Eigen/smart pointers or escaping exceptions. C API wrappers translate exceptions to status. Zero mandatory runtime deps; accelerators/tooling are optional/test-only.
+- Never free across languages: caller buffers or core-owned arrays released by the owner helper. Context error strings are invalidated by the next call. Matrix views carry explicit row/column strides; do not impose a boundary copy.
+- Closed-library model: methods/bindings/references/subsets enter via repository changes, not runtime plugins or bypasses of the public C ABI. `pls4all` is a packaging subset, not a second numerical engine.
+- Python uses ctypes.CDLL, releases the GIL during calls, and needs one Context per thread; do not share model/context handles across threads without the ABI's explicit contract. Avoid workers-times-threads oversubscription.
+- Start with [architecture](docs/ARCHITECTURE.md), [contributing](CONTRIBUTING.md), [testing](docs/dev/testing.md), [workflow](docs/dev/workflow.md) and the owned [operations note](docs/dev/agent_notes.md).
+- Sibling links are optional navigation.
 
-## Build, Test, and Development Commands
+- `docs/ARCHITECTURE.md` overrides this file when present, under current user scope and safety limits.
+- Methods supplies metric primitives; DAG owns metric definitions and scoring context. Shared fixtures qualify named profiles, not universal equivalence.
 
-- `make bootstrap`: enter the supported dev setup, preferring the devcontainer.
-- `make doctor`: verify required tools and paths.
-- `make build PRESET=dev-debug`: configure and build through CMake presets.
-- `make test PRESET=dev-debug`: run CTest for that preset.
-- `cmake --preset blas-omp && cmake --build --preset blas-omp -j`: production
-  build with BLAS and OpenMP.
-- `PYTHONPATH=bindings/python/src python -m pytest bindings/python/tests -q`:
-  run Python binding tests.
-- `python catalog/scripts/selftest.py && python catalog/scripts/validate.py`:
-  run the Phase B catalog parser and structural checks.
-- Full registry parity sweep with 8 native/sklearn jobs per cell:
-  `BENCH_SKLEARN_N_JOBS=8 python benchmarks/cross_binding/orchestrator.py --algorithms all --registry-cells --threads 8 --workers 1 --libn4m-build blas-omp --n-runs 2 --canonical-pls4all-only --reference-backends registry --timeout 180 --out-csv /tmp/n4m_full_parity.csv --force --flush-each-cell`.
+## Build and numerical checks
 
-## Coding Style & Naming Conventions
+- Use CMake presets, never hand-rolled build flags/directories.
+- `make bootstrap`/`make doctor` support setup; `make build PRESET=dev-debug` and `make test PRESET=dev-debug` wrap presets.
+- Optional production BLAS/OpenMP, CUDA and cross-target variants remain in operations.
+- Run CTest/doctest and relevant Python/R/Octave binding tests; numerical changes preserve/update justified parity fixtures/tolerances.
+- Full registry sweeps, thread/reference settings and overnight commands remain in operations; binding parity is distinct from reference parity.
+- Keep C++ clang-format/clang-tidy (4 spaces/100 columns/no tabs), typed Ruff-formatted Python, base R binding/tidyverse reference style and MATLAB/Octave intersection.
+- Use matching issue/PR templates and scoped Conventional Commits with exact parity/ABI checks.
 
-Use CMake presets; do not hand-roll build directories or flags. C++ is C++17
-with LLVM-derived `clang-format` settings: 4-space indentation, 100-column
-limit, no tabs. Public C headers must remain C11-compatible, `extern "C"` clean,
-and free of STL types or exceptions across the ABI. Exported C symbols use the
-`n4m_*` prefix. Internal names follow `.clang-tidy`: lower_case functions and
-variables, CamelCase types, UPPER_CASE macros. Python code should be type-hinted
-and formatted/linted with `ruff format` and `ruff check`.
+## Release / ABI gates
 
-## Testing Guidelines
+Three checks are **release blockers**; CI enforces them and any change that touches them needs the snapshots regenerated in the same PR:
 
-C++ tests use doctest behind CTest. Run `ctest --preset dev-release
---output-on-failure` before broad changes, and use
-`./build/dev-release/cpp/tests/n4m_tests --test-case="*aom*"` for focused
-filters. Keep test files named `test_<area>.cpp` or `test_<feature>.py`.
-Numerical changes must update or preserve parity fixtures and tolerances.
-Binding changes should include the relevant language test, for example
-`Rscript bindings/r/test_parity.R` for R parity.
+```bash
+# Version sync (header → all downstream manifests)
+scripts/bump_version.sh --check
 
-## Commit & Pull Request Guidelines
+# ABI symbol surface — must match exactly. If a new public n4m_* symbol is
+# intentional, regenerate the snapshot AND document in docs/abi/changes_log.md.
+nm -D --defined-only build/dev-release/cpp/src/libn4m.so.<ver> \
+  | awk '{print $3}' | sort -u \
+  | diff -u cpp/abi/expected_symbols_linux.txt -
 
-Recent history mixes Conventional Commits (`docs:`, `fix:`, `test:`) with
-phase and fixup commits. Prefer Conventional Commits with scopes when useful,
-such as `fix(abi): preserve symbol order`. PRs should use the matching template
-under `.github/PULL_REQUEST_TEMPLATE/`, link the issue template request when
-applicable, describe parity/ABI impact, and list the exact commands run.
+# SONAME / linkage sanity
+readelf -d build/dev-release/cpp/src/libn4m.so.<ver> \
+  | grep -E 'SONAME|NEEDED|RPATH|RUNPATH'
+```
 
-## Agent-Specific Instructions
+To regenerate the per-platform ABI snapshots after an intentional surface change, use `scripts/regen_abi_snapshots.sh`.
 
-Respect the closed-library model from `CONTRIBUTING.md`: new methods, bindings,
-references, and packaging subsets are added only through repository changes.
-Do not add runtime plugin hooks or bypass the public C ABI for bindings.
-During the Phase B catalog transition, edit `catalog/methods.yaml` and
-regenerate `catalog/methods/<id>.yaml` with `split_legacy_methods.py` until the
-legacy YAML is retired. Python bindings use `ctypes.CDLL` and release the GIL
-during native calls, but `n4m.Context` / `pls4all.Context` are not thread-safe;
-create one context per thread.
+ABI versioning (`N4M_ABI_VERSION_*` in `cpp/include/n4m/n4m_version.h`) is **independent of project version** and bumps only on surface change. `n4m_check_abi_compatibility(header_major, header_minor)` is how bindings detect header/runtime skew.
 
-## Language Policy
 
-All application and project content must be in English, including UI text, subtitles, tooltips, errors, documentation, comments and docstrings, test and fixture prose, reports, pull requests, commits, and generated content. Conversation with the maintainer may be in French. Preserve proper names, identifiers, filenames, source quotations, and historical or provenance records where translation would change their meaning or provenance.
+## Working rules
+
+- Read applicable local and deeper instructions before editing. Preserve dirty/concurrent work; make authorized owner fixes and propagate affected contracts/bindings/consumers. Do not reset another author's work.
+- Use CodeGraph FIRST for implementation navigation only if this checkout's root already has `.codegraph/`; use its exact projectPath or run the CLI here. Never auto-index or silently substitute an ancestor index.
+- Unindexed code and documentation use ordinary source navigation. Explicit source, tests and build tools are final authority. Owner links are navigation; this policy works without a parent workspace.
+- All application/project content is English: UI text/subtitles/tooltips/errors, docs/comments/docstrings, test/fixture prose, reports/issues/PRs, commits and generated material. Preserve identifiers, quotations and historical/provenance meaning; converse with the maintainer in French.
+- Do not commit credentials, private data, generated workspaces, caches or build outputs. Follow local licensing/fixture restrictions and report actual commands/exits/skips; a command reference grants no execution/publication permission.

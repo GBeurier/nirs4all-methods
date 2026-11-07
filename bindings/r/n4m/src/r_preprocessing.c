@@ -8,6 +8,7 @@
 #include <R.h>
 #include <R_ext/Arith.h>
 #include <Rinternals.h>
+#include <R_ext/Visibility.h>
 
 #include <limits.h>
 #include <math.h>
@@ -18,6 +19,36 @@
 
 static void r_pp_throw_status(const char* fn, n4m_status_t status) {
     Rf_error("%s failed: %s", fn, n4m_status_to_string(status));
+}
+
+/* SNV-only admission; shared by its legacy and generic role gateways. */
+static int r_snv_scalar(SEXP value, int flag, int* out) {
+    const int type = TYPEOF(value);
+    if (Rf_isObject(value) || XLENGTH(value) != 1
+        || !(type == INTSXP || type == REALSXP || (flag && type == LGLSXP)))
+        return 0;
+    const double x = Rf_asReal(value);
+    if (!R_finite(x) || x < 0 || x > INT_MAX || x != floor(x) || (flag && x != 0 && x != 1))
+        return 0;
+    *out = (int)x;
+    return 1;
+}
+
+/* Private cross-translation-unit helper, not an R .Call entry point. */
+attribute_hidden int r_snv_parameters(SEXP values, const char** bad) {
+    SEXP names = Rf_getAttrib(values, R_NamesSymbol);
+    for (R_xlen_t i = 0; i < XLENGTH(values); ++i) {
+        const char* name = CHAR(STRING_ELT(names, i));
+        const int flag = strcmp(name, "with_mean") == 0 || strcmp(name, "with_std") == 0;
+        if (!flag && strcmp(name, "ddof") != 0)
+            continue;
+        int ignored;
+        if (!r_snv_scalar(VECTOR_ELT(values, i), flag, &ignored)) {
+            *bad = name;
+            return 0;
+        }
+    }
+    return 1;
 }
 
 static int r_pp_flag(SEXP value, int dflt) {
@@ -298,17 +329,19 @@ SEXP r_n4m_snv_transform(SEXP X, SEXP with_mean, SEXP with_std, SEXP ddof) {
     int64_t rows = 0;
     int64_t cols = 0;
     r_pp_matrix_shape(X, &rows, &cols);
+    int mean, scale, degree;
+    if (!r_snv_scalar(with_mean, 1, &mean) || !r_snv_scalar(with_std, 1, &scale)
+        || !r_snv_scalar(ddof, 0, &degree)) {
+        Rf_error(
+            "SNV needs unclassed scalar flags (logical or 0/1) and integer ddof in [0, INT32_MAX]");
+    }
 
     SEXP X_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));
     SEXP out_rm = PROTECT(Rf_allocVector(REALSXP, (R_xlen_t)(rows * cols)));
     r_pp_copy_r_to_rowmajor(X, rows, cols, REAL(X_rm));
 
     n4m_pp_snv_handle_t* handle = NULL;
-    n4m_status_t status = n4m_transform_snv_create(
-        &handle,
-        r_pp_flag(with_mean, 1),
-        r_pp_flag(with_std, 1),
-        r_pp_int_scalar(ddof, "ddof"));
+    n4m_status_t status = n4m_transform_snv_create(&handle, mean, scale, degree);
     if (status != N4M_OK) {
         UNPROTECT(2);
         r_pp_throw_status("n4m_transform_snv_create", status);

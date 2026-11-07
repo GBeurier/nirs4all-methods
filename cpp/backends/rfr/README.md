@@ -32,3 +32,11 @@ pointer and length members, which Clang rejects when parsing the template.
 Explicitly deleting that impossible operation preserves immutable-reference
 semantics. The adapter never calls it. All other headers are unmodified.
 `SOURCES.sha256` records the shipped header bytes, including this patch.
+
+The JSON archive pulled in by `rfr/forests/regression_forest.hpp` is never used by
+n4m. Its RapidJSON derives member iterators from the C++17-deprecated
+`std::iterator`, which MSVC reports as C4996/STL4015. The build therefore defines
+RapidJSON's own `CEREAL_RAPIDJSON_NOMEMBERITERATORCLASS` switch (plain pointer
+member iterators) as a PRIVATE definition on the targets that compile the adapter
+(`n4m_core` in `cmake/ComponentBackends.cmake` and `n4m_fanova_kernel_tests`). No
+vendored byte changes and no warning is disabled.

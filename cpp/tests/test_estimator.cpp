@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -1150,6 +1151,174 @@ void test_param_descriptors() {
 
 }  // namespace
 
+// The generic adapter must propagate the shared SNV extent refusal. Every
+// row is observed before asserting, so an old kernel cannot hide later reds.
+void test_snv_parameter_domain(n4m_context_t* ctx) {
+    double x[16] = {1, 3, 8, 20, 10, 11, 13, 18, -7, -3, 2, 9, 5, 5, 5, 5};
+    auto xv = view(x, 4, 4);
+    std::vector<std::string> failures;
+    for (bool mean : {false, true})
+        for (bool scale : {false, true})
+            for (int64_t ddof : {int64_t{0},
+                                 int64_t{1},
+                                 int64_t{3},
+                                 int64_t{4},
+                                 int64_t{5},
+                                 int64_t{2147483647}}) {
+                int32_t index = -1;
+                CHECK(n4m_method_find("preprocessing.scatter.snv", &index) == N4M_OK);
+                n4m_params_t* params = nullptr;
+                CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+                CHECK(n4m_params_set_bool(params, "with_mean", mean) == N4M_OK);
+                CHECK(n4m_params_set_bool(params, "with_std", scale) == N4M_OK);
+                CHECK(n4m_params_set_int(params, "ddof", ddof) == N4M_OK);
+                n4m_estimator_t* est = nullptr;
+                CHECK(n4m_estimator_create(ctx, "preprocessing.scatter.snv", params, &est)
+                      == N4M_OK);
+                n4m_params_destroy(params);
+                n4m_fit_inputs_v1_t input{};
+                input.struct_size = sizeof input;
+                input.X = &xv;
+                CHECK(n4m_estimator_fit(ctx, est, &input) == N4M_OK);
+                double out[16];
+                for (double& value : out)
+                    value = -12345.0;
+                auto ov = view(out, 4, 4);
+                const auto status = n4m_estimator_transform(ctx, est, &xv, &ov);
+                const bool invalid = scale && ddof >= 4;
+                bool ok = status == (invalid ? N4M_ERR_INVALID_ARGUMENT : N4M_OK);
+                if (invalid)
+                    for (double value : out)
+                        ok = ok && value == -12345.0;
+                if (!invalid && !scale) {
+                    const double centers[4] = {8.0, 13.0, 0.25, 5.0};
+                    for (int i = 0; i < 16; ++i)
+                        ok = ok && out[i] == x[i] - (mean ? centers[i / 4] : 0.0);
+                }
+                n4m_estimator_destroy(est);
+                const auto label = "snv/mean=" + std::to_string(mean) + "/std="
+                                   + std::to_string(scale) + "/ddof=" + std::to_string(ddof);
+                std::printf("%s status=%d %s\n", label.c_str(), status, ok ? "PASS" : "FAIL");
+                if (!ok)
+                    failures.push_back(label);
+            }
+    for (const auto& failure : failures)
+        std::fprintf(stderr, "FAIL %s\n", failure.c_str());
+    CHECK(failures.empty());
+}
+
+// MI32_ESTIMATOR_V1: public ABI only; no hidden conversion helper export.
+static void test_raw_i32_case(
+    n4m_context_t* ctx, const char* id, const char* parameter, int64_t value, bool supervised) {
+    current_ = std::string("MI32_ESTIMATOR_V1/") + id + "/" + std::to_string(value);
+    std::printf("%s\n", current_.c_str());
+    int32_t index = -1;
+    CHECK(n4m_method_find(id, &index) == N4M_OK);
+    n4m_params_t* raw_params = nullptr;
+    CHECK(n4m_params_create(ctx, index, &raw_params) == N4M_OK);
+    std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> params(raw_params,
+                                                                        n4m_params_destroy);
+    CHECK(n4m_params_set_int(params.get(), parameter, value) == N4M_OK);
+    int64_t stored = 0, count = 0;
+    CHECK(n4m_params_get_int(params.get(), parameter, &stored, 1, &count) == N4M_OK);
+    CHECK(count == 1 && stored == value);
+    CHECK(n4m_params_validate(ctx, params.get()) == N4M_OK);
+    n4m_estimator_t* raw = nullptr;
+    CHECK(n4m_estimator_create(ctx, id, params.get(), &raw) == N4M_OK);
+    std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)> est(raw,
+                                                                           n4m_estimator_destroy);
+    double x[] = {1, 3, 5, 2, 2, 4, 6, 9, 3, 1, 0, 4, 9, 8, 1, 2, 4, 4, 7, 1, 0, 2, 3, 8};
+    const std::vector<double> original(x, x + 24);
+    double y[] = {-4, -4, 3, 8, -3, -3};
+    auto X = view(x, 6, 4), Y = view(y, 6, 1);
+    n4m_fit_inputs_v1_t in{};
+    in.struct_size = sizeof(in);
+    in.X = &X;
+    in.Y = supervised ? &Y : nullptr;
+    CHECK(n4m_estimator_fit(ctx, est.get(), &in) == N4M_ERR_INVALID_ARGUMENT);
+    CHECK(std::strcmp(n4m_context_last_error(ctx), "integer parameter exceeds int32") == 0);
+    int32_t fitted = -1;
+    CHECK(n4m_estimator_is_fitted(est.get(), &fitted) == N4M_OK && fitted == 0);
+    double output[24];
+    std::fill(output, output + 24, -777.25);
+    auto out = view(output, 6, supervised ? 1 : 4);
+    const auto st = supervised ? n4m_estimator_predict(ctx, est.get(), &X, &out)
+                               : n4m_estimator_transform(ctx, est.get(), &X, &out);
+    CHECK(st == N4M_ERR_NOT_FITTED);
+    CHECK(std::all_of(output, output + 24, [](double v) {
+        return v == -777.25;
+    }));
+    CHECK(std::equal(original.begin(), original.end(), x));
+}
+
+static void test_raw_i32_public_upper_and_wide_seed(n4m_context_t* ctx) {
+    current_ = "MI32_ESTIMATOR_V1/upper-and-wide-seed";
+    std::puts(current_.c_str());
+    int32_t index = -1;
+    CHECK(n4m_method_find("preprocessing.scatter.snv", &index) == N4M_OK);
+    n4m_params_t* raw_params = nullptr;
+    CHECK(n4m_params_create(ctx, index, &raw_params) == N4M_OK);
+    std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> params(raw_params,
+                                                                        n4m_params_destroy);
+    CHECK(n4m_params_set_int(params.get(), "ddof", std::numeric_limits<int32_t>::max()) == N4M_OK);
+    CHECK(n4m_params_set_bool(params.get(), "with_std", 0) == N4M_OK);
+    n4m_estimator_t* raw = nullptr;
+    CHECK(n4m_estimator_create(ctx, "preprocessing.scatter.snv", params.get(), &raw) == N4M_OK);
+    std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)> est(raw,
+                                                                           n4m_estimator_destroy);
+    double x[] = {1, 3, 5, 2, 4, 6}, out[6]{};
+    auto X = view(x, 2, 3), Y = view(out, 2, 3);
+    n4m_fit_inputs_v1_t in{};
+    in.struct_size = sizeof(in);
+    in.X = &X;
+    CHECK(n4m_estimator_fit(ctx, est.get(), &in) == N4M_OK);
+    CHECK(n4m_estimator_transform(ctx, est.get(), &X, &Y) == N4M_OK);
+    const double expected[] = {-2, 0, 2, -2, 0, 2};
+    CHECK(std::equal(out, out + 6, expected));
+    CHECK(n4m_method_find("augmentation.noise.gaussian_noise", &index) == N4M_OK);
+    n4m_params_t* seed_raw = nullptr;
+    CHECK(n4m_params_create(ctx, index, &seed_raw) == N4M_OK);
+    std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> seed(seed_raw, n4m_params_destroy);
+    const int64_t wide = (int64_t{1} << 40) + 17;
+    CHECK(n4m_params_set_int(seed.get(), "seed", wide) == N4M_OK);
+    CHECK(n4m_params_validate(ctx, seed.get()) == N4M_OK);
+    int64_t stored = 0, count = 0;
+    CHECK(n4m_params_get_int(seed.get(), "seed", &stored, 1, &count) == N4M_OK);
+    CHECK(stored == wide && count == 1);
+    n4m_method_result_t* result = nullptr;
+    CHECK(n4m_procedure_run(ctx, index, seed.get(), &in, &result) == N4M_OK);
+    CHECK(result != nullptr);
+    n4m_method_result_destroy(result);
+}
+
+static void test_raw_i32_failed_refit(n4m_context_t* ctx, Inputs& fixture, int64_t bad) {
+    current_ = "MI32_ESTIMATOR_V1/feature-groups/" + std::to_string(bad);
+    std::puts(current_.c_str());
+    const char* id = "models.sparse.group_sparse_pls";
+    n4m_estimator_t* raw = nullptr;
+    CHECK(n4m_estimator_create(ctx, id, nullptr, &raw) == N4M_OK);
+    std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)> est(raw,
+                                                                           n4m_estimator_destroy);
+    auto groups = fixture.feature_groups;
+    n4m_fit_inputs_v1_t in{};
+    in.struct_size = sizeof(in);
+    in.X = &fixture.X;
+    in.Y = &fixture.Y;
+    in.feature_groups = groups.data();
+    in.n_feature_groups = kCols;
+    CHECK(n4m_estimator_fit(ctx, est.get(), &in) == N4M_OK);
+    std::vector<double> before(static_cast<size_t>(kTrain)), after(before.size(), -777.25);
+    auto A = view(before.data(), kTrain, 1), Z = view(after.data(), kTrain, 1);
+    CHECK(n4m_estimator_predict(ctx, est.get(), &fixture.X, &A) == N4M_OK);
+    groups[0] = bad;
+    CHECK(n4m_estimator_fit(ctx, est.get(), &in) == N4M_ERR_INVALID_ARGUMENT);
+    CHECK(std::strcmp(n4m_context_last_error(ctx), "integer parameter exceeds int32") == 0);
+    int32_t fitted = 0;
+    CHECK(n4m_estimator_is_fitted(est.get(), &fitted) == N4M_OK && fitted == 1);
+    CHECK(n4m_estimator_predict(ctx, est.get(), &fixture.X, &Z) == N4M_OK);
+    CHECK(std::memcmp(before.data(), after.data(), before.size() * sizeof(double)) == 0);
+}
+
 int main() {
     n4m_context_t* ctx = nullptr;
     if (n4m_context_create(&ctx) != N4M_OK) return 1;
@@ -1165,6 +1334,9 @@ int main() {
     };
     Inputs in;
     run([&] { test_introspection_and_params(ctx); });
+    run([&] {
+        test_snv_parameter_domain(ctx);
+    });
     run([&] { test_pls_fit_simple_equivalence(ctx, in); });
     run([&] { test_in_sample_equivalence(ctx, in); });
     run([&] { test_aom_in_sample(ctx, in); });
@@ -1172,6 +1344,27 @@ int main() {
     run([&] { test_input_views(ctx, in); });
     run([&] { test_param_descriptors(); });
     run([&] { test_bounded_parameters(ctx, in); });
+    for (int64_t value :
+         {int64_t{2147483648}, int64_t{4294967296}, std::numeric_limits<int64_t>::max()}) {
+        run([&] {
+            test_raw_i32_case(ctx, "preprocessing.scatter.snv", "ddof", value, false);
+        });
+        run([&] {
+            test_raw_i32_case(ctx, "selection.vip_spa", "top_k", value, true);
+        });
+        run([&] {
+            test_raw_i32_case(ctx, "models.regularized.robust_pls", "max_irls_iter", value, true);
+        });
+    }
+    run([&] {
+        test_raw_i32_public_upper_and_wide_seed(ctx);
+    });
+    for (int64_t value :
+         {int64_t{-2147483649LL}, std::numeric_limits<int64_t>::min(), int64_t{2147483648}})
+        run([&] {
+            test_raw_i32_failed_refit(ctx, in, value);
+        });
+
     int32_t count = 0;
     n4m_method_count(&count);
     for (int32_t i = 0; i < count; ++i) {

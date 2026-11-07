@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -522,6 +523,32 @@ void test_zero_rows(Data& d) {
     n4m_role_pipeline_destroy(p);
 }
 
+void test_i32_narrowing_step(Data& d) {
+    current_ = "MI32_ROLE_V1";
+    std::puts(current_.c_str());
+    auto X = view(d.x, kRows, kCols), Y = view(d.y, kRows, 1);
+    for (int64_t value : {int64_t{2147483648}, int64_t{4294967296}}) {
+        auto* params = params_for("preprocessing.scatter.snv");
+        CHECK(n4m_params_set_int(params, "ddof", value) == N4M_OK);
+        auto* pipeline =
+            make({"preprocessing.scatter.snv", "models.regularized.ridge"}, {params, nullptr});
+        n4m_params_destroy(params);
+        auto in = inputs(&X, &Y);
+        const auto st = n4m_role_pipeline_fit(ctx_, pipeline, &in);
+        const auto message = error_text();
+        std::vector<double> sentinel(static_cast<size_t>(kRows), -777.25);
+        auto out = view(sentinel, kRows, 1);
+        const auto predict_st = n4m_role_pipeline_predict(ctx_, pipeline, &X, &out);
+        n4m_role_pipeline_destroy(pipeline);
+        CHECK(st == N4M_ERR_INVALID_ARGUMENT);
+        CHECK(message.find("step 0") != std::string::npos);
+        CHECK(message.find("integer parameter exceeds int32") != std::string::npos);
+        CHECK(predict_st == N4M_ERR_NOT_FITTED);
+        for (double v : sentinel)
+            CHECK(v == -777.25);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -544,6 +571,7 @@ int main() {
     run([&] { test_feature_names(d); });
     run([&] { test_training_rows(d); });
     run([&] { test_zero_rows(d); });
+    run([&] { test_i32_narrowing_step(d); });
     n4m_context_destroy(ctx_);
     std::printf("n4m_role_pipeline_tests: %d failures\n", failures);
     return failures == 0 ? 0 : 1;

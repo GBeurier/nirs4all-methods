@@ -18,6 +18,7 @@ _SOLVER_ALIASES: dict[str, Solver] = {
     "simpls": Solver.SIMPLS,
     "orthogonal-scores": Solver.ORTHOGONAL_SCORES,
     "kernel": Solver.KERNEL_ALGORITHM,
+    "kernel-algorithm": Solver.KERNEL_ALGORITHM,
     "wide-kernel": Solver.WIDE_KERNEL,
     "svd": Solver.SVD,
     "power": Solver.POWER,

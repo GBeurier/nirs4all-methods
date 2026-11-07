@@ -291,7 +291,12 @@ n4m_status_t compute(const n4m_matrix_view_t& view,
             cell(j, 1) = std::sqrt(variance[j]);
     }
     // Across disconnected graphs, priors cannot identify a global ordering.
-    if (n_components == 1 && converged) {
+    // Mean within-block ranks are comparable only when every block ranks every
+    // candidate; in incomplete designs block sizes change the rank scale, so the
+    // average-rank global rank is withheld (the descriptive mean stays the score).
+    const bool comparable_mean_rank =
+        o.method != N4M_RANKING_AVERAGE_RANK || complete == static_cast<double>(blocks);
+    if (n_components == 1 && converged && comparable_mean_rank) {
         std::vector<size_t> order(n);
         std::iota(order.begin(), order.end(), 0);
         std::sort(order.begin(), order.end(), [&](size_t i, size_t j) {

@@ -19,9 +19,11 @@ savgol_transform(
 }
 \arguments{
 \item{X}{Numeric matrix.}
-\item{with_mean}{Logical; center each row before scaling.}
-\item{with_std}{Logical; scale each row by its standard deviation.}
-\item{ddof}{Integer degrees-of-freedom correction.}
+\item{with_mean}{Unclassed logical or exact numeric 0/1 scalar; center each row.}
+\item{with_std}{Unclassed logical or exact numeric 0/1 scalar; scale by row standard deviation.}
+\item{ddof}{Unclassed exact numeric/integer scalar in [0, INT32_MAX], not logical or missing.
+With scaling, it must be smaller than the feature count even for constant or nonfinite rows.
+Centering-only does not use variance and accepts the full nonnegative range.}
 \item{window_length}{Odd integer Savitzky-Golay window length.}
 \item{polyorder}{Savitzky-Golay polynomial order.}
 \item{deriv}{Savitzky-Golay derivative order.}
