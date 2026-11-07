@@ -418,7 +418,7 @@ class binary_split_one_feature_rss_loss: public rfr::splits::k_ary_split_base<2,
 		else{
 			// every element in the split set should go to the left -> remove from right
 			auto it = std::partition (subspaces[0][feature_index].begin(), subspaces[0][feature_index].end(),
-										[this] (int i) {return((bool) this->cat_split_set[i]);});
+										[this] (num_t i) {return((bool) this->cat_split_set[static_cast<std::size_t>(i)]);});
 
 			// replace the values in the 'right subspace'
 			subspaces[1][feature_index].assign(it, subspaces[0][feature_index].end());

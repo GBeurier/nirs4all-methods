@@ -604,6 +604,10 @@ def run_raw(spec: DonorOpSpec, inp: dict[str, Any], seed: int) -> np.ndarray:
     """Invoke the raw `n4m.python` tier and reduce its output."""
     if spec.raw_fn is None:
         raise RuntimeError(spec.raw_reason or NO_RAW)
+    if spec.bench_id == "pp_snv":
+        from n4m.transform.scatter import SNV
+
+        return _reduce(spec, SNV(**spec.raw_kwargs).transform(inp["X"]))
     from n4m._impl import native as npy
     fn = getattr(npy, spec.raw_fn)
     X = inp["X"]

@@ -26,12 +26,21 @@ and component variance calculations are implemented in the n4m adapter from the
 published mathematical decomposition. Coordinate and response normalization
 protect upstream numerical arithmetic; the declared product measure is preserved.
 
-One compatibility patch in `cereal/external/rapidjson/document.h` deletes
+Two local compatibility patches are applied. The first, in
+`cereal/external/rapidjson/document.h`, deletes
 `GenericStringRef` copy assignment. Upstream's definition assigns to its const
 pointer and length members, which Clang rejects when parsing the template.
 Explicitly deleting that impossible operation preserves immutable-reference
-semantics. The adapter never calls it. All other headers are unmodified.
-`SOURCES.sha256` records the shipped header bytes, including this patch.
+semantics. The adapter never calls it.
+
+The second, in `rfr/splits/binary_split_one_feature_rss_loss.hpp`, makes the
+`compute_subspaces` categorical predicate accept `num_t` and explicitly convert
+the bitset index to `std::size_t`, avoiding MSVC's implicit narrowing diagnostic.
+Methods admits integral categorical codes in [0, 127], and upstream constructs
+these subspaces from integer category indices. The conversion preserves those
+indices and partition membership. No rounding or category admission is changed.
+All other headers are unmodified. `SOURCES.sha256` records the shipped header
+bytes, including both patches.
 
 The JSON archive pulled in by `rfr/forests/regression_forest.hpp` is never used by
 n4m. Its RapidJSON derives member iterators from the C++17-deprecated
