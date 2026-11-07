@@ -147,7 +147,7 @@ target_include_directories(n4m_procedure_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/s
 add_test(NAME n4m_procedure_tests COMMAND n4m_procedure_tests)
 set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
-    TIMEOUT 60)
+    TIMEOUT "$<IF:$<CONFIG:Debug>,180,60>")
 
 # Focused N4MM v2 model-pipeline contract. Kept separate so format changes can
 # be gated without rerunning the complete native suite.

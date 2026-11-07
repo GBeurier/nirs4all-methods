@@ -4,10 +4,13 @@
 source binding ships to both ecosystems. The V1 namespace is `+n4m`. The Octave path is CI-runnable:
 `.github/workflows/cross-binding-parity.yml` builds `libn4m`, compiles the MEX
 shims with `build_mex.m`, and runs `bindings/matlab/test/test_parity.m`,
-`test_n4m_namespace.m`, `test_optimizer.m`, all 14 HPO golden traces and a
-bidirectional Python checkpoint continuation. The CI runner currently uses
-Octave 6.4 from Ubuntu 22.04; the devcontainer installs the Octave package
-available on Ubuntu 24.04.
+`test_n4m_namespace.m`, `test_snv_parameter_contract.m`, `test_optimizer.m`,
+all 14 HPO golden traces and a bidirectional Python checkpoint continuation.
+The supported CI baseline is the Ubuntu 24.04 apt Octave package, matching
+the devcontainer distribution. This profile requires built-in `jsondecode`;
+CI checks both its presence and decoding a JSON boolean before building.
+The former Ubuntu 22.04 / Octave 6.4 profile lacks this capability and is no
+longer the qualification baseline. No legacy JSON parser is provided.
 
 MATLAB uses the same source package, but its runtime and File Exchange checks
 are deferred until a license is available. They do not gate current Octave work.
@@ -26,7 +29,7 @@ MATLAB versus Octave. The columns are:
 |-------|---------|
 | **Symbol** | Public name in the `+n4m` namespace |
 | **MATLAB**  | Behaviour on MATLAB R2024a+ (the minimum we target) |
-| **Octave**  | Behaviour on Octave 6.4 CI and the Ubuntu 24.04 devcontainer package |
+| **Octave**  | Behaviour on the Ubuntu 24.04 apt package with built-in `jsondecode` |
 | **Resolution** | What the binding does at runtime to keep the contract observable |
 
 ---

@@ -224,8 +224,9 @@ octave --no-gui --no-history --eval \
 the optimizer lifecycle and 14 selected Python/native HPO golden traces
 through this binding with a fixed score tape. The canonical Python specs and
 JSON goldens are rendered as a temporary `.m` fixture by
-`parity/hpo/export_matlab_fixtures.py` because the CI's Octave 6.4 has no
-`jsondecode`. The workflow also continues a Python N4MOPT checkpoint in
+`parity/hpo/export_matlab_fixtures.py`. The current CI baseline uses Ubuntu
+24.04 apt Octave with built-in `jsondecode`, checked before compilation;
+see [the supported profile](COMPAT.md). The workflow also continues a Python N4MOPT checkpoint in
 Octave and the reciprocal Octave checkpoint in Python, checking the next
 proposal exactly in both directions. All four cross-binding jobs, including
 the Octave optimizer checks, passed on `38c2cc84` ([CI run](https://github.com/GBeurier/nirs4all-methods/actions/runs/36546137355)).
@@ -254,8 +255,9 @@ octave --no-gui --no-history --eval \
 The renderer changes only test-data representation, retaining exact integers,
 booleans, cell ordering and N4ME bytes. On a runtime with `jsondecode`,
 `test_role_pipeline('/path/to/matching/role_pipeline_negative.json')` reads the
-JSON directly. The generated `.m` path supports Octave versions without
-`jsondecode`; it is trusted test data and is never accepted by product import.
+JSON directly. The generated `.m` path remains a trusted test-data representation
+and is never accepted by product import. It does not qualify runtimes below
+the current JSON-capable CI baseline.
 RolePipeline qualification requires real compiled MEX execution. Its runtime
 qualification is pending until that gate is run; existing optimizer parity
 results do not qualify this new surface.
