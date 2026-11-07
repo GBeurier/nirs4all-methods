@@ -5090,7 +5090,8 @@ void test_t4f_r1_r2_adaptive_bounds() {
         auto opts=default_opts();opts.sampler=sampler;opts.seed=19;opts.direction=N4M_OPT_MINIMIZE;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,s,&opts,&o)==N4M_OK);int outside=0;
         for(int i=0;i<d.count;++i){n4m_trial_t* t=nullptr;double x=0;std::int64_t id=-1;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&t)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(t,"x",&x)==N4M_OK);if(x<d.low||x>d.high)++outside;N4M_TEST_REQUIRE(n4m_trial_get_id(t,&id)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(o,id,-x)==N4M_OK);}
         N4M_TEST_REQUIRE(outside==0);auto blob=save_checkpoint(o);n4m_optimizer_t* restored=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&restored)==N4M_OK);n4m_optimizer_destroy(restored);n4m_optimizer_destroy(o);n4m_search_space_destroy(s);
-    } n4m_context_destroy(ctx);
+    }
+    n4m_context_destroy(ctx);
 }
 void test_t4f_r3_own_enqueue() {
     const double c=std::ldexp(1.0,-53);const double ds[][3]={{-1.,1.,3*c},{-std::ldexp(1.0,43),std::ldexp(1.0,43),3./1024},{-std::ldexp(1.0,54),std::ldexp(1.0,54),6.},{-1.,1.,1.25*c},{-1.,1.,1.5*c}};
@@ -5123,7 +5124,9 @@ void test_t4f_queued_checkpoint() {
     for(const auto& d:ds)for(auto sampler:samplers){n4m_search_space_t* space=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",d[0],d[1],d[2],0)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"aux",0,1,0,0)==N4M_OK);auto opts=default_opts();opts.sampler=sampler;opts.seed=19;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&o)==N4M_OK);const char* names[]={"x","aux"};double vals[]={d[0],0.25};
         const bool unsupported=sampler==N4M_SAMPLER_GA||sampler==N4M_SAMPLER_PSO||sampler==N4M_SAMPLER_CMAES||sampler==N4M_SAMPLER_GP_EI;auto status=n4m_optimizer_enqueue(o,names,vals,2);if(unsupported){N4M_TEST_REQUIRE(status==N4M_ERR_UNSUPPORTED);}else{N4M_TEST_REQUIRE(status==N4M_OK);auto blob=save_checkpoint(o);n4m_optimizer_t* copy=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK);int32_t same=0;N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(o,copy,&same)==N4M_OK&&same==1);
             for(int i=0;i<6;++i){n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=0,bi=0;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&a)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_ask(copy,&b)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(b,&bi)==N4M_OK&&ai==bi);for(const char* name:{"x","aux"}){double x=0,y=0;N4M_TEST_REQUIRE(n4m_trial_get_float(a,name,&x)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(b,name,&y)==N4M_OK);N4M_TEST_REQUIRE(std::memcmp(&x,&y,sizeof(x))==0);if(i==0&&std::string(name)=="x")N4M_TEST_REQUIRE(x==d[0]);}N4M_TEST_REQUIRE(n4m_optimizer_tell(o,ai,0.5)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}n4m_optimizer_destroy(copy);}
-        n4m_optimizer_destroy(o);n4m_search_space_destroy(space);}n4m_context_destroy(ctx);
+        n4m_optimizer_destroy(o);n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
 }
 
 void test_domain_log_enqueue() {
@@ -5453,7 +5456,9 @@ void test_loader_grid_control_queued() {
     for(const auto& dom:ds)for(auto sampler:samplers){n4m_search_space_t* space=nullptr;N4M_TEST_REQUIRE(n4m_search_space_create(&space)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"x",dom[0],dom[1],dom[2],0)==N4M_OK);N4M_TEST_REQUIRE(n4m_search_space_add_float(space,"aux",0,1,0,0)==N4M_OK);auto opts=default_opts();opts.sampler=sampler;opts.seed=19;n4m_optimizer_t* o=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_create(ctx,space,&opts,&o)==N4M_OK);const char* names[]={"x","aux"};double vals[]={dom[0],0.25};
         const bool unsupported=sampler==N4M_SAMPLER_GA||sampler==N4M_SAMPLER_PSO||sampler==N4M_SAMPLER_CMAES||sampler==N4M_SAMPLER_GP_EI;auto status=n4m_optimizer_enqueue(o,names,vals,2);if(unsupported){N4M_TEST_REQUIRE(status==N4M_ERR_UNSUPPORTED);}else{N4M_TEST_REQUIRE(status==N4M_OK);auto blob=save_checkpoint(o);n4m_optimizer_t* copy=nullptr;N4M_TEST_REQUIRE(n4m_optimizer_load(ctx,blob.data(),blob.size(),&copy)==N4M_OK);int32_t same=0;N4M_TEST_REQUIRE(n4m_optimizer_configuration_matches(o,copy,&same)==N4M_OK&&same==1);
             for(int i=0;i<6;++i){n4m_trial_t *a=nullptr,*b=nullptr;std::int64_t ai=0,bi=0;N4M_TEST_REQUIRE(n4m_optimizer_ask(o,&a)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_ask(copy,&b)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(a,&ai)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_id(b,&bi)==N4M_OK&&ai==bi);for(const char* name:{"x","aux"}){double x=0,y=0;N4M_TEST_REQUIRE(n4m_trial_get_float(a,name,&x)==N4M_OK);N4M_TEST_REQUIRE(n4m_trial_get_float(b,name,&y)==N4M_OK);N4M_TEST_REQUIRE(std::memcmp(&x,&y,sizeof(x))==0);if(i==0&&std::string(name)=="x")N4M_TEST_REQUIRE(x==dom[0]);}N4M_TEST_REQUIRE(n4m_optimizer_tell(o,ai,0.5)==N4M_OK);N4M_TEST_REQUIRE(n4m_optimizer_tell(copy,bi,0.5)==N4M_OK);}n4m_optimizer_destroy(copy);}
-        n4m_optimizer_destroy(o);n4m_search_space_destroy(space);}n4m_context_destroy(ctx);
+        n4m_optimizer_destroy(o);n4m_search_space_destroy(space);
+    }
+    n4m_context_destroy(ctx);
 }
 
 

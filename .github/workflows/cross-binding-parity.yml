@@ -201,8 +201,9 @@ jobs:
     # Octave binding: build libn4m, compile the +n4m MEX shims (build_mex.m),
     # run the parity test. Verified locally (MEX compiles, test_parity PASS at
     # rmse_rel ~4e-16); CI uses apt Octave (clean mkoctfile + system gcc, none of
-    # the conda-octave quirks). Licensed MATLAB runtime is deferred (COMPAT.md).
-    runs-on: ubuntu-22.04
+    # the conda-octave quirks). Use the devcontainer's Ubuntu 24.04 baseline
+    # with built-in JSON support. Licensed MATLAB runtime is deferred (COMPAT.md).
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7.0.0
 
@@ -211,6 +212,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             gcc-12 g++-12 ninja-build cmake octave liboctave-dev
+
+      - name: Require built-in Octave JSON support
+        run: |
+          octave --no-gui --no-history --eval \
+            "assert(exist('jsondecode', 'builtin') == 5, 'Octave with built-in jsondecode is required'); assert(jsondecode('true')); disp(version);"
 
       - name: Build libn4m (Linux gcc-12 Release)
         run: |
