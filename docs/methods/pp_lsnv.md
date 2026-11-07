@@ -16,7 +16,7 @@ Sliding-window (local) SNV.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_local_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L36) · [`n4m_transform_local_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L39) · [`n4m_transform_local_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L40). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_local_snv_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L40) · [`n4m_transform_local_snv_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L43) · [`n4m_transform_local_snv_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L44). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
@@ -24,7 +24,7 @@ Sliding-window (local) SNV.
 from n4m.transform.scatter import LSNV
 ```
 
-Source signature: [`LSNV(window: int = 11, pad_mode: str = 'reflect', constant_value: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L46).
+Source signature: [`LSNV(window: int = 11, pad_mode: str = 'reflect', constant_value: float = 0.0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L79).
 
 **R (source-verified):** [`local_snv_transform(X, window = 11L, pad_mode = "reflect", constant_value = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
 

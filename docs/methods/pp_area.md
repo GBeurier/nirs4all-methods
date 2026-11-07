@@ -14,7 +14,7 @@ Per-row area normalisation.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_area_normalization_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L61) · [`n4m_transform_area_normalization_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L63) · [`n4m_transform_area_normalization_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L64). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_area_normalization_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L65) · [`n4m_transform_area_normalization_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L67) · [`n4m_transform_area_normalization_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/scatter.h#L68). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
@@ -22,7 +22,7 @@ Per-row area normalisation.
 from n4m.transform.scatter import AreaNormalization
 ```
 
-Source signature: [`AreaNormalization(method: str = 'sum')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L104).
+Source signature: [`AreaNormalization(method: str = 'sum')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/preprocessing.py#L137).
 
 **R (source-verified):** [`area_normalization_transform(X, method = "sum")`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/preprocessing.R).
 
