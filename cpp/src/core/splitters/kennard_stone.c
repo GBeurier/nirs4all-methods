@@ -34,13 +34,18 @@ n4m_status_t n4m_split_ks_apply(const n4m_split_ks_state_t* state,
     n4m_status_t st = n4m_split_compute_train_test_count(rows, state->test_size,
                                                           &n_train, &n_test);
     if (st != N4M_OK) return st;
-    if (n_train < 2) {
-        return N4M_ERR_INVALID_ARGUMENT;
-    }
+    return n4m_split_ks_apply_count(X, rows, cols, n_train, out);
+}
+
+n4m_status_t n4m_split_ks_apply_count(const double* X, int64_t rows, int64_t cols,
+                                    int64_t n_train, n4m_split_result_t* out) {
+    if (X == NULL || out == NULL) return N4M_ERR_NULL_POINTER;
+    if (cols < 1 || n_train < 2 || n_train >= rows) return N4M_ERR_INVALID_ARGUMENT;
+    const int64_t n_test = rows - n_train;
 
     double* D = (double*)malloc((size_t)rows * (size_t)rows * sizeof(double));
     if (D == NULL) return N4M_ERR_OUT_OF_MEMORY;
-    st = n4m_split_euclidean_dist(X, rows, cols, D);
+    n4m_status_t st = n4m_split_euclidean_dist(X, rows, cols, D);
     if (st != N4M_OK) {
         free(D);
         return st;

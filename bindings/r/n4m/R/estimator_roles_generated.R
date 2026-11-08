@@ -1646,8 +1646,8 @@ n4m_kbins_stratified <- function(test_size = 0.25, seed = NULL, n_bins = 5L, str
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
-n4m_kennard_stone <- function(test_size = 0.25) {
-  .n4m_estimator("splitters.kennard_stone", c("splitter"), list(test_size = test_size))
+n4m_kennard_stone <- function(test_size = NULL, n_train = NULL) {
+  .n4m_estimator("splitters.kennard_stone", c("splitter"), list(test_size = test_size, n_train = n_train))
 }
 
 #' @rdname n4m_estimator_role_constructors

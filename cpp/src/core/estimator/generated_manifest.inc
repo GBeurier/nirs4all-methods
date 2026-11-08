@@ -1976,8 +1976,10 @@ const ParamSpec kParams_splitters_kbins_stratified[] = {
     {"strategy", N4M_METHOD_PARAM_ENUM, true, kDefault_splitters_kbins_stratified_strategy, nullptr, 1, kNaN, kNaN, kChoices_splitters_kbins_stratified_strategy, 2, false, false},
 };
 const double kDefault_splitters_kennard_stone_test_size[] = {0.25};
+const std::int64_t kDefault_splitters_kennard_stone_n_train[] = {0};
 const ParamSpec kParams_splitters_kennard_stone[] = {
-    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kennard_stone_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
+    {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_kennard_stone_test_size, 1, 0.0, 1.0, nullptr, 0, true, false},
+    {"n_train", N4M_METHOD_PARAM_INT, true, kDefault_splitters_kennard_stone_n_train, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
 const double kDefault_splitters_kmeans_test_size[] = {0.25};
 const std::int64_t kDefault_splitters_kmeans_seed[] = {0};
@@ -2276,7 +2278,7 @@ const MethodSpec kMethods[] = {
     {"selection.wvc_threshold", "n4m.feature_selection.wrapper.wvc_threshold", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_selection_wvc_threshold, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_wvc_threshold, nullptr},
     {"splitters.binned_strat_group_kfold", "n4m.model_selection.splitters.binned_strat_group_kfold", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_binned_strat_group_kfold, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
     {"splitters.kbins_stratified", "n4m.model_selection.splitters.kbins_stratified", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_kbins_stratified, 4, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
-    {"splitters.kennard_stone", "n4m.model_selection.splitters.kennard_stone", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_kennard_stone, 1, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
+    {"splitters.kennard_stone", "n4m.model_selection.splitters.kennard_stone", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_kennard_stone, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
     {"splitters.kmeans", "n4m.model_selection.splitters.kmeans", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_kmeans, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
     {"splitters.split_splitter", "n4m.model_selection.splitters.data_twinning", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_split_splitter, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
     {"splitters.spxy", "n4m.model_selection.splitters.spxy", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_spxy, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},

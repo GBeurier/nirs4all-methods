@@ -16,6 +16,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Generic `splitters.kennard_stone` accepts optional integer `n_train` with
+  `2 <= n_train < rows`, mutually exclusive with an explicit `test_size`.
+  Greedy training order, ties and ascending held-out indices are preserved.
+  Both parameters now have null introspection defaults (Python constructor:
+  `test_size=None, n_train=None`); omitting both still uses `test_size=0.25`
+  with identical indices. Count mode requires an updated Methods artifact
+  and catalog; older artifacts reject the unknown parameter. Fractional
+  convenience APIs and the public C ABI are unchanged.
+
 - ABI 2.21 comparable-block ranking for complete pipelines and arbitrary
   component candidates: Elo, regularized batch Bradley-Terry, pairwise
   TrueSkill1, Weng-Lin Bradley-Terry, available-case mean ranks and tie-corrected

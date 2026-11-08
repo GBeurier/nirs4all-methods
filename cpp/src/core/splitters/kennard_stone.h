@@ -39,6 +39,11 @@ n4m_status_t n4m_split_ks_apply(const n4m_split_ks_state_t* state,
                                 const double* X, int64_t rows, int64_t cols,
                                 n4m_split_result_t* out);
 
+/* Internal exact-count entry point; shares the fractional selector and ordering.
+ * Requires 2 <= n_train < rows and allocates buffers owned by the core. */
+n4m_status_t n4m_split_ks_apply_count(const double* X, int64_t rows, int64_t cols,
+                                    int64_t n_train, n4m_split_result_t* out);
+
 #ifdef __cplusplus
 }
 #endif

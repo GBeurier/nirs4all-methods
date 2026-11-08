@@ -419,7 +419,7 @@ n4m_wvc(top_k = NULL, n_components = 2L, normalize = TRUE)
 n4m_wvc_threshold(n_components = 2L, normalize = TRUE, score_threshold = 0.0, threshold_factor = 1.0, min_selected = 0L)
 n4m_binned_strat_group_kfold(n_splits = 5L, n_bins = 5L, strategy = "uniform", shuffle = TRUE, seed = NULL)
 n4m_kbins_stratified(test_size = 0.25, seed = NULL, n_bins = 5L, strategy = "uniform")
-n4m_kennard_stone(test_size = 0.25)
+n4m_kennard_stone(test_size = NULL, n_train = NULL)
 n4m_kmeans(test_size = 0.25, seed = NULL, max_iter = 100L)
 n4m_split_splitter(test_size = 0.25, seed = NULL)
 n4m_spxy(test_size = 0.25)
@@ -627,6 +627,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{n_steps}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_submodels}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_swarm}{Native parameter (int); defaults come from the n4m manifest.}
+\item{n_train}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_unique_per_block}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{n_x_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}
 \item{n_y_orthogonal}{Native parameter (int); defaults come from the n4m manifest.}

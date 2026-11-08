@@ -5434,14 +5434,17 @@ class KennardStone(NativeSplitter):
     _method_id = "splitters.kennard_stone"
     _param_types: ClassVar[dict[str, str]] = {
         "test_size": "double",
+        "n_train": "int",
     }
 
     def __init__(
         self,
         *,
-        test_size=0.25,
+        test_size=None,
+        n_train=None,
     ) -> None:
         self.test_size = test_size
+        self.n_train = n_train
 
 
 class KMeans(NativeSplitter):

@@ -47,6 +47,12 @@ estimator:
       default: 0.25
       min: 0.0
       max: 1.0
+      optional: true
+    - name: "n_train"
+      type: "int"
+      default: 0
+      min: 0
+      optional: true
 fq_name: "n4m.model_selection.splitters.kennard_stone"
 leaf: "kennard_stone"
 legacy_ids:

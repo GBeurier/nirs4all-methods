@@ -22,6 +22,7 @@
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/state_io.hpp"
 #include "core/method_result.hpp"
+#include "core/splitters/kennard_stone.h"
 
 namespace n4m::estimator {
 
@@ -273,12 +274,24 @@ n4m_status_t run_splitter(n4m_context_t* ctx, const Params& params, const FitInp
     if (st == N4M_OK && in.Y != nullptr) st = row_major_f64(ctx, *in.Y, "y", y_rows, Y);
     if (st != N4M_OK) return st;
 
+    const bool counted_ks = e.kind == N4M_SPLITTER_KENNARD_STONE &&
+                            params.raw(param_index(params.spec(), "n_train")).set;
+    if (counted_ks && params.raw(param_index(params.spec(), "test_size")).set) {
+        set_error(ctx, "n_train and explicit test_size are mutually exclusive");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+
     const std::int32_t n_folds = e.folds ? spec.n_splits : 1;
     std::vector<std::int64_t> train, test, train_offsets{0}, test_offsets{0};
     for (std::int32_t fold = 0; fold < n_folds; ++fold) {
         SplitGuard split;
-        st = n4m_splitter_run(&spec, e.uses_x ? &X : nullptr, in.Y != nullptr ? &Y : nullptr,
-                              in.groups, in.n_groups, fold, &split.result);
+        if (counted_ks) {
+            st = n4m_split_ks_apply_count(static_cast<const double*>(X.data), X.rows, X.cols,
+                                          params.get_int("n_train"), &split.result);
+        } else {
+            st = n4m_splitter_run(&spec, e.uses_x ? &X : nullptr, in.Y != nullptr ? &Y : nullptr,
+                                  in.groups, in.n_groups, fold, &split.result);
+        }
         if (st != N4M_OK) return failed(ctx, params, st);
         const n4m_split_result_t& r = split.result;
         train.insert(train.end(), r.train_idx, r.train_idx + r.n_train);
