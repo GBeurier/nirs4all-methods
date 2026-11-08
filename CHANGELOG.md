@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- Savitzky–Golay accepts even windows with half-integer coefficient centers,
+  integer half-window interpolation edge bands and SciPy convolution alignment
+  in all five modes. Smoothing (`deriv=0`) accepts unused `delta=0`; nonzero
+  derivatives still refuse zero spacing. Existing odd-window behavior and the
+  public ABI symbol surface are unchanged.
+
 ### Added
 
 - ABI 2.21 comparable-block ranking for complete pipelines and arbitrary

@@ -89,14 +89,172 @@ void test_savgol_smoke() {
     N4M_TEST_REQUIRE(Y[4] > 9.0 && Y[4] < 12.0);
     // Invalid parameters.
     n4m_pp_savgol_handle_t* h_bad = nullptr;
-    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h_bad, /*w=*/4, 2, 0, 1.0,
+    N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h_bad, /*w=*/0, 2, 0, 1.0,
                                             N4M_PP_SAVGOL_MIRROR, 0.0) ==
-                     N4M_ERR_INVALID_ARGUMENT);  // even window
+                     N4M_ERR_INVALID_ARGUMENT);  // nonpositive window
     N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(&h_bad, /*w=*/5, 5, 0, 1.0,
                                             N4M_PP_SAVGOL_MIRROR, 0.0) ==
                      N4M_ERR_INVALID_ARGUMENT);  // polyorder >= window
     n4m_transform_savitzky_golay_destroy(h);
     n4m_transform_savitzky_golay_destroy(nullptr);
+}
+
+// Independent SciPy 1.17.1 literals from Root's frozen helper:
+// ceab07b3ffcae1ea8678a56b6d2f68097b332a5fd0dc24aeb89f1df29775d5b5
+// No libn4m output or runtime SciPy call supplies an expected array here.
+void test_savgol_literal_contract() {
+    const std::vector<double> input = {
+        0.5, 1.25, -0.75, 3.0, 2.5, -1.0, 4.25, 0.0,
+        5.5, 2.0, -2.25, 6.0, 1.5, 3.75, -0.5, 7.0,
+    };
+    struct LiteralCase {
+        const char* name;
+        int window;
+        int degree;
+        int deriv;
+        double delta;
+        n4m_pp_savgol_mode_t mode;
+        double cval;
+        std::vector<double> expected;
+    };
+    const std::vector<LiteralCase> cases = {
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="interp", cval=0.0)
+        {"even_interp", 10, 3, 0, 1.0,
+         N4M_PP_SAVGOL_INTERP, 0.0, {
+             0.6000000000000022, 0.7136363636363636, 0.9181818181818171, 1.1909090909090896,
+             1.5090909090909084, 2.4656250000000024, 1.987500000000021, 1.9468750000000061,
+             2.0687500000000147, 2.8000000000000105, 1.7328125000000134, 1.681002331002326,
+             1.816200466200459, 2.3671911421911345, 3.450815850815845, 5.183916083916084,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=1, delta=0.25,
+        //     axis=-1, mode="interp", cval=0.0)
+        {"even_derivative", 10, 3, 1, 0.25,
+         N4M_PP_SAVGOL_INTERP, 0.0, {
+             0.24242424242423105, 0.6515151515151453, 0.9696969696969675, 1.1969696969696977,
+             1.3333333333333357, 2.894036519036521, -1.6588966588966545, 0.8190559440559428,
+             -0.11344211344211136, 0.01418026418026308, -0.6744852369852319, -0.13500388500389632,
+             1.294483294483288, 3.1913364413364427, 5.555555555555569, 8.387140637140666,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="interp", cval=0.0)
+        {"even_minimum_width", 10, 3, 0, 1.0,
+         N4M_PP_SAVGOL_INTERP, 0.0, {
+             0.6000000000000022, 0.7136363636363636, 0.9181818181818171, 1.1909090909090896,
+             1.5090909090909084, 1.8499999999999996, 2.1909090909090914, 2.50909090909091,
+             2.7818181818181826, 2.986363636363636,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="mirror", cval=0.0)
+        {"even_mirror", 10, 3, 0, 1.0,
+         N4M_PP_SAVGOL_MIRROR, 0.0, {
+             0.8609374999999931, 0.5828125000000072, 1.4390625000000108, 1.0484375000000181,
+             1.678125000000017, 2.4656250000000024, 1.987500000000021, 1.9468750000000061,
+             2.0687500000000147, 2.8000000000000105, 1.7328125000000134, 2.687500000000008,
+             2.1171875000000027, 2.8500000000000134, 2.7343750000000284, 2.7343749999999893,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="constant", cval=1.25)
+        {"even_constant", 10, 3, 0, 1.0,
+         N4M_PP_SAVGOL_CONSTANT, 1.25, {
+             1.1671874999999994, 0.8109375000000103, 1.264062500000004, 1.0484375000000181,
+             1.678125000000017, 2.4656250000000024, 1.987500000000021, 1.9468750000000061,
+             2.0687500000000147, 2.8000000000000105, 1.7328125000000134, 2.534375000000013,
+             2.401562499999998, 3.007812500000011, 3.151562500000013, 2.1265624999999906,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="nearest", cval=0.0)
+        {"even_nearest", 10, 3, 0, 1.0,
+         N4M_PP_SAVGOL_NEAREST, 0.0, {
+             0.9609375000000026, 0.7500000000000139, 1.3015625000000075, 1.1140625000000206,
+             1.678125000000017, 2.4656250000000024, 1.987500000000021, 1.9468750000000061,
+             2.0687500000000147, 2.8000000000000105, 1.7328125000000134, 2.03125000000003,
+             2.1140625000000237, 3.4750000000000423, 4.732812500000049, 5.001562500000031,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="wrap", cval=0.0)
+        {"even_wrap", 10, 3, 0, 1.0,
+         N4M_PP_SAVGOL_WRAP, 0.0, {
+             2.1234374999999974, 1.2812500000000029, 1.632812500000002, 0.5453124999999992,
+             1.678125000000017, 2.4656250000000024, 1.987500000000021, 1.9468750000000061,
+             2.0687500000000147, 2.8000000000000105, 1.7328125000000134, 2.600000000000011,
+             2.373437499999997, 3.084375000000004, 2.7781250000000144, 1.6515624999999943,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=0, delta=0.0,
+        //     axis=-1, mode="interp", cval=0.0)
+        {"zero_delta_smoothing", 10, 3, 0, 0.0,
+         N4M_PP_SAVGOL_INTERP, 0.0, {
+             0.6000000000000022, 0.7136363636363636, 0.9181818181818171, 1.1909090909090896,
+             1.5090909090909084, 2.4656250000000024, 1.987500000000021, 1.9468750000000061,
+             2.0687500000000147, 2.8000000000000105, 1.7328125000000134, 1.681002331002326,
+             1.816200466200459, 2.3671911421911345, 3.450815850815845, 5.183916083916084,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=11, polyorder=3, deriv=0, delta=1.0,
+        //     axis=-1, mode="interp", cval=0.0)
+        {"odd_interp", 11, 3, 0, 1.0,
+         N4M_PP_SAVGOL_INTERP, 0.0, {
+             1.0489510489510474, 0.41433566433566105, 0.43181818181817677, 0.8916083916083842,
+             1.5839160839160753, 2.298951048951052, 1.8141025641025799, 2.221445221445235,
+             1.8846153846153932, 2.4959207459207504, 2.1853146853147076, 1.737762237762254,
+             1.5891608391608565, 1.998251748251762, 3.2237762237762317, 5.52447552447552,
+         }},
+        // scipy.signal.savgol_filter(
+        //     np.array([0.5,1.25,-0.75,3,2.5,-1,4.25,0,5.5,2,-2.25,6,1.5,3.75,-0.5,7], dtype=np.float64),
+        //     window_length=10, polyorder=3, deriv=4, delta=1.0,
+        //     axis=-1, mode="interp", cval=0.0)
+        {"derivative_above_polyorder", 10, 3, 4, 1.0,
+         N4M_PP_SAVGOL_INTERP, 0.0, {
+             0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0,
+             0.0, 0.0, 0.0, 0.0,
+         }},
+    };
+    for (const auto& c : cases) {
+        n4m_pp_savgol_handle_t* handle = nullptr;
+        N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(
+            &handle, c.window, c.degree, c.deriv, c.delta, c.mode, c.cval) == N4M_OK);
+        std::vector<double> source(input.begin(), input.begin() + c.expected.size());
+        std::vector<double> actual(source.size(), -12345.0);
+        const auto width = static_cast<std::int64_t>(source.size());
+        N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_transform(
+            handle, make_rowmajor_view(source.data(), 1, width),
+            make_rowmajor_view(actual.data(), 1, width)) == N4M_OK);
+        assert_close_with(actual, c.expected, c.name, 1e-9, 1e-10);
+        // The shared kernel also stages in-place even-window calls correctly.
+        auto view = make_rowmajor_view(source.data(), 1, width);
+        N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_transform(
+            handle, view, view) == N4M_OK);
+        assert_close_with(source, c.expected, c.name, 1e-9, 1e-10);
+        n4m_transform_savitzky_golay_destroy(handle);
+    }
+    // SciPy 1.17.1's deriv=1, delta=0.0 generating call raises
+    // ZeroDivisionError. The C ABI expresses that invalid spacing as a status.
+    for (int deriv : {1, 4}) {
+        n4m_pp_savgol_handle_t* handle = nullptr;
+        N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(
+            &handle, 10, 3, deriv, 0.0, N4M_PP_SAVGOL_INTERP, 0.0)
+            == N4M_ERR_INVALID_ARGUMENT);
+        N4M_TEST_REQUIRE(handle == nullptr);
+    }
 }
 
 void test_first_derivative_smoke() {
@@ -327,6 +485,7 @@ void register_preprocessing_smoothing_tests(n4m_testing::Runner& r);
 void register_preprocessing_smoothing_tests(n4m_testing::Runner& r) {
     r.run("pp_savgol_smoke",                test_savgol_smoke);
     r.run("pp_savgol_parity",               verify_savgol_parity);
+    r.run("pp_savgol_literal_contract",     test_savgol_literal_contract);
     r.run("pp_first_derivative_smoke",      test_first_derivative_smoke);
     r.run("pp_first_derivative_parity",     verify_first_derivative_parity);
     r.run("pp_second_derivative_smoke",     test_second_derivative_smoke);

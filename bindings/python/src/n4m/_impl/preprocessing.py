@@ -9,7 +9,7 @@ import numpy as np
 
 from .._errors import check
 from .._ffi import lib
-from .._parameter_validation import _snv_parameters
+from .._parameter_validation import _int32_parameter, _snv_parameters
 from .estimator_base import StatefulOperator, StatelessOperator
 
 # Boundary-mode lookups for the operators that accept a string mode.
@@ -430,9 +430,9 @@ class SavitzkyGolay(StatelessOperator):
         cval: float = 0.0,
     ):
         super().__init__()
-        self.window_length = int(window_length)
-        self.polyorder = int(polyorder)
-        self.deriv = int(deriv)
+        self.window_length = _int32_parameter("window_length", window_length)
+        self.polyorder = _int32_parameter("polyorder", polyorder)
+        self.deriv = _int32_parameter("deriv", deriv)
         self.delta = float(delta)
         self.mode = str(mode)
         self.cval = float(cval)
@@ -446,9 +446,9 @@ class SavitzkyGolay(StatelessOperator):
         check(
             lib.n4m_transform_savitzky_golay_create(
                 ctypes.byref(h),
-                ctypes.c_int32(self.window_length),
-                ctypes.c_int32(self.polyorder),
-                ctypes.c_int32(self.deriv),
+                ctypes.c_int32(_int32_parameter("window_length", self.window_length)),
+                ctypes.c_int32(_int32_parameter("polyorder", self.polyorder)),
+                ctypes.c_int32(_int32_parameter("deriv", self.deriv)),
                 ctypes.c_double(self.delta),
                 ctypes.c_int(mode_int),
                 ctypes.c_double(self.cval),
