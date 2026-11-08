@@ -211,6 +211,7 @@
   "splitters.spxy_fold" = c("splitter"),
   "splitters.spxy_g_fold" = c("splitter"),
   "splitters.systematic_circular" = c("splitter"),
+  "utilities.finite_column_quantiles" = c("generic"),
   "utilities.hotelling_t2" = c("generic"),
   "utilities.moments" = c("generic"),
   "utilities.q_residuals" = c("generic"),
@@ -429,6 +430,7 @@
   "splitters.spxy_fold" = "n4m_spxy_fold",
   "splitters.spxy_g_fold" = "n4m_spxy_g_fold",
   "splitters.systematic_circular" = "n4m_systematic_circular",
+  "utilities.finite_column_quantiles" = "n4m_finite_column_quantiles",
   "utilities.hotelling_t2" = "n4m_hotelling_t2",
   "utilities.moments" = "n4m_moments",
   "utilities.q_residuals" = "n4m_q_residuals",
@@ -1684,6 +1686,12 @@ n4m_spxy_g_fold <- function(n_splits = 5L, y_metric = "euclidean", aggregation =
 #' @export
 n4m_systematic_circular <- function(test_size = 0.25, seed = NULL) {
   .n4m_estimator("splitters.systematic_circular", c("splitter"), list(test_size = test_size, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_finite_column_quantiles <- function(probabilities = NULL) {
+  .n4m_estimator("utilities.finite_column_quantiles", c("generic"), list(probabilities = probabilities))
 }
 
 #' @rdname n4m_estimator_role_constructors

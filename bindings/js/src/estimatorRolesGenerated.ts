@@ -6952,6 +6952,30 @@ export class SystematicCircular extends NativeProcedure implements Splitter {
 }
 NativeMethod.register("splitters.systematic_circular", SystematicCircular);
 
+/** Parameters of FiniteColumnQuantiles; unset values take the native defaults. */
+export interface FiniteColumnQuantilesParams {
+    /** Required. */
+    probabilities?: number[];
+}
+
+/** Native `utilities.finite_column_quantiles` (generic). */
+export class FiniteColumnQuantiles extends NativeProcedure implements Procedure {
+    readonly methodId = "utilities.finite_column_quantiles";
+    readonly paramTypes = {
+        probabilities: "double_array",
+    } as const;
+
+    constructor(params: FiniteColumnQuantilesParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("utilities.finite_column_quantiles", FiniteColumnQuantiles);
+
 /** Parameters of HotellingT2; unset values take the native defaults. */
 export interface HotellingT2Params {
     /** Default 5. */

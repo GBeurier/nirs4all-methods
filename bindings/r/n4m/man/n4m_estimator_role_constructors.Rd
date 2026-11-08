@@ -209,6 +209,7 @@
 \alias{n4m_spxy_fold}
 \alias{n4m_spxy_g_fold}
 \alias{n4m_systematic_circular}
+\alias{n4m_finite_column_quantiles}
 \alias{n4m_hotelling_t2}
 \alias{n4m_moments}
 \alias{n4m_q_residuals}
@@ -426,6 +427,7 @@ n4m_spxy(test_size = 0.25)
 n4m_spxy_fold(n_splits = 5L, y_metric = "euclidean")
 n4m_spxy_g_fold(n_splits = 5L, y_metric = "euclidean", aggregation = "mean")
 n4m_systematic_circular(test_size = 0.25, seed = NULL)
+n4m_finite_column_quantiles(probabilities = NULL)
 n4m_hotelling_t2(n_components = 5L, alpha = 0.05)
 n4m_moments()
 n4m_q_residuals(n_components = 5L, alpha = 0.05)
@@ -674,6 +676,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{polyorder}{Native parameter (int); defaults come from the n4m manifest.}
 \item{population_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{presence}{Native parameter (int_array); defaults come from the n4m manifest.}
+\item{probabilities}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{probability}{Native parameter (double); defaults come from the n4m manifest.}
 \item{profile}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{randomization_seed}{Native parameter (int); defaults come from the n4m manifest.}
@@ -996,6 +999,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_spxy_fold}: \code{splitters.spxy_fold} (splitter)
 \item \code{n4m_spxy_g_fold}: \code{splitters.spxy_g_fold} (splitter)
 \item \code{n4m_systematic_circular}: \code{splitters.systematic_circular} (splitter)
+\item \code{n4m_finite_column_quantiles}: \code{utilities.finite_column_quantiles} (generic)
 \item \code{n4m_hotelling_t2}: \code{utilities.hotelling_t2} (generic)
 \item \code{n4m_moments}: \code{utilities.moments} (generic)
 \item \code{n4m_q_residuals}: \code{utilities.q_residuals} (generic)

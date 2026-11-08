@@ -73,6 +73,7 @@ std::unique_ptr<Adapter> make_filter_high_leverage(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_filter_spectral_quality(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_filter_x_outlier(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_filter_y_outlier(const MethodSpec& spec);
+n4m_status_t run_finite_column_quantiles(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 std::unique_ptr<Adapter> make_gpr_pls(const MethodSpec& spec);
 n4m_status_t run_hotelling_t2(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 std::unique_ptr<Adapter> make_kernel_pls(const MethodSpec& spec);

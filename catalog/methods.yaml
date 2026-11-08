@@ -13794,6 +13794,50 @@ methods:
       roles: [generic]
       inputs:
         y: required
+  - method_id: utilities.finite_column_quantiles
+    family: utilities.finite_column_quantiles
+    category: utilities
+    subcategory: finite_column_quantiles
+    since_abi: 2.22.0
+    abi_symbols: []
+    tu:
+      - cpp/src/core/estimator/procedures.cpp
+    headers:
+      - cpp/include/n4m/estimator.h
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: tbd
+      divergence_id: null
+      references: []
+      tolerances: []
+    bench:
+      bench_id: utilities.finite_column_quantiles
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: n4m.roles
+        class: FiniteColumnQuantiles
+        legacy_aliases: []
+    publications: []
+    notes: "Per-column type-7 quantiles of finite X entries only. Required non-empty probabilities in [0,1], in caller order. Outputs: quantiles (probabilities x columns, F64), finite_counts (one int64 per column). Empty finite columns return NaN and count zero. No fitted state or imputation."
+    namespace: utilities
+    leaf: finite_column_quantiles
+    fq_name: n4m.utilities.finite_column_quantiles
+    c_surface: none
+    legacy_ids:
+      - utilities.finite_column_quantiles
+    estimator:
+      kind: procedure
+      adapter: finite_column_quantiles
+      roles: [generic]
+      params:
+        - name: probabilities
+          type: double_array
+          min: 0.0
+          max: 1.0
   - method_id: utilities.ragged_summary
     family: utilities.ragged_summary
     category: utilities
