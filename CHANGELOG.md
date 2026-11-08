@@ -16,6 +16,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Generic StandardScale (`preprocessing.scaling.standard_scale`) accepts integer
+  `ddof` (default 0), requiring `0 <= ddof < rows` even with `with_std=false`.
+  Default population fresh-fit arithmetic is unchanged; `ddof=1` supplies sample
+  SD. Constant columns keep scale 1; singleton sample-SD fits are refused.
+- StandardScale N4ME states now resolve three parameters instead of two. Direct
+  Python/JS/R/MATLAB, pickle and RolePipeline states written before this change,
+  and N4MF/N4MC exports containing those scaler states, are explicitly refused
+  by the existing parameter-count check. Preserve old bytes; no compatibility
+  reader, C ABI or envelope-format bump is introduced. `ddof` is fit provenance
+  only: learned scales are stored, but the fitted row count is not. Multimodal
+  population recipes require a nested scaler with resolved `ddof=0`.
+
 - Generic `splitters.kennard_stone` accepts optional integer `n_train` with
   `2 <= n_train < rows`, mutually exclusive with an explicit `test_size`.
   Greedy training order, ties and ascending held-out indices are preserved.

@@ -324,7 +324,8 @@ n4m_status_t validate_state(n4m_context_t* ctx, const Pipeline::Estimator& state
     } else {
         valid = source->encoder == N4M_MULTIMODAL_TENSOR_PCA
             ? double_param(raw, "n_components", static_cast<double>(source->n_components))
-            : integer_param(raw, "with_mean", source->with_mean) && integer_param(raw, "with_std", source->with_std);
+            : integer_param(raw, "with_mean", source->with_mean) &&
+              integer_param(raw, "with_std", source->with_std) && integer_param(raw, "ddof", 0);
         status = n4m_estimator_transform_cols(state.get(), &output_width);
         valid = valid && output_width == (source->encoder == N4M_MULTIMODAL_TENSOR_PCA ? source->n_components : expected_width);
     }

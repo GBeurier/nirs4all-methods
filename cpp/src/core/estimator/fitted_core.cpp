@@ -28,22 +28,25 @@ namespace {
 
 struct StandardScaleState {
     bool with_mean, with_std;
+    std::int64_t ddof;
     std::vector<double> mean, scale;
 };
 
 StandardScaleState* standard_scale_create(const Params& params) {
-    return new (std::nothrow) StandardScaleState{params.get_bool("with_mean"),
-                                                params.get_bool("with_std"), {}, {}};
+    return new (std::nothrow) StandardScaleState{
+        params.get_bool("with_mean"), params.get_bool("with_std"), params.get_int("ddof"), {}, {}};
 }
 
 n4m_status_t standard_scale_fit(StandardScaleState* state, const double* values,
                                std::int64_t rows, std::int64_t cols) {
-    if (rows <= 0 || cols <= 0) return N4M_ERR_INVALID_ARGUMENT;
+    if (rows <= 0 || cols <= 0 || state->ddof < 0 || state->ddof >= rows) {
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
     std::vector<double> centered(values, values + rows * cols);
     for (double value : centered) {
         if (!std::isfinite(value)) return N4M_ERR_INVALID_ARGUMENT;
     }
-    // Translation before the shared population arithmetic preserves exact
+    // Translation before the shared arithmetic preserves exact
     // constants and avoids summing a large common offset repeatedly.
     std::vector<double> anchor(centered.begin(), centered.begin() + static_cast<std::ptrdiff_t>(cols));
     for (std::int64_t row = 0; row < rows; ++row) {
@@ -60,7 +63,8 @@ n4m_status_t standard_scale_fit(StandardScaleState* state, const double* values,
         }
     }
     n4m::core::detail::column_scales(centered, static_cast<std::size_t>(rows),
-                                    static_cast<std::size_t>(cols), state->scale);
+                                    static_cast<std::size_t>(cols), state->scale,
+                                    static_cast<std::size_t>(state->ddof));
     for (std::size_t col = 0; col < state->mean.size(); ++col) {
         state->mean[col] += anchor[col];
         if (!std::isfinite(state->mean[col]) || !std::isfinite(state->scale[col])) {
