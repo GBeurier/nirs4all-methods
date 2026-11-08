@@ -7,6 +7,10 @@ if(DEFINED _N4M_OPTIONS_INCLUDED)
 endif()
 set(_N4M_OPTIONS_INCLUDED ON)
 
+# ---- Build identity --------------------------------------------------------
+set(N4M_BUILD_GIT_REVISION "" CACHE STRING
+    "Explicit source revision for n4m_get_git_revision; empty means unknown")
+
 # ---- Build targets ---------------------------------------------------------
 option(N4M_BUILD_SHARED        "Build n4m_c shared library (libn4m.so/.dll/.dylib)" ON)
 option(N4M_BUILD_STATIC        "Build n4m_c_static (for Android predict-only embedders)" ON)

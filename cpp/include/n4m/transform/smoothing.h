@@ -47,10 +47,10 @@ N4M_API int64_t      n4m_transform_derivative_output_cols(int32_t order,
 /* ---------- SavitzkyGolay -------------------------------------------------
  *
  * Parameters:
- *   window_length : odd integer >= 1
+ *   window_length : integer >= 1 (odd or even)
  *   polyorder     : 0 <= polyorder < window_length
  *   deriv         : derivative order >= 0
- *   delta         : sample spacing (non-zero)
+ *   delta         : sample spacing (non-zero when deriv > 0; unused when deriv == 0)
  *   mode          : boundary handling, see n4m_pp_savgol_mode_t below
  *   cval          : fill value used when mode == N4M_PP_SAVGOL_CONSTANT
  *
@@ -60,8 +60,10 @@ N4M_API int64_t      n4m_transform_derivative_output_cols(int32_t order,
  *   - NEAREST  : replicate the edge sample.
  *   - WRAP     : cyclic.
  *   - INTERP   : fit `polyorder` polynomials to the first and last
- *                window_length samples, evaluate at the half-window
- *                positions on each side.
+ *                window_length samples, evaluate at window_length / 2
+ *                positions on each side (integer division).
+ * Even windows use a half-integer coefficient center. All modes use SciPy's
+ * convolve1d alignment. Nonempty signals require at least window_length columns.
  */
 typedef struct n4m_pp_savgol_handle_t n4m_pp_savgol_handle_t;
 typedef enum n4m_pp_savgol_mode_t {

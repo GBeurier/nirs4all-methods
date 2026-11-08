@@ -1001,14 +1001,19 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "Savitzky & Golay (1964), *Smoothing and Differentiation of Data by Simplified Least "
         "Squares Procedures*, Analytical Chemistry 36, 1627–1639, "
         "https://doi.org/10.1021/ac60214a047.",
-        "In every odd window, a polynomial of degree `polyorder` is fit by least squares. The "
-        "value or derivative of order `deriv` at the center is a precomputed convolution of "
-        "the window, scaled by `delta`; `mode` defines edge extension.",
+        "In every positive odd or even window, a polynomial of degree `polyorder` is fit by "
+        "least squares. Coefficients use the center `(window_length - 1) / 2`, which is "
+        "half-integer for even windows. All modes use SciPy's convolution alignment with "
+        "integer offset `window_length // 2`. The `interp` mode fills the first and last "
+        "`window_length // 2` outputs by polynomial edge fits; derivatives are scaled by "
+        "`delta`.",
         "Denoising while preserving polynomial peak shape, or estimating smoothed first and "
         "second derivatives.",
-        "Window, degree, derivative, and grid spacing must be coherent. Derivatives amplify "
-        "noise, large windows merge narrow bands, and edge modes produce different boundary "
-        "values.",
+        "Require `window_length >= 1`, `0 <= polyorder < window_length`, and `deriv >= 0`. "
+        "Spacing must be nonzero for `deriv > 0`; `delta=0` is accepted when `deriv=0` "
+        "because smoothing does not use spacing. Nonempty signals require at least "
+        "`window_length` columns in every mode. Derivatives amplify noise, large windows "
+        "merge narrow bands, and edge modes produce different boundary values.",
         "`n4m.transform.smoothing.SavitzkyGolay` wraps "
         "`n4m_transform_savitzky_golay_*`; coefficient generation and modes are in "
         "`preprocessing/derivatives/savitzky_golay.c`.",

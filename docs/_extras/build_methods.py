@@ -3559,13 +3559,15 @@ OPERATOR_BIB: dict[str, dict] = {
                  "Differentiation of Data by Simplified Least Squares "
                  "Procedures*. Analytical Chemistry 36(8), 1627–1639.",
         "principle": (
-            "Within a sliding window of odd length $w$, a polynomial of order "
+            "Within a positive odd or even window of length $w$, a polynomial of order "
             "$p$ is fit by least squares; the smoothed value (or its "
             "$d$-th derivative) at the window centre is a fixed linear "
-            "combination of the windowed points. Because the convolution "
-            "coefficients are precomputed, SG simultaneously denoises and "
-            "differentiates while preserving peak shape far better than a "
-            "moving average."),
+            "combination of the windowed points. Even windows use a half-integer "
+            "coefficient centre, separate from the integer $w // 2$ convolution "
+            "offset used in all modes and the interpolation edge-band width. "
+            "Zero spacing is accepted only for smoothing ($d=0$); derivatives "
+            "require nonzero spacing. Precomputed coefficients preserve polynomial "
+            "peak shape while smoothing or differentiating."),
     },
     "pp_first_derivative": {
         "title": "First derivative",

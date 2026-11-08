@@ -1210,7 +1210,7 @@ N4M_API n4m_status_t n4m_transform_savitzky_golay_create(n4m_pp_savgol_handle_t*
         return N4M_ERR_NULL_POINTER;
     }
     *out = nullptr;
-    if (window_length < 1 || (window_length % 2) == 0) {
+    if (window_length < 1) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     if (polyorder < 0 || polyorder >= window_length) {
@@ -1219,7 +1219,7 @@ N4M_API n4m_status_t n4m_transform_savitzky_golay_create(n4m_pp_savgol_handle_t*
     if (deriv < 0) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
-    if (delta == 0.0) {
+    if (deriv > 0 && delta == 0.0) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
     if (mode != N4M_PP_SAVGOL_MIRROR &&

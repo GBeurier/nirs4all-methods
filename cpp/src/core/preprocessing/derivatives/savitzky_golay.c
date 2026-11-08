@@ -6,7 +6,7 @@
  *
  * Coefficient precomputation (done once at `_create`):
  *
- *   pos     = (window_length - 1) // 2          # centred filter
+ *   pos     = (window_length - 1) / 2.0        # half-integer for even windows
  *   x       = arange(-pos, window_length - pos) # signed positions
  *   x_rev   = reverse(x)                        # 'conv' order
  *   V[i, j] = x_rev[i] ** j     for i in [0, window_length), j in [0, polyorder+1)
@@ -22,14 +22,14 @@
  * Transform path:
  *
  *   For each row of X, the centred output position j is
- *       out[i, j] = sum_k coeffs[k] * X_padded[i, j - pos + k]
- *   for k in [0, window_length).  When (j - pos + k) is out of range, the
+ *       out[i, j] = sum_k coeffs[k] * X_padded[i, j + half_window - k]
+ *   where half_window = window_length // 2 is an integer, separate from pos.
+ *   For k in [0, window_length), when the source index is out of range, the
  *   five modes pull values via n4m_pad_resolve_index (or `cval` for
  *   `constant`).  The `interp` mode skips padding for the boundary regions
  *   and instead fits a polynomial of degree `polyorder` to the first /
- *   last `window_length` samples, evaluating it at offsets 0..pos and
- *   cols-1-pos..cols-1 respectively (matches `_fit_edge` in scipy's
- *   _savitzky_golay.py byte-for-byte).
+ *   last `window_length` samples, filling the first and last half_window
+ *   outputs (the edge bands used by SciPy's `_fit_edge`).
  */
 
 #include "savitzky_golay.h"
@@ -48,7 +48,7 @@ struct n4m_pp_savgol_state_t {
     double                 delta;
     n4m_pp_savgol_mode_t   mode;
     double                 cval;
-    int32_t                pos;        /* window center index */
+    double                 coefficient_center; /* half-integer for even windows */
     double*                coeffs;     /* length window_length */
 };
 
@@ -67,7 +67,7 @@ n4m_pp_savgol_state_t* n4m_pp_savgol_state_new(int32_t window_length,
                                                 double delta,
                                                 n4m_pp_savgol_mode_t mode,
                                                 double cval) {
-    if (window_length < 1 || (window_length % 2) == 0) {
+    if (window_length < 1) {
         return NULL;
     }
     if (polyorder < 0 || polyorder >= window_length) {
@@ -76,7 +76,7 @@ n4m_pp_savgol_state_t* n4m_pp_savgol_state_new(int32_t window_length,
     if (deriv < 0) {
         return NULL;
     }
-    if (delta == 0.0) {
+    if (deriv > 0 && delta == 0.0) {
         return NULL;
     }
     n4m_pp_savgol_state_t* s =
@@ -90,7 +90,7 @@ n4m_pp_savgol_state_t* n4m_pp_savgol_state_new(int32_t window_length,
     s->delta         = delta;
     s->mode          = mode;
     s->cval          = cval;
-    s->pos           = (window_length - 1) / 2;
+    s->coefficient_center = (window_length - 1) / 2.0;
     s->coeffs        = (double*)malloc((size_t)window_length * sizeof(double));
     if (s->coeffs == NULL) {
         free(s);
@@ -107,11 +107,11 @@ n4m_pp_savgol_state_t* n4m_pp_savgol_state_new(int32_t window_length,
     }
 
     /* Build V (window_length x (polyorder + 1)), row major.  Positions are
-     * the reversed integer sequence [-pos, ..., window_length - pos - 1]
+     * the reversed sequence [-pos, ..., window_length - pos - 1]
      * (scipy's 'conv' flip). */
     const int32_t p = polyorder + 1;
     const int32_t w = window_length;
-    const int32_t pos = s->pos;
+    const double pos = s->coefficient_center;
     double* V = (double*)malloc((size_t)w * (size_t)p * sizeof(double));
     double* tau = (double*)malloc((size_t)p * sizeof(double));
     double* y   = (double*)malloc((size_t)p * sizeof(double));
@@ -126,10 +126,8 @@ n4m_pp_savgol_state_t* n4m_pp_savgol_state_new(int32_t window_length,
         return NULL;
     }
     for (int32_t i = 0; i < w; ++i) {
-        /* x_rev[i] = (window_length - 1 - i) - pos
-         *          = (w - 1 - pos) - i  =  pos_inverse - i  for centred (pos = (w-1)/2)
-         *          = pos - i           (because for odd w, w - 1 - pos == pos). */
-        const double xi = (double)(w - 1 - i) - (double)pos;
+        /* SciPy's 'conv' order, including half-integer even-window positions. */
+        const double xi = (double)(w - 1 - i) - pos;
         double power = 1.0;
         for (int32_t j = 0; j < p; ++j) {
             V[(size_t)i * (size_t)p + (size_t)j] = power;
@@ -382,7 +380,9 @@ n4m_status_t n4m_pp_savgol_state_apply(const n4m_pp_savgol_state_t* state,
     if (cols < (int64_t)w) {
         return N4M_ERR_INVALID_ARGUMENT;
     }
-    const int32_t pos = state->pos;
+    /* Integer edge-band width and convolve1d offset for both odd and even
+     * kernels. Do not truncate the independent coefficient center for this. */
+    const int32_t pos = w / 2;
     const double* coeffs = state->coeffs;
     const int in_place = (X == out);
 

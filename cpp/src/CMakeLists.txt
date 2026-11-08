@@ -14,6 +14,10 @@ configure_file(
     ${PROJECT_BINARY_DIR}/generated/n4m/n4m_export.h
     @ONLY)
 
+# Stamp only the version translation unit used by native and Wasm libraries.
+set_property(SOURCE core/common/version.cpp APPEND PROPERTY COMPILE_DEFINITIONS
+    "N4M_BUILD_GIT_REVISION=\"${N4M_BUILD_GIT_REVISION}\"")
+
 # ---------------------------------------------------------------------------
 # n4m_core — internal OBJECT library. Embedded inside n4m_c and
 # n4m_c_static via $<TARGET_OBJECTS:n4m_core>. Never installed.

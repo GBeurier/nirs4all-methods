@@ -24,8 +24,10 @@ extern "C" {
 
 typedef struct n4m_pp_savgol_state_t n4m_pp_savgol_state_t;
 
-/* Allocate the SG state. Validates window_length >= 1 (odd), polyorder
- * in [0, window_length), deriv >= 0, delta != 0. Returns NULL on invalid
+/* Allocate the SG state. Validates window_length >= 1 (odd or even), polyorder
+ * in [0, window_length), deriv >= 0, and delta != 0 when deriv > 0.
+ * Even windows use a half-integer coefficient center and integer w/2 edge
+ * bands, with SciPy convolve1d alignment in every mode. Returns NULL on invalid
  * arguments or allocation failure. The mode argument is validated by the
  * C-API wrapper; the engine assumes a valid value. */
 n4m_pp_savgol_state_t* n4m_pp_savgol_state_new(int32_t window_length,
