@@ -61,7 +61,9 @@ testthat::test_that("every manifest estimator has a generated R constructor", {
                             c(vapply(fx$cases, `[[`, "", "method_id"),
                               vapply(fx$procedures, `[[`, "", "method_id"),
                               "preprocessing.scaling.standard_scale",
+                              "models.pls.opls",
                               "utilities.ragged_summary",
+                              "utilities.finite_column_quantiles",
                               "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
                               "diagnostics.spectral_noise_proxy", "diagnostics.local_density",
                               "diagnostics.pca_reference_qc"))
@@ -80,6 +82,22 @@ testthat::test_that("StandardScale fits population moments on training rows only
   replay <- n4m_estimator_import(state)
   testthat::expect_identical(n4m_estimator_transform(replay, heldout),
                               n4m_estimator_transform(fit, heldout))
+  testthat::expect_identical(n4m_estimator_export(replay), state)
+})
+
+testthat::test_that("the OPLS role is the n4m_fit opls_nipals model", {
+  # Same kernel and configuration as nirs4all_pls(algo = "opls_nipals"):
+  # wiring parity, not an independent reference.
+  role <- n4m_estimator_fit(n4m_opls(n_components = 3L, scale_x = FALSE, scale_y = FALSE),
+                            fx$x_train, fx$y_train)
+  direct <- n4m_fit(fx$x_train, fx$y_train, algo = "opls_nipals", n_components = 3L,
+                    center_x = TRUE, scale_x = FALSE, center_y = TRUE, scale_y = FALSE)
+  testthat::expect_equal(as.numeric(predict(role, fx$x_test)),
+                         as.numeric(n4m_predict(direct, fx$x_test)), tolerance = 1e-12)
+  state <- n4m_estimator_export(role)
+  replay <- n4m_estimator_import(state)
+  testthat::expect_s3_class(replay, "n4m_regressor")
+  testthat::expect_identical(predict(replay, fx$x_test), predict(role, fx$x_test))
   testthat::expect_identical(n4m_estimator_export(replay), state)
 })
 

@@ -1066,6 +1066,18 @@ const ParamSpec kParams_models_pls_kernel[] = {
     {"coef0", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_pls_kernel_coef0, 1, kNaN, kNaN, nullptr, 0, false, false},
     {"degree", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_kernel_degree, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_models_pls_opls_n_components[] = {2};
+const std::int64_t kDefault_models_pls_opls_center_x[] = {1};
+const std::int64_t kDefault_models_pls_opls_scale_x[] = {1};
+const std::int64_t kDefault_models_pls_opls_center_y[] = {1};
+const std::int64_t kDefault_models_pls_opls_scale_y[] = {1};
+const ParamSpec kParams_models_pls_opls[] = {
+    {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_models_pls_opls_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, true},
+    {"center_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_opls_center_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"scale_x", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_opls_scale_x, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"center_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_opls_center_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+    {"scale_y", N4M_METHOD_PARAM_BOOL, true, kDefault_models_pls_opls_scale_y, nullptr, 1, kNaN, kNaN, nullptr, 0, false, true},
+};
 const std::int64_t kDefault_models_pls_pcr_n_components[] = {2};
 const std::int64_t kDefault_models_pls_pcr_center_x[] = {1};
 const std::int64_t kDefault_models_pls_pcr_scale_x[] = {1};
@@ -2172,6 +2184,7 @@ const MethodSpec kMethods[] = {
     {"models.multiblock.so_pls", "n4m.estimators.multiblock.so_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_so_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_so_pls, nullptr},
     {"models.pls.cppls", "n4m.estimators.regression.latent.cppls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_pls_cppls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_cppls, nullptr},
     {"models.pls.kernel", "n4m.estimators.regression.kernel.kernel_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_pls_kernel, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "kernel_pls", &make_kernel_pls, nullptr},
+    {"models.pls.opls", "n4m.estimators.regression.latent.opls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_opls, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_opls, nullptr},
     {"models.pls.pcr", "n4m.estimators.regression.latent.pcr", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_pcr, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_pcr, nullptr},
     {"models.pls.pls_fit_simple", "n4m.estimators.regression.latent.pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_pls_fit_simple, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_pls_fit_simple, nullptr},
     {"models.pls.pls_regression", "n4m.estimators.regression.latent.pls_regression", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_pls_regression, 6, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_pls_regression, nullptr},

@@ -2770,6 +2770,34 @@ class KernelPLS(NativeRegressor):
         self.degree = degree
 
 
+class OPLS(NativeRegressor, NativeTransformer):
+    """Native ``models.pls.opls`` (transformer, regressor)."""
+
+    _method_id = "models.pls.opls"
+    _param_types: ClassVar[dict[str, str]] = {
+        "n_components": "int",
+        "center_x": "bool",
+        "scale_x": "bool",
+        "center_y": "bool",
+        "scale_y": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        n_components=2,
+        center_x=True,
+        scale_x=True,
+        center_y=True,
+        scale_y=True,
+    ) -> None:
+        self.n_components = n_components
+        self.center_x = center_x
+        self.scale_x = scale_x
+        self.center_y = center_y
+        self.scale_y = scale_y
+
+
 class PCR(NativeRegressor, NativeTransformer):
     """Native ``models.pls.pcr`` (transformer, regressor)."""
 
@@ -5792,6 +5820,7 @@ __all__ = [
     "MSC",
     "NPLS",
     "O2PLS",
+    "OPLS",
     "OSC",
     "PCR",
     "PDS",

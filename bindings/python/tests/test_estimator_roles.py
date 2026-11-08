@@ -239,6 +239,27 @@ def test_pcr_matches_n4m_reference(data):
     )
 
 
+def test_opls_role_surface():
+    # The generated class mirrors the manifest: five parameters, no solver.
+    assert roles.OPLS._method_id == "models.pls.opls"
+    assert set(roles.OPLS._param_types) == {
+        "n_components",
+        "center_x",
+        "scale_x",
+        "center_y",
+        "scale_y",
+    }
+    assert roles.OPLS().get_params() == {
+        "n_components": 2,
+        "center_x": True,
+        "scale_x": True,
+        "center_y": True,
+        "scale_y": True,
+    }
+    with pytest.raises(TypeError):
+        roles.OPLS(solver="nipals")
+
+
 def test_weighted_pls_matches_n4m_reference(data):
     X, y, X_test, _, _ = data
     weights = np.linspace(0.5, 2.0, X.shape[0])
@@ -277,10 +298,11 @@ def test_cross_language_fixture_states_replay():
     X_test = np.asarray(doc["x_test"])
     assert doc["abi"] == "2.15.0"
     legacy_methods = {case["method_id"] for case in doc["cases"]}
-    new_methods = {"preprocessing.scaling.standard_scale"}
+    new_methods = {"preprocessing.scaling.standard_scale", "models.pls.opls"}
     assert legacy_methods.isdisjoint(new_methods)
     # Preserve every old fixture packet; StandardScale has its actual native
-    # population/scientific oracle and portable-state cases in the new suite.
+    # population/scientific oracle and portable-state cases in the new suite,
+    # and OPLS its kernel-fixture oracle in the native models_pls suite.
     assert legacy_methods | new_methods == {
         m for m, c in _REGISTRY.items() if issubclass(c, roles.NativeEstimator)
     }

@@ -1,0 +1,74 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "models.pls.opls"
+family: "models.pls"
+category: "models"
+subcategory: "pls"
+since_abi: "2.22.0"
+abi_symbols:
+  - "n4m_model_fit"
+tu:
+  - "cpp/src/core/model.cpp"
+  - "cpp/src/c_api/c_api_model.cpp"
+headers:
+  - "cpp/include/n4m/n4m.h"
+carry_along_tu:
+  - "cpp/src/core/common/context.cpp"
+  - "cpp/src/core/common/status.cpp"
+  - "cpp/src/core/common/matrix_view.cpp"
+  - "cpp/src/core/common/version.cpp"
+parity:
+  fixtures:
+    - "parity/fixtures/synthetic_opls_tiny_pls1_v1.json"
+    - "parity/fixtures/synthetic_opls_small_pls1_v1.json"
+    - "parity/fixtures/synthetic_opls_small_pls2_v1.json"
+  tolerance_row: "pls4all-numpy-opls"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "models.pls.opls"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings: {}
+publications:
+  - "Trygg, J., Wold, S. (2002). Orthogonal projections to latent structures (O-PLS)."
+notes: "OPLS regression through the N4MM model life cycle (n4m_model_fit) with the kernel's only route: NIPALS with orthogonal deflation. n_components is the total: one predictive plus n_components - 1 Y-orthogonal components; transform returns the predictive score first, then the orthogonal scores in extraction order."
+c_surface:
+  - "n4m_model_fit"
+estimator:
+  kind: "estimator"
+  adapter: "opls"
+  roles: "[regressor, transformer]"
+  state: "n4mm"
+  inputs:
+    y: "required"
+  params:
+    - name: "n_components"
+      type: "int"
+      default: 2
+      min: 1
+      recorded: true
+    - name: "center_x"
+      type: "bool"
+      default: true
+      recorded: true
+    - name: "scale_x"
+      type: "bool"
+      default: true
+      recorded: true
+    - name: "center_y"
+      type: "bool"
+      default: true
+      recorded: true
+    - name: "scale_y"
+      type: "bool"
+      default: true
+      recorded: true
+fq_name: "n4m.estimators.regression.latent.opls"
+leaf: "opls"
+legacy_ids:
+  - "models.pls.opls"
+namespace: "estimators.regression.latent"

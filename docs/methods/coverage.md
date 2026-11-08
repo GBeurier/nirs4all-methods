@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **242**
+- Catalog entries: **244**
 - Curated scientific records: **249**
-- Resolved documentation pages: **242**
+- Resolved documentation pages: **244**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -124,6 +124,7 @@ This generated report records the documentation source used for each catalog ent
 | `models.multiblock.so_pls` | [so_pls](so_pls.md) | curated |
 | `models.pls.cppls` | [cppls](cppls.md) | curated |
 | `models.pls.kernel` | [kernel_pls_rbf](kernel_pls_rbf.md) | curated |
+| `models.pls.opls` | [opls](opls.md) | curated |
 | `models.pls.pcr` | [pcr](pcr.md) | curated |
 | `models.pls.pls_fit_simple` | [pls](pls.md) | curated |
 | `models.pls.pls_regression` | [models_pls_pls_regression](models_pls_pls_regression.md) | curated |
@@ -243,6 +244,7 @@ This generated report records the documentation source used for each catalog ent
 | `splitters.spxy_fold` | [split_spxy_fold](split_spxy_fold.md) | curated |
 | `splitters.spxy_g_fold` | [split_spxy_g_fold](split_spxy_g_fold.md) | curated |
 | `splitters.systematic_circular` | [split_systematic_circular](split_systematic_circular.md) | curated |
+| `utilities.finite_column_quantiles` | [utilities_finite_column_quantiles](utilities_finite_column_quantiles.md) | missing |
 | `utilities.hotelling_t2` | [utilities_hotelling_t2](utilities_hotelling_t2.md) | curated |
 | `utilities.moments` | [utilities_moments](utilities_moments.md) | curated |
 | `utilities.q_residuals` | [utilities_q_residuals](utilities_q_residuals.md) | curated |

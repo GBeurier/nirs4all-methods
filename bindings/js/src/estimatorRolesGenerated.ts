@@ -3248,6 +3248,46 @@ export class KernelPLS extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("models.pls.kernel", KernelPLS);
 
+/** Parameters of OPLS; unset values take the native defaults. */
+export interface OPLSParams {
+    /** Default 2. */
+    n_components?: number;
+    /** Default true. */
+    center_x?: boolean;
+    /** Default true. */
+    scale_x?: boolean;
+    /** Default true. */
+    center_y?: boolean;
+    /** Default true. */
+    scale_y?: boolean;
+}
+
+/** Native `models.pls.opls` (transformer, regressor). */
+export class OPLS extends NativeEstimator implements Regressor, Transformer {
+    readonly methodId = "models.pls.opls";
+    readonly paramTypes = {
+        n_components: "int",
+        center_x: "bool",
+        scale_x: "bool",
+        center_y: "bool",
+        scale_y: "bool",
+    } as const;
+
+    constructor(params: OPLSParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("models.pls.opls", OPLS);
+
 /** Parameters of PCR; unset values take the native defaults. */
 export interface PCRParams {
     /** Default 2. */

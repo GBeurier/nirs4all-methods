@@ -91,6 +91,7 @@
 \alias{n4m_so_pls}
 \alias{n4m_cppls}
 \alias{n4m_kernel}
+\alias{n4m_opls}
 \alias{n4m_pcr}
 \alias{n4m_pls_fit_simple}
 \alias{n4m_pls_regression}
@@ -309,6 +310,7 @@ n4m_rosa(n_components = 2L)
 n4m_so_pls(n_components_per_block = NULL)
 n4m_cppls(n_components = 2L, gamma = 0.5)
 n4m_kernel(n_components = 2L, kernel = "rbf", gamma = 0.0, coef0 = 1.0, degree = 3L)
+n4m_opls(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
 n4m_pcr(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = FALSE)
 n4m_pls_fit_simple(n_components = 2L)
 n4m_pls_regression(n_components = 2L, solver = "nipals", center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
@@ -881,6 +883,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_so_pls}: \code{models.multiblock.so_pls} (regressor)
 \item \code{n4m_cppls}: \code{models.pls.cppls} (regressor)
 \item \code{n4m_kernel}: \code{models.pls.kernel} (regressor)
+\item \code{n4m_opls}: \code{models.pls.opls} (transformer, regressor)
 \item \code{n4m_pcr}: \code{models.pls.pcr} (transformer, regressor)
 \item \code{n4m_pls_fit_simple}: \code{models.pls.pls_fit_simple} (transformer, regressor)
 \item \code{n4m_pls_regression}: \code{models.pls.pls_regression} (transformer, regressor)

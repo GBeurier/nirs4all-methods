@@ -28,6 +28,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <stdexcept>
 #include <string>
@@ -1404,6 +1405,425 @@ void test_pls_close_singular_values_many_targets() {
     }
 }
 
+// ---- models.pls.opls: the OPLS kernel behind the generic estimator role ----
+//
+// The role adds no numerics: it fits N4M_ALGO_OPLS + N4M_SOLVER_NIPALS +
+// N4M_DEFLATION_ORTHOGONAL through n4m_model_fit, with the other config
+// defaults (the configuration of the R `opls_nipals` gateway). Only
+// test_opls_role_oracle compares against an independent reference (the NumPy
+// OPLS1 recurrence fixtures, row `pls4all-numpy-opls`); the other tests check
+// the role wiring against the same kernel called directly.
+
+constexpr const char* kOplsRole = "models.pls.opls";
+constexpr const char* kPlsRole = "models.pls.pls_regression";
+
+struct RoleFlags {
+    std::int32_t n_components;
+    bool center_x;
+    bool scale_x;
+    bool center_y;
+    bool scale_y;
+};
+
+n4m_params_t* role_params(n4m_context_t* ctx, const char* method_id, const RoleFlags& f) {
+    std::int32_t index = -1;
+    N4M_TEST_REQUIRE(n4m_method_find(method_id, &index) == N4M_OK);
+    n4m_params_t* params = nullptr;
+    N4M_TEST_REQUIRE(n4m_params_create(ctx, index, &params) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_params_set_int(params, "n_components", f.n_components) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_params_set_bool(params, "center_x", f.center_x ? 1 : 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_params_set_bool(params, "scale_x", f.scale_x ? 1 : 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_params_set_bool(params, "center_y", f.center_y ? 1 : 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_params_set_bool(params, "scale_y", f.scale_y ? 1 : 0) == N4M_OK);
+    return params;
+}
+
+n4m_fit_inputs_v1_t xy_inputs(const n4m_matrix_view_t& X, const n4m_matrix_view_t& Y) {
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &X;
+    inputs.Y = &Y;
+    return inputs;
+}
+
+n4m_estimator_t* fit_role(n4m_context_t* ctx, const char* method_id, const RoleFlags& f,
+                          const n4m_matrix_view_t& X, const n4m_matrix_view_t& Y) {
+    n4m_params_t* params = role_params(ctx, method_id, f);
+    n4m_estimator_t* est = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimator_create(ctx, method_id, params, &est) == N4M_OK);
+    n4m_params_destroy(params);
+    const n4m_fit_inputs_v1_t inputs = xy_inputs(X, Y);
+    N4M_TEST_REQUIRE(n4m_estimator_fit(ctx, est, &inputs) == N4M_OK);
+    return est;
+}
+
+n4m_model_t* fit_direct(n4m_context_t* ctx, n4m_algorithm_t algorithm, n4m_solver_t solver,
+                        n4m_deflation_t deflation, const RoleFlags& f,
+                        const n4m_matrix_view_t& X, const n4m_matrix_view_t& Y) {
+    n4m_config_t* cfg = nullptr;
+    N4M_TEST_REQUIRE(n4m_config_create(&cfg) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_algorithm(cfg, algorithm) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_solver(cfg, solver) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_deflation(cfg, deflation) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_n_components(cfg, f.n_components) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_center_x(cfg, f.center_x ? 1 : 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_x(cfg, f.scale_x ? 1 : 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_center_y(cfg, f.center_y ? 1 : 0) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_config_set_scale_y(cfg, f.scale_y ? 1 : 0) == N4M_OK);
+    n4m_model_t* model = nullptr;
+    N4M_TEST_REQUIRE(n4m_model_fit(ctx, cfg, &X, &Y, &model) == N4M_OK);
+    n4m_config_destroy(cfg);
+    return model;
+}
+
+n4m_model_t* fit_direct_opls(n4m_context_t* ctx, const RoleFlags& f,
+                             const n4m_matrix_view_t& X, const n4m_matrix_view_t& Y) {
+    return fit_direct(ctx, N4M_ALGO_OPLS, N4M_SOLVER_NIPALS, N4M_DEFLATION_ORTHOGONAL, f, X, Y);
+}
+
+std::vector<double> role_output(n4m_context_t* ctx, const n4m_estimator_t* est,
+                                const n4m_matrix_view_t& X, bool transform) {
+    std::int64_t cols = 0;
+    N4M_TEST_REQUIRE((transform ? n4m_estimator_transform_cols(est, &cols)
+                                : n4m_estimator_n_outputs(est, &cols)) == N4M_OK);
+    std::vector<double> out(static_cast<std::size_t>(X.rows * cols), 0.0);
+    n4m_matrix_view_t view{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&view, out.data(), X.rows, cols,
+                                                   N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE((transform ? n4m_estimator_transform(ctx, est, &X, &view)
+                                : n4m_estimator_predict(ctx, est, &X, &view)) == N4M_OK);
+    return out;
+}
+
+std::vector<double> model_output(n4m_context_t* ctx, const n4m_model_t* model,
+                                 const n4m_matrix_view_t& X, bool transform) {
+    std::int32_t cols = 0;
+    N4M_TEST_REQUIRE((transform ? n4m_model_get_n_components(model, &cols)
+                                : n4m_model_get_n_targets(model, &cols)) == N4M_OK);
+    std::vector<double> out(static_cast<std::size_t>(X.rows * cols), 0.0);
+    n4m_matrix_view_t view{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&view, out.data(), X.rows, cols,
+                                                   N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE((transform ? n4m_model_transform(ctx, model, &X, &view)
+                                : n4m_model_predict(ctx, model, &X, &view)) == N4M_OK);
+    return out;
+}
+
+std::vector<unsigned char> export_role(n4m_context_t* ctx, const n4m_estimator_t* est) {
+    std::size_t size = 0;
+    N4M_TEST_REQUIRE(n4m_estimator_export_size(ctx, est, 0, &size) == N4M_OK);
+    std::vector<unsigned char> bytes(size);
+    std::size_t written = 0;
+    N4M_TEST_REQUIRE(n4m_estimator_export_to_buffer(ctx, est, 0, bytes.data(), size,
+                                                    &written) == N4M_OK);
+    bytes.resize(written);
+    return bytes;
+}
+
+std::vector<unsigned char> export_model(const n4m_model_t* model) {
+    std::size_t size = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_size(model, &size) == N4M_OK);
+    std::vector<unsigned char> bytes(size);
+    std::size_t written = 0;
+    N4M_TEST_REQUIRE(n4m_model_export_to_buffer(model, bytes.data(), size, &written) == N4M_OK);
+    bytes.resize(written);
+    return bytes;
+}
+
+// An N4MM-state estimator envelope ends with its only block:
+// u32 tag "N4MM" | u64 length | N4MM bytes | u64 FNV-1a-64 checksum.
+constexpr std::size_t kN4meBlockHeader = 4 + 8;
+constexpr std::size_t kN4meChecksum = 8;
+constexpr unsigned char kN4mmTag[4] = {0x4E, 0x34, 0x4D, 0x4D};  // "N4MM"
+
+std::uint64_t fnv1a64(const unsigned char* data, std::size_t size) {
+    std::uint64_t h = 0xcbf29ce484222325ULL;
+    for (std::size_t i = 0; i < size; ++i) {
+        h ^= data[i];
+        h *= 0x100000001b3ULL;
+    }
+    return h;
+}
+
+bool n4me_ends_with_block(const std::vector<unsigned char>& n4me,
+                          const std::vector<unsigned char>& n4mm) {
+    const std::size_t tail = kN4meBlockHeader + n4mm.size() + kN4meChecksum;
+    if (n4me.size() < tail) return false;
+    const unsigned char* block = n4me.data() + n4me.size() - tail;
+    std::uint64_t length = 0;
+    for (int i = 0; i < 8; ++i) {
+        length |= static_cast<std::uint64_t>(block[4 + i]) << (8 * i);
+    }
+    return std::memcmp(block, kN4mmTag, 4) == 0 && length == n4mm.size() &&
+           std::memcmp(block + kN4meBlockHeader, n4mm.data(), n4mm.size()) == 0;
+}
+
+// The envelope `n4me` (whose last block is `current`) with that block replaced
+// by `replacement`, and its checksum recomputed.
+std::vector<unsigned char> replace_n4mm_block(const std::vector<unsigned char>& n4me,
+                                              const std::vector<unsigned char>& current,
+                                              const std::vector<unsigned char>& replacement) {
+    N4M_TEST_REQUIRE(n4me_ends_with_block(n4me, current));
+    const std::size_t prefix = n4me.size() - kN4meBlockHeader - current.size() - kN4meChecksum;
+    std::vector<unsigned char> out(n4me.begin(), n4me.begin() + static_cast<std::ptrdiff_t>(prefix));
+    out.insert(out.end(), kN4mmTag, kN4mmTag + 4);
+    const std::uint64_t length = replacement.size();
+    for (int i = 0; i < 8; ++i) out.push_back(static_cast<unsigned char>(length >> (8 * i)));
+    out.insert(out.end(), replacement.begin(), replacement.end());
+    const std::uint64_t h = fnv1a64(out.data(), out.size());
+    for (int i = 0; i < 8; ++i) out.push_back(static_cast<unsigned char>(h >> (8 * i)));
+    return out;
+}
+
+double max_abs_difference(const std::vector<double>& a, const std::vector<double>& b) {
+    N4M_TEST_REQUIRE(a.size() == b.size());
+    double worst = 0.0;
+    for (std::size_t i = 0; i < a.size(); ++i) worst = std::max(worst, std::fabs(a[i] - b[i]));
+    return worst;
+}
+
+// (a) Independent oracle, default flags. Predictions and the transform
+// (predictive score, then the orthogonal scores) must match the fixture's
+// predict_train and scores_T at abs/rel 1e-9 with the generated per-column sign
+// policy (sign_invariant MatrixRef). This is the gate for declaring the
+// transformer role: a failure must not be met by loosening the tolerance or
+// relabelling the output, and the transformer role must not ship.
+void test_opls_role_oracle() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    for (const auto& fx : ::n4m::test::fixtures::kOplsFixtures) {
+        const n4m_matrix_view_t X = make_view(fx.X);
+        const n4m_matrix_view_t Y = make_view(fx.Y);
+        n4m_estimator_t* est =
+            fit_role(ctx, kOplsRole, {fx.n_components, true, true, true, true}, X, Y);
+        const std::vector<double> pred = role_output(ctx, est, X, false);
+        N4M_TEST_REQUIRE(pred.size() == fx.predict_train.size);
+        check_close(fx.id, pred.data(), fx.predict_train);
+        std::int64_t width = 0;
+        N4M_TEST_REQUIRE(n4m_estimator_transform_cols(est, &width) == N4M_OK);
+        N4M_TEST_REQUIRE(width == fx.n_components && width == fx.scores_t.cols);
+        const std::vector<double> scores = role_output(ctx, est, X, true);
+        N4M_TEST_REQUIRE(scores.size() == fx.scores_t.size);
+        check_close((std::string(fx.id) + " transform").c_str(), scores.data(), fx.scores_t);
+        n4m_estimator_destroy(est);
+    }
+    n4m_context_destroy(ctx);
+}
+
+// (b) Role wiring at non-default flags (n_components 3, unscaled X and Y)
+// against the same kernel called directly. This is wiring parity, not an
+// independent check of the mathematics.
+void test_opls_role_wiring() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    const auto& fx = ::n4m::test::fixtures::kOplsFixtures[1];  // small PLS1
+    const n4m_matrix_view_t X = make_view(fx.X);
+    const n4m_matrix_view_t Y = make_view(fx.Y);
+    const RoleFlags flags{3, true, false, true, false};
+    n4m_estimator_t* est = fit_role(ctx, kOplsRole, flags, X, Y);
+    n4m_model_t* direct = fit_direct_opls(ctx, flags, X, Y);
+
+    const std::vector<double> pred = role_output(ctx, est, X, false);
+    const std::vector<double> scores = role_output(ctx, est, X, true);
+    N4M_TEST_REQUIRE(pred == model_output(ctx, direct, X, false));
+    N4M_TEST_REQUIRE(scores == model_output(ctx, direct, X, true));
+
+    // The N4ME carries exactly the direct model's N4MM (format 1) as its state.
+    const std::vector<unsigned char> n4me = export_role(ctx, est);
+    const std::vector<unsigned char> n4mm = export_model(direct);
+    N4M_TEST_REQUIRE(n4me_ends_with_block(n4me, n4mm));
+    n4m_serialized_model_info_v1_t info{};
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(n4mm.data(), n4mm.size(), &info) ==
+                     N4M_OK);
+    N4M_TEST_REQUIRE(info.format_version == 1U);
+    N4M_TEST_REQUIRE(info.algorithm == N4M_ALGO_OPLS);
+    N4M_TEST_REQUIRE(info.solver == N4M_SOLVER_NIPALS);
+    N4M_TEST_REQUIRE(info.deflation == N4M_DEFLATION_ORTHOGONAL);
+    N4M_TEST_REQUIRE(info.n_components == 3);
+
+    // Import restores the effective parameters and reproduces the outputs and
+    // the bytes exactly.
+    n4m_estimator_t* restored = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimator_import_from_buffer(ctx, n4me.data(), n4me.size(), &restored) ==
+                     N4M_OK);
+    n4m_params_t* params = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimator_get_params(ctx, restored, &params) == N4M_OK);
+    const char* names[] = {"n_components", "center_x", "scale_x", "center_y", "scale_y"};
+    const std::int64_t expected[] = {3, 1, 0, 1, 0};
+    for (std::size_t i = 0; i < 5; ++i) {
+        std::int64_t value = -1, count = 0;
+        N4M_TEST_REQUIRE(n4m_params_get_int(params, names[i], &value, 1, &count) == N4M_OK);
+        N4M_TEST_REQUIRE(count == 1 && value == expected[i]);
+    }
+    n4m_params_destroy(params);
+    N4M_TEST_REQUIRE(role_output(ctx, restored, X, false) == pred);
+    N4M_TEST_REQUIRE(role_output(ctx, restored, X, true) == scores);
+    N4M_TEST_REQUIRE(export_role(ctx, restored) == n4me);
+
+    n4m_estimator_destroy(restored);
+    n4m_model_destroy(direct);
+    n4m_estimator_destroy(est);
+    n4m_context_destroy(ctx);
+}
+
+// (c) Ordinary PLS is unchanged and stays a different model. On one target,
+// OPLS and PLS with the same total component count give the same predictions
+// in exact arithmetic, so the prediction difference is checked on the fixed
+// two-target fixture (one shared OPLS predictive direction against PLS2).
+void test_opls_role_pls_control() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    const auto& fx = ::n4m::test::fixtures::kOplsFixtures[2];  // small PLS2, A = 3
+    N4M_TEST_REQUIRE(fx.n_components == 3 && fx.Y.cols == 2);
+    const n4m_matrix_view_t X = make_view(fx.X);
+    const n4m_matrix_view_t Y = make_view(fx.Y);
+    const RoleFlags flags{3, true, true, true, true};
+
+    n4m_estimator_t* pls = fit_role(ctx, kPlsRole, flags, X, Y);
+    n4m_model_t* direct_pls = fit_direct(ctx, N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS,
+                                         N4M_DEFLATION_REGRESSION, flags, X, Y);
+    const std::vector<double> pls_pred = role_output(ctx, pls, X, false);
+    N4M_TEST_REQUIRE(pls_pred == model_output(ctx, direct_pls, X, false));
+    n4m_serialized_model_info_v1_t info{};
+    const std::vector<unsigned char> pls_n4mm = export_model(direct_pls);
+    N4M_TEST_REQUIRE(n4me_ends_with_block(export_role(ctx, pls), pls_n4mm));
+    N4M_TEST_REQUIRE(n4m_serialization_inspect_model_v1(pls_n4mm.data(), pls_n4mm.size(),
+                                                        &info) == N4M_OK);
+    N4M_TEST_REQUIRE(info.algorithm == N4M_ALGO_PLS_REGRESSION);
+
+    n4m_estimator_t* opls = fit_role(ctx, kOplsRole, flags, X, Y);
+    N4M_TEST_REQUIRE(max_abs_difference(role_output(ctx, opls, X, false), pls_pred) > 1e-6);
+
+    n4m_estimator_destroy(opls);
+    n4m_model_destroy(direct_pls);
+    n4m_estimator_destroy(pls);
+    n4m_context_destroy(ctx);
+}
+
+// (d) Boundaries: OPLS has no solver parameter, and an N4ME labelled OPLS must
+// carry an OPLS model.
+void test_opls_role_refusals() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    std::int32_t index = -1;
+    N4M_TEST_REQUIRE(n4m_method_find(kOplsRole, &index) == N4M_OK);
+    n4m_params_t* params = nullptr;
+    N4M_TEST_REQUIRE(n4m_params_create(ctx, index, &params) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_params_set_enum(params, "solver", "nipals") == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(n4m_params_set_int(params, "solver", 0) == N4M_ERR_INVALID_ARGUMENT);
+    n4m_params_destroy(params);
+
+    const auto& fx = ::n4m::test::fixtures::kOplsFixtures[1];
+    const n4m_matrix_view_t X = make_view(fx.X);
+    const n4m_matrix_view_t Y = make_view(fx.Y);
+    const RoleFlags flags{3, true, false, true, false};
+    n4m_estimator_t* est = fit_role(ctx, kOplsRole, flags, X, Y);
+    const std::vector<unsigned char> n4me = export_role(ctx, est);
+    n4m_model_t* direct_opls = fit_direct_opls(ctx, flags, X, Y);
+    n4m_model_t* direct_pls = fit_direct(ctx, N4M_ALGO_PLS_REGRESSION, N4M_SOLVER_NIPALS,
+                                         N4M_DEFLATION_REGRESSION, flags, X, Y);
+    const std::vector<unsigned char> opls_n4mm = export_model(direct_opls);
+
+    // Rebuilding the envelope around its own block still imports, so the
+    // refusal below comes from the state, not from the rebuilt envelope.
+    const std::vector<unsigned char> same = replace_n4mm_block(n4me, opls_n4mm, opls_n4mm);
+    N4M_TEST_REQUIRE(same == n4me);
+    n4m_estimator_t* restored = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimator_import_from_buffer(ctx, same.data(), same.size(), &restored) ==
+                     N4M_OK);
+    n4m_estimator_destroy(restored);
+
+    // Same component count, flags, widths and capabilities: only the
+    // algorithm of the state differs.
+    const std::vector<unsigned char> foreign =
+        replace_n4mm_block(n4me, opls_n4mm, export_model(direct_pls));
+    restored = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimator_import_from_buffer(ctx, foreign.data(), foreign.size(),
+                                                      &restored) == N4M_ERR_CORRUPT_BUFFER);
+    N4M_TEST_REQUIRE(restored == nullptr);
+    N4M_TEST_REQUIRE(std::strstr(n4m_context_last_error(ctx), "'algorithm'") != nullptr);
+
+    n4m_model_destroy(direct_pls);
+    n4m_model_destroy(direct_opls);
+    n4m_estimator_destroy(est);
+    n4m_context_destroy(ctx);
+}
+
+// RolePipeline: SNV then the OPLS regressor equals the steps run by hand, and
+// the exported step states rebuild an identical pipeline.
+void test_opls_role_pipeline() {
+    n4m_context_t* ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&ctx) == N4M_OK);
+    const auto& fx = ::n4m::test::fixtures::kOplsFixtures[1];
+    const n4m_matrix_view_t X = make_view(fx.X);
+    const n4m_matrix_view_t Y = make_view(fx.Y);
+    const RoleFlags flags{3, true, false, true, false};
+    const char* ids[] = {"preprocessing.scatter.snv", kOplsRole};
+    n4m_params_t* opls_params = role_params(ctx, kOplsRole, flags);
+    const n4m_params_t* step_params[] = {nullptr, opls_params};
+    n4m_role_pipeline_t* pipeline = nullptr;
+    N4M_TEST_REQUIRE(n4m_role_pipeline_create(ctx, 2, ids, step_params, &pipeline) == N4M_OK);
+    const n4m_fit_inputs_v1_t inputs = xy_inputs(X, Y);
+    N4M_TEST_REQUIRE(n4m_role_pipeline_fit(ctx, pipeline, &inputs) == N4M_OK);
+    std::vector<double> got(static_cast<std::size_t>(X.rows * Y.cols), 0.0);
+    n4m_matrix_view_t G{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&G, got.data(), X.rows, Y.cols,
+                                                   N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_role_pipeline_predict(ctx, pipeline, &X, &G) == N4M_OK);
+
+    n4m_estimator_t* snv = nullptr;
+    N4M_TEST_REQUIRE(n4m_estimator_create(ctx, ids[0], nullptr, &snv) == N4M_OK);
+    n4m_fit_inputs_v1_t snv_inputs{};
+    snv_inputs.struct_size = sizeof(snv_inputs);
+    snv_inputs.X = &X;
+    N4M_TEST_REQUIRE(n4m_estimator_fit(ctx, snv, &snv_inputs) == N4M_OK);
+    std::vector<double> x1 = role_output(ctx, snv, X, true);
+    n4m_matrix_view_t X1{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&X1, x1.data(), X.rows, X.cols,
+                                                   N4M_DTYPE_F64) == N4M_OK);
+    n4m_estimator_t* opls = fit_role(ctx, kOplsRole, flags, X1, Y);
+    N4M_TEST_REQUIRE(got == role_output(ctx, opls, X1, false));
+
+    std::int32_t n_states = 0;
+    N4M_TEST_REQUIRE(n4m_role_pipeline_n_states(pipeline, &n_states) == N4M_OK);
+    N4M_TEST_REQUIRE(n_states == 2);
+    std::vector<std::vector<unsigned char>> states(static_cast<std::size_t>(n_states));
+    std::vector<const void*> state_ptrs;
+    std::vector<std::size_t> state_sizes;
+    for (std::int32_t s = 0; s < n_states; ++s) {
+        auto& bytes = states[static_cast<std::size_t>(s)];
+        std::size_t size = 0;
+        N4M_TEST_REQUIRE(n4m_role_pipeline_export_state_size(ctx, pipeline, s, 0, &size) ==
+                         N4M_OK);
+        bytes.resize(size);
+        std::size_t written = 0;
+        N4M_TEST_REQUIRE(n4m_role_pipeline_export_state_to_buffer(ctx, pipeline, s, 0,
+                                                                  bytes.data(), size,
+                                                                  &written) == N4M_OK);
+        bytes.resize(written);
+        state_ptrs.push_back(bytes.data());
+        state_sizes.push_back(bytes.size());
+    }
+    N4M_TEST_REQUIRE(states[1] == export_role(ctx, opls));
+    n4m_role_pipeline_t* replay = nullptr;
+    N4M_TEST_REQUIRE(n4m_role_pipeline_create(ctx, 2, ids, step_params, &replay) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_role_pipeline_import_states(ctx, replay, n_states, state_ptrs.data(),
+                                                     state_sizes.data()) == N4M_OK);
+    std::vector<double> again(got.size(), 0.0);
+    n4m_matrix_view_t A{};
+    N4M_TEST_REQUIRE(n4m_matrix_view_init_rowmajor(&A, again.data(), X.rows, Y.cols,
+                                                   N4M_DTYPE_F64) == N4M_OK);
+    N4M_TEST_REQUIRE(n4m_role_pipeline_predict(ctx, replay, &X, &A) == N4M_OK);
+    N4M_TEST_REQUIRE(again == got);
+
+    n4m_role_pipeline_destroy(replay);
+    n4m_estimator_destroy(opls);
+    n4m_estimator_destroy(snv);
+    n4m_role_pipeline_destroy(pipeline);
+    n4m_params_destroy(opls_params);
+    n4m_context_destroy(ctx);
+}
+
 }  // namespace
 
 void register_models_pls_tests(n4m_testing::Runner& r) {
@@ -1429,4 +1849,9 @@ void register_models_pls_tests(n4m_testing::Runner& r) {
     r.run("models_pls/pls_da",             test_pls_da);
     r.run("models_pls/opls",               test_opls);
     r.run("models_pls/opls_da",            test_opls_da);
+    r.run("models_pls/opls_role_oracle",   test_opls_role_oracle);
+    r.run("models_pls/opls_role_wiring",   test_opls_role_wiring);
+    r.run("models_pls/opls_role_pls_control", test_opls_role_pls_control);
+    r.run("models_pls/opls_role_refusals", test_opls_role_refusals);
+    r.run("models_pls/opls_role_pipeline", test_opls_role_pipeline);
 }

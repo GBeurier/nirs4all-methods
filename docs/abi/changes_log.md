@@ -1,5 +1,21 @@
 # ABI — Changes Log
 
+## 2026-11-08 — ABI unchanged: OPLS regressor role
+
+The generic role manifest gains `models.pls.opls` (regressor, transformer;
+N4MM state in the N4ME envelope). It fits the existing OPLS kernel through
+`n4m_model_fit` with `N4M_ALGO_OPLS`, `N4M_SOLVER_NIPALS` and
+`N4M_DEFLATION_ORTHOGONAL`; the other settings keep the `n4m_config` defaults.
+Its five recorded parameters are `n_components` (total: one predictive plus
+`n_components - 1` Y-orthogonal components, default 2), `center_x`,
+`scale_x`, `center_y` and `scale_y` (default true); a `solver` or any other
+parameter is refused. Transform returns the predictive score, then the
+orthogonal scores in extraction order. Import refuses an N4ME labelled
+`models.pls.opls` whose N4MM holds another algorithm. No public symbol,
+signature, layout, N4MM format (OPLS writes format 1) or N4ME envelope change;
+the ABI version is unchanged. The role exists only in libraries built with
+this manifest, so consumers check the manifest, not the version label.
+
 ## 2026-11-07 — ABI 2.22.0: Gaussian mixed effects, forest fANOVA, loss normalization
 
 Additive (unreleased); existing signatures, serialized model formats and the

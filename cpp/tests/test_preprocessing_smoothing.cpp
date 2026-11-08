@@ -232,7 +232,7 @@ void test_savgol_literal_contract() {
         n4m_pp_savgol_handle_t* handle = nullptr;
         N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_create(
             &handle, c.window, c.degree, c.deriv, c.delta, c.mode, c.cval) == N4M_OK);
-        std::vector<double> source(input.begin(), input.begin() + c.expected.size());
+        std::vector<double> source(input.begin(), input.begin() + static_cast<std::vector<double>::difference_type>(c.expected.size()));
         std::vector<double> actual(source.size(), -12345.0);
         const auto width = static_cast<std::int64_t>(source.size());
         N4M_TEST_REQUIRE(n4m_transform_savitzky_golay_transform(

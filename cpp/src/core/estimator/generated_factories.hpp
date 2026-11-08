@@ -83,6 +83,7 @@ std::unique_ptr<Adapter> make_lw_pls(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_missing_aware_nipals(const MethodSpec& spec);
 n4m_status_t run_moments(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 n4m_status_t run_one_se_rule(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
+std::unique_ptr<Adapter> make_opls(const MethodSpec& spec);
 n4m_status_t run_pca_reference_qc(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 std::unique_ptr<Adapter> make_pcr(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_pls_cox(const MethodSpec& spec);
