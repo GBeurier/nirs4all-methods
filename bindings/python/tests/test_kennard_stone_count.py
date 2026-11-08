@@ -3,7 +3,6 @@
 
 import numpy as np
 import pytest
-
 from n4m import roles
 
 
