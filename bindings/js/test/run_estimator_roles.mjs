@@ -103,7 +103,19 @@ for (const c of fixture.cases) {
     const fitted = new Cls(c.params).fit(xTrain, target, inputsFor(c.fit_inputs));
     if (c.classes) checkClassifier(fitted, c, 1e-9, `${c.method_id} JS fit`);
     checkMask(fitted, c, `${c.method_id} JS fit`);
-    if (c.predict) close(fitted.predict(xTest).data, c.predict, 1e-9, `${c.method_id} JS fit`);
+    let expectedPredict = c.predict;
+    if (c.method_id === "models.multiblock.mb_pls") {
+        // c.predict is the LEGACY historical MBPLS expectation, kept for the old N4ME
+        // replay above. A fresh generic fit is the canonical scale_x = 0 configuration;
+        // its same-engine reference is the public low-level fitModel("MBPLS", ...)
+        // (center_x = 1, scale_x = 0) + predictModel. Same-kernel interoperability,
+        // not an independent oracle. fitModel returns plain arrays: nothing to dispose.
+        const reference = n4m.fitModel("MBPLS", xTrain,
+            { data: yTrain, rows: xTrain.rows, cols: 1 }, c.params.n_components ?? 2,
+            fixture.blocks);
+        expectedPredict = n4m.predictModel(reference, xTest).data;
+    }
+    if (c.predict) close(fitted.predict(xTest).data, expectedPredict, 1e-9, `${c.method_id} JS fit`);
     if (c.selected_indices) {
         assert.deepEqual(fitted.selectedIndices(), c.selected_indices, `${c.method_id} JS fit`);
     }

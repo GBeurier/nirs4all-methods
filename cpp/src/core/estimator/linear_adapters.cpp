@@ -502,10 +502,16 @@ std::unique_ptr<Adapter> make_affine_mir_pls(const MethodSpec&) {
     });
 }
 
+// The role is the canonical NIPALS multi-block path (scale_x = 0; the kernel
+// centers each block itself). The legacy block-balanced path stays reachable
+// only through an explicit low-level configuration.
 std::unique_ptr<Adapter> make_affine_mb_pls(const MethodSpec&) {
-    return affine([](auto ctx, auto cfg, const Params&, const FitInputs& in, auto out) {
-        return n4m_estimators_mb_pls_fit(ctx, cfg, in.X, in.Y, in.block_sizes, in.n_blocks, out);
-    });
+    return affine(
+        [](auto ctx, auto cfg, const Params&, const FitInputs& in, auto out) {
+            return n4m_estimators_mb_pls_fit(ctx, cfg, in.X, in.Y, in.block_sizes, in.n_blocks,
+                                             out);
+        },
+        [](const Params&, n4m_config_t* cfg) { return n4m_config_set_scale_x(cfg, 0); });
 }
 
 std::unique_ptr<Adapter> make_affine_ecr(const MethodSpec&) {

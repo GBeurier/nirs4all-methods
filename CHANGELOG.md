@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   in all five modes. Smoothing (`deriv=0`) accepts unused `delta=0`; nonzero
   derivatives still refuse zero spacing. Existing odd-window behavior and the
   public ABI symbol surface are unchanged.
+- The generic `models.multiblock.mb_pls` role now fits the canonical NIPALS
+  multi-block path (`scale_x = 0`), matching the R `mb_pls` alias. Explicit
+  low-level legacy configurations, previously exported N4ME states and the
+  state wire format are unchanged.
 
 ### Added
 

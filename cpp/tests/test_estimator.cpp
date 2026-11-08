@@ -19,6 +19,8 @@
 
 #include "n4m/n4m.h"
 
+#include "fixtures/mb_pls_fixtures.hpp"
+
 #define CHECK(expr)                                                                   \
     do {                                                                              \
         if (!(expr)) throw std::runtime_error(std::string(#expr) + " @" + current_); \
@@ -1207,6 +1209,84 @@ void test_snv_parameter_domain(n4m_context_t* ctx) {
     CHECK(failures.empty());
 }
 
+// The generic MB-PLS role must fit the canonical NIPALS multi-block path: the
+// public C API with an explicit scale_x = 0 configuration, never the legacy
+// block-balanced path (scale_x = 1) that test_models_extra::test_mb_pls pins
+// on the same fixture. Same engine: a configuration wiring check, not an
+// independent reference. Tolerance is the fixture's MB-PLS gate (1e-8).
+void test_mb_pls_role_is_canonical(n4m_context_t* ctx) {
+    for (const auto& fx : ::n4m::test::fixtures::kMbPlsFixtures) {
+        current_ = std::string("models.multiblock.mb_pls/canonical_role/") + fx.id;
+        std::printf("%s\n", current_.c_str());
+        std::vector<double> x(fx.X.values, fx.X.values + fx.X.size);
+        std::vector<double> y(fx.Y.values, fx.Y.values + fx.Y.size);
+        const int64_t n = fx.X.rows;
+        const int64_t q = fx.Y.cols;
+        auto X = view(x.data(), n, fx.X.cols);
+        auto Y = view(y.data(), n, q);
+        const auto n_blocks = static_cast<int64_t>(fx.block_sizes.size);
+        // In-sample predictions of the explicit low-level C API.
+        auto api = [&](int32_t scale_x) {
+            n4m_config_t* cfg = nullptr;
+            CHECK(n4m_config_create(&cfg) == N4M_OK);
+            CHECK(n4m_config_set_n_components(cfg, fx.n_components) == N4M_OK);
+            CHECK(n4m_config_set_scale_x(cfg, scale_x) == N4M_OK);
+            n4m_method_result_t* result = nullptr;
+            const n4m_status_t st = n4m_estimators_mb_pls_fit(
+                ctx, cfg, &X, &Y, fx.block_sizes.values, n_blocks, &result);
+            n4m_config_destroy(cfg);
+            CHECK(st == N4M_OK);
+            const double* data = nullptr;
+            int64_t rows = 0, cols = 0;
+            CHECK(n4m_method_result_get_double_matrix(result, "predictions", &data, &rows,
+                                                      &cols) == N4M_OK);
+            CHECK(rows == n && cols == q);
+            std::vector<double> out(data, data + rows * cols);
+            n4m_method_result_destroy(result);
+            return out;
+        };
+        const auto canonical = api(0);
+        const auto legacy = api(1);
+        int32_t index = -1;
+        CHECK(n4m_method_find("models.multiblock.mb_pls", &index) == N4M_OK);
+        n4m_params_t* params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+        CHECK(n4m_params_set_int(params, "n_components", fx.n_components) == N4M_OK);
+        n4m_estimator_t* est = nullptr;
+        const n4m_status_t created =
+            n4m_estimator_create(ctx, "models.multiblock.mb_pls", params, &est);
+        n4m_params_destroy(params);
+        CHECK(created == N4M_OK);
+        n4m_fit_inputs_v1_t input{};
+        input.struct_size = sizeof input;
+        input.X = &X;
+        input.Y = &Y;
+        input.block_sizes = fx.block_sizes.values;
+        input.n_blocks = n_blocks;
+        CHECK(n4m_estimator_fit(ctx, est, &input) == N4M_OK);
+        std::vector<double> role(canonical.size()), replay(canonical.size());
+        auto R = view(role.data(), n, q);
+        CHECK(n4m_estimator_predict(ctx, est, &X, &R) == N4M_OK);
+        double from_legacy = 0.0;
+        for (size_t i = 0; i < role.size(); ++i) {
+            const double diff = std::fabs(role[i] - canonical[i]);
+            const double scale = std::max({std::fabs(role[i]), std::fabs(canonical[i]), 1.0});
+            CHECK(diff <= 1e-8 || diff <= 1e-8 * scale);
+            from_legacy = std::max(from_legacy, std::fabs(role[i] - legacy[i]));
+        }
+        // An unconfigured (legacy) factory cannot satisfy both checks.
+        CHECK(from_legacy > 1e-6);
+        const auto bytes = export_bytes(ctx, est);
+        n4m_estimator_t* back = nullptr;
+        CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+        auto P = view(replay.data(), n, q);
+        CHECK(n4m_estimator_predict(ctx, back, &X, &P) == N4M_OK);
+        CHECK(std::memcmp(role.data(), replay.data(), role.size() * sizeof(double)) == 0);
+        n4m_estimator_destroy(back);
+        n4m_estimator_destroy(est);
+    }
+}
+
 // MI32_ESTIMATOR_V1: public ABI only; no hidden conversion helper export.
 static void test_raw_i32_case(
     n4m_context_t* ctx, const char* id, const char* parameter, int64_t value, bool supervised) {
@@ -1438,6 +1518,7 @@ int main() {
     run([&] { test_input_views(ctx, in); });
     run([&] { test_param_descriptors(); });
     run([&] { test_bounded_parameters(ctx, in); });
+    run([&] { test_mb_pls_role_is_canonical(ctx); });
     for (int64_t value :
          {int64_t{2147483648}, int64_t{4294967296}, std::numeric_limits<int64_t>::max()}) {
         run([&] {
