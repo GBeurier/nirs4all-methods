@@ -493,6 +493,17 @@ class SparsePlsDaClassifier final : public ClassifierAdapter {
         // no public setter.
         static_cast<core::Config*>(raw_cfg)->sparsity_lambda = params.get_double("sparsity_lambda");
         n4m_method_result_t* raw = nullptr;
+        const auto k = params.get_int("n_components");
+        const auto nfit = in.X->rows;
+        const auto transformed_p = in.X->cols;
+        if (k < 1 || k > std::min(nfit - 1, transformed_p)) {
+            ctx->set_errorf(
+                "n_components k=%lld requires 1 <= k <= min(nfit-1, p_transformed); "
+                "nfit=%lld, p_transformed=%lld",
+                static_cast<long long>(k), static_cast<long long>(nfit),
+                static_cast<long long>(transformed_p));
+            return N4M_ERR_INVALID_ARGUMENT;
+        }
         st = n4m_estimators_sparse_pls_da_fit(ctx, raw_cfg, in.X, labels.data(),
                                               static_cast<std::int64_t>(labels.size()), &raw);
         if (st != N4M_OK) return st;

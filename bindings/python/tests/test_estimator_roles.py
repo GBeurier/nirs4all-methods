@@ -1003,6 +1003,86 @@ def test_classifiers_match_n4m_kernels(labelled):
     np.testing.assert_allclose(decision, reference, rtol=1e-12, atol=1e-12)
 
 
+def test_sparse_pls_da_refuses_components_above_selected_width(labelled):
+    X, labels, _, _ = labelled
+    pipeline = roles.RolePipeline(
+        [
+            ("filters.correlation", {"top_k": 2}),
+            ("models.sparse.sparse_pls_da", {"n_components": 3}),
+        ]
+    )
+    assert X.shape[1] > 3
+    with pytest.raises(
+        N4MError,
+        match=rf"n_components k=3.*nfit={X.shape[0]}, p_transformed=2",
+    ) as error:
+        pipeline.fit(X, labels)
+    assert error.value.status_name == "INVALID_ARGUMENT"
+
+
+@pytest.mark.parametrize("k", [4, 5])
+def test_sparse_pls_da_refuses_components_at_or_above_fit_rows(labelled, k):
+    X, _, _, _ = labelled
+    X = X[:4]
+    labels = np.array([10, 20, 10, 20])
+    pipeline = roles.RolePipeline(
+        [("models.sparse.sparse_pls_da", {"n_components": k})]
+    )
+    with pytest.raises(
+        N4MError,
+        match=rf"n_components k={k}.*nfit=4, p_transformed={X.shape[1]}",
+    ) as error:
+        pipeline.fit(X, labels)
+    assert error.value.status_name == "INVALID_ARGUMENT"
+
+
+def test_sparse_pls_da_boundary_and_frozen_class_predictions(labelled):
+    import json
+    from pathlib import Path
+
+    from pls4all import _methods as kernels
+
+    X, labels, _, _ = labelled
+    classes, codes = np.unique(labels, return_inverse=True)
+    selected = roles.CorrelationFilter(top_k=2).fit(X, codes).transform(X)
+    k = min(X.shape[0] - 1, selected.shape[1])
+    assert k == selected.shape[1] == 2
+    pipeline = roles.RolePipeline(
+        [
+            ("filters.correlation", {"top_k": 2}),
+            (
+                "models.sparse.sparse_pls_da",
+                {"n_components": k, "sparsity_lambda": 0.0},
+            ),
+        ]
+    ).fit(X, labels)
+    ctx, cfg = pls4all_classifier_config()
+    cfg.n_components = k
+    sparse = kernels.sparse_pls_da_fit(ctx, cfg, selected, codes)
+    reference = (selected - sparse.matrix("x_mean")) @ sparse.matrix(
+        "coefficients"
+    ) + sparse.matrix("y_mean")
+    np.testing.assert_allclose(
+        pipeline.decision_function(X), reference, rtol=1e-12, atol=1e-12
+    )
+    np.testing.assert_array_equal(pipeline.classes_, classes)
+    np.testing.assert_array_equal(pipeline.predict(X), classes[reference.argmax(axis=1)])
+
+    fixture = (
+        Path(__file__).resolve().parents[3]
+        / "parity"
+        / "fixtures"
+        / "estimator_roles_n4me.json"
+    )
+    doc = json.loads(fixture.read_text(encoding="utf-8"))
+    case = next(
+        c for c in doc["cases"] if c["method_id"] == "models.sparse.sparse_pls_da"
+    )
+    est = roles.SparsePLSDA(**case["params"]).fit(doc["x_train"], doc["labels_train"])
+    np.testing.assert_array_equal(est.classes_, case["classes"])
+    np.testing.assert_array_equal(est.predict(doc["x_test"]), case["predict_labels"])
+
+
 def test_pls_qda_is_quadratic_discriminant_on_scores(labelled):
     """PLSQDA equals scikit-learn QDA fitted on the PLS scores."""
     from sklearn.cross_decomposition import PLSRegression
