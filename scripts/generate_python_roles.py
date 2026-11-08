@@ -36,6 +36,7 @@ ACRONYMS = {
     "di",
     "simpls",
     "o2pls",
+    "opls",
     "spa",
     "vip",
     "uve",

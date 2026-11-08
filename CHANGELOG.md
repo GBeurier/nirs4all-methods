@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Expose the existing OPLS kernel as the generic regressor/transformer role
+  `models.pls.opls` (NIPALS with orthogonal deflation; `n_components`,
+  `center_x`, `scale_x`, `center_y`, `scale_y`). ABI and state formats are
+  unchanged.
 - Generic StandardScale (`preprocessing.scaling.standard_scale`) accepts integer
   `ddof` (default 0), requiring `0 <= ddof < rows` even with `with_std=false`.
   Default population fresh-fit arithmetic is unchanged; `ddof=1` supplies sample

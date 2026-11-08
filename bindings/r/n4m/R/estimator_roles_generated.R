@@ -93,6 +93,7 @@
   "models.multiblock.so_pls" = c("regressor"),
   "models.pls.cppls" = c("regressor"),
   "models.pls.kernel" = c("regressor"),
+  "models.pls.opls" = c("transformer", "regressor"),
   "models.pls.pcr" = c("transformer", "regressor"),
   "models.pls.pls_fit_simple" = c("transformer", "regressor"),
   "models.pls.pls_regression" = c("transformer", "regressor"),
@@ -312,6 +313,7 @@
   "models.multiblock.so_pls" = "n4m_so_pls",
   "models.pls.cppls" = "n4m_cppls",
   "models.pls.kernel" = "n4m_kernel",
+  "models.pls.opls" = "n4m_opls",
   "models.pls.pcr" = "n4m_pcr",
   "models.pls.pls_fit_simple" = "n4m_pls_fit_simple",
   "models.pls.pls_regression" = "n4m_pls_regression",
@@ -978,6 +980,12 @@ n4m_cppls <- function(n_components = 2L, gamma = 0.5) {
 #' @export
 n4m_kernel <- function(n_components = 2L, kernel = "rbf", gamma = 0.0, coef0 = 1.0, degree = 3L) {
   .n4m_estimator("models.pls.kernel", c("regressor"), list(n_components = n_components, kernel = kernel, gamma = gamma, coef0 = coef0, degree = degree))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_opls <- function(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE) {
+  .n4m_estimator("models.pls.opls", c("transformer", "regressor"), list(n_components = n_components, center_x = center_x, scale_x = scale_x, center_y = center_y, scale_y = scale_y))
 }
 
 #' @rdname n4m_estimator_role_constructors

@@ -52,7 +52,7 @@ const inputsFor = (names) => ({
 const classes = Object.values(n4m).filter(
     (c) => typeof c === "function" && c.prototype instanceof n4m.NativeEstimator);
 const byMethod = new Map(classes.map((c) => [new c().methodId, c]));
-const newMethods = ["preprocessing.scaling.standard_scale"];
+const newMethods = ["preprocessing.scaling.standard_scale", "models.pls.opls"];
 const newProcedures = ["utilities.finite_column_quantiles", "utilities.ragged_summary",
     "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
     "diagnostics.spectral_noise_proxy", "diagnostics.local_density", "diagnostics.pca_reference_qc"];
@@ -157,6 +157,24 @@ assert.throws(() => new n4m.CPPLS().fit(xTrain, yTrain, { groups: new Array(xTra
               /not used/);
 assert.throws(() => new n4m.PLSRegression({ solver: "bogus" }).fit(xTrain, yTrain), /solver/);
 assert.throws(() => new n4m.PLSLDA().fit(xTrain), /labels/);
+
+// OPLS (not in the frozen fixture): the generated class fits, and its N4ME
+// state replays the same predictions, scores and bytes.
+{
+    const opls = new n4m.OPLS({ n_components: 3, scale_x: false, scale_y: false })
+        .fit(xTrain, yTrain);
+    assert.equal(opls.methodId, "models.pls.opls");
+    const state = opls.toN4me();
+    const replay = n4m.NativeEstimator.fromN4me(state);
+    assert.equal(replay.methodId, "models.pls.opls");
+    assert.deepEqual(replay.predict(xTest).data, opls.predict(xTest).data);
+    const scores = opls.transform(xTest);
+    assert.equal(scores.cols, 3);
+    assert.deepEqual(replay.transform(xTest).data, scores.data);
+    assert.deepEqual(replay.toN4me(), state);
+    replay.dispose();
+    opls.dispose();
+}
 
 console.log(`estimator roles: ${fixture.cases.length} unchanged fixture estimators and ${fixture.procedures.length} procedures reproduced in JS/WASM; independent population StandardScale oracle/replay PASS`);
 

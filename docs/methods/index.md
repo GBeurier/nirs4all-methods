@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **242**. Additional Python reference
+_Total catalogued native methods_: **244**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -271,6 +271,7 @@ sweep_run
 t2_select
 ternary
 tpe
+utilities_finite_column_quantiles
 utilities_hotelling_t2
 utilities_moments
 utilities_q_residuals
@@ -416,6 +417,7 @@ wvc_threshold_select
 | [`cppls`](cppls.md) | `n4m.estimators.regression.latent.cppls` | `n4m.estimators.regression.latent` | C, Py |
 | [`ecr`](ecr.md) | `n4m.estimators.regression.latent.ecr` | `n4m.estimators.regression.latent` | C, Py |
 | [`missing_aware_nipals`](missing_aware_nipals.md) | `n4m.estimators.regression.latent.missing_aware_nipals` | `n4m.estimators.regression.latent` | C |
+| [`opls`](opls.md) | `n4m.estimators.regression.latent.opls` | `n4m.estimators.regression.latent` | C |
 | [`pcr`](pcr.md) | `n4m.estimators.regression.latent.pcr` | `n4m.estimators.regression.latent` | C, Py |
 | [`pls`](pls.md) | `n4m.estimators.regression.latent.pls` | `n4m.estimators.regression.latent` | C, Py |
 | [`pls_regression`](models_pls_pls_regression.md) | `n4m.estimators.regression.latent.pls_regression` | `n4m.estimators.regression.latent` | C |
@@ -624,6 +626,7 @@ wvc_threshold_select
 
 | Method | Fully-qualified name | Namespace | Refs |
 |--------|----------------------|-----------|------|
+| [`finite_column_quantiles`](utilities_finite_column_quantiles.md) | `n4m.utilities.finite_column_quantiles` | `n4m.utilities` | Py |
 | [`ragged_summary`](utilities_ragged_summary.md) | `n4m.utilities.ragged_summary` | `n4m.utilities` | Py |
 
 ---

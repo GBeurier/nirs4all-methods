@@ -10,6 +10,7 @@
 #include <functional>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -182,14 +183,18 @@ class ModelAdapter : public Adapter {
     std::uint64_t caps_;
 };
 
-// PLS / PCR through n4m_model_fit.
+// PLS / PCR / OPLS through n4m_model_fit. With a required algorithm, a
+// restored N4MM must hold that algorithm (the N4MM reader already ties its
+// solver and deflation to the algorithm).
 class ModelFitAdapter final : public ModelAdapter {
   public:
     using Configure = std::function<n4m_status_t(const Params&, n4m_config_t*)>;
-    explicit ModelFitAdapter(Configure configure)
+    explicit ModelFitAdapter(Configure configure,
+                             std::optional<n4m_algorithm_t> required_algorithm = std::nullopt)
         : ModelAdapter(N4M_CAP_PREDICT | N4M_CAP_TRANSFORM | N4M_CAP_AFFINE |
                        N4M_CAP_SERIALIZABLE),
-          configure_(std::move(configure)) {}
+          configure_(std::move(configure)),
+          required_algorithm_(required_algorithm) {}
 
     n4m_status_t fit(n4m_context_t* ctx, const Params& params,
                      const FitInputs& in) override {
@@ -204,8 +209,17 @@ class ModelFitAdapter final : public ModelAdapter {
         return st;
     }
 
+    n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const override {
+        if (required_algorithm_ && model_->algorithm != *required_algorithm_) {
+            set_error_named(ctx, "N4MM state contradicts the method", "algorithm");
+            return N4M_ERR_CORRUPT_BUFFER;
+        }
+        return ModelAdapter::check_params(ctx, params);
+    }
+
   private:
     Configure configure_;
+    std::optional<n4m_algorithm_t> required_algorithm_;
 };
 
 // MethodResult kernels promoted to a predict-only affine N4MM model.
@@ -369,6 +383,21 @@ std::unique_ptr<Adapter> make_pls_fit_simple(const MethodSpec&) {
         n4m_status_t st = n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION);
         return st != N4M_OK ? st : n4m_config_set_solver(cfg, N4M_SOLVER_SIMPLS);
     });
+}
+
+// OPLS with the kernel's only route, NIPALS with orthogonal deflation; the
+// other settings keep the n4m_config defaults (as the R `opls_nipals` gateway
+// does). n_components is the total: one predictive plus n_components - 1
+// Y-orthogonal components.
+std::unique_ptr<Adapter> make_opls(const MethodSpec&) {
+    return std::make_unique<ModelFitAdapter>(
+        [](const Params&, n4m_config_t* cfg) {
+            n4m_status_t st = n4m_config_set_algorithm(cfg, N4M_ALGO_OPLS);
+            if (st == N4M_OK) st = n4m_config_set_solver(cfg, N4M_SOLVER_NIPALS);
+            if (st == N4M_OK) st = n4m_config_set_deflation(cfg, N4M_DEFLATION_ORTHOGONAL);
+            return st;
+        },
+        N4M_ALGO_OPLS);
 }
 
 // Same configuration as n4m_estimators_pcr_fit: PCR + SVD.
