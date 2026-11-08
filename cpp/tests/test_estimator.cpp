@@ -1319,6 +1319,99 @@ static void test_raw_i32_failed_refit(n4m_context_t* ctx, Inputs& fixture, int64
     CHECK(std::memcmp(before.data(), after.data(), before.size() * sizeof(double)) == 0);
 }
 
+// Focused case callable by the existing private narrow-driver pattern.
+void test_standard_scale_ddof(n4m_context_t* ctx) {
+    current_ = "standard_scale/ddof";
+    using Estimator = std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)>;
+    using Parameters = std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)>;
+    int32_t index = -1;
+    CHECK(n4m_method_find("preprocessing.scaling.standard_scale", &index) == N4M_OK);
+    auto make = [&](int64_t ddof, bool explicit_ddof, bool mean, bool scale) {
+        n4m_params_t* raw_params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &raw_params) == N4M_OK);
+        Parameters params(raw_params, n4m_params_destroy);
+        int64_t value = -1, count = 0;
+        CHECK(n4m_params_get_int(params.get(), "ddof", &value, 1, &count) == N4M_OK);
+        CHECK(value == 0 && count == 1);
+        if (explicit_ddof) CHECK(n4m_params_set_int(params.get(), "ddof", ddof) == N4M_OK);
+        CHECK(n4m_params_set_bool(params.get(), "with_mean", mean ? 1 : 0) == N4M_OK);
+        CHECK(n4m_params_set_bool(params.get(), "with_std", scale ? 1 : 0) == N4M_OK);
+        n4m_estimator_t* raw = nullptr;
+        CHECK(n4m_estimator_create(ctx, "preprocessing.scaling.standard_scale", params.get(),
+                                   &raw) == N4M_OK);
+        return Estimator(raw, n4m_estimator_destroy);
+    };
+    const double offset = 1099511627776.0;  // 2^40, exactly representable.
+    double train[] = {offset, 7, 0, offset + 2, 7, 2,
+                      offset + 4, 7, 4, offset + 6, 7, 6};
+    double heldout[] = {offset + 1, 7, 1, offset + 5, 7, 5};
+    auto X = view(train, 4, 3), H = view(heldout, 2, 3);
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &X;
+    auto transform = [&](const n4m_estimator_t* est) {
+        std::vector<double> out(6);
+        auto O = view(out.data(), 2, 3);
+        CHECK(n4m_estimator_transform(ctx, est, &H, &O) == N4M_OK);
+        return out;
+    };
+    for (int64_t ddof : {int64_t{0}, int64_t{1}}) {
+        for (bool mean : {false, true}) {
+            for (bool scale : {false, true}) {
+                auto est = make(ddof, true, mean, scale);
+                CHECK(n4m_estimator_fit(ctx, est.get(), &inputs) == N4M_OK);
+                const auto out = transform(est.get());
+                for (size_t r = 0; r < 2; ++r) {
+                    for (size_t c = 0; c < 3; ++c) {
+                        const double center = c == 0 ? offset + 3 : c == 1 ? 7 : 3;
+                        const double sd = c == 1 ? 1 : std::sqrt(20.0 / (4 - ddof));
+                        const double expected = (heldout[r * 3 + c] - (mean ? center : 0)) /
+                                                (scale ? sd : 1);
+                        CHECK(std::fabs(out[r * 3 + c] - expected) <=
+                              1e-12 * (1 + std::fabs(expected)));
+                    }
+                    CHECK(out[r * 3 + 1] == (mean ? 0 : 7));
+                }
+                const auto bytes = export_bytes(ctx, est.get());
+                n4m_estimator_t* raw_back = nullptr;
+                CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(),
+                                                       &raw_back) == N4M_OK);
+                Estimator back(raw_back, n4m_estimator_destroy);
+                const auto replay = transform(back.get());
+                CHECK(std::memcmp(out.data(), replay.data(), out.size() * sizeof(double)) == 0);
+                CHECK(export_bytes(ctx, back.get()) == bytes);
+                if (ddof == 0) {
+                    auto defaults = make(0, false, mean, scale);
+                    CHECK(n4m_estimator_fit(ctx, defaults.get(), &inputs) == N4M_OK);
+                    const auto omitted = transform(defaults.get());
+                    CHECK(std::memcmp(out.data(), omitted.data(), out.size() * sizeof(double)) == 0);
+                    CHECK(export_bytes(ctx, defaults.get()) == bytes);
+                }
+            }
+        }
+    }
+    double singleton[] = {0.1, 7};
+    auto S = view(singleton, 1, 2);
+    inputs.X = &S;
+    for (bool scale : {false, true}) {
+        auto est = make(0, false, true, scale);
+        CHECK(n4m_estimator_fit(ctx, est.get(), &inputs) == N4M_OK);
+        double zeros[] = {-1, -1};
+        auto Z = view(zeros, 1, 2);
+        CHECK(n4m_estimator_transform(ctx, est.get(), &S, &Z) == N4M_OK);
+        CHECK(zeros[0] == 0 && zeros[1] == 0);
+        for (int64_t ddof : {int64_t{1}, int64_t{2}, std::numeric_limits<int64_t>::max()}) {
+            auto invalid = make(ddof, true, true, scale);
+            CHECK(n4m_estimator_fit(ctx, invalid.get(), &inputs) == N4M_ERR_INVALID_ARGUMENT);
+        }
+    }
+    n4m_params_t* raw_params = nullptr;
+    CHECK(n4m_params_create(ctx, index, &raw_params) == N4M_OK);
+    Parameters params(raw_params, n4m_params_destroy);
+    CHECK(n4m_params_set_int(params.get(), "ddof", -1) == N4M_ERR_INVALID_ARGUMENT);
+    CHECK(n4m_params_set_double(params.get(), "ddof", 0.5) == N4M_ERR_INVALID_ARGUMENT);
+}
+
 int main() {
     n4m_context_t* ctx = nullptr;
     if (n4m_context_create(&ctx) != N4M_OK) return 1;
@@ -1334,6 +1427,7 @@ int main() {
     };
     Inputs in;
     run([&] { test_introspection_and_params(ctx); });
+    run([&] { test_standard_scale_ddof(ctx); });
     run([&] {
         test_snv_parameter_domain(ctx);
     });

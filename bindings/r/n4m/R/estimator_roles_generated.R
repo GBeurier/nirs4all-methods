@@ -1298,8 +1298,8 @@ n4m_simple_scale <- function() {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
-n4m_standard_scale <- function(with_mean = TRUE, with_std = TRUE) {
-  .n4m_estimator("preprocessing.scaling.standard_scale", c("transformer"), list(with_mean = with_mean, with_std = with_std))
+n4m_standard_scale <- function(with_mean = TRUE, with_std = TRUE, ddof = 0L) {
+  .n4m_estimator("preprocessing.scaling.standard_scale", c("transformer"), list(with_mean = with_mean, with_std = with_std, ddof = ddof))
 }
 
 #' @rdname n4m_estimator_role_constructors

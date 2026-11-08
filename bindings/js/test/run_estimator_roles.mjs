@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as n4m from "../dist/index.js";
 import { assertN4meReexportEquivalent } from "./_n4me_compat.mjs";
+import { checkStandardScale } from "./run_standard_scale.mjs";
 
 await n4m.loadModule();
 const fixture = JSON.parse(readFileSync(
@@ -58,28 +59,7 @@ const legacyMethods = fixture.cases.map((c) => c.method_id);
 assert.ok(newMethods.every((id) => !legacyMethods.includes(id)));
 assert.deepEqual([...byMethod.keys()].sort(), [...legacyMethods, ...newMethods].sort());
 
-// Independent analytic population oracle, including a constant column and a
-// large offset. Four equally spaced values have variance 5 (not sample 20/3).
-{
-    const offset = 1e12;
-    const train = matrix([[offset, 7, 0], [offset + 2, 7, 2],
-        [offset + 4, 7, 4], [offset + 6, 7, 6]]);
-    const heldout = matrix([[offset + 1, 7, 1], [offset + 5, 7, 5]]);
-    const expected = [-2 / Math.sqrt(5), 0, -2 / Math.sqrt(5),
-        2 / Math.sqrt(5), 0, 2 / Math.sqrt(5)];
-    const scaler = new n4m.StandardScale().fit(train);
-    let restored;
-    try {
-        close(scaler.transform(heldout).data, expected, 1e-12, "population StandardScale");
-        const state = scaler.toN4me();
-        restored = n4m.NativeEstimator.fromN4me(state);
-        close(restored.transform(heldout).data, expected, 1e-12, "population StandardScale replay");
-        assert.deepEqual(restored.toN4me(), state);
-    } finally {
-        scaler.dispose();
-        restored?.dispose();
-    }
-}
+checkStandardScale();
 
 const yTest = Float64Array.from(fixture.y_test);
 const checkMask = (est, c, label) => {

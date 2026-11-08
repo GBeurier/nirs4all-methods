@@ -4935,7 +4935,7 @@ methods:
         class: "StandardScale"
         legacy_aliases: []
     publications: []
-    notes: "Native transformer through the shared n4m_estimator_* role API, with no dedicated C exports. Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales."
+    notes: "Native transformer through the shared n4m_estimator_* role API, with no dedicated C exports. Fitted column standardization: integer ddof defaults to 0 (population); 0 <= ddof < rows is required even with with_std=false, and zero variance uses scale=1. ddof is fit provenance only; no fitted row count is stored. The resolved N4ME parameter set now has with_mean, with_std and ddof. Old two-parameter StandardScale states from Python/JS/R/MATLAB/pickle/RolePipeline and nested N4MF/N4MC exports are refused by the existing parameter-count check; no ABI or envelope-format change."
     namespace: "transform.scaling"
     leaf: "standard_scale"
     fq_name: "n4m.transform.scaling.standard_scale"
@@ -4956,6 +4956,10 @@ methods:
         - name: with_std
           type: bool
           default: true
+        - name: ddof
+          type: int
+          default: 0
+          min: 0
   - method_id: "preprocessing.scaling.baseline"
     family: "preprocessing.scaling"
     category: "preprocessing"

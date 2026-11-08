@@ -3956,6 +3956,7 @@ class StandardScale(NativeTransformer):
     _param_types: ClassVar[dict[str, str]] = {
         "with_mean": "bool",
         "with_std": "bool",
+        "ddof": "int",
     }
 
     def __init__(
@@ -3963,9 +3964,11 @@ class StandardScale(NativeTransformer):
         *,
         with_mean=True,
         with_std=True,
+        ddof=0,
     ) -> None:
         self.with_mean = with_mean
         self.with_std = with_std
+        self.ddof = ddof
 
 
 class AreaNormalization(NativeTransformer):

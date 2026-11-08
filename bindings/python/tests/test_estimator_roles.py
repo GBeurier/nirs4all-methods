@@ -767,7 +767,9 @@ def reference_transformer(cls, est):
     if cls is roles.StandardScale:
         from sklearn.preprocessing import StandardScaler
 
-        return StandardScaler(**est.get_params())
+        params = est.get_params().copy()
+        assert params.pop("ddof") == 0
+        return StandardScaler(**params)
 
     for module in (
         "baseline",
