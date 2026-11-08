@@ -145,6 +145,12 @@ add_executable(n4m_procedure_tests test_procedure.cpp)
 target_link_libraries(n4m_procedure_tests PRIVATE n4m_c)
 target_include_directories(n4m_procedure_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/src)
 add_test(NAME n4m_procedure_tests COMMAND n4m_procedure_tests)
+add_executable(n4m_finite_column_quantiles_tests test_finite_column_quantiles.c)
+target_link_libraries(n4m_finite_column_quantiles_tests PRIVATE n4m_c)
+if(NOT MSVC)
+    target_link_libraries(n4m_finite_column_quantiles_tests PRIVATE m)
+endif()
+add_test(NAME n4m_finite_column_quantiles_tests COMMAND n4m_finite_column_quantiles_tests)
 set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
     TIMEOUT "$<IF:$<CONFIG:Debug>,180,60>")

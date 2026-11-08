@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstring>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -643,6 +644,65 @@ n4m_status_t run_aug_edge_artifacts(n4m_context_t* ctx, const Params& params,
 }
 
 // ---- Generic procedures -------------------------------------------------
+
+// Probabilities are checked once by Params::set_doubles using catalog bounds.
+// X may contain missing/nonfinite values; only finite observations contribute.
+n4m_status_t run_finite_column_quantiles(n4m_context_t* ctx, const Params& params,
+                                        const FitInputs& in, n4m_method_result_t** out) {
+    const auto probabilities = params.get_doubles("probabilities");
+    if (probabilities.empty()) {
+        set_error(ctx, "probabilities must be non-empty");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    const auto& X = *in.X;
+    if (X.dtype != N4M_DTYPE_F64) {
+        set_error(ctx, "X must be F64");
+        return N4M_ERR_DTYPE_MISMATCH;
+    }
+    const auto cols = static_cast<std::size_t>(X.cols);
+    std::vector<double> quantiles;
+    if (probabilities.size() > quantiles.max_size() / cols) {
+        set_error(ctx, "quantile output shape exceeds addressable storage");
+        return N4M_ERR_INVALID_ARGUMENT;
+    }
+    quantiles.assign(probabilities.size() * cols, std::numeric_limits<double>::quiet_NaN());
+    std::vector<std::int64_t> counts(cols, 0);
+    std::vector<double> finite;
+    finite.reserve(static_cast<std::size_t>(X.rows));
+    const auto* data = static_cast<const double*>(X.data);
+    for (std::int64_t col = 0; col < X.cols; ++col) {
+        finite.clear();
+        for (std::int64_t row = 0; row < X.rows; ++row) {
+            const double value = data[row * X.row_stride + col * X.col_stride];
+            if (std::isfinite(value)) finite.push_back(value);
+        }
+        counts[static_cast<std::size_t>(col)] = static_cast<std::int64_t>(finite.size());
+        if (finite.empty()) continue;
+        std::sort(finite.begin(), finite.end());
+        for (std::size_t q = 0; q < probabilities.size(); ++q) {
+            const double p = probabilities[q];
+            double value;
+            if (finite.size() == 1 || p == 0.0) value = finite.front();
+            else if (p == 1.0) value = finite.back();
+            else {
+                const double h = static_cast<double>(finite.size() - 1) * p;
+                const auto lo = static_cast<std::size_t>(std::floor(h));
+                const double fraction = h - static_cast<double>(lo);
+                // Exact nodes need no neighbour (including a rounded upper endpoint).
+                value = finite[lo];
+                if (fraction != 0.0 && lo + 1 < finite.size()) {
+                    value += fraction * (finite[lo + 1] - value);
+                }
+            }
+            quantiles[q * cols + static_cast<std::size_t>(col)] = value;
+        }
+    }
+    auto result = std::make_unique<n4m_method_result_s>();
+    result->set_double_matrix("quantiles", std::move(quantiles),
+                              static_cast<std::int64_t>(probabilities.size()), X.cols);
+    result->set_int64_vector("finite_counts", std::move(counts));
+    return finish(std::move(result), out);
+}
 
 n4m_status_t run_approximate_press(n4m_context_t* ctx, const Params& params, const FitInputs& in,
                                    n4m_method_result_t** out) {

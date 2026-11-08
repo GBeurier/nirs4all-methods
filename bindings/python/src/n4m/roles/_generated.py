@@ -5588,6 +5588,22 @@ class SystematicCircular(NativeSplitter):
         self.seed = seed
 
 
+class FiniteColumnQuantiles(NativeProcedure):
+    """Native ``utilities.finite_column_quantiles`` (generic)."""
+
+    _method_id = "utilities.finite_column_quantiles"
+    _param_types: ClassVar[dict[str, str]] = {
+        "probabilities": "double_array",
+    }
+
+    def __init__(
+        self,
+        *,
+        probabilities=None,
+    ) -> None:
+        self.probabilities = probabilities
+
+
 class HotellingT2(NativeProcedure):
     """Native ``utilities.hotelling_t2`` (generic)."""
 
@@ -5843,6 +5859,7 @@ __all__ = [
     "EdgeArtifacts",
     "EdgeCurvature",
     "FCKStaticTransformer",
+    "FiniteColumnQuantiles",
     "FirstDerivative",
     "FlexiblePCA",
     "FlexibleSVD",

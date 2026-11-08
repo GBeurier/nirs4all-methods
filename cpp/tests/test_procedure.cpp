@@ -854,6 +854,26 @@ const std::map<std::string, Direct>& generic_checks() {
              CHECK(r->int_arrays.at("exact_full_moments_status")[0] == 6);
              CHECK(scalar_is(r, "solver_code", 1));
          }},
+        {"utilities.finite_column_quantiles",
+         [](n4m_context_t*, const n4m_params_t*, const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             const auto& q = r->double_arrays.at("quantiles");
+             const auto& counts = r->int64_arrays.at("finite_counts");
+             CHECK(r->double_shapes.at("quantiles") == std::make_pair(int64_t{2}, in.X->cols));
+             CHECK(counts.size() == static_cast<size_t>(in.X->cols));
+             for (int64_t j = 0; j < in.X->cols; ++j) {
+                 double lo = INFINITY, hi = -INFINITY;
+                 for (int64_t i = 0; i < in.X->rows; ++i) {
+                     const double value = static_cast<const double*>(in.X->data)[
+                         i * in.X->row_stride + j * in.X->col_stride];
+                     lo = std::min(lo, value);
+                     hi = std::max(hi, value);
+                 }
+                 CHECK(q[static_cast<size_t>(j)] == lo);
+                 CHECK(q[static_cast<size_t>(in.X->cols + j)] == hi);
+                 CHECK(counts[static_cast<size_t>(j)] == in.X->rows);
+             }
+         }},
         {"utilities.ragged_summary",
          [](n4m_context_t*, const n4m_params_t*, const n4m_fit_inputs_v1_t& in,
             const n4m_method_result_t* r) {
@@ -969,6 +989,11 @@ bool fill_required(int32_t index, n4m_params_t* params) {
         CHECK(n4m_method_param_info_v1(index, k, &pi) == N4M_OK);
         if (pi.has_default) continue;
         any = true;
+        if (std::strcmp(info.method_id, "utilities.finite_column_quantiles") == 0) {
+            const double probabilities[] = {0.0, 1.0};
+            CHECK(n4m_params_set_double_array(params, pi.name, probabilities, 2) == N4M_OK);
+            continue;
+        }
         if (std::strcmp(info.method_id, "utilities.ragged_summary") == 0 &&
             std::strcmp(pi.name, "offsets") == 0) {
             std::vector<int64_t> offsets;

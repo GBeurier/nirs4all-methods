@@ -2024,6 +2024,9 @@ const ParamSpec kParams_splitters_systematic_circular[] = {
     {"test_size", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_splitters_systematic_circular_test_size, 1, 0.0, 1.0, nullptr, 0, false, false},
     {"seed", N4M_METHOD_PARAM_INT, true, kDefault_splitters_systematic_circular_seed, nullptr, 1, 0.0, kNaN, nullptr, 0, true, false},
 };
+const ParamSpec kParams_utilities_finite_column_quantiles[] = {
+    {"probabilities", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+};
 const std::int64_t kDefault_utilities_hotelling_t2_n_components[] = {5};
 const double kDefault_utilities_hotelling_t2_alpha[] = {0.05};
 const ParamSpec kParams_utilities_hotelling_t2[] = {
@@ -2287,6 +2290,7 @@ const MethodSpec kMethods[] = {
     {"splitters.spxy_fold", "n4m.model_selection.splitters.spxy_fold", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_spxy_fold, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
     {"splitters.spxy_g_fold", "n4m.model_selection.splitters.spxy_g_fold", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_spxy_g_fold, 3, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
     {"splitters.systematic_circular", "n4m.model_selection.splitters.systematic_circular", N4M_METHOD_PROCEDURE, N4M_ROLE_SPLITTER, kParams_splitters_systematic_circular, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_splitter},
+    {"utilities.finite_column_quantiles", "n4m.utilities.finite_column_quantiles", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_finite_column_quantiles, 1, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_finite_column_quantiles},
     {"utilities.hotelling_t2", "n4m.outlier_detection.hotelling_t2", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_hotelling_t2, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_hotelling_t2},
     {"utilities.moments", "n4m.lowlevel.moments.moments", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, nullptr, 0, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_moments},
     {"utilities.q_residuals", "n4m.outlier_detection.q_residuals", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_utilities_q_residuals, 2, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_q_residuals},
