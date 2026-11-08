@@ -8891,6 +8891,12 @@ methods:
           default: 0.25
           min: 0.0
           max: 1.0
+          optional: true
+        - name: n_train
+          type: int
+          default: 0
+          min: 0
+          optional: true
   - method_id: "splitters.kmeans"
     family: "splitters"
     category: "splitters"

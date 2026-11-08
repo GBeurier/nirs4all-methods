@@ -6759,8 +6759,10 @@ NativeMethod.register("splitters.kbins_stratified", KBinsStratified);
 
 /** Parameters of KennardStone; unset values take the native defaults. */
 export interface KennardStoneParams {
-    /** Default 0.25. */
+    /** Optional: unset by default. */
     test_size?: number;
+    /** Optional: unset by default. */
+    n_train?: number;
 }
 
 /** Native `splitters.kennard_stone` (splitter). */
@@ -6768,6 +6770,7 @@ export class KennardStone extends NativeProcedure implements Splitter {
     readonly methodId = "splitters.kennard_stone";
     readonly paramTypes = {
         test_size: "double",
+        n_train: "int",
     } as const;
 
     constructor(params: KennardStoneParams = {}) {

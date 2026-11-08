@@ -25,8 +25,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "n4m/n4m.h"
@@ -617,6 +619,114 @@ void verify_split_splitter_parity() {
     }
 }
 
+// Generic named Params carry the count; fractional ABI callers share the same kernel.
+void test_kennard_stone_count() {
+    n4m_context_t* raw_ctx = nullptr;
+    N4M_TEST_REQUIRE(n4m_context_create(&raw_ctx) == N4M_OK);
+    std::unique_ptr<n4m_context_t, decltype(&n4m_context_destroy)> ctx(raw_ctx,
+                                                                 n4m_context_destroy);
+    std::int32_t index = -1;
+    N4M_TEST_REQUIRE(n4m_method_find("splitters.kennard_stone", &index) == N4M_OK);
+    for (std::int32_t p = 0; p < 2; ++p) {
+        n4m_param_info_v1_t info{};
+        info.struct_size = sizeof(info);
+        N4M_TEST_REQUIRE(n4m_method_param_info_v1(index, p, &info) == N4M_OK);
+        N4M_TEST_REQUIRE(info.has_default == 1 && info.default_length == 0);
+        N4M_TEST_REQUIRE(info.type == (p == 0 ? N4M_METHOD_PARAM_DOUBLE : N4M_METHOD_PARAM_INT));
+    }
+    double x[26];
+    for (int i = 0; i < 26; ++i) x[i] = i;
+    auto X = make_rowmajor_view(x, 26, 1);
+    auto split = [&](std::int64_t count, bool set_count, bool set_fraction,
+                     n4m_status_t expected = N4M_OK) {
+        n4m_params_t* raw = nullptr;
+        N4M_TEST_REQUIRE(n4m_params_create(ctx.get(), index, &raw) == N4M_OK);
+        std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)> params(raw,
+                                                                      n4m_params_destroy);
+        auto st = set_count ? n4m_params_set_int(params.get(), "n_train", count) : N4M_OK;
+        if (set_fraction) {
+            N4M_TEST_REQUIRE(n4m_params_set_double(params.get(), "test_size", 0.25) == N4M_OK);
+        }
+        n4m_fit_inputs_v1_t in{};
+        in.struct_size = sizeof(in);
+        in.X = &X;
+        n4m_method_result_t* result = nullptr;
+        if (st == N4M_OK) st = n4m_procedure_run(ctx.get(), index, params.get(), &in, &result);
+        std::unique_ptr<n4m_method_result_t, decltype(&n4m_method_result_destroy)> owner(
+            result, n4m_method_result_destroy);
+        N4M_TEST_REQUIRE(st == expected);
+        std::pair<std::vector<std::int64_t>, std::vector<std::int64_t>> out;
+        if (st != N4M_OK) {
+            N4M_TEST_REQUIRE(result == nullptr);
+            return out;
+        }
+        std::int32_t folds = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_n_folds(result, &folds) == N4M_OK && folds == 1);
+        const std::int64_t *train = nullptr, *test = nullptr;
+        std::int64_t n_train = 0, n_test = 0;
+        N4M_TEST_REQUIRE(n4m_method_result_get_fold(result, 0, &train, &n_train, &test,
+                                                   &n_test) == N4M_OK);
+        out.first.assign(train, train + n_train);
+        out.second.assign(test, test + n_test);
+        auto members = out.first;
+        members.insert(members.end(), test, test + n_test);
+        std::sort(members.begin(), members.end());
+        N4M_TEST_REQUIRE(members.size() == static_cast<std::size_t>(X.rows));
+        for (std::int64_t i = 0; i < X.rows; ++i) {
+            N4M_TEST_REQUIRE(members[static_cast<std::size_t>(i)] == i);
+        }
+        N4M_TEST_REQUIRE(std::is_sorted(out.second.begin(), out.second.end()));
+        return out;
+    };
+    for (const auto rows : {26, 25}) {
+        X.rows = rows;
+        const auto implicit = split(0, false, false);
+        N4M_TEST_REQUIRE(implicit == split(0, false, true));
+        N4M_TEST_REQUIRE(implicit.first.size() == static_cast<std::size_t>(rows - 7));
+        N4M_TEST_REQUIRE(implicit == split(rows - 7, true, false));
+        // The pre-existing fractional C ABI must retain identical ordered indices.
+        n4m_splitter_spec_t spec{};
+        spec.kind = N4M_SPLITTER_KENNARD_STONE;
+        spec.test_size = 0.25;
+        n4m_split_result_t legacy{};
+        N4M_TEST_REQUIRE(n4m_splitter_run(&spec, &X, nullptr, nullptr, 0, 0, &legacy) == N4M_OK);
+        const bool same = implicit.first == std::vector<std::int64_t>(
+                             legacy.train_idx, legacy.train_idx + legacy.n_train) &&
+                          implicit.second == std::vector<std::int64_t>(
+                             legacy.test_idx, legacy.test_idx + legacy.n_test);
+        n4m_split_result_destroy(&legacy);
+        N4M_TEST_REQUIRE(same);
+        const auto counted = split(rows == 26 ? 20 : 19, true, false);
+        N4M_TEST_REQUIRE(counted.first.size() == static_cast<std::size_t>(rows - 6));
+        N4M_TEST_REQUIRE(std::equal(implicit.first.begin(), implicit.first.end(),
+                                    counted.first.begin()));
+        N4M_TEST_REQUIRE(split(2, true, false).first.size() == 2);
+        N4M_TEST_REQUIRE(split(rows - 1, true, false).second.size() == 1);
+        for (const auto invalid : {-1, 0, 1, rows, rows + 1}) {
+            split(invalid, true, false, N4M_ERR_INVALID_ARGUMENT);
+        }
+        split(20, true, true, N4M_ERR_INVALID_ARGUMENT);
+    }
+    n4m_params_t* params = nullptr;
+    N4M_TEST_REQUIRE(n4m_params_create(ctx.get(), index, &params) == N4M_OK);
+    const auto noninteger = n4m_params_set_double(params, "n_train", 2.5);
+    const auto unknown = n4m_params_set_int(params, "unknown_count", 20);
+    n4m_params_destroy(params);
+    N4M_TEST_REQUIRE(noninteger == N4M_ERR_INVALID_ARGUMENT);
+    N4M_TEST_REQUIRE(unknown == N4M_ERR_INVALID_ARGUMENT);
+
+    // Equal farthest pairs and equal greedy distances: first strict maximum wins.
+    double ties[] = {0, 0, 1, 0, 0, 1, 1, 1, 0.5, 0.5};
+    X = make_rowmajor_view(ties, 5, 2);
+    const auto tied = split(3, true, false);
+    N4M_TEST_REQUIRE(tied.first == std::vector<std::int64_t>({0, 3, 1}));
+    N4M_TEST_REQUIRE(tied.second == std::vector<std::int64_t>({2, 4}));
+    std::fill(ties, ties + 10, 0.0);
+    const auto identical = split(3, true, false);
+    N4M_TEST_REQUIRE(identical.first == std::vector<std::int64_t>({0, 1, 2}));
+    N4M_TEST_REQUIRE(identical.second == std::vector<std::int64_t>({3, 4}));
+}
+
 void test_generic_splitter_all_kinds() {
     double X[60], Y[30];
     std::int64_t groups[30];
@@ -705,6 +815,7 @@ void register_splitters_tests(n4m_testing::Runner& r);
 void register_splitters_tests(n4m_testing::Runner& r) {
     r.run("split_kennard_stone_smoke",         test_kennard_stone_smoke);
     r.run("split_kennard_stone_parity",        verify_kennard_stone_parity);
+    r.run("split_kennard_stone_count",         test_kennard_stone_count);
     r.run("split_spxy_smoke",                  test_spxy_smoke);
     r.run("split_spxy_parity",                 verify_spxy_parity);
     r.run("split_spxy_fold_smoke",             test_spxy_fold_smoke);

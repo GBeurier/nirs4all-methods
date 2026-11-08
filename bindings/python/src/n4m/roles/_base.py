@@ -14,6 +14,7 @@ from __future__ import annotations
 import ctypes
 import math
 import numbers
+import operator
 import sys
 from typing import Any, ClassVar
 
@@ -371,8 +372,16 @@ class NativeMethod(BaseEstimator):
                     continue
                 key = name.encode()
                 if kind == "int":
+                    if isinstance(value, (float, np.floating)):
+                        if not math.isfinite(value) or not value.is_integer():
+                            raise TypeError(f"{name} must be an integer")
+                        integer = int(value)
+                    else:
+                        integer = operator.index(value)
+                    if not -(2**63) <= integer < 2**63:
+                        raise OverflowError(f"{name} must fit a signed int64")
                     status = lib.n4m_params_set_int(
-                        params, key, ctypes.c_int64(int(value))
+                        params, key, ctypes.c_int64(integer)
                     )
                 elif kind == "double":
                     status = lib.n4m_params_set_double(
