@@ -73,16 +73,27 @@ on:
     inputs:
       publish_to:
         description: |
-          Optional publish target for manual runs. PyPI is intentionally
-          NOT offered here — production publishes only via a tag push so
-          the tag + wheel-version validation step always runs. Use
-          'testpypi' for dry-runs; the published version is whatever
+          Optional TestPyPI target for ordinary manual builds. Stable-tag
+          PyPI recovery is controlled separately by recovery_publish and
+          validates the immutable tag and source. The version is whatever
           pyproject.toml says (bump via scripts/bump_version.sh first
           for a different version).
         required: true
         default: "none"
         type: choice
         options: [none, testpypi]
+      recovery_publish:
+        description: 'Publish an exact stable-tag recovery after rebuilding the full matrix'
+        type: boolean
+        default: false
+      release_tag:
+        description: 'Existing stable release tag'
+        type: string
+        default: ''
+      expected_source_sha:
+        description: 'Exact commit resolved by the release tag'
+        type: string
+        default: ''
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -102,6 +113,21 @@ jobs:
       - uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0
+          ref: ${{ inputs.recovery_publish && inputs.expected_source_sha || github.ref }}
+
+      - name: Verify immutable recovery source
+        if: github.event_name == 'workflow_dispatch' && inputs.recovery_publish
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$EXPECTED_SOURCE_SHA"
+          test "$(sed -nE 's/^version = "([0-9]+[.][0-9]+[.][0-9]+)"/\1/p' bindings/python/pyproject.toml)" = "${RELEASE_TAG#v}"
 
       - uses: actions/setup-python@v6.3.0
         with:
@@ -141,7 +167,7 @@ jobs:
             cibw_build: "cp312-manylinux_aarch64 cp312-musllinux_aarch64"
             build_preset: dev-release
           - label: macos-universal2
-            runs_on: macos-14
+            runs_on: macos-15
             cibw_archs: universal2
             cibw_build: "cp312-macosx_universal2"
             # universal2 preset cross-compiles arm64 + x86_64 into one dylib;
@@ -205,6 +231,21 @@ jobs:
       - uses: actions/checkout@v7.0.0
         with:
           fetch-depth: 0
+          ref: ${{ inputs.recovery_publish && inputs.expected_source_sha || github.ref }}
+
+      - name: Verify immutable recovery source
+        if: github.event_name == 'workflow_dispatch' && inputs.recovery_publish
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]
+          [[ "$EXPECTED_SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")" = "$EXPECTED_SOURCE_SHA"
+          test "$(sed -nE 's/^version = "([0-9]+[.][0-9]+[.][0-9]+)"/\1/p' bindings/python/pyproject.toml)" = "${RELEASE_TAG#v}"
 
       - uses: actions/setup-python@v6.3.0
         with:
@@ -329,12 +370,12 @@ jobs:
   publish-pypi:
     name: publish to PyPI
     needs: [sdist, wheels]
-    # PyPI publish is tag-only by design. workflow_dispatch does not expose
-    # 'pypi' as a choice; the only path to production is a SemVer tag.
+    # Stable-tag production builds retain tag and version validation.
     if: |
-      github.event_name == 'push'
+      (github.event_name == 'push'
       && startsWith(github.ref, 'refs/tags/v')
-      && !contains(github.ref_name, '-')
+      && !contains(github.ref_name, '-'))
+      || (github.event_name == 'workflow_dispatch' && inputs.recovery_publish)
     runs-on: ubuntu-22.04
     environment: pypi
     permissions:
@@ -351,10 +392,11 @@ jobs:
         run: ls -la dist/
 
       - name: Validate release tag matches semver and pyproject version
-        if: github.event_name == 'push'
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
         run: |
           set -euo pipefail
-          ref_name="${GITHUB_REF_NAME}"
+          ref_name="${RELEASE_TAG}"
           if [[ ! "${ref_name}" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
             echo "::error::Tag ${ref_name} is not a SemVer release (v<MAJOR>.<MINOR>.<PATCH>)" >&2
             exit 1
@@ -447,8 +489,8 @@ jobs:
       - name: Extract version from ref
         id: ver
         run: |
-          ref="${GITHUB_REF#refs/tags/v}"
-          echo "version=${ref}" >> "$GITHUB_OUTPUT"
+          ref="${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}"
+          echo "version=${ref#v}" >> "$GITHUB_OUTPUT"
       - name: Install from PyPI + verify exact version (with propagation retry)
         run: |
           set -euo pipefail

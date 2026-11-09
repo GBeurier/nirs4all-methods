@@ -24,9 +24,9 @@ jobs:
           - { label: linux-gcc13-release,   runs_on: ubuntu-24.04, preset: ci-linux-gcc13-release,   apt_install: "gcc-13 g++-13 ninja-build" }
           - { label: linux-clang16-release, runs_on: ubuntu-22.04, preset: ci-linux-clang16-release, apt_install: "clang-16 ninja-build" }
           - { label: linux-clang16-debug,   runs_on: ubuntu-22.04, preset: ci-linux-clang16-debug,   apt_install: "clang-16 ninja-build" }
-          - { label: macos-clang-release,   runs_on: macos-14,     preset: ci-macos-clang-release,   apt_install: "" }
-          - { label: macos-clang-debug,     runs_on: macos-14,     preset: ci-macos-clang-debug,     apt_install: "" }
-          - { label: macos-universal2,      runs_on: macos-14,     preset: ci-macos-universal2,      apt_install: "" }
+          - { label: macos-clang-release,   runs_on: macos-15,     preset: ci-macos-clang-release,   apt_install: "" }
+          - { label: macos-clang-debug,     runs_on: macos-15,     preset: ci-macos-clang-debug,     apt_install: "" }
+          - { label: macos-universal2,      runs_on: macos-15,     preset: ci-macos-universal2,      apt_install: "" }
           - { label: windows-msvc-release,  runs_on: windows-2022, preset: ci-windows-msvc-release,  apt_install: "" }
           - { label: windows-msvc-debug,    runs_on: windows-2022, preset: ci-windows-msvc-debug,    apt_install: "" }
           - { label: windows-mingw-release, runs_on: windows-2022, preset: ci-windows-mingw-release, apt_install: "" }
