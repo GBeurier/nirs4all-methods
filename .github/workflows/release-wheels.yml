@@ -75,16 +75,16 @@ jobs:
       matrix:
         os:
           - ubuntu-22.04
-          - macos-14
+          - macos-15
           - windows-2022
         arch:
           - x86_64
           - aarch64
         exclude:
-          # macos-14 builds ONE universal2 wheel (x86_64 + arm64). macos-13 is
+          # macos-15 builds ONE universal2 wheel (x86_64 + arm64). macos-13 is
           # dropped: the GitHub macos-13 (Intel) runner queue is unreliable
           # (hours-long), and the universal2 wheel covers Intel Macs anyway.
-          - os: macos-14
+          - os: macos-15
             arch: x86_64
           - os: windows-2022
             arch: aarch64
@@ -109,11 +109,11 @@ jobs:
       # CIBW_BEFORE_ALL (in the manylinux container on Linux) so the bundled
       # lib matches the wheel.
       - name: Materialize the nirs4all-methods package dir (metadata only)
-        if: inputs.artifact_run_id == ''
+        if: inputs.artifact_run_id == '' || runner.os == 'macOS'
         run: python bindings/python/scripts/make_python_package.py --name nirs4all-methods
 
       - name: Build wheels
-        if: inputs.artifact_run_id == ''
+        if: inputs.artifact_run_id == '' || runner.os == 'macOS'
         uses: pypa/cibuildwheel@v2.21.3
         with:
           package-dir: bindings/python_nirs4all_methods
@@ -121,7 +121,7 @@ jobs:
           CIBW_ENVIRONMENT: "N4M_WHEEL_ANALYSIS=1"
           N4M_WHEEL_ANALYSIS: "1"
           CIBW_ARCHS_LINUX:   ${{ matrix.arch }}
-          # macos-14 builds a single universal2 wheel (x86_64 + arm64) via the
+          # macos-15 builds a single universal2 wheel (x86_64 + arm64) via the
           # ci-macos-universal2 preset below — covers Intel + Apple Silicon and
           # avoids the unreliable macos-13 runner.
           CIBW_ARCHS_MACOS:   universal2
@@ -193,14 +193,14 @@ jobs:
           jobs = api("/actions/runs/" + run_id + "/jobs?per_page=100")["jobs"]
           expected = {"nirs4all-methods / " + platform for platform in
               ("ubuntu-22.04 / x86_64", "ubuntu-22.04 / aarch64",
-               "macos-14 / aarch64", "windows-2022 / x86_64")}
+               "windows-2022 / x86_64")}
           successful = {job["name"] for job in jobs if job["conclusion"] == "success"}
           assert expected <= successful, "original platform build failed or missing"
           print("REUSE_ORIGINAL_BUILD", repo, run_id, tag, commit)
           PYCODE
 
       - name: Download the original wheel with digest verification
-        if: inputs.artifact_run_id != ''
+        if: inputs.artifact_run_id != '' && runner.os != 'macOS'
         uses: actions/download-artifact@v8.0.1
         with:
           name: wheels-nirs4all-methods-${{ matrix.os }}-${{ matrix.arch }}
@@ -210,7 +210,7 @@ jobs:
           digest-mismatch: error
 
       - name: Retag ctypes-only wheel cp312 to py3
-        if: inputs.artifact_run_id == ''
+        if: inputs.artifact_run_id == '' || runner.os == 'macOS'
         run: python bindings/python/scripts/retag_wheels.py wheelhouse --inplace
 
       - name: Verify portable wheel metadata
@@ -268,8 +268,8 @@ jobs:
             artifact: wheels-nirs4all-methods-ubuntu-22.04-x86_64
           - python: "3.14"
             label: macos-universal2
-            runner: macos-14
-            artifact: wheels-nirs4all-methods-macos-14-aarch64
+            runner: macos-15
+            artifact: wheels-nirs4all-methods-macos-15-aarch64
           - python: "3.14"
             label: windows-x86_64
             runner: windows-2022
