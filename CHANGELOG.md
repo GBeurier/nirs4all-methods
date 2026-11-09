@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Changed
+
+- Independent Rust crate `n4m` 0.4.2 requires libn4m ABI >= 2.22; no API change.
+
 ### Fixed
 
 - Savitzky–Golay accepts even windows with half-integer coefficient centers,
@@ -17,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   multi-block path (`scale_x = 0`), matching the R `mb_pls` alias. Explicit
   low-level legacy configurations, previously exported N4ME states and the
   state wire format are unchanged.
+
+- The generic `models.sparse.sparse_pls_da` classifier refuses `n_components`
+  outside `1 .. min(nfit - 1, p_transformed)` before its numerical fit instead
+  of silently clamping the requested component count.
 
 ### Added
 
