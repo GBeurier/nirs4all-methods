@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const wasmDir = resolve(here, "..", "..", "..", "build", "emscripten",
-                        "bindings", "js");
+const wasmDir = resolve(here, "..", "..", "..", "build",
+                        process.env.N4M_WASM_PRESET || "emscripten", "bindings", "js");
 const factory = (await import(resolve(wasmDir, "n4m.js"))).default;
 const M = await factory({});
 const cc = (n, r, t, a) => M.ccall(n, r, t, a);

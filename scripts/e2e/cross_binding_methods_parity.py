@@ -625,6 +625,8 @@ def _run_wasm_smoke(timeout: int, *, fixture_path: Path | None = None) -> dict[s
             "cmake --build --preset emscripten --target n4m_wasm"
         )
     env = _base_env()
+    # This oracle records and qualifies the emscripten build explicitly.
+    env["N4M_WASM_PRESET"] = "emscripten"
     if fixture_path is not None:
         env["N4M_WASM_PARITY_FIXTURE"] = str(fixture_path)
     proc = _run(

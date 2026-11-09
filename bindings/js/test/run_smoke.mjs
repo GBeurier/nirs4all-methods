@@ -16,8 +16,8 @@ import { dirname, resolve } from "node:path";
 import { readFileSync, existsSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const wasmDir = resolve(here, "..", "..", "..", "build", "emscripten",
-                        "bindings", "js");
+const wasmDir = resolve(here, "..", "..", "..", "build",
+                        process.env.N4M_WASM_PRESET || "emscripten", "bindings", "js");
 const factory = (await import(resolve(wasmDir, "n4m.js"))).default;
 const M = await factory({locateFile: (p) => resolve(wasmDir, p)});
 const cc = (name, result, types, args) => M.ccall(name, result, types, args);
