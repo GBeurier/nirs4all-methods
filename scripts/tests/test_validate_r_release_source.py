@@ -28,6 +28,12 @@ class RecoverySourceTest(unittest.TestCase):
             git("commit", "-m", "immutable source")
             git("tag", "v1.3.10")
             desc.write_text(desc.read_text() + "Suggests: jsonlite\n")
+            snv_test = repo / "bindings/r/n4m/tests/testthat/test-snv-parameter-contract.R"
+            snv_test.parent.mkdir(parents=True)
+            snv_test.write_text("fixture <- 'fixtures/snv_parameter_contract_v1.json'\n")
+            fixture = snv_test.parent / "fixtures/snv_parameter_contract_v1.json"
+            fixture.parent.mkdir()
+            fixture.write_text("{}\n")
             git("add", ".")
             git("commit", "-m", "declare test dependency")
             expected = git("rev-parse", "HEAD")
