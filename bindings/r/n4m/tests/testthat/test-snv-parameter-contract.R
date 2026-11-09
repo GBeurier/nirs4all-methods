@@ -1,6 +1,6 @@
 # SNV contract: actual C bridge/refusals, not host-side numerical code.
-fixture <- Sys.getenv("N4M_SNV_FIXTURE_PATH", "../../../../../parity/fixtures/snv_parameter_contract_v1.json")
-if (!file.exists(fixture)) stop("Set N4M_SNV_FIXTURE_PATH to the shared owner fixture in packaged test context")
+fixture <- Sys.getenv("N4M_SNV_FIXTURE_PATH", "fixtures/snv_parameter_contract_v1.json")
+if (!file.exists(fixture)) stop("SNV contract fixture is missing; set N4M_SNV_FIXTURE_PATH to an explicit fixture")
 doc <- jsonlite::fromJSON(fixture, simplifyVector = FALSE)
 stopifnot(identical(sort(names(doc)), sort(c("schema", "matrix", "references", "domains", "typed_values", "default_bits", "provenance"))))
 X <- matrix(unlist(doc$matrix), ncol = 4L, byrow = TRUE)
