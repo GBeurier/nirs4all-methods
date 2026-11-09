@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Allow the first R tarball's packaging repair without changing a release tag.
 
-The numerical core, R transport, tests, and fixtures must still match the
-immutable stable release. No registry artifact is replaced by this workflow.
+The numerical core and R transport must match the immutable stable release.
+The SNV test locator and its canonical fixture mirror may be repaired for the
+self-contained R package. No registry artifact is replaced by this workflow.
 """
 from __future__ import annotations
 
@@ -13,6 +14,8 @@ import subprocess
 
 ALLOWED = frozenset({
     "bindings/r/n4m/DESCRIPTION",
+    "bindings/r/n4m/tests/testthat/test-snv-parameter-contract.R",
+    "bindings/r/n4m/tests/testthat/fixtures/snv_parameter_contract_v1.json",
     ".github/workflows/release-r.yml",
     "scripts/validate_r_release_source.py",
     "scripts/tests/test_validate_r_release_source.py",
