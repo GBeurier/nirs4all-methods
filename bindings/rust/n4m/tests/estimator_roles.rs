@@ -79,6 +79,22 @@ fn ints(value: &Value) -> Vec<i64> {
 /// few ulps elsewhere (FMA contraction), so replays compare at 1e-9.
 const REPLAY_TOL: f64 = 1e-9;
 
+/// Fresh canonical `models.multiblock.mb_pls` prediction on the fixture `x_test` (see its use below).
+const MBPLS_FRESH_CANONICAL_PREDICT: [f64; 12] = [
+    0.3144976403031756,
+    1.9788909719425392,
+    -1.1042990419433782,
+    -3.253677087496506,
+    1.835464307675744,
+    -2.573544819288882,
+    0.11036523745733073,
+    2.5287389502999544,
+    0.43517949136879674,
+    1.3895176523275472,
+    1.8873250016312832,
+    0.24191305385888362,
+];
+
 fn close(actual: &[f64], expected: &[f64], tol: f64, label: &str) {
     assert_eq!(actual.len(), expected.len(), "{label}: length");
     for (i, (a, e)) in actual.iter().zip(expected).enumerate() {
@@ -494,6 +510,10 @@ fn replays_the_cross_language_fixture() {
         .collect();
     assert!(listed.insert("preprocessing.scaling.standard_scale"));
     assert!(listed.insert("utilities.ragged_summary"));
+    // OPLS and finite-column quantiles postdate the frozen fixture: they are not waived,
+    // each is accounted for by its own explicit test below.
+    assert!(listed.insert("models.pls.opls"));
+    assert!(listed.insert("utilities.finite_column_quantiles"));
     let intrinsic = intrinsic_fixture();
     let intrinsic_cases = intrinsic["cases"].as_array().unwrap();
     assert_eq!(intrinsic_cases.len(), 5);
@@ -599,7 +619,21 @@ fn replays_the_cross_language_fixture() {
         fitted
             .fit(&ctx, &extra.add(base, &case["fit_inputs"]))
             .unwrap_or_else(|e| panic!("{method_id} fit: {e}"));
-        check(&fitted, case, 1e-9, &format!("{method_id} Rust fit"));
+        // Fresh MBPLS is the canonical scale_x = 0 configuration; the frozen `case["predict"]` is the
+        // LEGACY (scale_x = 1) expectation and stays only for the old-packet replay below. The fresh
+        // reference is the qualified fresh Python/libn4m 1.3.15 prediction (Root-approved frozen literal,
+        // packet mbpls-native-fresh-packet.json fit_count 1, same fixture inputs): same-engine
+        // cross-language interoperability, not independent math.
+        let fresh_case;
+        let fresh: &Value = if method_id == "models.multiblock.mb_pls" {
+            let mut with_literal = case.clone();
+            with_literal["predict"] = serde_json::json!(MBPLS_FRESH_CANONICAL_PREDICT);
+            fresh_case = with_literal;
+            &fresh_case
+        } else {
+            case
+        };
+        check(&fitted, fresh, 1e-9, &format!("{method_id} Rust fit"));
 
         let Some(encoded) = case["n4me_base64"].as_str() else {
             continue; // train-only filter without a serializable state
@@ -734,6 +768,153 @@ fn ragged_summary_matches_independent_population_statistics() {
             2., 1., 1., 3., 3., 1., 2., 4., 2., 0.25, 1., 6., 0., 6., 6., 8., 0., 8., 8., 1., 0.,
             1.
         ]
+    );
+}
+
+/// OPLS (`models.pls.opls`) postdates the frozen fixture. Same contract as the accepted JS and C++
+/// checks: surface and effective flags, native N4ME replay of predictions, scores and bytes. Its
+/// kernel fixture oracle stays in the native `models_pls` suite (not duplicated here).
+#[test]
+fn opls_role_surface_and_native_state_replay() {
+    let ctx = Context::new().unwrap();
+    let fx = fixture();
+    let (x_train, x_test) = (Dense::new(&fx["x_train"]), Dense::new(&fx["x_test"]));
+    let y_train = Dense::new(&fx["y_train"]);
+
+    // OPLS has no solver parameter.
+    let mut refused = Params::new(&ctx, "models.pls.opls").unwrap();
+    assert!(refused
+        .set("solver", &ParamValue::Enum("nipals".to_owned()))
+        .is_err());
+
+    let mut params = Params::new(&ctx, "models.pls.opls").unwrap();
+    params.set("n_components", &ParamValue::Int(3)).unwrap();
+    params.set("scale_x", &ParamValue::Bool(false)).unwrap();
+    params.set("scale_y", &ParamValue::Bool(false)).unwrap();
+    let mut opls = Estimator::new(&ctx, "models.pls.opls", Some(&params)).unwrap();
+    opls.fit(&ctx, &FitInputs::new(x_train.view()).y(y_train.view()))
+        .unwrap();
+    assert_eq!(opls.method_id().unwrap(), "models.pls.opls");
+    let caps = opls.capabilities().unwrap();
+    assert!(caps & roles::CAP_PREDICT != 0 && caps & roles::CAP_TRANSFORM != 0);
+    assert_eq!(opls.transform_cols().unwrap(), 3);
+    let effective =
+        |est: &Estimator, name: &str| est.params(&ctx).unwrap().int_values(name).unwrap();
+    for (name, value) in [
+        ("n_components", 3),
+        ("center_x", 1),
+        ("scale_x", 0),
+        ("center_y", 1),
+        ("scale_y", 0),
+    ] {
+        assert_eq!(effective(&opls, name), vec![value], "{name}");
+    }
+
+    let predictions = opls.predict(&ctx, x_test.view()).unwrap();
+    let scores = opls.transform(&ctx, x_test.view()).unwrap();
+    assert_eq!(scores.cols, 3);
+    let state = opls.to_n4me(&ctx, false).unwrap();
+    let replay = Estimator::from_n4me(&ctx, &state).unwrap();
+    assert_eq!(replay.method_id().unwrap(), "models.pls.opls");
+    for (name, value) in [("n_components", 3), ("scale_x", 0), ("scale_y", 0)] {
+        assert_eq!(effective(&replay, name), vec![value], "replay {name}");
+    }
+    assert_eq!(replay.predict(&ctx, x_test.view()).unwrap(), predictions);
+    assert_eq!(replay.transform(&ctx, x_test.view()).unwrap(), scores);
+    assert_eq!(replay.to_n4me(&ctx, false).unwrap(), state);
+}
+
+/// `utilities.finite_column_quantiles` (generic procedure/result contract) postdates the frozen
+/// fixture; the literals are those of the accepted JS/WASM check (`run_finite_column_quantiles.mjs`).
+#[test]
+fn finite_column_quantiles_literal_contract() {
+    let ctx = Context::new().unwrap();
+    let id = "utilities.finite_column_quantiles";
+    let run = |probabilities: &[f64],
+               data: &[f64],
+               rows: usize,
+               cols: usize|
+     -> Result<roles::MethodResult, n4m::Error> {
+        let mut params = Params::new(&ctx, id)?;
+        params.set(
+            "probabilities",
+            &ParamValue::DoubleArray(probabilities.to_vec()),
+        )?;
+        let x = MatrixRef::row_major(data, rows, cols)?;
+        roles::run_procedure(&ctx, id, Some(&params), &FitInputs::new(x))
+    };
+    let counts = |result: &roles::MethodResult| -> Vec<i64> {
+        result.int64_vector("finite_counts").unwrap_or_else(|_| {
+            result
+                .int_vector("finite_counts")
+                .unwrap()
+                .into_iter()
+                .map(i64::from)
+                .collect()
+        })
+    };
+    let same = |actual: &[f64], expected: &[f64], label: &str| {
+        assert_eq!(actual.len(), expected.len(), "{label}: length");
+        for (i, (a, e)) in actual.iter().zip(expected).enumerate() {
+            if e.is_nan() {
+                assert!(a.is_nan(), "{label}[{i}]: {a} vs NaN");
+            } else {
+                assert!((a - e).abs() < 1e-12, "{label}[{i}]: {a} vs {e}");
+            }
+        }
+    };
+    let (nan, inf) = (f64::NAN, f64::INFINITY);
+    let x = [
+        3., 7., nan, inf, 1., inf, nan, 2., 4., -inf, inf, nan, 2., nan, -inf, 6.,
+    ];
+    let probabilities = [0.1, 0.5, 0.9, 0., 1., 0.5];
+    let result = run(&probabilities, &x, 4, 4).unwrap();
+    assert_eq!(counts(&result), vec![4, 1, 0, 2]);
+    let quantiles = result.double_matrix("quantiles").unwrap();
+    assert_eq!((quantiles.rows, quantiles.cols), (6, 4));
+    same(
+        &quantiles.data,
+        &[
+            1.3, 7., nan, 2.4, 2.5, 7., nan, 4., 3.7, 7., nan, 5.6, 1., 7., nan, 2., 4., 7., nan,
+            6., 2.5, 7., nan, 4.,
+        ],
+        "quantiles",
+    );
+    // Later runs own their buffers; a singleton column and the endpoints are exact.
+    let single = run(&probabilities, &[9., nan], 1, 2).unwrap();
+    assert_eq!(counts(&single), vec![1, 0]);
+    let single_q = single.double_matrix("quantiles").unwrap();
+    assert_eq!((single_q.rows, single_q.cols), (6, 2));
+    for row in single_q.data.chunks(2) {
+        assert_eq!(row[0], 9.);
+        assert!(row[1].is_nan());
+    }
+    let ends = run(&[1., 0.], &[-f64::MAX, f64::MAX], 2, 1).unwrap();
+    assert_eq!(
+        ends.double_matrix("quantiles").unwrap().data,
+        vec![f64::MAX, -f64::MAX]
+    );
+    assert_eq!(counts(&ends), vec![2]);
+    assert_eq!(counts(&result), vec![4, 1, 0, 2]);
+    assert_eq!(quantiles.data[4], 2.5);
+    // Invalid probabilities are refused; so are missing and empty ones.
+    for bad in [&[-0.1][..], &[1.1], &[nan], &[inf], &[-inf], &[0.5, nan]] {
+        assert!(run(bad, &x, 4, 4).is_err(), "{bad:?}");
+    }
+    assert_eq!(
+        run(&[], &x, 4, 4)
+            .err()
+            .expect("empty probabilities must be refused")
+            .kind,
+        ErrorKind::InvalidArgument
+    );
+    let view = MatrixRef::row_major(&x, 4, 4).unwrap();
+    assert_eq!(
+        roles::run_procedure(&ctx, id, None, &FitInputs::new(view))
+            .err()
+            .expect("missing probabilities must be refused")
+            .kind,
+        ErrorKind::InvalidArgument
     );
 }
 
