@@ -1492,6 +1492,94 @@ void test_standard_scale_ddof(n4m_context_t* ctx) {
     CHECK(n4m_params_set_double(params.get(), "ddof", 0.5) == N4M_ERR_INVALID_ARGUMENT);
 }
 
+void test_row_l2_normalize(n4m_context_t* ctx) {
+    current_ = "row_l2_normalize/scientific_contract";
+    using Estimator = std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)>;
+    n4m_estimator_t* raw = nullptr;
+    CHECK(n4m_estimator_create(ctx, "preprocessing.scaling.row_l2_normalize", nullptr, &raw)
+          == N4M_OK);
+    Estimator est(raw, n4m_estimator_destroy);
+    double train[] = {9.0, -12.0};
+    auto T = view(train, 1, 2);
+    n4m_fit_inputs_v1_t fit{};
+    fit.struct_size = sizeof(fit);
+    fit.X = &T;
+    CHECK(n4m_estimator_fit(ctx, est.get(), &fit) == N4M_OK);
+    const auto state = export_bytes(ctx, est.get());
+    const double max = std::numeric_limits<double>::max();
+    const double tiny = std::numeric_limits<double>::denorm_min();
+    std::vector<double> values{
+        3, 4, 0, 0, -3, 4, 3e300, 4e300, 3e-300, 4e-300, max, max, tiny, tiny};
+    const double u = 1.0 / std::sqrt(2.0);
+    const std::vector<double> expected{0.6, 0.8, 0, 0, -0.6, 0.8, 0.6, 0.8, 0.6, 0.8, u, u, u, u};
+    constexpr int64_t rows = 7;
+    auto X = view(values.data(), rows, 2);
+    std::vector<double> actual(values.size());
+    auto O = view(actual.data(), rows, 2);
+    CHECK(n4m_estimator_transform(ctx, est.get(), &X, &O) == N4M_OK);
+    for (size_t i = 0; i < actual.size(); ++i) {
+        CHECK(std::isfinite(actual[i]));
+        CHECK(std::abs(actual[i] - expected[i]) < 4e-15);
+    }
+    // A row transformed alone gives exactly the corresponding batch result.
+    for (int64_t row = 0; row < rows; ++row) {
+        double one[2]{};
+        auto R = view(values.data() + row * 2, 1, 2);
+        auto Q = view(one, 1, 2);
+        CHECK(n4m_estimator_transform(ctx, est.get(), &R, &Q) == N4M_OK);
+        CHECK(one[0] == actual[static_cast<size_t>(row * 2)]);
+        CHECK(one[1] == actual[static_cast<size_t>(row * 2 + 1)]);
+    }
+    // Padded/column-strided input and column-major padded output, no host copy.
+    std::vector<double> padded(static_cast<size_t>(rows * 6), 99.0);
+    std::vector<double> strided_out(static_cast<size_t>((rows + 1) * 2), 99.0);
+    for (int64_t row = 0; row < rows; ++row) {
+        padded[static_cast<size_t>(row * 6)] = values[static_cast<size_t>(row * 2)];
+        padded[static_cast<size_t>(row * 6 + 2)] = values[static_cast<size_t>(row * 2 + 1)];
+    }
+    auto S = X;
+    S.data = padded.data();
+    S.row_stride = 6;
+    S.col_stride = 2;
+    auto D = O;
+    D.data = strided_out.data();
+    D.row_stride = 1;
+    D.col_stride = rows + 1;
+    CHECK(n4m_estimator_transform(ctx, est.get(), &S, &D) == N4M_OK);
+    for (int64_t row = 0; row < rows; ++row) {
+        CHECK(strided_out[static_cast<size_t>(row)] == actual[static_cast<size_t>(row * 2)]);
+        CHECK(strided_out[static_cast<size_t>(rows + 1 + row)]
+              == actual[static_cast<size_t>(row * 2 + 1)]);
+    }
+    CHECK(strided_out[static_cast<size_t>(rows)] == 99.0);
+    CHECK(strided_out.back() == 99.0);
+    n4m_estimator_t* imported = nullptr;
+    CHECK(n4m_estimator_import_from_buffer(ctx, state.data(), state.size(), &imported) == N4M_OK);
+    Estimator replay(imported, n4m_estimator_destroy);
+    std::vector<double> replayed(values.size());
+    auto R = view(replayed.data(), rows, 2);
+    CHECK(n4m_estimator_transform(ctx, replay.get(), &X, &R) == N4M_OK);
+    CHECK(replayed == actual);
+    CHECK(export_bytes(ctx, replay.get()) == state);
+    fit.X = &X;
+    CHECK(n4m_estimator_fit(ctx, est.get(), &fit) == N4M_OK);
+    CHECK(export_bytes(ctx, est.get()) == state);  // Fit retains width only.
+    int32_t retains_rows = -1;
+    CHECK(n4m_estimator_contains_training_rows(est.get(), &retains_rows) == N4M_OK);
+    CHECK(retains_rows == 0);
+    for (double invalid : {std::numeric_limits<double>::quiet_NaN(),
+                           std::numeric_limits<double>::infinity(),
+                           -std::numeric_limits<double>::infinity()}) {
+        double bad[] = {invalid, 1};
+        auto B = view(bad, 1, 2);
+        double result[2]{};
+        auto Q = view(result, 1, 2);
+        CHECK(n4m_estimator_transform(ctx, est.get(), &B, &Q) == N4M_ERR_INVALID_ARGUMENT);
+        fit.X = &B;
+        CHECK(n4m_estimator_fit(ctx, est.get(), &fit) == N4M_ERR_INVALID_ARGUMENT);
+    }
+}
+
 int main() {
     n4m_context_t* ctx = nullptr;
     if (n4m_context_create(&ctx) != N4M_OK) return 1;
@@ -1508,6 +1596,9 @@ int main() {
     Inputs in;
     run([&] { test_introspection_and_params(ctx); });
     run([&] { test_standard_scale_ddof(ctx); });
+    run([&] {
+        test_row_l2_normalize(ctx);
+    });
     run([&] {
         test_snv_parameter_domain(ctx);
     });

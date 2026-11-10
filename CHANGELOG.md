@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Added
+
+- Project 1.3.16 introduces the parameter-free `RowL2Normalize` native transformer
+  (`preprocessing.scaling.row_l2_normalize`) through the existing generic roles.
+  Row-wise L2 scaling preserves zero rows, supports strided views and portable
+  width-only state, uses scaled arithmetic for finite extremes and refuses
+  non-finite inputs. ABI 2.22.0 and the column-wise `Normalize` are unchanged.
+
 ### Changed
 
 - Independent Rust crate `n4m` 0.4.2 requires libn4m ABI >= 2.22; no API change.

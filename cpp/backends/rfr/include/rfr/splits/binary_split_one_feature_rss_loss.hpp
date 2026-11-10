@@ -101,7 +101,7 @@ class binary_split_one_feature_rss_loss: public rfr::splits::k_ary_split_base<2,
 				loss = best_split_continuous(infos_begin, infos_end, num_split_copy, total_stat, min_samples_in_child, min_weight_in_child, rng);
 			}
 			// a positive feature type encodes the number of possible values
-			if (ft > 0){
+			else{
 				// find best split for the current feature_index
 				loss = best_split_categorical(infos_begin, infos_end, ft, cat_split_copy, total_stat, min_samples_in_child, min_weight_in_child, rng);
 			}

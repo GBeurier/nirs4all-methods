@@ -21,6 +21,19 @@ See [`../PRODUCTION_AUDIT.md`](../PRODUCTION_AUDIT.md) §1 for the full parity m
 A "missing value" in the matrix must always mean *paper-only / not-applicable*,
 **never** "the reference library was not installed". The doctor below enforces that.
 
+## Row L2 normalization (project 1.3.16)
+
+`preprocessing.scaling.row_l2_normalize` preserves the per-row Euclidean operation
+from the Web donor `web-app/src/engine/algo/preprocessing.ts` (`normalize`, L2
+branch). Its native analytic cases and real-WASM role cases cover `[3,4]`, zero
+rows, batch/subset independence and scaled finite extremes; NaN and infinity are
+explicitly refused. This is distinct from the column-wise `Normalize` method.
+The named witnesses are `cpp/tests/test_estimator.cpp::test_row_l2_normalize` and
+`bindings/js/test/run_row_l2_normalize.mjs`. These targeted checks do not claim
+shared-fixture coverage or bitwise equivalence for the donor's naive extreme-value
+arithmetic. No existing numerical fixture, registry lockfile or frozen historical
+bibliography is rewritten for this repair.
+
 ## Setup (one command)
 
 ```bash

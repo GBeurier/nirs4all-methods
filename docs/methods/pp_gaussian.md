@@ -18,7 +18,7 @@ SciPy-compatible 1-D Gaussian filter along the wavelength axis.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_gaussian_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L156) · [`n4m_transform_gaussian_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L161) · [`n4m_transform_gaussian_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L162). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_gaussian_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L158) · [`n4m_transform_gaussian_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L163) · [`n4m_transform_gaussian_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L164). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

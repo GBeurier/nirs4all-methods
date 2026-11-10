@@ -15,7 +15,7 @@ Two passes of ``np.gradient`` (shape-preserving).
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_second_derivative_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L109) · [`n4m_transform_second_derivative_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L111) · [`n4m_transform_second_derivative_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L113). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_second_derivative_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L111) · [`n4m_transform_second_derivative_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L113) · [`n4m_transform_second_derivative_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L115). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

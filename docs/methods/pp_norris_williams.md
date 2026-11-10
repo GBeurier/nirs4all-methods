@@ -17,7 +17,7 @@ Segment smoothing followed by gap finite differences.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_norris_williams_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L125) · [`n4m_transform_norris_williams_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L128) · [`n4m_transform_norris_williams_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L130). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_norris_williams_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L127) · [`n4m_transform_norris_williams_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L130) · [`n4m_transform_norris_williams_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L132). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

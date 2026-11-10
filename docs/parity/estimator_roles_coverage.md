@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**215 of 242 catalog entries covered.**
+**218 of 245 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -16,11 +16,11 @@ three bindings and each binding's own fit reproduces the Python fit.
 | augmentation | 39 | 39 |
 | diagnostics | 5 | 21 |
 | filters | 6 | 7 |
-| models | 37 | 38 |
-| preprocessing | 63 | 64 |
+| models | 38 | 39 |
+| preprocessing | 64 | 65 |
 | selection | 26 | 26 |
 | splitters | 9 | 9 |
-| utilities | 12 | 17 |
+| utilities | 13 | 18 |
 
 | Method | Kind | Roles | Validated in |
 |---|---|---|---|
@@ -140,6 +140,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `models.multiblock.so_pls` | estimator | regressor | Python, R, JS/WASM |
 | `models.pls.cppls` | estimator | regressor | Python, R, JS/WASM |
 | `models.pls.kernel` | estimator | regressor | Python, R, JS/WASM |
+| `models.pls.opls` | estimator | transformer, regressor | manifest only |
 | `models.pls.pcr` | estimator | transformer, regressor | Python, R, JS/WASM |
 | `models.pls.pls_fit_simple` | estimator | transformer, regressor | Python, R, JS/WASM |
 | `models.pls.pls_regression` | estimator | transformer, regressor | Python, R, JS/WASM |
@@ -193,6 +194,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.scaling.baseline` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scaling.log_transform` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scaling.normalize` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.scaling.row_l2_normalize` | estimator | transformer | manifest only |
 | `preprocessing.scaling.simple_scale` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.scaling.standard_scale` | estimator | transformer | manifest only |
 | `preprocessing.scatter.area_normalization` | estimator | transformer | Python, R, JS/WASM |
@@ -259,6 +261,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `splitters.spxy_fold` | procedure | splitter | manifest only |
 | `splitters.spxy_g_fold` | procedure | splitter | manifest only |
 | `splitters.systematic_circular` | procedure | splitter | manifest only |
+| `utilities.finite_column_quantiles` | procedure | generic | manifest only |
 | `utilities.hotelling_t2` | procedure | generic | manifest only |
 | `utilities.moments` | procedure | generic | manifest only |
 | `utilities.q_residuals` | procedure | generic | manifest only |

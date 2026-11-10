@@ -15,7 +15,7 @@ _Group_: **Preprocessing** · _C ABI_: `n4m_transform_first_derivative_*`
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_first_derivative_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L94) · [`n4m_transform_first_derivative_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L96) · [`n4m_transform_first_derivative_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L98). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_first_derivative_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L96) · [`n4m_transform_first_derivative_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L98) · [`n4m_transform_first_derivative_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L100). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 

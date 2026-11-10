@@ -3967,6 +3967,16 @@ class Normalize(NativeTransformer):
         self.feature_max = feature_max
 
 
+class RowL2Normalize(NativeTransformer):
+    """Native ``preprocessing.scaling.row_l2_normalize`` (transformer)."""
+
+    _method_id = "preprocessing.scaling.row_l2_normalize"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
 class SimpleScale(NativeTransformer):
     """Native ``preprocessing.scaling.simple_scale`` (transformer)."""
 
@@ -5964,6 +5974,7 @@ __all__ = [
     "RobustPLS",
     "RollingBall",
     "RotateTranslate",
+    "RowL2Normalize",
     "SPXYFold",
     "SPXYGroupFold",
     "SPlitSplitter",

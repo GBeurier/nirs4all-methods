@@ -19,7 +19,7 @@ scipy.signal.savgol_filter parity.
 
 ## API and bindings
 
-**C ABI (ABI 2):** [`n4m_transform_savitzky_golay_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L74) · [`n4m_transform_savitzky_golay_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L81) · [`n4m_transform_savitzky_golay_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L82). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_transform_savitzky_golay_create`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L76) · [`n4m_transform_savitzky_golay_destroy`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L83) · [`n4m_transform_savitzky_golay_transform`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/transform/smoothing.h#L84). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):**
 
@@ -48,7 +48,7 @@ Savitzky & Golay (1964), *Smoothing and Differentiation of Data by Simplified Le
 
 ### Mathematical principle
 
-In every odd window, a polynomial of degree `polyorder` is fit by least squares. The value or derivative of order `deriv` at the center is a precomputed convolution of the window, scaled by `delta`; `mode` defines edge extension.
+In every positive odd or even window, a polynomial of degree `polyorder` is fit by least squares. Coefficients use the center `(window_length - 1) / 2`, which is half-integer for even windows. All modes use SciPy's convolution alignment with integer offset `window_length // 2`. The `interp` mode fills the first and last `window_length // 2` outputs by polynomial edge fits; derivatives are scaled by `delta`.
 
 ### Appropriate uses
 
@@ -56,7 +56,7 @@ Denoising while preserving polynomial peak shape, or estimating smoothed first a
 
 ### Limits and validation
 
-Window, degree, derivative, and grid spacing must be coherent. Derivatives amplify noise, large windows merge narrow bands, and edge modes produce different boundary values.
+Require `window_length >= 1`, `0 <= polyorder < window_length`, and `deriv >= 0`. Spacing must be nonzero for `deriv > 0`; `delta=0` is accepted when `deriv=0` because smoothing does not use spacing. Nonempty signals require at least `window_length` columns in every mode. Derivatives amplify noise, large windows merge narrow bands, and edge modes produce different boundary values.
 
 ### Implementation
 

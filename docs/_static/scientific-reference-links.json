@@ -3345,6 +3345,23 @@
       "links": [
         {
           "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_row_l2_normalize.mjs"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/row_l2_normalize.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_estimator.cpp"
+        }
+      ],
+      "page": "preprocessing_scaling_row_l2_normalize"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.standard_scale.yaml"
         },
         {
@@ -3825,6 +3842,27 @@
     {
       "links": [
         {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/utilities.finite_column_quantiles.yaml"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/procedures.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_finite_column_quantiles.c"
+        }
+      ],
+      "page": "utilities_finite_column_quantiles"
+    },
+    {
+      "links": [
+        {
           "kind": "doi",
           "value": "10.1214/aoms/1177732979"
         },
@@ -4089,6 +4127,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "f2d62bd3214a8561ceb48ff3545ad8b7008eba29ddb587226f062d948fffbc28"
+    "docs/_extras/scientific_remaining.py": "e7dc988e7c0b6d3738a2f8405e4d9c7b74e3075943f9072d1a69b0ee2e42b944"
   }
 }
