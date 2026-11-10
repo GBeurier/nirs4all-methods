@@ -3,9 +3,9 @@
 // Transformer role adapters over the per-method preprocessing kernels.
 //
 // Stateless transformers keep no fitted data: the fitted state is the input
-// width (the method is rebuilt from its N4ME parameters). The kernels need
-// contiguous row-major F64 views, so strided inputs and outputs go through a
-// private contiguous copy.
+// width (the method is rebuilt from its N4ME parameters). Contiguous-only
+// kernels use a private copy for strided views; stride-aware kernels receive
+// the original views.
 
 #include <cstring>
 #include <functional>
@@ -17,6 +17,7 @@
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/spec.hpp"
 #include "core/estimator/state_io.hpp"
+#include "core/preprocessing/scaling/row_l2_normalize.hpp"
 
 namespace n4m::estimator {
 
@@ -90,6 +91,8 @@ struct Kernel {
     n4m_status_t (*transform)(const H*, n4m_matrix_view_t, n4m_matrix_view_t);
     void (*destroy)(H*);
     std::function<n4m_status_t(const H*, std::int64_t, std::int64_t*)> output_cols;
+    bool stride_aware = false;
+    n4m_status_t (*validate_input)(const n4m_matrix_view_t&) = nullptr;
 };
 
 template <typename H>
@@ -105,12 +108,19 @@ class StatelessTransformAdapter final : public Adapter {
     std::int64_t transform_cols() const noexcept override { return out_cols_; }
 
     n4m_status_t fit(n4m_context_t* ctx, const Params& params, const FitInputs& in) override {
-        return build(ctx, params, in.X->cols);
+        const n4m_status_t st = validate_input(ctx, *in.X);
+        return st == N4M_OK ? build(ctx, params, in.X->cols) : st;
     }
 
-    n4m_status_t transform(n4m_context_t*, const n4m_matrix_view_t& X,
+    n4m_status_t transform(n4m_context_t* ctx,
+                           const n4m_matrix_view_t& X,
                            n4m_matrix_view_t& out) const override {
         if (out.cols != out_cols_) return N4M_ERR_SHAPE_MISMATCH;
+        const n4m_status_t st = validate_input(ctx, X);
+        if (st != N4M_OK)
+            return st;
+        if (kernel_.stride_aware)
+            return kernel_.transform(handle_.get(), X, out);
         return contiguous_call(X, out, [this](n4m_matrix_view_t x, n4m_matrix_view_t o) {
             return kernel_.transform(handle_.get(), x, o);
         });
@@ -146,6 +156,15 @@ class StatelessTransformAdapter final : public Adapter {
     n4m_status_t check_params(n4m_context_t*, const Params&) const override { return N4M_OK; }
 
   private:
+      n4m_status_t validate_input(n4m_context_t* ctx, const n4m_matrix_view_t& X) const {
+          if (kernel_.validate_input == nullptr)
+              return N4M_OK;
+          const n4m_status_t st = kernel_.validate_input(X);
+          if (st != N4M_OK)
+              set_error(ctx, "transformer requires finite input values");
+          return st;
+      }
+
     n4m_status_t build(n4m_context_t* ctx, const Params& params, std::int64_t width) {
         handle_.reset();
         n_features_ = 0;
@@ -395,6 +414,27 @@ std::unique_ptr<Adapter> make_tr_snv(const MethodSpec&) {
                                              i32(p.get_int("ddof")));
          },
          n4m_transform_snv_transform, n4m_transform_snv_destroy, {}});
+}
+
+// ---- row scaling -----------------------------------------------------------
+
+std::unique_ptr<Adapter> make_tr_row_l2_normalize(const MethodSpec&) {
+    // No learned statistics or method-specific public handle. Reuse WTD1 width state.
+    struct RowL2Kernel {};
+    return stateless<RowL2Kernel>(
+        {[](RowL2Kernel** h, const Params&) {
+             *h = new RowL2Kernel{};
+             return N4M_OK;
+         },
+         [](const RowL2Kernel*, n4m_matrix_view_t X, n4m_matrix_view_t out) {
+             return n4m::core::row_l2_normalize(X, out);
+         },
+         [](RowL2Kernel* h) {
+             delete h;
+         },
+         {},
+         true,
+         n4m::core::row_l2_validate_input});
 }
 
 // ---- signal conversion -----------------------------------------------------

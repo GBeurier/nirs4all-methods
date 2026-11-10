@@ -8,7 +8,7 @@ _Namespace_: **`n4m.transform.scaling`** · _Fully-qualified_: `n4m.transform.sc
 
 **Python (verified public re-export):** `from n4m.roles import StandardScale`
 
-**Signature:** [`StandardScale(*, with_mean = True, with_std = True)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L3952)
+**Signature:** [`StandardScale(*, with_mean = True, with_std = True, ddof = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L3990)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
@@ -20,6 +20,7 @@ _Namespace_: **`n4m.transform.scaling`** · _Fully-qualified_: `n4m.transform.sc
 |---|---|---|
 | `with_mean` | `—` | `True` |
 | `with_std` | `—` | `True` |
+| `ddof` | `—` | `0` |
 
 ## Explanations
 
@@ -49,7 +50,7 @@ https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/fi
 
 ## Catalog note
 
-Native transformer through the shared n4m_estimator_* role API, with no dedicated C exports. Train-only population standardization (ddof=0; zero variance scale=1), with portable native learned means and scales.
+Native transformer through the shared n4m_estimator_* role API, with no dedicated C exports. Fitted column standardization: integer ddof defaults to 0 (population); 0 <= ddof < rows is required even with with_std=false, and zero variance uses scale=1. ddof is fit provenance only; no fitted row count is stored. The resolved N4ME parameter set now has with_mean, with_std and ddof. Old two-parameter StandardScale states from Python/JS/R/MATLAB/pickle/RolePipeline and nested N4MF/N4MC exports are refused by the existing parameter-count check; no ABI or envelope-format change.
 
 
 _See also_: [methods index](index.md).

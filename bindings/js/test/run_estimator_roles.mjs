@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import * as n4m from "../dist/index.js";
 import { assertN4meReexportEquivalent } from "./_n4me_compat.mjs";
 import { checkStandardScale } from "./run_standard_scale.mjs";
+import { checkRowL2Normalize } from "./run_row_l2_normalize.mjs";
 import { checkFiniteColumnQuantiles } from "./run_finite_column_quantiles.mjs";
 
 await n4m.loadModule();
@@ -52,7 +53,8 @@ const inputsFor = (names) => ({
 const classes = Object.values(n4m).filter(
     (c) => typeof c === "function" && c.prototype instanceof n4m.NativeEstimator);
 const byMethod = new Map(classes.map((c) => [new c().methodId, c]));
-const newMethods = ["preprocessing.scaling.standard_scale", "models.pls.opls"];
+const newMethods = ["preprocessing.scaling.standard_scale", "models.pls.opls",
+    "preprocessing.scaling.row_l2_normalize"];
 const newProcedures = ["utilities.finite_column_quantiles", "utilities.ragged_summary",
     "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
     "diagnostics.spectral_noise_proxy", "diagnostics.local_density", "diagnostics.pca_reference_qc"];
@@ -61,6 +63,7 @@ assert.ok(newMethods.every((id) => !legacyMethods.includes(id)));
 assert.deepEqual([...byMethod.keys()].sort(), [...legacyMethods, ...newMethods].sort());
 
 checkStandardScale();
+checkRowL2Normalize();
 checkFiniteColumnQuantiles();
 
 const yTest = Float64Array.from(fixture.y_test);

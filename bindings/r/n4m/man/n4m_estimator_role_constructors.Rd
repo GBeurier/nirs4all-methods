@@ -144,6 +144,7 @@
 \alias{n4m_baseline}
 \alias{n4m_log_transform}
 \alias{n4m_normalize}
+\alias{n4m_row_l2_normalize}
 \alias{n4m_simple_scale}
 \alias{n4m_standard_scale}
 \alias{n4m_area_normalization}
@@ -363,6 +364,7 @@ n4m_resampler(target_wavelengths = c(), method = "linear", crop_min = 0.0, crop_
 n4m_baseline()
 n4m_log_transform(base = 0.0, offset = 0.0, auto_offset = TRUE, min_value = 1e-08)
 n4m_normalize(feature_min = -1.0, feature_max = 1.0)
+n4m_row_l2_normalize()
 n4m_simple_scale()
 n4m_standard_scale(with_mean = TRUE, with_std = TRUE, ddof = 0L)
 n4m_area_normalization(method = "sum")
@@ -936,6 +938,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_baseline}: \code{preprocessing.scaling.baseline} (transformer)
 \item \code{n4m_log_transform}: \code{preprocessing.scaling.log_transform} (transformer)
 \item \code{n4m_normalize}: \code{preprocessing.scaling.normalize} (transformer)
+\item \code{n4m_row_l2_normalize}: \code{preprocessing.scaling.row_l2_normalize} (transformer)
 \item \code{n4m_simple_scale}: \code{preprocessing.scaling.simple_scale} (transformer)
 \item \code{n4m_standard_scale}: \code{preprocessing.scaling.standard_scale} (transformer)
 \item \code{n4m_area_normalization}: \code{preprocessing.scatter.area_normalization} (transformer)

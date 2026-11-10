@@ -47,13 +47,17 @@ Current implementation: [cpp/src/core/extra_pls.cpp](https://github.com/GBeurier
 
 ### API and bindings
 
-**C ABI:** no standalone exported symbol is declared for this method.
+**C ABI (ABI 2):** [`n4m_model_fit`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/n4m.h#L437). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python:** no current AST-verified public `n4m` re-export was found for this method. The linked C ABI above is the documented surface in this checkout.
 
-**R:** no current source-verified entry point was found for this catalog method.
+**R (source-verified):** [`opls(formula, data, ncomp = 2L, na.action = stats::na.omit)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/sklearn.R).
 
-**MATLAB / Octave:** no current source-verified entry point was found for this catalog method.
+The source signature has additional required inputs, so no example call is fabricated.
+
+**MATLAB / Octave (source-verified):** [`opls(X, Y, n_components)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/matlab/+n4m/opls.m).
+
+The source signature has additional required inputs, so no example call is fabricated.
 
 **Registry parity references** 📐
 

@@ -18,7 +18,7 @@
 //                           0 mirror, 1 constant, 2 nearest, 3 wrap, 4 interp
 //   Derivative            : [order]                   (1 → 1st, ≥2 → 2nd derivative)
 //   Detrend               : [polyorder]
-//   Normalize             : []                        (vector L2 norm)
+// Row L2 uses the generic RowL2Normalize transformer; ppCreate has no Normalize token.
 //   GaussianFilter        : [sigma]
 
 import { getModule, checkStatus } from "./ffi.js";

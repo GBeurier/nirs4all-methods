@@ -146,6 +146,7 @@
   "preprocessing.scaling.baseline" = c("transformer"),
   "preprocessing.scaling.log_transform" = c("transformer"),
   "preprocessing.scaling.normalize" = c("transformer"),
+  "preprocessing.scaling.row_l2_normalize" = c("transformer"),
   "preprocessing.scaling.simple_scale" = c("transformer"),
   "preprocessing.scaling.standard_scale" = c("transformer"),
   "preprocessing.scatter.area_normalization" = c("transformer"),
@@ -366,6 +367,7 @@
   "preprocessing.scaling.baseline" = "n4m_baseline",
   "preprocessing.scaling.log_transform" = "n4m_log_transform",
   "preprocessing.scaling.normalize" = "n4m_normalize",
+  "preprocessing.scaling.row_l2_normalize" = "n4m_row_l2_normalize",
   "preprocessing.scaling.simple_scale" = "n4m_simple_scale",
   "preprocessing.scaling.standard_scale" = "n4m_standard_scale",
   "preprocessing.scatter.area_normalization" = "n4m_area_normalization",
@@ -1298,6 +1300,12 @@ n4m_log_transform <- function(base = 0.0, offset = 0.0, auto_offset = TRUE, min_
 #' @export
 n4m_normalize <- function(feature_min = -1.0, feature_max = 1.0) {
   .n4m_estimator("preprocessing.scaling.normalize", c("transformer"), list(feature_min = feature_min, feature_max = feature_max))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_row_l2_normalize <- function() {
+  .n4m_estimator("preprocessing.scaling.row_l2_normalize", c("transformer"), list())
 }
 
 #' @rdname n4m_estimator_role_constructors

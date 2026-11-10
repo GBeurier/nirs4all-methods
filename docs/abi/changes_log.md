@@ -1,5 +1,13 @@
 # ABI — Changes Log
 
+## 2026-11-10 — ABI unchanged: RowL2Normalize transformer role
+
+Project 1.3.16 introduces `preprocessing.scaling.row_l2_normalize`
+(`RowL2Normalize`) through the existing generic estimator roles, with no
+parameters and width-only WTD1 state in the existing N4ME envelope. No public
+symbol, signature, layout or state-format change; ABI remains 2.22.0.
+Consumers query the method manifest for this capability, not the ABI version.
+
 ## 2026-11-08 — ABI unchanged: OPLS regressor role
 
 The generic role manifest gains `models.pls.opls` (regressor, transformer;

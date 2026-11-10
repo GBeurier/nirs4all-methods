@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **244**
-- Curated scientific records: **249**
-- Resolved documentation pages: **244**
+- Catalog entries: **245**
+- Curated scientific records: **251**
+- Resolved documentation pages: **245**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -178,6 +178,7 @@ This generated report records the documentation source used for each catalog ent
 | `preprocessing.scaling.baseline` | [pp_baseline](pp_baseline.md) | curated |
 | `preprocessing.scaling.log_transform` | [pp_log](pp_log.md) | curated |
 | `preprocessing.scaling.normalize` | [pp_normalize](pp_normalize.md) | curated |
+| `preprocessing.scaling.row_l2_normalize` | [preprocessing_scaling_row_l2_normalize](preprocessing_scaling_row_l2_normalize.md) | curated |
 | `preprocessing.scaling.simple_scale` | [pp_simple_scale](pp_simple_scale.md) | curated |
 | `preprocessing.scaling.standard_scale` | [preprocessing_scaling_standard_scale](preprocessing_scaling_standard_scale.md) | curated |
 | `preprocessing.scatter.area_normalization` | [pp_area](pp_area.md) | curated |
@@ -244,7 +245,7 @@ This generated report records the documentation source used for each catalog ent
 | `splitters.spxy_fold` | [split_spxy_fold](split_spxy_fold.md) | curated |
 | `splitters.spxy_g_fold` | [split_spxy_g_fold](split_spxy_g_fold.md) | curated |
 | `splitters.systematic_circular` | [split_systematic_circular](split_systematic_circular.md) | curated |
-| `utilities.finite_column_quantiles` | [utilities_finite_column_quantiles](utilities_finite_column_quantiles.md) | missing |
+| `utilities.finite_column_quantiles` | [utilities_finite_column_quantiles](utilities_finite_column_quantiles.md) | curated |
 | `utilities.hotelling_t2` | [utilities_hotelling_t2](utilities_hotelling_t2.md) | curated |
 | `utilities.moments` | [utilities_moments](utilities_moments.md) | curated |
 | `utilities.q_residuals` | [utilities_q_residuals](utilities_q_residuals.md) | curated |

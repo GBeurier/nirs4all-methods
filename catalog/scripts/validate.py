@@ -238,8 +238,11 @@ def expected_abi_symbols() -> set[str]:
 
 
 def infra_abi_symbols() -> set[str]:
-    """Non-method support symbols (catalog/abi_infra.yaml) — the explicit bucket
-    that, together with all method abi_symbols, must cover the full ABI snapshot."""
+    """Shared support symbols declared in catalog/abi_infra.yaml.
+
+    Methods may expose the same generic support entry point. The union of
+    method and infrastructure symbols must cover the full ABI snapshot.
+    """
     path = CATALOG / "abi_infra.yaml"
     if not path.exists():
         return set()
@@ -308,7 +311,8 @@ def validate_methods(
     method_schema = load_schema("method.json")
     expected_symbols = expected_abi_symbols()
     seen: set[str] = set()
-    sym_owner: dict[str, str] = {}  # ABI symbol -> owning method (duplicate guard)
+    infra = infra_abi_symbols()
+    sym_owners: dict[str, set[str]] = {}  # Entry point -> all declaring methods.
     fail_count = 0
     warn_count = 0
     warning_samples: list[str] = []
@@ -359,10 +363,15 @@ def validate_methods(
                     if len(warning_samples) < 20:
                         warning_samples.append(message)
                     warn_count += 1
-            if strict_abi and symbol in sym_owner:
-                print(f"  FAIL: {method_id}: ABI symbol {symbol} also claimed by {sym_owner[symbol]}")
+            owners = sym_owners.setdefault(symbol, set())
+            # Shared support entry points can serve several methods. Dedicated
+            # method symbols remain exclusive; a repeated entry within one
+            # method is invalid even for a shared support symbol.
+            if strict_abi and (method_id in owners or (owners and symbol not in infra)):
+                prior = ", ".join(sorted(owners))
+                print(f"  FAIL: {method_id}: ABI symbol {symbol} also claimed by {prior}")
                 fail_count += 1
-            sym_owner[symbol] = method_id
+            owners.add(method_id)
 
         # Phase-R namespace-migration invariants (Codex Phase-R gate): the five
         # migration fields are required, fq_name must equal n4m.<namespace>.<leaf>,
@@ -398,19 +407,24 @@ def validate_methods(
     # method OR listed in the explicit infra bucket. Catches API exported by
     # libn4m but missing from the catalog (the Phase-B reconciliation invariant).
     if strict_abi and expected_symbols:
-        infra = infra_abi_symbols()
         # Only the exported FUNCTION symbols (n4m_*) need a method/infra home; the
         # ELF version-script node (N4M_1) is not a function symbol.
         real_funcs = {s for s in expected_symbols if s.startswith("n4m_")}
-        unaccounted = sorted(real_funcs - set(sym_owner) - infra)
+        method_symbols = set(sym_owners)
+        unknown_infra = sorted(infra - real_funcs)
+        for symbol in unknown_infra:
+            print(f"  FAIL: infra ABI symbol not in expected snapshot: {symbol}")
+        fail_count += len(unknown_infra)
+        unaccounted = sorted(real_funcs - method_symbols - infra)
         for symbol in unaccounted[:20]:
             print(f"  FAIL: real ABI symbol unaccounted (no method, not infra): {symbol}")
         if unaccounted:
             if len(unaccounted) > 20:
                 print(f"  FAIL: ... {len(unaccounted) - 20} more unaccounted ABI symbol(s)")
             fail_count += len(unaccounted)
-        covered = len(set(sym_owner)) + len(infra)
-        print(f"  ABI coverage: {len(set(sym_owner))} method + {len(infra)} infra "
+        covered = len(method_symbols | infra)
+        dedicated = len(method_symbols - infra)
+        print(f"  ABI coverage: {dedicated} method + {len(infra)} infra "
               f"= {covered}/{len(real_funcs)} exported n4m_* symbols")
 
     for warning in warning_samples:

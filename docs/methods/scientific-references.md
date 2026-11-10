@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **249**
+- Curated records: **251**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `f2d62bd3214a8561ceb48ff3545ad8b7008eba29ddb587226f062d948fffbc28`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `e7dc988e7c0b6d3738a2f8405e4d9c7b74e3075943f9072d1a69b0ee2e42b944`
 
 ## References by documentation page
 
@@ -1240,6 +1240,12 @@ No single canonical paper specifies this combined n4m lifecycle. The exact local
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/spectral_encoding.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/methods/spectral_encoding.md
 
+### [`preprocessing_scaling_row_l2_normalize`](preprocessing_scaling_row_l2_normalize.md) — Independent per-row Euclidean normalization
+
+No single canonical paper is asserted for this elementary Euclidean normalization. The implementation-specific finite-input, zero-row and portable-width-state contract is defined by the native source and analytic contract tests linked below.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/row_l2_normalize.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_estimator.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_row_l2_normalize.mjs
+
 ### [`preprocessing_scaling_standard_scale`](preprocessing_scaling_standard_scale.md) — Training-fitted column standardization
 
 Population standardization uses the arithmetic mean and population variance. The public StandardScaler reference documents the same ddof=0 convention: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html.
@@ -1413,6 +1419,12 @@ Cai, W., Li, Y. & Shao, X. (2008). *A variable selection method based on uninfor
 Mehmood, T. (2016). *Hotelling T² based variable selection in partial least squares regression*. Chemometrics and Intelligent Laboratory Systems 154, 23–28. https://doi.org/10.1016/j.chemolab.2016.03.020 — proposes T²-PLS, the loading-weights-level Hotelling T² selector. See also Wold, Sjöström & Eriksson (2001), Chemometrics and Intelligent Laboratory Systems 58(2), 109–130 §6.2 for the original T²-vs-VIP discussion in PLS.
 
 **Provenance:** Current implementation: [cpp/src/core/t2_selection.cpp](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/t2_selection.cpp).
+
+### [`utilities_finite_column_quantiles`](utilities_finite_column_quantiles.md) — Finite-only column quantiles with caller-ordered probabilities
+
+No single canonical paper is asserted for this implementation-specific utility. Its finite-value filtering, type-7 interpolation and named output contract are specified by the native implementation and public-C contract test linked below. These sources document behavior, not external-reference parity.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/procedures.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/utilities.finite_column_quantiles.yaml; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_finite_column_quantiles.c
 
 ### [`utilities_hotelling_t2`](utilities_hotelling_t2.md) — Standalone PCA Hotelling T² statistic
 

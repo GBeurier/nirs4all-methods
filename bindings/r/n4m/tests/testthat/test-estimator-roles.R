@@ -61,6 +61,7 @@ testthat::test_that("every manifest estimator has a generated R constructor", {
                             c(vapply(fx$cases, `[[`, "", "method_id"),
                               vapply(fx$procedures, `[[`, "", "method_id"),
                               "preprocessing.scaling.standard_scale",
+                              "preprocessing.scaling.row_l2_normalize",
                               "models.pls.opls",
                               "utilities.ragged_summary",
                               "utilities.finite_column_quantiles",

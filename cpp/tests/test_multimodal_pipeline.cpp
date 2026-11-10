@@ -50,7 +50,8 @@ struct Fixture {
             if (i == 1 || i == 2) { s.n_components = 2; s.random_state = 77; }
             else { s.with_mean = 1; s.with_std = 1; }
             if (i == 3) { s.numeric_column = 0; s.categorical_column = 1; s.ignore_unknown = 1; }
-            raw_shapes[i] = {rows}; raw_shapes[i].insert(raw_shapes[i].end(), shapes[i].begin(), shapes[i].end());
+            raw_shapes[i].assign(1, rows);
+            raw_shapes[i].insert(raw_shapes[i].end(), shapes[i].begin(), shapes[i].end());
             strides[i].resize(raw_shapes[i].size()); int64_t stride = 1;
             for (size_t d = raw_shapes[i].size(); d-- > 0;) { strides[i][d] = stride; stride *= raw_shapes[i][d]; }
             if (i == 3) strides[i][0] = 1;
@@ -142,7 +143,8 @@ void zero_alpha_rank_deficiency_and_transaction() {
                 fixture.y[static_cast<size_t>(row)] = row % 2 ? 2.0 : -1.0;
         } else if (profile == 2) {
             // A single learned category is a constant feature after centering.
-            fixture.categories.clear(); fixture.offsets = {0};
+            fixture.categories.clear();
+            fixture.offsets.assign(1, uint64_t{0});
             for (int64_t row = 0; row < Fixture::rows; ++row) {
                 fixture.categories += "é"; fixture.offsets.push_back(fixture.categories.size());
                 fixture.y[static_cast<size_t>(row)] = 2.0 + 3.0 * fixture.numeric[3][static_cast<size_t>(row)];

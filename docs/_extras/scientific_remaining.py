@@ -31,6 +31,43 @@ def _entry(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "utilities_finite_column_quantiles": _entry(
+        "Finite-only column quantiles with caller-ordered probabilities",
+        "No single canonical paper is asserted for this implementation-specific utility. "
+        "Its finite-value filtering, type-7 interpolation and named output contract are "
+        "specified by the native implementation and public-C contract test linked below. "
+        "These sources document behavior, not external-reference parity.",
+        "For each column of X, collect and sort only finite observations. With n finite "
+        "values sorted as v[0], ..., v[n-1], compute h=(n-1)*p, i=floor(h) and "
+        "f=h-i for each requested probability p. Return v[i]+f*(v[i+1]-v[i]) "
+        "when interpolation is needed; exact nodes use v[i] directly. Probabilities "
+        "zero and one return the minimum and maximum, respectively, and a singleton "
+        "returns its sole finite value for every p. Preserve caller probability order "
+        "and duplicates. A column with no finite values returns NaN for every p.",
+        "Computing descriptive per-channel summaries of incomplete numerical matrices "
+        "while reporting the finite sample count for each channel. If summaries inform "
+        "a learned threshold or preprocessing choice, callers must restrict their inputs "
+        "to the appropriate training scope.",
+        "X must be an F64 matrix with positive row and column counts. The required "
+        "probabilities parameter is a non-empty double array of finite values in [0,1]; "
+        "the Python constructor's None default does not supply probabilities. NaN and "
+        "both infinities in X are excluded rather than imputed, so columns may summarize "
+        "different populations. No weighting, fitted state, uncertainty interval or "
+        "statistical coverage guarantee is provided. The existing C test exercises this "
+        "contract; no external-reference parity is claimed.",
+        "The registered utilities.finite_column_quantiles procedure calls "
+        "run_finite_column_quantiles in cpp/src/core/estimator/procedures.cpp through "
+        "the shared n4m_procedure_run ABI in cpp/include/n4m/estimator.h. It reads X "
+        "using explicit row and column strides and returns quantiles as an F64 matrix "
+        "of shape (number of probabilities, number of columns), plus finite_counts as "
+        "an int64 vector with one entry per column. Python exposes "
+        "n4m.roles.FiniteColumnQuantiles(probabilities=...).run(X) through the generic "
+        "native procedure transport without recomputing quantiles.",
+        _REPO + "cpp/include/n4m/estimator.h; "
+        + _REPO + "cpp/src/core/estimator/procedures.cpp; "
+        + _REPO + "catalog/methods/utilities.finite_column_quantiles.yaml; "
+        + _REPO + "cpp/tests/test_finite_column_quantiles.c",
+    ),
     "utilities_ragged_summary": _entry(
         "Deterministic ragged sequence summaries",
         "Descriptive population statistics and explicit temporal support. This operator "
@@ -60,6 +97,15 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO + "cpp/src/core/estimator/procedures.cpp; "
         + _REPO + "catalog/methods/utilities.ragged_summary.yaml; "
         + _REPO + "bindings/python/tests/test_ragged_summary.py",
+    ),
+    "preprocessing_scaling_row_l2_normalize": _entry(
+        "Independent per-row Euclidean normalization",
+        "No single canonical paper is asserted for this elementary Euclidean normalization. The implementation-specific finite-input, zero-row and portable-width-state contract is defined by the native source and analytic contract tests linked below.",
+        "For each row x, return x/sqrt(sum_j x_j^2) when the row is nonzero; preserve a zero row unchanged. Compute s=max_j abs(x_j), then u_j=x_j/s and return u_j/sqrt(sum_j u_j^2). The scaled calculation avoids forming an overflowing or underflowing unscaled squared norm. Every row is independent of other batch rows and of the rows used for fitting.",
+        "Normalizing finite spectra to unit Euclidean length before similarity comparisons or native role pipelines when absolute spectral magnitude should be removed.",
+        "Only L2 normalization is supported; there are no order, L1 or axis parameters. Fit and transform refuse NaN and infinity rather than imputing or propagating them. Zero rows stay zero and have no unit direction. Fit retains input width only and transform requires that width; empty dimensions follow the shared native estimator boundary. Large and small finite rows require scaled arithmetic rather than naive sum-of-squares.",
+        "The native preprocessing.scaling.row_l2_normalize transformer is exposed as RowL2Normalize through generated Python and JS adapters and as n4m_row_l2_normalize in R. Its kernel accepts explicit input and output strides. The shared n4m_estimator_* lifecycle and WTD1 width state supply fit, transform and N4ME replay without new C symbols. Available since project 1.3.16; ABI 2.22.0 is unchanged. Existing Normalize remains a distinct column-wise operation.",
+        "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/scaling/row_l2_normalize.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_estimator.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_row_l2_normalize.mjs",
     ),
     "preprocessing_scaling_standard_scale": _entry(
         "Training-fitted column standardization",

@@ -8,7 +8,7 @@ _Namespace_: **`n4m.utilities`** · _Fully-qualified_: `n4m.utilities.ragged_sum
 
 **Python (verified public re-export):** `from n4m.roles import RaggedSummary`
 
-**Signature:** [`RaggedSummary(*, offsets = None, presence = (), time_coordinates = (), missing_policy = 'reject')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L5633)
+**Signature:** [`RaggedSummary(*, offsets = None, presence = (), time_coordinates = (), missing_policy = 'reject')`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L5693)
 
 ### Generated generic procedure bindings
 

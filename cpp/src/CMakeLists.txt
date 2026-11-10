@@ -64,6 +64,7 @@ add_library(n4m_core OBJECT
     core/estimator/n4me.cpp
     core/estimator/selector_adapters.cpp
     core/estimator/transform_adapters.cpp
+    core/preprocessing/scaling/row_l2_normalize.cpp
     core/estimator/state_io.cpp
     core/estimator/fitted_scatter.cpp
     core/estimator/classifier_adapters.cpp

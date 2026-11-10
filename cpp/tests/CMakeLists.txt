@@ -147,6 +147,12 @@ target_include_directories(n4m_procedure_tests PRIVATE ${CMAKE_SOURCE_DIR}/cpp/s
 add_test(NAME n4m_procedure_tests COMMAND n4m_procedure_tests)
 add_executable(n4m_finite_column_quantiles_tests test_finite_column_quantiles.c)
 target_link_libraries(n4m_finite_column_quantiles_tests PRIVATE n4m_c)
+# Keep the source C11, but link with the C++ driver: the instrumented C++
+# library needs Clang's C++-only UBSan handlers (vptr/function checks), which
+# the C driver does not link.
+if(N4M_ENABLE_UBSAN)
+    set_property(TARGET n4m_finite_column_quantiles_tests PROPERTY LINKER_LANGUAGE CXX)
+endif()
 if(NOT MSVC)
     target_link_libraries(n4m_finite_column_quantiles_tests PRIVATE m)
 endif()

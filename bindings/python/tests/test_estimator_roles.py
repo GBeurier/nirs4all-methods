@@ -298,11 +298,16 @@ def test_cross_language_fixture_states_replay():
     X_test = np.asarray(doc["x_test"])
     assert doc["abi"] == "2.15.0"
     legacy_methods = {case["method_id"] for case in doc["cases"]}
-    new_methods = {"preprocessing.scaling.standard_scale", "models.pls.opls"}
+    new_methods = {
+        "preprocessing.scaling.standard_scale",
+        "models.pls.opls",
+        "preprocessing.scaling.row_l2_normalize",
+    }
     assert legacy_methods.isdisjoint(new_methods)
     # Preserve every old fixture packet; StandardScale has its actual native
     # population/scientific oracle and portable-state cases in the new suite,
     # and OPLS its kernel-fixture oracle in the native models_pls suite.
+    # RowL2Normalize has targeted analytic native/WASM witnesses and the constructor smoke below.
     assert legacy_methods | new_methods == {
         m for m, c in _REGISTRY.items() if issubclass(c, roles.NativeEstimator)
     }
@@ -793,6 +798,11 @@ def reference_transformer(cls, est):
         assert params.pop("ddof") == 0
         return StandardScaler(**params)
 
+    if cls is roles.RowL2Normalize:
+        from sklearn.preprocessing import Normalizer
+
+        return Normalizer(norm="l2")
+
     for module in (
         "baseline",
         "smoothing",
@@ -824,8 +834,8 @@ def test_transformer_matches_n4m_reference(cls, data):
     X, y, X_test, X_target = positive_spectra(data)
     est = transformer(cls).fit(X, y, **fit_kwargs(cls, X_target))
     ref = reference_transformer(cls, est).fit(X, y)
-    if cls is roles.StandardScale:
-        # Independent population-variance arithmetic can differ by roundoff.
+    if cls in (roles.StandardScale, roles.RowL2Normalize):
+        # Independent reference arithmetic can differ by roundoff.
         np.testing.assert_allclose(
             est.transform(X_test), ref.transform(X_test), rtol=1e-12, atol=1e-12
         )

@@ -1386,7 +1386,7 @@ static int pp_kind_for(const char* op, const double* params, int n_params) {
     if (strcmp(op, "WaveletDenoise") == 0) return PPK_WAVELET_DENOISE;
     /* Note: n4m_transform_normalize is COLUMN-wise L2 (batch-dependent), not the
      * per-spectrum normalization a catalog node would want — intentionally
-     * not exposed here until a row-wise L2 operator lands in libn4m. */
+     * not exposed here. Use the generic RowL2Normalize transformer role. */
     return 0;
 }
 

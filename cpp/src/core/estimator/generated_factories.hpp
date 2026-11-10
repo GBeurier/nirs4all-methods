@@ -180,6 +180,7 @@ std::unique_ptr<Adapter> make_tr_resampler(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_robust_direct_standardization(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_robust_snv(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_rolling_ball(const MethodSpec& spec);
+std::unique_ptr<Adapter> make_tr_row_l2_normalize(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_saps(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_savitzky_golay(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_second_derivative(const MethodSpec& spec);
