@@ -212,7 +212,15 @@ def test_counter_positive_and_mixed_fields(calls):
 
 
 @pytest.mark.parametrize("last", [False, True])
-def test_pipeline_malformed_cleanup(last, calls):
+def test_pipeline_malformed_cleanup(last, calls, monkeypatch):
+    integer_params = []
+    set_int = lib.n4m_params_set_int
+
+    def tracked_set_int(params, key, value):
+        integer_params.append((key, value.value))
+        return set_int(params, key, value)
+
+    monkeypatch.setattr(lib, "n4m_params_set_int", tracked_set_int)
     # The last-SNV construction gate tests cleanup, not admission of a
     # transformer-only recipe. A genuine valid recipe is exercised below.
     bad = ("preprocessing.scatter.snv", {"ddof": -1})
@@ -221,12 +229,14 @@ def test_pipeline_malformed_cleanup(last, calls):
         if last
         else [bad, "models.regularized.ridge"]
     )
-    with pytest.raises((TypeError, ValueError)):
+    with pytest.raises(ValueError, match="ddof"):
         RolePipeline.from_steps(steps)
     assert calls.count("n4m_params_create") == calls.count("n4m_params_destroy"), calls
     assert calls.count("n4m_role_pipeline_create") == 0
     assert calls.count("n4m_role_pipeline_fit") == 0
-    assert calls.count("n4m_params_set_int") == 0
+    # Only the valid StandardScale prefix forwards its default ddof=0.
+    assert calls.count("n4m_params_set_int") == int(last)
+    assert integer_params == ([(b"ddof", 0)] if last else [])
 
 
 def test_valid_pipeline_and_nondefault_forwarding(calls):
