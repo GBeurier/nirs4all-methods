@@ -14,7 +14,8 @@ constexpr std::uint32_t kTagBlockRms = 0x31535242u;  // "BRS1"
 double read(const n4m_matrix_view_t& view, std::int64_t row, std::int64_t column) {
     const auto offset = row * view.row_stride + column * view.col_stride;
     return view.dtype == N4M_DTYPE_F64 ? static_cast<const double*>(view.data)[offset]
-                                     : static_cast<const float*>(view.data)[offset];
+                                     : static_cast<double>(
+                                           static_cast<const float*>(view.data)[offset]);
 }
 
 class BlockRmsAdapter final : public Adapter {
