@@ -1,5 +1,17 @@
 # ABI — Changes Log
 
+## 2026-11-16 — ABI unchanged: multibranch neural regressor role
+
+The generic role manifest gains `models.neural.multibranch_regressor`
+(`MultibranchRegressor`; regressor and transformer; `y` required, `blocks`
+optional) with twelve typed parameters (two int arrays declaring branch kinds
+and shapes, architecture integers, epochs, batch size, learning rate, weight
+decay and an int64 seed read as u64). Its fitted state is one `MBN1` block in
+the existing N4ME envelope (state format label `multibranch_network`); fit
+diagnostics use the existing `n4m_estimator_fit_result`. No public symbol,
+signature, enum, layout or envelope change; ABI remains 2.22.0. Consumers
+query the method manifest for this capability.
+
 ## 2026-11-10 — ABI unchanged: RowL2Normalize transformer role
 
 Project 1.3.16 introduces `preprocessing.scaling.row_l2_normalize`

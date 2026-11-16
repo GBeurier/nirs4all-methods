@@ -1047,6 +1047,32 @@ const ParamSpec kParams_models_multiblock_rosa[] = {
 const ParamSpec kParams_models_multiblock_so_pls[] = {
     {"n_components_per_block", N4M_METHOD_PARAM_INT_ARRAY, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_models_neural_multibranch_regressor_branch_kinds[] = {0};
+const std::int64_t kDefault_models_neural_multibranch_regressor_branch_shapes[] = {0};
+const std::int64_t kDefault_models_neural_multibranch_regressor_filters[] = {4};
+const std::int64_t kDefault_models_neural_multibranch_regressor_kernel_size[] = {5};
+const std::int64_t kDefault_models_neural_multibranch_regressor_pool_size[] = {2};
+const std::int64_t kDefault_models_neural_multibranch_regressor_embedding_dim[] = {8};
+const std::int64_t kDefault_models_neural_multibranch_regressor_head_hidden[] = {8};
+const std::int64_t kDefault_models_neural_multibranch_regressor_epochs[] = {100};
+const std::int64_t kDefault_models_neural_multibranch_regressor_batch_size[] = {16};
+const double kDefault_models_neural_multibranch_regressor_learning_rate[] = {0.01};
+const double kDefault_models_neural_multibranch_regressor_weight_decay[] = {0.0001};
+const std::int64_t kDefault_models_neural_multibranch_regressor_seed[] = {0};
+const ParamSpec kParams_models_neural_multibranch_regressor[] = {
+    {"branch_kinds", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_models_neural_multibranch_regressor_branch_kinds, nullptr, 0, 0.0, 2.0, nullptr, 0, false, false},
+    {"branch_shapes", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_models_neural_multibranch_regressor_branch_shapes, nullptr, 0, 1.0, kNaN, nullptr, 0, false, false},
+    {"filters", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_filters, nullptr, 1, 1.0, 64.0, nullptr, 0, false, true},
+    {"kernel_size", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_kernel_size, nullptr, 1, 1.0, 31.0, nullptr, 0, false, true},
+    {"pool_size", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_pool_size, nullptr, 1, 1.0, 16.0, nullptr, 0, false, true},
+    {"embedding_dim", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_embedding_dim, nullptr, 1, 1.0, 256.0, nullptr, 0, false, true},
+    {"head_hidden", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_head_hidden, nullptr, 1, 0.0, 256.0, nullptr, 0, false, true},
+    {"epochs", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_epochs, nullptr, 1, 0.0, 100000.0, nullptr, 0, false, false},
+    {"batch_size", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_batch_size, nullptr, 1, 1.0, 1048576.0, nullptr, 0, false, false},
+    {"learning_rate", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_neural_multibranch_regressor_learning_rate, 1, 0.0, 10.0, nullptr, 0, false, false},
+    {"weight_decay", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_models_neural_multibranch_regressor_weight_decay, 1, 0.0, 10.0, nullptr, 0, false, false},
+    {"seed", N4M_METHOD_PARAM_INT, true, kDefault_models_neural_multibranch_regressor_seed, nullptr, 1, kNaN, kNaN, nullptr, 0, true, false},
+};
 const std::int64_t kDefault_models_pls_cppls_n_components[] = {2};
 const double kDefault_models_pls_cppls_gamma[] = {0.5};
 const ParamSpec kParams_models_pls_cppls[] = {
@@ -2182,6 +2208,7 @@ const MethodSpec kMethods[] = {
     {"models.multiblock.on_pls", "n4m.estimators.multiblock.on_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_models_multiblock_on_pls, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "on_pls", &make_tr_on_pls, nullptr},
     {"models.multiblock.rosa", "n4m.estimators.multiblock.rosa", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_rosa, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_rosa, nullptr},
     {"models.multiblock.so_pls", "n4m.estimators.multiblock.so_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_multiblock_so_pls, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_so_pls, nullptr},
+    {"models.neural.multibranch_regressor", "n4m.estimators.neural.multibranch_regressor", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_neural_multibranch_regressor, 12, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "multibranch_network", &make_multibranch_regressor, nullptr},
     {"models.pls.cppls", "n4m.estimators.regression.latent.cppls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_pls_cppls, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_affine_cppls, nullptr},
     {"models.pls.kernel", "n4m.estimators.regression.kernel.kernel_pls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR, kParams_models_pls_kernel, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "kernel_pls", &make_kernel_pls, nullptr},
     {"models.pls.opls", "n4m.estimators.regression.latent.opls", N4M_METHOD_ESTIMATOR, N4M_ROLE_REGRESSOR | N4M_ROLE_TRANSFORMER, kParams_models_pls_opls, 5, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "n4mm", &make_opls, nullptr},
@@ -2235,6 +2262,7 @@ const MethodSpec kMethods[] = {
     {"preprocessing.resampling.resample_transformer", "n4m.transform.resampling.resample_transformer", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_resample_transformer, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_resample, nullptr},
     {"preprocessing.resampling.resampler", "n4m.transform.resampling.resampler", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_resampler, 11, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "source_axis", &make_tr_resampler, nullptr},
     {"preprocessing.scaling.baseline", "n4m.transform.scaling.baseline_center", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "column_mean", &make_tr_baseline, nullptr},
+    {"preprocessing.scaling.block_rms", "n4m.transform.scaling.block_rms", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "block_rms", &make_tr_block_rms, nullptr},
     {"preprocessing.scaling.log_transform", "n4m.transform.scaling.log_transform", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scaling_log_transform, 4, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "offset", &make_tr_log_transform, nullptr},
     {"preprocessing.scaling.normalize", "n4m.transform.scaling.normalize", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scaling_normalize, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "column_stats", &make_tr_normalize, nullptr},
     {"preprocessing.scaling.row_l2_normalize", "n4m.transform.scaling.row_l2_normalize", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_row_l2_normalize, nullptr},

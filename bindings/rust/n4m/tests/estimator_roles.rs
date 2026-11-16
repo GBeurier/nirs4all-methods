@@ -512,6 +512,12 @@ fn replays_the_cross_language_fixture() {
     // RowL2Normalize postdates the frozen fixture; it is qualified by the native analytic
     // contract (test_estimator.cpp::test_row_l2_normalize) and the real-WASM witness.
     assert!(listed.insert("preprocessing.scaling.row_l2_normalize"));
+    // Train-fitted block RMS scaling postdates the frozen state fixture; the
+    // native role sweep owns its fit/transform/portable-state contract.
+    assert!(listed.insert("preprocessing.scaling.block_rms"));
+    // The multibranch neural regressor postdates the frozen fixture; it is qualified by the
+    // native probe (cpp/tests/test_multibranch_regressor.cpp) and the generic conformance sweep.
+    assert!(listed.insert("models.neural.multibranch_regressor"));
     assert!(listed.insert("utilities.ragged_summary"));
     // OPLS and finite-column quantiles postdate the frozen fixture: they are not waived,
     // each is accounted for by its own explicit test below.

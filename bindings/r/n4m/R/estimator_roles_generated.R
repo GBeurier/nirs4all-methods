@@ -91,6 +91,7 @@
   "models.multiblock.on_pls" = c("transformer"),
   "models.multiblock.rosa" = c("regressor"),
   "models.multiblock.so_pls" = c("regressor"),
+  "models.neural.multibranch_regressor" = c("transformer", "regressor"),
   "models.pls.cppls" = c("regressor"),
   "models.pls.kernel" = c("regressor"),
   "models.pls.opls" = c("transformer", "regressor"),
@@ -144,6 +145,7 @@
   "preprocessing.resampling.resample_transformer" = c("transformer"),
   "preprocessing.resampling.resampler" = c("transformer"),
   "preprocessing.scaling.baseline" = c("transformer"),
+  "preprocessing.scaling.block_rms" = c("transformer"),
   "preprocessing.scaling.log_transform" = c("transformer"),
   "preprocessing.scaling.normalize" = c("transformer"),
   "preprocessing.scaling.row_l2_normalize" = c("transformer"),
@@ -312,6 +314,7 @@
   "models.multiblock.on_pls" = "n4m_on_pls",
   "models.multiblock.rosa" = "n4m_rosa",
   "models.multiblock.so_pls" = "n4m_so_pls",
+  "models.neural.multibranch_regressor" = "n4m_multibranch_regressor",
   "models.pls.cppls" = "n4m_cppls",
   "models.pls.kernel" = "n4m_kernel",
   "models.pls.opls" = "n4m_opls",
@@ -365,6 +368,7 @@
   "preprocessing.resampling.resample_transformer" = "n4m_resample_transformer",
   "preprocessing.resampling.resampler" = "n4m_resampler",
   "preprocessing.scaling.baseline" = "n4m_baseline",
+  "preprocessing.scaling.block_rms" = "n4m_block_rms",
   "preprocessing.scaling.log_transform" = "n4m_log_transform",
   "preprocessing.scaling.normalize" = "n4m_normalize",
   "preprocessing.scaling.row_l2_normalize" = "n4m_row_l2_normalize",
@@ -974,6 +978,12 @@ n4m_so_pls <- function(n_components_per_block = NULL) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_multibranch_regressor <- function(branch_kinds = c(), branch_shapes = c(), filters = 4L, kernel_size = 5L, pool_size = 2L, embedding_dim = 8L, head_hidden = 8L, epochs = 100L, batch_size = 16L, learning_rate = 0.01, weight_decay = 0.0001, seed = NULL) {
+  .n4m_estimator("models.neural.multibranch_regressor", c("transformer", "regressor"), list(branch_kinds = branch_kinds, branch_shapes = branch_shapes, filters = filters, kernel_size = kernel_size, pool_size = pool_size, embedding_dim = embedding_dim, head_hidden = head_hidden, epochs = epochs, batch_size = batch_size, learning_rate = learning_rate, weight_decay = weight_decay, seed = seed))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_cppls <- function(n_components = 2L, gamma = 0.5) {
   .n4m_estimator("models.pls.cppls", c("regressor"), list(n_components = n_components, gamma = gamma))
 }
@@ -1288,6 +1298,12 @@ n4m_resampler <- function(target_wavelengths = c(), method = "linear", crop_min 
 #' @export
 n4m_baseline <- function() {
   .n4m_estimator("preprocessing.scaling.baseline", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_block_rms <- function() {
+  .n4m_estimator("preprocessing.scaling.block_rms", c("transformer"), list())
 }
 
 #' @rdname n4m_estimator_role_constructors

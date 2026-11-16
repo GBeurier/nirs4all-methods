@@ -61,6 +61,12 @@ NIRS4ALL_DONOR_CATEGORIES = {
 # parity/fixtures/{hdbscan,permanova,domain_shift,cluster_matching_null}_v1.json.
 # The variance components pin dense-REML, statsmodels and SciPy references
 # in cpp/tests/test_variance_components.cpp.
+# The multibranch neural regressor is an original native Methods composite with
+# no external donor (parity/REFERENCES.md "Multibranch neural regressor"): its
+# witnesses are finite-difference gradients, learning, N4ME replay and strided
+# inputs (cpp/tests/test_multibranch_regressor.cpp,
+# cpp/tests/test_multibranch_gradients.cpp) and the native/WASM prediction
+# checksum (bindings/js/test/run_multimodal_teaching.mjs).
 NIRS4ALL_DONOR_METHODS = {
     "diagnostics.adjusted_rand_index",
     "diagnostics.bh_adjust",
@@ -80,6 +86,7 @@ NIRS4ALL_DONOR_METHODS = {
     "diagnostics.regression_metrics",
     "diagnostics.variance_components",
     "models.ensembles.moment_stack",
+    "models.neural.multibranch_regressor",
     "models.regularized.ridge",
 }
 

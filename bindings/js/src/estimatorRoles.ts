@@ -410,6 +410,38 @@ export abstract class NativeEstimator extends NativeMethod {
     }
 
     /**
+     * Named diagnostics of the last fit (n4m_estimator_fit_result), for
+     * example the training loss history of a neural regressor; null when the
+     * method keeps none, including after fromN4me (diagnostics are not state).
+     */
+    fitResult(): Record<string, ProcedureOutput> | null {
+        const m = getModule();
+        const handle = this.handle();
+        const out = m._malloc(8);
+        try {
+            m.setValue(out, 0, "i32");
+            const status = m.ccall("n4m_estimator_fit_result", "number", ["number", "number"],
+                [handle, out]) as number;
+            if (status === 10) return null;  // N4M_ERR_UNSUPPORTED: no fit diagnostics
+            checkStatus(status);
+            const result = m.getValue(out, "i32");
+            checkStatus(m.ccall("n4m_method_result_entry_count", "number", ["number", "number"],
+                [result, out]) as number);
+            const count = m.getValue(out, "i32");
+            const entries: Record<string, ProcedureOutput> = {};
+            for (let i = 0; i < count; ++i) {
+                checkStatus(m.ccall("n4m_method_result_entry", "number",
+                    ["number", "number", "number", "number"], [result, i, out, out + 4]) as number);
+                const name = m.UTF8ToString(m.getValue(out, "i32"));
+                entries[name] = readEntry(result, name, m.getValue(out + 4, "i32"));
+            }
+            return entries;
+        } finally {
+            m._free(out);
+        }
+    }
+
+    /**
      * Portable fitted state (N4ME bytes), readable by every n4m binding. A
      * state that embeds training rows (containsTrainingRows()) is refused
      * unless `allowTrainingRows` is set: sharing the export shares them.

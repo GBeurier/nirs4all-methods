@@ -1,5 +1,5 @@
 schema_version: 1
-method_count: 239
+method_count: 240
 methods:
   - method_id: "aom_pop.aom_preprocessing"
     family: "aom_pop.aom"
@@ -4908,6 +4908,50 @@ methods:
           type: int
           default: 0
           min: 0
+  - method_id: "preprocessing.scaling.block_rms"
+    family: "preprocessing.scaling"
+    category: "preprocessing"
+    subcategory: "scaling"
+    since_abi: "2.22.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/estimator/block_rms_adapter.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "preprocessing.scaling.block_rms"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "BlockRms"
+        legacy_aliases: []
+      r:
+        function: "n4m_block_rms"
+        legacy_aliases: []
+    publications: []
+    notes: "Train-fitted scalar block RMS normalization: s=sqrt(sum(X_train^2)/n_train), without implicit centering. Transform divides a source block by its fitted scalar; an all-zero block keeps scale one. Width and scalar are persisted as BRS1 state; optional y is ignored. No new public ABI symbol or host numerical implementation."
+    namespace: "transform.scaling"
+    leaf: "block_rms"
+    fq_name: "n4m.transform.scaling.block_rms"
+    c_surface: "none"
+    legacy_ids:
+      - "preprocessing.scaling.block_rms"
+    estimator:
+      kind: estimator
+      adapter: tr_block_rms
+      roles: [transformer]
+      state: block_rms
+      inputs:
+        y: optional
   - method_id: "preprocessing.scaling.row_l2_normalize"
     family: "preprocessing.scaling"
     category: "preprocessing"
@@ -11024,6 +11068,117 @@ methods:
           type: bool
           default: true
           recorded: true
+  - method_id: "models.neural.multibranch_regressor"
+    family: "models.neural"
+    category: "models"
+    subcategory: "neural"
+    since_abi: "2.22.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/neural/multibranch_network.cpp"
+      - "cpp/src/core/estimator/neural_adapters.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu:
+      - "cpp/src/core/common/rng_pcg64.c"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "models.neural.multibranch_regressor"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "MultibranchRegressor"
+        legacy_aliases: []
+      r:
+        function: "n4m_multibranch_regressor"
+        legacy_aliases: []
+    publications: []
+    notes: "Jointly trained multibranch neural regressor for intermediate (mid-level) multisource fusion through the shared n4m_estimator_* role API, ABI 2.22.0 unchanged. X is the concatenation of ordered blocks (optional blocks fit input; absent = one block). Each block feeds one branch declared by branch_kinds (0 dense, 1 conv1d, 2 conv2d; empty = all dense) and branch_shapes (3 ints per branch: dense/conv1d [width,1,1], conv2d HWC [H,W,C]). Branches: dense layer, or valid convolution + leaky ReLU + average pooling + dense embedding; embeddings are concatenated and a common head (optional hidden layer) regresses standardized y. All kernels, embeddings and head weights are trained jointly by backpropagation of MSE with Adam and decoupled weight decay, PCG64-seeded He/Glorot initialization and per-epoch Fisher-Yates minibatch order, for a fixed number of epochs (no early stopping, no validation split). Input/target standardization is fitted on training rows only (dense per column, conv1d per block, conv2d per channel). Transform returns the learned embeddings; the fit result holds loss_history. Fit refuses NaN/Inf (complete-data profile). No GPU, pretrained backbone or deep-learning framework parity claim."
+    namespace: "estimators.neural"
+    leaf: "multibranch_regressor"
+    fq_name: "n4m.estimators.neural.multibranch_regressor"
+    c_surface: "none"
+    legacy_ids:
+      - "models.neural.multibranch_regressor"
+    estimator:
+      kind: estimator
+      adapter: multibranch_regressor
+      roles: [regressor, transformer]
+      state: multibranch_network
+      inputs:
+        y: required
+        blocks: optional
+      params:
+        - name: branch_kinds
+          type: int_array
+          default: []
+          min: 0
+          max: 2
+        - name: branch_shapes
+          type: int_array
+          default: []
+          min: 1
+        - name: filters
+          type: int
+          default: 4
+          min: 1
+          max: 64
+          recorded: true
+        - name: kernel_size
+          type: int
+          default: 5
+          min: 1
+          max: 31
+          recorded: true
+        - name: pool_size
+          type: int
+          default: 2
+          min: 1
+          max: 16
+          recorded: true
+        - name: embedding_dim
+          type: int
+          default: 8
+          min: 1
+          max: 256
+          recorded: true
+        - name: head_hidden
+          type: int
+          default: 8
+          min: 0
+          max: 256
+          recorded: true
+        - name: epochs
+          type: int
+          default: 100
+          min: 0
+          max: 100000
+        - name: batch_size
+          type: int
+          default: 16
+          min: 1
+          max: 1048576
+        - name: learning_rate
+          type: double
+          default: 0.01
+          min: 0.0
+          max: 10.0
+        - name: weight_decay
+          type: double
+          default: 0.0001
+          min: 0.0
+          max: 10.0
+        - name: seed
+          type: int
+          default: 0
+          optional: true
   - method_id: "models.pls.pcr"
     family: "models.pls"
     category: "models"

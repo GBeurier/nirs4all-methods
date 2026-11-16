@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- `MultibranchRegressor` (`models.neural.multibranch_regressor`): a jointly trained
+  multibranch neural regressor for intermediate multisource fusion through the existing
+  generic roles (regressor + transformer). Ordered `blocks` feed dense, conv1d or
+  conv2d (HWC) branches declared by `branch_kinds`/`branch_shapes`; learned embeddings
+  are concatenated into a common head. All kernels, embeddings and head weights train
+  jointly (MSE backpropagation, Adam with decoupled weight decay, PCG64-seeded
+  initialization and minibatch order, fixed epochs, no early stopping). Standardization
+  is fitted on training rows only; fit refuses non-finite data. `transform` returns the
+  embeddings, the fit result holds `loss_history`, and the MBN1 N4ME state replays
+  predictions without refitting. JS `NativeEstimator.fitResult()` exposes any
+  estimator's fit diagnostics through the existing `n4m_estimator_fit_result`.
+  ABI 2.22.0 is unchanged.
 - Project 1.3.16 introduces the parameter-free `RowL2Normalize` native transformer
   (`preprocessing.scaling.row_l2_normalize`) through the existing generic roles.
   Row-wise L2 scaling preserves zero rows, supports strided views and portable

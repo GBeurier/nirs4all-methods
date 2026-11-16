@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **251**
+- Curated records: **253**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `e7dc988e7c0b6d3738a2f8405e4d9c7b74e3075943f9072d1a69b0ee2e42b944`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `ce647c0111848c9a002770f79a56d3e22df5a33d7ca80151c511b47f94eaafa1`
 
 ## References by documentation page
 
@@ -742,6 +742,12 @@ No canonical paper defines this n4m moment-stack product route; its implementati
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/ensemble.py; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/_impl/moment_facade.py
 
+### [`models_neural_multibranch_regressor`](models_neural_multibranch_regressor.md) — Jointly trained multibranch neural regressor for intermediate fusion
+
+Implementation-specific compact architecture; no single canonical paper is asserted. Its components follow standard references: LeCun, Bottou, Bengio & Haffner (1998), *Gradient-based learning applied to document recognition*, Proceedings of the IEEE 86, 2278-2324, https://doi.org/10.1109/5.726791 (convolution and backpropagation); Kingma & Ba (2015), *Adam: a method for stochastic optimization*, https://arxiv.org/abs/1412.6980; Loshchilov & Hutter (2019), *Decoupled weight decay regularization*, https://arxiv.org/abs/1711.05101. No deep-learning framework parity is claimed.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/neural/multibranch_network.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/neural_adapters.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/models.neural.multibranch_regressor.yaml; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_multibranch_regressor.cpp
+
 ### [`models_pls_pls_regression`](models_pls_pls_regression.md) — PLS regression with a selectable solver
 
 Wold, Sjöström & Eriksson (2001), *PLS-regression: a basic tool of chemometrics*, Chemometrics and Intelligent Laboratory Systems 58, 109–130, https://doi.org/10.1016/S0169-7439(01)00155-1; de Jong (1993), *SIMPLS: an alternative approach to partial least squares regression*, https://doi.org/10.1016/0169-7439(93)85002-X.
@@ -1239,6 +1245,12 @@ No single canonical paper defines this bounded implementation. It applies the st
 No single canonical paper specifies this combined n4m lifecycle. The exact local subspace and global nonnegative constructions are defined by the current C++ implementation and its spectral-encoding contract.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/spectral_encoding.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/methods/spectral_encoding.md
+
+### [`preprocessing_scaling_block_rms`](preprocessing_scaling_block_rms.md) — Train-fitted block RMS scaling
+
+No single canonical paper is asserted for this elementary block scaling rule. The exact normalization, finite-input boundary and retained-scalar state are specified by the native source and catalog declaration linked below; no external-reference parity is claimed.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/block_rms_adapter.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.block_rms.yaml; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h
 
 ### [`preprocessing_scaling_row_l2_normalize`](preprocessing_scaling_row_l2_normalize.md) — Independent per-row Euclidean normalization
 

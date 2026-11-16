@@ -231,6 +231,22 @@ if(TARGET n4m_c_static)
         TIMEOUT 60)
 endif()
 
+# Multibranch neural regressor probe: finite-difference gradients, learned
+# weights, N4ME replay and strided inputs. The network kernel is internal
+# (hidden in libn4m), so the probe links the static archive.
+if(TARGET n4m_c_static)
+    add_executable(n4m_multibranch_regressor_tests test_multibranch_regressor.cpp)
+    target_link_libraries(n4m_multibranch_regressor_tests PRIVATE n4m_c_static)
+    target_include_directories(n4m_multibranch_regressor_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/cpp/src
+        ${PROJECT_BINARY_DIR}/generated)
+    n4m_add_warnings(n4m_multibranch_regressor_tests)
+    add_test(NAME n4m_multibranch_regressor_tests COMMAND n4m_multibranch_regressor_tests)
+    set_tests_properties(n4m_multibranch_regressor_tests PROPERTIES
+        LABELS "parity"
+        TIMEOUT 120)
+endif()
+
 # Existing public build-info ABI must report the numerical core's actual flags.
 add_executable(n4m_build_capabilities_tests test_build_capabilities.cpp)
 target_link_libraries(n4m_build_capabilities_tests PRIVATE n4m_c)
@@ -338,3 +354,14 @@ target_link_libraries(n4m_mixed_effects_tests PRIVATE n4m_c)
 target_include_directories(n4m_mixed_effects_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 n4m_add_warnings(n4m_mixed_effects_tests)
 add_test(NAME mixed_effects COMMAND n4m_mixed_effects_tests)
+
+# Independent central finite-difference verification of the production CNN kernel.
+if(TARGET n4m_c_static)
+    add_executable(n4m_multibranch_gradient_tests test_multibranch_gradients.cpp)
+    target_link_libraries(n4m_multibranch_gradient_tests PRIVATE n4m_c_static)
+    target_include_directories(n4m_multibranch_gradient_tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/cpp/src ${PROJECT_BINARY_DIR}/generated)
+    n4m_add_warnings(n4m_multibranch_gradient_tests)
+    add_test(NAME n4m_multibranch_gradient_tests COMMAND n4m_multibranch_gradient_tests)
+    set_tests_properties(n4m_multibranch_gradient_tests PROPERTIES LABELS "parity" TIMEOUT 60)
+endif()

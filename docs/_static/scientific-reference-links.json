@@ -2054,6 +2054,43 @@
       "links": [
         {
           "kind": "doi",
+          "value": "10.1109/5.726791"
+        },
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1412.6980"
+        },
+        {
+          "kind": "url",
+          "value": "https://arxiv.org/abs/1711.05101"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/5.726791"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/models.neural.multibranch_regressor.yaml"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/neural_adapters.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/neural/multibranch_network.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_multibranch_regressor.cpp"
+        }
+      ],
+      "page": "models_neural_multibranch_regressor"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
           "value": "10.1016/0169-7439(93)85002-X"
         },
         {
@@ -3345,6 +3382,23 @@
       "links": [
         {
           "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.block_rms.yaml"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/estimator.h"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/block_rms_adapter.cpp"
+        }
+      ],
+      "page": "preprocessing_scaling_block_rms"
+    },
+    {
+      "links": [
+        {
+          "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_row_l2_normalize.mjs"
         },
         {
@@ -4127,6 +4181,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "e7dc988e7c0b6d3738a2f8405e4d9c7b74e3075943f9072d1a69b0ee2e42b944"
+    "docs/_extras/scientific_remaining.py": "ce647c0111848c9a002770f79a56d3e22df5a33d7ca80151c511b47f94eaafa1"
   }
 }

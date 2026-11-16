@@ -502,9 +502,14 @@ std::unique_ptr<Adapter> make_affine_mir_pls(const MethodSpec&) {
     });
 }
 
-// The role is the canonical NIPALS multi-block path (scale_x = 0; the kernel
-// centers each block itself). The legacy block-balanced path stays reachable
-// only through an explicit low-level configuration.
+// The role selects the genuine multi-block NIPALS kernel (scale_x = 0): per-block
+// centering, no block scaling, block weights w_b = X_b^T y / |X_b^T y| on the
+// deflated residuals (first response column), and an equal-weight super score
+// (normalized mean of the block scores), matching nirs4all
+// MBPLS(standardize=False). This is not the super-weighted Westerhuis variant,
+// whose single-response predictions equal concatenated PLS. The legacy
+// block-scaled concatenated-PLS path (scale_x != 0) stays reachable only
+// through an explicit low-level configuration.
 std::unique_ptr<Adapter> make_affine_mb_pls(const MethodSpec&) {
     return affine(
         [](auto ctx, auto cfg, const Params&, const FitInputs& in, auto out) {

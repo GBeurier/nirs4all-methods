@@ -14,8 +14,8 @@ See [`../PRODUCTION_AUDIT.md`](../PRODUCTION_AUDIT.md) §1 for the full parity m
 > Every method has **one documented donor** chosen as the most credible
 > implementation for the community. Methods that originate in **nirs4all**
 > (augmentations, scatter/baseline preprocessing, splitters, native AOM/moment
-> orchestration, and direct native heads such as Ridge) use **nirs4all** as the
-> donor. The only exception is a genuine *paper-only* method, which must be
+> orchestration, and direct native heads such as Ridge or the multibranch neural
+> regressor) use **nirs4all** as the donor. The only exception is a genuine *paper-only* method, which must be
 > explicitly marked as such.
 
 A "missing value" in the matrix must always mean *paper-only / not-applicable*,
@@ -33,6 +33,49 @@ The named witnesses are `cpp/tests/test_estimator.cpp::test_row_l2_normalize` an
 shared-fixture coverage or bitwise equivalence for the donor's naive extreme-value
 arithmetic. No existing numerical fixture, registry lockfile or frozen historical
 bibliography is rewritten for this repair.
+
+## Multibranch neural regressor and block RMS scaling (project 1.3.17)
+
+`models.neural.multibranch_regressor` is an **original native Methods
+composite** (dense / conv1d / conv2d branches, concatenated learned embeddings,
+common head, joint MSE backpropagation with Adam and decoupled weight decay,
+PCG64-seeded initialization and minibatch order). It is not copied from a
+nirs4all SDK implementation, PyTorch, Keras or any other framework, so it has
+**no external donor and no external-parity claim**; it is not a paper-only
+method either, because its owning implementation is executable and qualified.
+Like the direct native Ridge head, it is listed explicitly in
+`NIRS4ALL_DONOR_METHODS` (`catalog/scripts/validate.py`) as a nirs4all-origin
+method. Owning source: `cpp/src/core/neural/multibranch_network.{hpp,cpp}` and
+the estimator adapter `cpp/src/core/estimator/neural_adapters.cpp`.
+
+Its evidence is analytic and cross-native, not reference parity:
+
+- `cpp/tests/test_multibranch_regressor.cpp`: central finite differences against
+  the backpropagated gradient for every parameter tensor of a three-branch
+  (conv1d `[16]`, dense `[3]`, conv2d `[5,5,2]`) network; supervised training
+  lowers the loss and changes every convolution/embedding tensor, `epochs = 0`
+  keeps the seeded initialization; N4ME export/import predicts and transforms
+  bit-identically without refitting and re-exports the same bytes; column-major
+  and padded row-stride inputs equal row-major results; identical seeds refit
+  identically; non-finite data and undeclared conv2d shapes are refused.
+- `cpp/tests/test_multibranch_gradients.cpp`: an independent integrator probe of
+  the same kernel (finite differences with and without a hidden head layer,
+  noncontiguous minibatch rows, joint learning of both convolution branches).
+- `bindings/js/test/run_multimodal_teaching.mjs`: the real WASM build reproduces
+  the native public-ABI prediction checksum of the same deterministic fixture
+  within `1e-9` relative, replays the N4ME state exactly and transports a
+  high-bit u64 seed.
+
+`preprocessing.scaling.block_rms` stays in the blanket nirs4all preprocessing
+category. Its analytic witness is the training-fitted scalar
+`s = sqrt(sum(X_train^2) / n_train)` without centering: for training rows
+`[[3, 4], [0, 0]]`, `s = sqrt(12.5)`; unseen rows are divided by that fitted
+scalar without changing the state, and an all-zero training block keeps scale
+one (`bindings/python/tests/test_estimator_roles.py::test_block_rms_uses_training_scalar_and_replays`
+and the BlockRMS section of `bindings/js/test/run_multimodal_teaching.mjs`).
+
+No registry entry, truth-source lockfile, numerical fixture or frozen
+historical bibliography is added or rewritten for these methods.
 
 ## Setup (one command)
 
@@ -87,4 +130,4 @@ if any **required** reference dependency is missing. `--json` for machine output
 | external lib | 65 | sklearn (`pls`, `pcr`, `pls_lda`), R `pls` (`cppls`, solver variants), R `plsVarSel` (selectors), R `multiblock` (`so_pls`), matlab/libPLS (`ecr`, `cars`), `diPLSlib` (`di_pls`), `ikpls` (cross-check) |
 | `nirs4all_sanctioned` | 5 | `aom_pls`, `aom_preprocess`, `lw_pls`, `mb_pls`, `pop_pls` |
 | `paper_only` (no reference) | 3 | `fused_sparse_pls`, `mir_pls`, `sipls_select` |
-| nirs4all (donor methods) | ≈135 | augmentation, preprocessing, filters, splitters, native `aom_pop` orchestration, direct Ridge |
+| nirs4all (donor methods) | ≈135 | augmentation, preprocessing, filters, splitters, native `aom_pop` orchestration, direct Ridge, native multibranch regressor |

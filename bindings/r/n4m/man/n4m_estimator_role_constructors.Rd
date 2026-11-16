@@ -89,6 +89,7 @@
 \alias{n4m_on_pls}
 \alias{n4m_rosa}
 \alias{n4m_so_pls}
+\alias{n4m_multibranch_regressor}
 \alias{n4m_cppls}
 \alias{n4m_kernel}
 \alias{n4m_opls}
@@ -142,6 +143,7 @@
 \alias{n4m_resample_transformer}
 \alias{n4m_resampler}
 \alias{n4m_baseline}
+\alias{n4m_block_rms}
 \alias{n4m_log_transform}
 \alias{n4m_normalize}
 \alias{n4m_row_l2_normalize}
@@ -309,6 +311,7 @@ n4m_o2pls(n_predictive = 2L, n_x_orthogonal = 1L, n_y_orthogonal = 1L)
 n4m_on_pls(n_joint = 1L, n_unique_per_block = NULL)
 n4m_rosa(n_components = 2L)
 n4m_so_pls(n_components_per_block = NULL)
+n4m_multibranch_regressor(branch_kinds = c(), branch_shapes = c(), filters = 4L, kernel_size = 5L, pool_size = 2L, embedding_dim = 8L, head_hidden = 8L, epochs = 100L, batch_size = 16L, learning_rate = 0.01, weight_decay = 0.0001, seed = NULL)
 n4m_cppls(n_components = 2L, gamma = 0.5)
 n4m_kernel(n_components = 2L, kernel = "rbf", gamma = 0.0, coef0 = 1.0, degree = 3L)
 n4m_opls(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y = TRUE, scale_y = TRUE)
@@ -362,6 +365,7 @@ n4m_range_discretizer(edges = NULL)
 n4m_resample_transformer(num_samples = NULL)
 n4m_resampler(target_wavelengths = c(), method = "linear", crop_min = 0.0, crop_max = 0.0, use_crop = FALSE, fill_value = 0.0, bounds_error = FALSE, extrapolate = FALSE, tgt_min = 0.0, tgt_step = 1.0, tgt_n = 0L)
 n4m_baseline()
+n4m_block_rms()
 n4m_log_transform(base = 0.0, offset = 0.0, auto_offset = TRUE, min_value = 1e-08)
 n4m_normalize(feature_min = -1.0, feature_max = 1.0)
 n4m_row_l2_normalize()
@@ -468,9 +472,12 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{b_low}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base}{Native parameter (double); defaults come from the n4m manifest.}
 \item{base_intercepts}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{batch_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{block_scaling}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{bound_water_shift}{Native parameter (double); defaults come from the n4m manifest.}
 \item{bounds_error}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{branch_kinds}{Native parameter (int_array); defaults come from the n4m manifest.}
+\item{branch_shapes}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{branches}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{bw_hi}{Native parameter (int); defaults come from the n4m manifest.}
 \item{bw_lo}{Native parameter (int); defaults come from the n4m manifest.}
@@ -519,11 +526,13 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{edge_width}{Native parameter (double); defaults come from the n4m manifest.}
 \item{edges}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{effect_strength}{Native parameter (double); defaults come from the n4m manifest.}
+\item{embedding_dim}{Native parameter (int); defaults come from the n4m manifest.}
 \item{enable_broadening}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{enable_intensity}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{enable_shift}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{end}{Native parameter (int); defaults come from the n4m manifest.}
 \item{entropy}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{epochs}{Native parameter (int); defaults come from the n4m manifest.}
 \item{eps}{Native parameter (double); defaults come from the n4m manifest.}
 \item{epsilon}{Native parameter (double); defaults come from the n4m manifest.}
 \item{extrapolate}{Native parameter (bool); defaults come from the n4m manifest.}
@@ -533,6 +542,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{feature_min}{Native parameter (double); defaults come from the n4m manifest.}
 \item{features_per_subspace}{Native parameter (int); defaults come from the n4m manifest.}
 \item{fill_value}{Native parameter (double); defaults come from the n4m manifest.}
+\item{filters}{Native parameter (int); defaults come from the n4m manifest.}
 \item{fit_intercept}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{floor_probability}{Native parameter (double); defaults come from the n4m manifest.}
 \item{free_water_fraction}{Native parameter (double); defaults come from the n4m manifest.}
@@ -550,6 +560,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{group_lambda}{Native parameter (double); defaults come from the n4m manifest.}
 \item{half_window}{Native parameter (int); defaults come from the n4m manifest.}
 \item{head}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{head_hidden}{Native parameter (int); defaults come from the n4m manifest.}
 \item{heads}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{huber_k}{Native parameter (double); defaults come from the n4m manifest.}
 \item{include_baseline_distortion}{Native parameter (bool); defaults come from the n4m manifest.}
@@ -678,6 +689,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{polynomial_order}{Native parameter (int); defaults come from the n4m manifest.}
 \item{polynomial_strength}{Native parameter (double); defaults come from the n4m manifest.}
 \item{polyorder}{Native parameter (int); defaults come from the n4m manifest.}
+\item{pool_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{population_size}{Native parameter (int); defaults come from the n4m manifest.}
 \item{presence}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{probabilities}{Native parameter (double_array); defaults come from the n4m manifest.}
@@ -771,6 +783,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{w}{Native parameter (double); defaults come from the n4m manifest.}
 \item{water_activity_delta}{Native parameter (double); defaults come from the n4m manifest.}
 \item{wavelength_exponent}{Native parameter (double); defaults come from the n4m manifest.}
+\item{weight_decay}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weight_floor}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weights}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{width_hi}{Native parameter (int); defaults come from the n4m manifest.}
@@ -883,6 +896,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_on_pls}: \code{models.multiblock.on_pls} (transformer)
 \item \code{n4m_rosa}: \code{models.multiblock.rosa} (regressor)
 \item \code{n4m_so_pls}: \code{models.multiblock.so_pls} (regressor)
+\item \code{n4m_multibranch_regressor}: \code{models.neural.multibranch_regressor} (transformer, regressor)
 \item \code{n4m_cppls}: \code{models.pls.cppls} (regressor)
 \item \code{n4m_kernel}: \code{models.pls.kernel} (regressor)
 \item \code{n4m_opls}: \code{models.pls.opls} (transformer, regressor)
@@ -936,6 +950,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_resample_transformer}: \code{preprocessing.resampling.resample_transformer} (transformer)
 \item \code{n4m_resampler}: \code{preprocessing.resampling.resampler} (transformer)
 \item \code{n4m_baseline}: \code{preprocessing.scaling.baseline} (transformer)
+\item \code{n4m_block_rms}: \code{preprocessing.scaling.block_rms} (transformer)
 \item \code{n4m_log_transform}: \code{preprocessing.scaling.log_transform} (transformer)
 \item \code{n4m_normalize}: \code{preprocessing.scaling.normalize} (transformer)
 \item \code{n4m_row_l2_normalize}: \code{preprocessing.scaling.row_l2_normalize} (transformer)

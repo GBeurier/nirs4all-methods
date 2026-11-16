@@ -82,6 +82,7 @@ n4m_status_t run_local_density(n4m_context_t* ctx, const Params& params, const F
 std::unique_ptr<Adapter> make_lw_pls(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_missing_aware_nipals(const MethodSpec& spec);
 n4m_status_t run_moments(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
+std::unique_ptr<Adapter> make_multibranch_regressor(const MethodSpec& spec);
 n4m_status_t run_one_se_rule(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 std::unique_ptr<Adapter> make_opls(const MethodSpec& spec);
 n4m_status_t run_pca_reference_qc(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
@@ -136,6 +137,7 @@ std::unique_ptr<Adapter> make_tr_arpls(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_asls(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_baseline(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_beads(const MethodSpec& spec);
+std::unique_ptr<Adapter> make_tr_block_rms(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_cow_align(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_crop(const MethodSpec& spec);
 std::unique_ptr<Adapter> make_tr_derivate(const MethodSpec& spec);

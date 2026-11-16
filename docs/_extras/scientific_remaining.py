@@ -31,6 +31,41 @@ def _entry(
 
 
 SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
+    "preprocessing_scaling_block_rms": _entry(
+        "Train-fitted block RMS scaling",
+        "No single canonical paper is asserted for this elementary block scaling rule. "
+        "The exact normalization, finite-input boundary and retained-scalar state are "
+        "specified by the native source and catalog declaration linked below; no "
+        "external-reference parity is claimed.",
+        "For a source block X with n training rows, fit one scalar "
+        "s=sqrt(sum_ij X_ij^2/n), without implicit centering, and transform new rows "
+        "as X/s. An all-zero training block retains s=1. The native implementation "
+        "uses a scaled sum of squares to avoid forming overflowing X_ij^2. With "
+        "population-standardized columns, s=sqrt(p), so the block multiplier is "
+        "1/sqrt(p), where p is the block width.",
+        "Balancing source magnitudes before early feature fusion or a multiblock "
+        "model when a single training-fitted scale per source is intended. Apply "
+        "it after explicitly chosen source preprocessing and inside each training "
+        "scope; holdout rows never contribute to the fitted scalar.",
+        "No centering, featurewise scaling or imputation occurs. Input values must "
+        "be finite, and an unrepresentable fitted scale or transformed value is "
+        "refused. This is not per-sample L2 normalization. A downstream model's "
+        "per-column autoscaling or internal branch normalization can absorb the "
+        "source scalar, so it must not be presented as an effective intervention "
+        "when that downstream normalization cancels it. The shared role fixture "
+        "predates this addition; registration is not a cross-binding parity claim.",
+        "The native preprocessing.scaling.block_rms transformer uses "
+        "cpp/src/core/estimator/block_rms_adapter.cpp through the generic "
+        "n4m_estimator_* lifecycle. Python and JS expose BlockRms and R exposes "
+        "n4m_block_rms through generated thin role bindings. The BRS1 state "
+        "inside N4ME stores only input width and fitted scalar; prediction-time "
+        "transforms reuse that state without fitting. Strided F32/F64 input and "
+        "output views are accepted; optional y is ignored. No public C symbol, "
+        "ABI change or host numerical implementation is added.",
+        _REPO + "cpp/src/core/estimator/block_rms_adapter.cpp; "
+        + _REPO + "catalog/methods/preprocessing.scaling.block_rms.yaml; "
+        + _REPO + "cpp/include/n4m/estimator.h",
+    ),
     "utilities_finite_column_quantiles": _entry(
         "Finite-only column quantiles with caller-ordered probabilities",
         "No single canonical paper is asserted for this implementation-specific utility. "
@@ -179,6 +214,54 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "https://doi.org/10.1016/S0169-7439(01)00155-1; "
         + _REPO
         + "cpp/src/core/model.cpp",
+    ),
+    "models_neural_multibranch_regressor": _entry(
+        "Jointly trained multibranch neural regressor for intermediate fusion",
+        "Implementation-specific compact architecture; no single canonical paper is "
+        "asserted. Its components follow standard references: LeCun, Bottou, Bengio & "
+        "Haffner (1998), *Gradient-based learning applied to document recognition*, "
+        "Proceedings of the IEEE 86, 2278-2324, https://doi.org/10.1109/5.726791 "
+        "(convolution and backpropagation); Kingma & Ba (2015), *Adam: a method for "
+        "stochastic optimization*, https://arxiv.org/abs/1412.6980; Loshchilov & Hutter "
+        "(2019), *Decoupled weight decay regularization*, https://arxiv.org/abs/1711.05101. "
+        "No deep-learning framework parity is claimed.",
+        "X concatenates ordered blocks; each block feeds one branch. A dense branch maps "
+        "its standardized block to an embedding e_b = act(W_b x_b + c_b). A conv1d branch "
+        "applies a valid convolution with F filters of length K, a leaky ReLU act "
+        "(slope 0.01), non-overlapping average pooling of width P and a dense embedding. "
+        "A conv2d branch does the same on an H x W x C block with F kernels C x K x K and "
+        "P x P pooling. Embeddings are concatenated in block order and a common head "
+        "(optional hidden layer with act, then a linear output) predicts the standardized "
+        "targets. All kernels, embeddings and head weights are trained jointly by "
+        "backpropagation of the mean squared error with Adam and decoupled weight decay "
+        "for a fixed number of epochs; the model after the last epoch is returned.",
+        "Teaching and small-sample studies of intermediate (mid-level) fusion of several "
+        "measurements of the same samples, for example spectra plus marker dosages or "
+        "spectra plus small images, and per-source CNN baselines with a single branch.",
+        "Small fixed architecture without early stopping or internal validation: epochs "
+        "and every other hyperparameter must be fixed a priori or chosen inside a "
+        "training scope, never on a retained test set. Networks can overfit or "
+        "underperform linear models on small or linear data. Marker order is not a "
+        "physical convolution axis, so markers should use a dense branch. Fit refuses NaN "
+        "or infinity (no imputation). Images are not resized; the declared H x W x C must "
+        "match the block. Bounded to 2,000,000 parameters; CPU only, no pretrained "
+        "backbone. Results are deterministic for a build without floating-point "
+        "contraction; other builds agree to rounding.",
+        "The native models.neural.multibranch_regressor estimator (regressor and "
+        "transformer) runs cpp/src/core/neural/multibranch_network.cpp through the "
+        "adapter in cpp/src/core/estimator/neural_adapters.cpp and the shared "
+        "n4m_estimator_* lifecycle; strided inputs are copied to row-major. branch_kinds "
+        "(0 dense, 1 conv1d, 2 conv2d) and branch_shapes (3 integers per branch) declare "
+        "the branches against the optional blocks fit input. Standardization is fitted "
+        "on training rows only (dense per column, conv1d per block, conv2d per channel, "
+        "y per target). PCG64 seeds He/Glorot initialization and the per-epoch "
+        "minibatch permutation. transform returns the learned embeddings; the fit result "
+        "holds loss_history. The MBN1 N4ME block stores architecture, scaling and weights "
+        "so import predicts without refitting. ABI 2.22.0 is unchanged.",
+        _REPO + "cpp/src/core/neural/multibranch_network.cpp; "
+        + _REPO + "cpp/src/core/estimator/neural_adapters.cpp; "
+        + _REPO + "catalog/methods/models.neural.multibranch_regressor.yaml; "
+        + _REPO + "cpp/tests/test_multibranch_regressor.cpp",
     ),
     "pp_airpls": _entry(
         "Adaptive iteratively reweighted penalized least squares (airPLS)",
