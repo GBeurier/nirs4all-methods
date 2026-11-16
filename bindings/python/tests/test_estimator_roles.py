@@ -302,12 +302,18 @@ def test_cross_language_fixture_states_replay():
         "preprocessing.scaling.standard_scale",
         "models.pls.opls",
         "preprocessing.scaling.row_l2_normalize",
+        "preprocessing.scaling.block_rms",
+        "models.neural.multibranch_regressor",
     }
     assert legacy_methods.isdisjoint(new_methods)
     # Preserve every old fixture packet; StandardScale has its actual native
     # population/scientific oracle and portable-state cases in the new suite,
     # and OPLS its kernel-fixture oracle in the native models_pls suite.
     # RowL2Normalize has targeted analytic native/WASM witnesses and the constructor smoke below.
+    # BlockRms is a training-fitted source scalar covered by the native role sweep;
+    # it postdates this historical cross-binding state fixture.
+    # MultibranchRegressor postdates the fixture; the generic regressor sweep and the native
+    # multibranch probe (cpp/tests/test_multibranch_regressor.cpp) cover it.
     assert legacy_methods | new_methods == {
         m for m, c in _REGISTRY.items() if issubclass(c, roles.NativeEstimator)
     }
@@ -660,6 +666,7 @@ FITTED_CASES = [
 FITTED_REFERENCE_CLASSES = {case[0] for case in FITTED_CASES} | {
     "Normalize",
     "SimpleScale",
+    "BlockRms",
     "OnPLS",
     "DS",
     "PDS",
@@ -841,6 +848,22 @@ def test_transformer_matches_n4m_reference(cls, data):
         )
     else:
         np.testing.assert_array_equal(est.transform(X_test), ref.transform(X_test))
+
+
+def test_block_rms_uses_training_scalar_and_replays():
+    """A single train-fitted scalar preserves relative values and unseen scale."""
+    train = np.array([[3.0, 4.0], [0.0, 0.0]])
+    unseen = np.array([[3000.0, 4000.0]])
+    est = roles.BlockRms().fit(train)
+    payload = est.to_n4me()
+    expected = unseen / np.sqrt(np.square(train).sum() / train.shape[0])
+    np.testing.assert_allclose(est.transform(unseen), expected, rtol=1e-14)
+    assert est.to_n4me() == payload
+    restored = roles.NativeEstimator.from_n4me(payload)
+    np.testing.assert_array_equal(restored.transform(unseen), est.transform(unseen))
+    np.testing.assert_array_equal(
+        roles.BlockRms().fit(np.zeros_like(train)).transform(unseen), unseen
+    )
 
 
 # AOM / POP roles --------------------------------------------------------

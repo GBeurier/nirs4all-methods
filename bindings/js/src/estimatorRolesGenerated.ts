@@ -3185,6 +3185,67 @@ export class SOPLS extends NativeEstimator implements Regressor {
 }
 NativeMethod.register("models.multiblock.so_pls", SOPLS);
 
+/** Parameters of MultibranchRegressor; unset values take the native defaults. */
+export interface MultibranchRegressorParams {
+    /** Default []. */
+    branch_kinds?: number[];
+    /** Default []. */
+    branch_shapes?: number[];
+    /** Default 4. */
+    filters?: number;
+    /** Default 5. */
+    kernel_size?: number;
+    /** Default 2. */
+    pool_size?: number;
+    /** Default 8. */
+    embedding_dim?: number;
+    /** Default 8. */
+    head_hidden?: number;
+    /** Default 100. */
+    epochs?: number;
+    /** Default 16. */
+    batch_size?: number;
+    /** Default 0.01. */
+    learning_rate?: number;
+    /** Default 0.0001. */
+    weight_decay?: number;
+    /** Optional: unset by default. */
+    seed?: number;
+}
+
+/** Native `models.neural.multibranch_regressor` (transformer, regressor). */
+export class MultibranchRegressor extends NativeEstimator implements Regressor, Transformer {
+    readonly methodId = "models.neural.multibranch_regressor";
+    readonly paramTypes = {
+        branch_kinds: "int_array",
+        branch_shapes: "int_array",
+        filters: "int",
+        kernel_size: "int",
+        pool_size: "int",
+        embedding_dim: "int",
+        head_hidden: "int",
+        epochs: "int",
+        batch_size: "int",
+        learning_rate: "double",
+        weight_decay: "double",
+        seed: "int",
+    } as const;
+
+    constructor(params: MultibranchRegressorParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    predict(X: Matrix): Matrix {
+        return this.predictMatrix(X);
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("models.neural.multibranch_regressor", MultibranchRegressor);
+
 /** Parameters of CPPLS; unset values take the native defaults. */
 export interface CPPLSParams {
     /** Default 2. */
@@ -4788,6 +4849,27 @@ export class BaselineCenter extends NativeEstimator implements Transformer {
     }
 }
 NativeMethod.register("preprocessing.scaling.baseline", BaselineCenter);
+
+/** Parameters of BlockRms; unset values take the native defaults. */
+export interface BlockRmsParams {
+}
+
+/** Native `preprocessing.scaling.block_rms` (transformer). */
+export class BlockRms extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.scaling.block_rms";
+    readonly paramTypes = {
+    } as const;
+
+    constructor(params: BlockRmsParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.scaling.block_rms", BlockRms);
 
 /** Parameters of LogTransform; unset values take the native defaults. */
 export interface LogTransformParams {

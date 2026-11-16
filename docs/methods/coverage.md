@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **245**
-- Curated scientific records: **251**
-- Resolved documentation pages: **245**
+- Catalog entries: **247**
+- Curated scientific records: **253**
+- Resolved documentation pages: **247**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -122,6 +122,7 @@ This generated report records the documentation source used for each catalog ent
 | `models.multiblock.on_pls` | [on_pls](on_pls.md) | curated |
 | `models.multiblock.rosa` | [rosa](rosa.md) | curated |
 | `models.multiblock.so_pls` | [so_pls](so_pls.md) | curated |
+| `models.neural.multibranch_regressor` | [models_neural_multibranch_regressor](models_neural_multibranch_regressor.md) | curated |
 | `models.pls.cppls` | [cppls](cppls.md) | curated |
 | `models.pls.kernel` | [kernel_pls_rbf](kernel_pls_rbf.md) | curated |
 | `models.pls.opls` | [opls](opls.md) | curated |
@@ -176,6 +177,7 @@ This generated report records the documentation source used for each catalog ent
 | `preprocessing.resampling.resample_transformer` | [pp_resample](pp_resample.md) | curated |
 | `preprocessing.resampling.resampler` | [pp_resampler](pp_resampler.md) | curated |
 | `preprocessing.scaling.baseline` | [pp_baseline](pp_baseline.md) | curated |
+| `preprocessing.scaling.block_rms` | [preprocessing_scaling_block_rms](preprocessing_scaling_block_rms.md) | curated |
 | `preprocessing.scaling.log_transform` | [pp_log](pp_log.md) | curated |
 | `preprocessing.scaling.normalize` | [pp_normalize](pp_normalize.md) | curated |
 | `preprocessing.scaling.row_l2_normalize` | [preprocessing_scaling_row_l2_normalize](preprocessing_scaling_row_l2_normalize.md) | curated |

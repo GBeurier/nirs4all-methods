@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **245**. Additional Python reference
+_Total catalogued native methods_: **247**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -146,6 +146,7 @@ model_selection_normalize_loss
 model_selection_ranking
 model_selection_relative_gain
 models_ensembles_moment_stack
+models_neural_multibranch_regressor
 models_pls_pls_regression
 models_regularized_ridge
 moment_stack
@@ -232,6 +233,7 @@ pp_wavelet_svd
 pp_weighted_snv
 pp_xcorr_align
 preprocessing_feature_selection_spectral_encoding
+preprocessing_scaling_block_rms
 preprocessing_scaling_row_l2_normalize
 preprocessing_scaling_standard_scale
 pso_search
@@ -317,6 +319,7 @@ wvc_threshold_select
 | [`resample_transformer`](pp_resample.md) | `n4m.transform.resampling.resample_transformer` | `n4m.transform.resampling` | C |
 | [`resampler`](pp_resampler.md) | `n4m.transform.resampling.resampler` | `n4m.transform.resampling` | C |
 | [`baseline_center`](pp_baseline.md) | `n4m.transform.scaling.baseline_center` | `n4m.transform.scaling` | C |
+| [`block_rms`](preprocessing_scaling_block_rms.md) | `n4m.transform.scaling.block_rms` | `n4m.transform.scaling` | Py |
 | [`log_transform`](pp_log.md) | `n4m.transform.scaling.log_transform` | `n4m.transform.scaling` | C |
 | [`normalize`](pp_normalize.md) | `n4m.transform.scaling.normalize` | `n4m.transform.scaling` | C |
 | [`row_l2_normalize`](preprocessing_scaling_row_l2_normalize.md) | `n4m.transform.scaling.row_l2_normalize` | `n4m.transform.scaling` | Py |
@@ -412,6 +415,7 @@ wvc_threshold_select
 | [`on_pls`](on_pls.md) | `n4m.estimators.multiblock.on_pls` | `n4m.estimators.multiblock` | C |
 | [`rosa`](rosa.md) | `n4m.estimators.multiblock.rosa` | `n4m.estimators.multiblock` | C |
 | [`so_pls`](so_pls.md) | `n4m.estimators.multiblock.so_pls` | `n4m.estimators.multiblock` | C |
+| [`multibranch_regressor`](models_neural_multibranch_regressor.md) | `n4m.estimators.neural.multibranch_regressor` | `n4m.estimators.neural` | Py |
 | [`pls_glm`](pls_glm.md) | `n4m.estimators.regression.glm.pls_glm` | `n4m.estimators.regression.glm` | C |
 | [`gpr_pls`](gpr_pls.md) | `n4m.estimators.regression.kernel.gpr_pls` | `n4m.estimators.regression.kernel` | C |
 | [`kernel_pls`](kernel_pls_rbf.md) | `n4m.estimators.regression.kernel.kernel_pls` | `n4m.estimators.regression.kernel` | C |

@@ -8,7 +8,7 @@ _Namespace_: **`n4m.transform.scaling`** · _Fully-qualified_: `n4m.transform.sc
 
 **Python (verified public re-export):** `from n4m.roles import StandardScale`
 
-**Signature:** [`StandardScale(*, with_mean = True, with_std = True, ddof = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L3990)
+**Signature:** [`StandardScale(*, with_mean = True, with_std = True, ddof = 0)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L4049)
 
 **R:** no current source-verified entry point was found for this catalog method.
 

@@ -1,0 +1,48 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.scaling.block_rms"
+family: "preprocessing.scaling"
+category: "preprocessing"
+subcategory: "scaling"
+since_abi: "2.22.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/estimator/block_rms_adapter.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.scaling.block_rms"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "BlockRms"
+    legacy_aliases: []
+  r:
+    function: "n4m_block_rms"
+    legacy_aliases: []
+publications: []
+notes: "Train-fitted scalar block RMS normalization: s=sqrt(sum(X_train^2)/n_train), without implicit centering. Transform divides a source block by its fitted scalar; an all-zero block keeps scale one. Width and scalar are persisted as BRS1 state; optional y is ignored. No new public ABI symbol or host numerical implementation."
+c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "tr_block_rms"
+  roles: "[transformer]"
+  state: "block_rms"
+  inputs:
+    y: "optional"
+fq_name: "n4m.transform.scaling.block_rms"
+leaf: "block_rms"
+legacy_ids:
+  - "preprocessing.scaling.block_rms"
+namespace: "transform.scaling"

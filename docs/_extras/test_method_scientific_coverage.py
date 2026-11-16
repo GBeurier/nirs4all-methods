@@ -57,14 +57,14 @@ from public_api_docs import (  # noqa: E402
     scan_r_public_api,
 )
 
-CATALOG_SIZE = 245
+CATALOG_SIZE = 247
 REGISTRY_SIZE = 73
-PYTHON_VERIFIED = 198
+PYTHON_VERIFIED = 200
 # Generic n4m.roles constructors are now verified through their public package
 # exports and source definitions, without importing native/optional runtimes.
 # The remaining C-only diagnostics deliberately have no verified Python facade.
 PYTHON_C_ONLY = 47
-R_VERIFIED = 84
+R_VERIFIED = 86
 MATLAB_VERIFIED = 71
 
 SCIENTIFIC_HEADINGS = (

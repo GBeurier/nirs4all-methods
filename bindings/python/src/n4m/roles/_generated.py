@@ -2715,6 +2715,55 @@ class SOPLS(NativeRegressor):
         self.n_components_per_block = n_components_per_block
 
 
+class MultibranchRegressor(NativeRegressor, NativeTransformer):
+    """Native ``models.neural.multibranch_regressor`` (transformer, regressor)."""
+
+    _method_id = "models.neural.multibranch_regressor"
+    _param_types: ClassVar[dict[str, str]] = {
+        "branch_kinds": "int_array",
+        "branch_shapes": "int_array",
+        "filters": "int",
+        "kernel_size": "int",
+        "pool_size": "int",
+        "embedding_dim": "int",
+        "head_hidden": "int",
+        "epochs": "int",
+        "batch_size": "int",
+        "learning_rate": "double",
+        "weight_decay": "double",
+        "seed": "int",
+    }
+
+    def __init__(
+        self,
+        *,
+        branch_kinds=(),
+        branch_shapes=(),
+        filters=4,
+        kernel_size=5,
+        pool_size=2,
+        embedding_dim=8,
+        head_hidden=8,
+        epochs=100,
+        batch_size=16,
+        learning_rate=0.01,
+        weight_decay=0.0001,
+        seed=None,
+    ) -> None:
+        self.branch_kinds = branch_kinds
+        self.branch_shapes = branch_shapes
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.pool_size = pool_size
+        self.embedding_dim = embedding_dim
+        self.head_hidden = head_hidden
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
+        self.weight_decay = weight_decay
+        self.seed = seed
+
+
 class CPPLS(NativeRegressor):
     """Native ``models.pls.cppls`` (regressor)."""
 
@@ -3917,6 +3966,16 @@ class BaselineCenter(NativeTransformer):
     """Native ``preprocessing.scaling.baseline`` (transformer)."""
 
     _method_id = "preprocessing.scaling.baseline"
+    _param_types: ClassVar[dict[str, str]] = {}
+
+    def __init__(self) -> None:
+        pass
+
+
+class BlockRms(NativeTransformer):
+    """Native ``preprocessing.scaling.block_rms`` (transformer)."""
+
+    _method_id = "preprocessing.scaling.block_rms"
     _param_types: ClassVar[dict[str, str]] = {}
 
     def __init__(self) -> None:
@@ -5881,6 +5940,7 @@ __all__ = [
     "BatchEffect",
     "BiPLS",
     "BinnedStratifiedGroupKFold",
+    "BlockRms",
     "BoostingPLS",
     "ChannelDropout",
     "ContinuumRegression",
@@ -5940,6 +6000,7 @@ __all__ = [
     "ModelSelection",
     "Moisture",
     "Moments",
+    "MultibranchRegressor",
     "MultiplicativeNoise",
     "Normalize",
     "NorrisWilliams",

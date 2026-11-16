@@ -8,7 +8,7 @@ _Namespace_: **`n4m.utilities`** · _Fully-qualified_: `n4m.utilities.finite_col
 
 **Python (verified public re-export):** `from n4m.roles import FiniteColumnQuantiles`
 
-**Signature:** [`FiniteColumnQuantiles(*, probabilities = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L5629)
+**Signature:** [`FiniteColumnQuantiles(*, probabilities = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L5688)
 
 **R:** no current source-verified entry point was found for this catalog method.
 
