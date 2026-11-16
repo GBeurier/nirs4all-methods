@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Project 1.3.18 (ABI 2.23.0) adds the explainability kernels below and a
+  bit-identical, faster SNV (exact power-of-two scaling instead of `ldexp` in
+  the hot loops; three times faster in WebAssembly).
 - Model explanation kernels (`n4m/explain.h`, ABI 2.23.0): an ask/tell
   session that never calls a model (hosts predict the emitted perturbed rows in
   any backend) for exact group SHAP (G <= 16), antithetic permutation SHAP

@@ -24,7 +24,7 @@ import numpy as np
 import pls4all
 from pls4all.sklearn import PLSRegression
 
-print(pls4all.version())      # e.g. "1.3.17+abi.2.23.0"
+print(pls4all.version())      # e.g. "1.3.18+abi.2.23.0"
 print(pls4all.abi_version())  # (2, 23, 0)
 
 rng = np.random.default_rng(0)

@@ -57,7 +57,7 @@ restores the original typed label table; omitting it exposes native class IDs.
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.3.17+abi.2.23.0"
+console.log(n4m.version());     // "1.3.18+abi.2.23.0"
 console.log(n4m.abiVersion());  // [2, 23, 0]
 
 const rows = 40, cols = 6;
