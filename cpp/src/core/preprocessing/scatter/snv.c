@@ -68,6 +68,23 @@ static void snv_acc_add(snv_acc_t* a, double v) {
     a->sum = t;
 }
 
+/* Exact power-of-two scaling. ldexp is a libm call (no WebAssembly instruction), so
+ * the hot loops multiply by a precomputed 2^k instead. Multiplying by an exactly
+ * representable power of two is one correctly rounded operation, bit-identical to
+ * ldexp(x, k) in every case (including subnormal results); ldexp is kept only when 2^k
+ * itself is not a normal double. */
+typedef struct { double factor; int k; int exact; } snv_pow2_t;
+static snv_pow2_t snv_pow2(int k) {
+    snv_pow2_t p;
+    p.k = k;
+    p.exact = k >= -1022 && k <= 1023;
+    p.factor = p.exact ? ldexp(1.0, k) : 0.0;
+    return p;
+}
+static double snv_scale(double x, snv_pow2_t p) {
+    return p.exact ? x * p.factor : ldexp(x, p.k);
+}
+
 /* Plain two-pass formulas for rows holding NaN/Inf (unchanged contract). */
 static void snv_row_nonfinite(const n4m_pp_snv_state_t* state, const double* x,
                               int64_t cols, int64_t denom_count, double* out) {
@@ -93,6 +110,7 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     double amax = 0.0;
     for (int64_t j = 0; j < cols; ++j) amax = fmax(amax, fabs(x[j]));
     const int e = ilogb(amax);
+    const snv_pow2_t down_e = snv_pow2(-e);
     /* Mean as a double-double m_hi + m_lo from the unevaluated Neumaier pair
      * (exact sum within (n u)^2 sum|y|) and the exact fma division remainder.
      * No refinement pass: it would add u mean|y - m|, which dominates when
@@ -100,14 +118,15 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     snv_acc_t s0 = {0.0, 0.0};
     double abs_sum = 0.0;
     for (int64_t j = 0; j < cols; ++j) {
-        snv_acc_add(&s0, ldexp(x[j], -e));
-        abs_sum += fabs(ldexp(x[j], -e));
+        const double y = snv_scale(x[j], down_e);
+        snv_acc_add(&s0, y);
+        abs_sum += fabs(y);
     }
     const double m_hi = s0.sum / n;
     const double m_lo = (fma(-m_hi, n, s0.sum) + s0.comp) / n;
     double abs_dev = 0.0, dmax = 0.0;
     for (int64_t j = 0; j < cols; ++j) {
-        const double d = fabs((ldexp(x[j], -e) - m_hi) - m_lo);
+        const double d = fabs((snv_scale(x[j], down_e) - m_hi) - m_lo);
         abs_dev += d;
         dmax = fmax(dmax, d);
     }
@@ -116,9 +135,10 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     const int scale = state->with_std && denom_count > 0 && dmax > 0.0;
     if (!scale) {
         /* Centre only (or no SD available): x - mean at the original scale. */
+        const snv_pow2_t up_e = snv_pow2(e);
         for (int64_t j = 0; j < cols; ++j) {
             const double v = state->with_mean
-                ? ldexp((ldexp(x[j], -e) - m_hi) - m_lo, e) : x[j];
+                ? snv_scale((snv_scale(x[j], down_e) - m_hi) - m_lo, up_e) : x[j];
             if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
             out[j] = v;
         }
@@ -126,22 +146,23 @@ static n4m_status_t snv_row_finite(const n4m_pp_snv_state_t* state, const double
     }
     /* Deviations rescaled by 2^-k (k = ilogb(max|d|)) before squaring. */
     const int k = ilogb(dmax);
+    const snv_pow2_t down_k = snv_pow2(-k);
     snv_acc_t ss = {0.0, 0.0};
     for (int64_t j = 0; j < cols; ++j) {
-        const double t = ldexp((ldexp(x[j], -e) - m_hi) - m_lo, -k);
+        const double t = snv_scale((snv_scale(x[j], down_e) - m_hi) - m_lo, down_k);
         snv_acc_add(&ss, t * t);
     }
     const double sd_t = sqrt((ss.sum + ss.comp) / (double)denom_count);
     if (!(sd_t > 0.0) || !isfinite(sd_t)) return N4M_ERR_NUMERICAL_FAILURE;
     double zmax = 0.0;
     for (int64_t j = 0; j < cols; ++j) {
-        const double y = ldexp(x[j], -e);
+        const double y = snv_scale(x[j], down_e);
         double v;
         if (state->with_mean) {
-            v = ldexp((y - m_hi) - m_lo, -k) / sd_t;
+            v = snv_scale((y - m_hi) - m_lo, down_k) / sd_t;
         } else {
             /* x / sd = (y / sd_t) * 2^-k; may legitimately overflow. */
-            v = ldexp(y / sd_t, -k);
+            v = snv_scale(y / sd_t, down_k);
         }
         if (!isfinite(v)) return N4M_ERR_NUMERICAL_FAILURE;
         zmax = fmax(zmax, fabs(v));
