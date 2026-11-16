@@ -1,5 +1,50 @@
 # ABI — Changes Log
 
+## 2026-11-16 — ABI 2.23.0: model explanation kernels
+
+Additive (unreleased); existing signatures, enums, layouts and serialized
+formats keep their meaning. Twelve new public symbols, declared in the new role
+header `n4m/explain.h` (included by `n4m/n4m.h`) and present in all three
+`cpp/abi/expected_symbols_*.txt` snapshots:
+
+```c
+n4m_status_t n4m_explain_options_init_v1(n4m_explain_options_v1_t* options);
+n4m_status_t n4m_explain_session_create_v1(/* ctx, X, background, feature_group, n_groups, options, out_session */);
+void         n4m_explain_session_destroy(n4m_explain_session_t* session);
+n4m_status_t n4m_explain_session_info_v1(/* session, n_rows, n_features, n_groups, n_outputs, total_evaluations */);
+n4m_status_t n4m_explain_session_next_batch_v1(/* ctx, session, out_rows, capacity_rows, out_rows_written */);
+n4m_status_t n4m_explain_session_submit_v1(/* ctx, session, predictions, rows */);
+n4m_status_t n4m_explain_session_result_v1(/* ctx, session, attributions, expected, predictions, std_error (+ sizes) */);
+n4m_status_t n4m_explain_linear_v1(/* ctx, X, coefficients, intercept, reference, groups, outputs */);
+n4m_status_t n4m_explain_tree_path_dependent_v1(/* ctx, X, flat tree ensemble, groups, outputs */);
+n4m_status_t n4m_explain_groups_fixed_width_v1(/* n_features, width, feature_group, size, out_n_groups */);
+n4m_status_t n4m_explain_groups_from_ranges_v1(/* n_features, ranges, n_ranges, feature_group, range_of_group, out_n_groups */);
+n4m_status_t n4m_explain_summarize_v1(/* attributions, n_rows, n_groups, n_outputs, output_index, mean_abs, mean_signed, size */);
+```
+
+- **Versioned struct** `n4m_explain_options_v1_t`, 72 bytes, with
+  `struct_size` set by `n4m_explain_options_init_v1` (a mismatch returns
+  `N4M_ERR_ABI_MISMATCH`). New enums `n4m_explain_method_t` (exact,
+  permutation and Kernel SHAP, LIME, occlusion) and `n4m_explain_baseline_t`
+  (background, mean, interpolate) are stored as `int32_t` fields.
+- **Ask/tell session.** The opaque `n4m_explain_session_t` never calls a model:
+  hosts predict the perturbed rows it emits (`next_batch`) and submit the
+  predictions (`submit`), which strictly alternate. The plan is deterministic
+  for (inputs, options, seed), batch-size independent and generated lazily.
+  Nonfinite predictions return `N4M_ERR_NUMERICAL_FAILURE` and poison the
+  session; protocol misuse returns `N4M_ERR_INVALID_ARGUMENT` (a wrong row count
+  `N4M_ERR_SHAPE_MISMATCH`) and leaves the pending batch intact.
+- **Direct explainers.** Exact interventional linear SHAP and path-dependent
+  TreeSHAP over a generic flat tree ensemble (local child indices, covers,
+  multi-output leaf values, `<=`/`<` decision types, optional NaN default
+  directions). Grouped tree values are sums of per-feature values.
+- Caller-owned output buffers; invalid input writes no output. F64 views only.
+  See [EXPLAIN.md](../EXPLAIN.md) and the envelope schema
+  [`explanation_v1.schema.json`](../explain/explanation_v1.schema.json).
+- `N4M_ABI_VERSION_MINOR` is 23. The Python and Rust loader ABI constants
+  (`bindings/python/src/n4m/_ffi.py`, `bindings/rust/n4m/{build.rs,src/lib.rs}`)
+  must follow (checked by `scripts/bump_version.sh --check`).
+
 ## 2026-11-16 — ABI unchanged: multibranch neural regressor role
 
 The generic role manifest gains `models.neural.multibranch_regressor`

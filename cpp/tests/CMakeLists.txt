@@ -327,6 +327,13 @@ target_include_directories(n4m_ranking_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 n4m_add_warnings(n4m_ranking_tests)
 add_test(NAME n4m_ranking_tests COMMAND n4m_ranking_tests)
 
+# Explanation kernels (SHAP family, LIME, occlusion) over the public ABI.
+add_executable(n4m_explain_tests test_explain.cpp include_check_explain.c)
+target_link_libraries(n4m_explain_tests PRIVATE n4m_c)
+target_include_directories(n4m_explain_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+n4m_add_warnings(n4m_explain_tests)
+add_test(NAME n4m_explain_tests COMMAND n4m_explain_tests)
+
 add_executable(n4m_fanova_tests test_fanova.cpp include_check_fanova.c)
 target_link_libraries(n4m_fanova_tests PRIVATE n4m_c)
 target_include_directories(n4m_fanova_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -24,8 +24,8 @@ import numpy as np
 import pls4all
 from pls4all.sklearn import PLSRegression
 
-print(pls4all.version())      # e.g. "1.3.14+abi.2.22.0"
-print(pls4all.abi_version())  # (2, 22, 0)
+print(pls4all.version())      # e.g. "1.3.17+abi.2.23.0"
+print(pls4all.abi_version())  # (2, 23, 0)
 
 rng = np.random.default_rng(0)
 X = rng.standard_normal((40, 12))
@@ -131,6 +131,65 @@ with `result.timed_out is True` and fewer trials than
 `result.requested_trials`. See
 [`docs/methods/optimization.md`](../../docs/methods/optimization.md#pure-native-estimator-selection)
 for the exact schema, status and validation-plan contracts.
+
+## Explainability in the full package
+
+`n4m.explain` (full `nirs4all-methods` distribution, not the slim `pls4all`
+namespace) wraps the native `n4m/explain.h` attribution kernels. All numerics
+run in libn4m; the binding only marshals arrays and drives the native ask/tell
+session, so any Python predictor works:
+
+```python
+import numpy as np
+from n4m import explain as ex
+
+# X and background live in the feature space the predictor consumes, e.g. raw
+# spectra of a complete fitted pipeline.
+groups, n_groups = ex.groups_fixed_width(X.shape[1], 16)   # optional grouping
+result = ex.explain(
+    pipeline.predict,            # receives C-contiguous float64 (rows, n_features)
+    X,
+    background=background,
+    feature_group=groups,
+    n_groups=n_groups,
+    method="permutation_shap",   # exact_shap | permutation_shap | kernel_shap | lime | occlusion
+    baseline="background",       # background | mean | interpolate
+    n_permutations=10,
+    seed=0,
+    progress=lambda done, total: print(f"{done}/{total}"),
+)
+result.attributions               # (n_rows, n_groups, n_outputs)
+result.expected, result.predictions
+result.exactness, result.additivity_max_abs_error
+mean_abs, mean_signed = ex.summarize(result.attributions, output_index=0)
+```
+
+`predict_batch` returns `(rows,)` or `(rows, n_outputs)` finite predictions in
+whatever output space the host chose (target units, a class probability, a
+decision score); the binding never relabels it. `n_outputs` is inferred from
+one probe row when omitted.
+
+| Kind | `exactness` | Additive | `group_aggregation` |
+| --- | --- | --- | --- |
+| `exact_shap` (groups <= 16) | `exact` | yes | `group_game` |
+| `permutation_shap` (antithetic; `std_error` = Monte-Carlo SE) | `sampled` | yes | `group_game` |
+| `kernel_shap` | `sampled`, `exact` when the budget covers all 2^G - 2 coalitions | yes | `group_game` |
+| `lime` | `surrogate` | no | `group_game` |
+| `occlusion` | `perturbation` | no | `group_game` |
+| `linear_shap(X, coefficients, reference=..., intercept=...)` | `exact` (interventional) | yes | `none`, or `group_game` with groups |
+| `tree_shap(X, TreeEnsemble(...))` (path-dependent) | `exact` | yes | `none`, or `sum_of_feature_values` with groups |
+
+`TreeEnsemble` is a generic flat layout (concatenated nodes, per-tree
+offsets, local child indices, cover and leaf values, `decision_type` 0 for
+`x <= threshold` or 1 for `x < threshold`, optional `base_offset` and
+`tree_scale`). Converting scikit-learn, XGBoost or LightGBM models into it is
+the host's job (the `nirs4all` SDK). `groups_from_ranges(n_features, ranges)`
+turns half-open feature-index ranges (for example chemical bands already
+mapped to indices) into a partition and reports the source range of each
+group (`-1` for uncovered runs). `settings` uses the snake_case keys of the
+`nirs4all.explanation.v1` envelope; hosts add axis, output and sample-index
+metadata. `bench/explain/bench_explain.py` times every explainer over spectral
+widths, group widths and background sizes.
 
 ## Relation to nirs4all conformal learning and robustness
 

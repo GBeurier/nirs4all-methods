@@ -67,7 +67,14 @@ NIRS4ALL_DONOR_CATEGORIES = {
 # inputs (cpp/tests/test_multibranch_regressor.cpp,
 # cpp/tests/test_multibranch_gradients.cpp) and the native/WASM prediction
 # checksum (bindings/js/test/run_multimodal_teaching.mjs).
+# The explainability kernels of ABI 2.23 take the nirs4all SDK SHAP analyzer
+# (Python ``shap`` package) as donor: brute-force Shapley oracles are pinned in
+# cpp/tests/test_explain.cpp and shap 0.51 Linear/Tree/Permutation/Exact parity
+# in bindings/python/tests/test_explain.py (parity/REFERENCES.md "Explainability").
 NIRS4ALL_DONOR_METHODS = {
+    "diagnostics.explain.linear_shap",
+    "diagnostics.explain.model_agnostic",
+    "diagnostics.explain.tree_shap",
     "diagnostics.adjusted_rand_index",
     "diagnostics.bh_adjust",
     "diagnostics.cluster_jaccard_matrix",

@@ -113,3 +113,7 @@ export { rank, type RankingMethod, type RankingOptions, type RankingCandidate,
          type RankingResult } from "./ranking.js";
 export { mixedEffects, fanova, normalizeLoss, type MixedEffectsOptions, type MixedEffectsResult,
          type FanovaOptions, type FanovaResult } from "./componentAnalysis.js";
+export { explainModel, linearShap, treeShap, groupsFixedWidth, groupsFromRanges,
+         summarizeAttributions, type ExplainMethod, type ExplainBaseline, type AttributionKind,
+         type ExplainOptions, type PredictBatch, type FeatureGrouping, type ExplainModelInput,
+         type AttributionResult, type FlatTreeEnsemble } from "./explain.js";

@@ -1,0 +1,63 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.explain.model_agnostic"
+family: "diagnostics.explain"
+category: "diagnostics"
+subcategory: "explain"
+since_abi: "2.23.0"
+abi_symbols:
+  - "n4m_explain_options_init_v1"
+  - "n4m_explain_session_create_v1"
+  - "n4m_explain_session_destroy"
+  - "n4m_explain_session_info_v1"
+  - "n4m_explain_session_next_batch_v1"
+  - "n4m_explain_session_submit_v1"
+  - "n4m_explain_session_result_v1"
+  - "n4m_explain_groups_fixed_width_v1"
+  - "n4m_explain_groups_from_ranges_v1"
+  - "n4m_explain_summarize_v1"
+tu:
+  - "cpp/src/core/explain/explain_session.cpp"
+  - "cpp/src/core/explain/explain_common.cpp"
+  - "cpp/src/core/explain/grouping.cpp"
+  - "cpp/src/c_api/c_api_explain.cpp"
+headers:
+  - "cpp/include/n4m/explain.h"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.explain.model_agnostic"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.explain"
+    class: "explain"
+    legacy_aliases: []
+  js:
+    function: "explainModel"
+    legacy_aliases: []
+publications: []
+notes: "Ask/tell session (never calls a model): exact group SHAP (G <= 16), antithetic permutation SHAP, Kernel SHAP with exact efficiency, LIME over group masks and occlusion, with background, mean or spectral interpolate baselines. Groups are coalition players. Grouping and summary helpers."
+c_surface:
+  - "n4m_explain_options_init_v1"
+  - "n4m_explain_session_create_v1"
+  - "n4m_explain_session_destroy"
+  - "n4m_explain_session_info_v1"
+  - "n4m_explain_session_next_batch_v1"
+  - "n4m_explain_session_submit_v1"
+  - "n4m_explain_session_result_v1"
+  - "n4m_explain_groups_fixed_width_v1"
+  - "n4m_explain_groups_from_ranges_v1"
+  - "n4m_explain_summarize_v1"
+fq_name: "n4m.explain.model_agnostic"
+leaf: "model_agnostic"
+legacy_ids:
+  - "diagnostics.explain.model_agnostic"
+namespace: "explain"

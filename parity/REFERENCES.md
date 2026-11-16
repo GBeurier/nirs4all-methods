@@ -77,6 +77,18 @@ and the BlockRMS section of `bindings/js/test/run_multimodal_teaching.mjs`).
 No registry entry, truth-source lockfile, numerical fixture or frozen
 historical bibliography is added or rewritten for these methods.
 
+## Explainability (ABI 2.23)
+
+`diagnostics.explain.{model_agnostic,linear_shap,tree_shap}` take the nirs4all
+SDK SHAP analyzer, i.e. the Python `shap` package, as donor. Exact Shapley
+values, permutation/kernel convergence and path-dependent TreeSHAP (including a
+feature repeated along one path) are checked against brute-force oracles in
+`cpp/tests/test_explain.cpp`; `bindings/python/tests/test_explain.py` pins
+parity with `shap` (`LinearExplainer`, `TreeExplainer(tree_path_dependent)` on
+scikit-learn trees/forests/boosting, `PermutationExplainer`, `ExactExplainer`).
+Sampled explainers (permutation, kernel, LIME) are statistical: parity is a
+tolerance on the estimate, not bitwise agreement.
+
 ## Setup (one command)
 
 ```bash

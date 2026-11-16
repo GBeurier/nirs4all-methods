@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://methods.nirs4all.org/contracts/explanation.v1.json",
+  "title": "nirs4all explanation envelope v1",
+  "description": "Host-built envelope around one attribution result (nirs4all-methods AttributionResult or the python shap package) plus host metadata. Arrays are indexed [row][group][output] (attributions, std_error) and [row][output] (expected_value, prediction). Explained-row indices and source-partition indices (rows.sample_indices) are never interchanged. Consumers ignore unknown keys.",
+  "type": "object",
+  "required": [
+    "schema",
+    "kind",
+    "engine",
+    "exactness",
+    "additive",
+    "group_aggregation",
+    "attribution_space",
+    "output",
+    "axis",
+    "feature_names",
+    "groups",
+    "rows",
+    "attributions",
+    "std_error",
+    "expected_value",
+    "prediction",
+    "additivity_max_abs_error",
+    "settings",
+    "summary"
+  ],
+  "properties": {
+    "schema": {"const": "nirs4all.explanation.v1"},
+    "kind": {
+      "description": "Explainer that produced the attributions.",
+      "enum": [
+        "exact_shap",
+        "permutation_shap",
+        "kernel_shap",
+        "lime",
+        "occlusion",
+        "linear_shap",
+        "tree_shap",
+        "deep_shap"
+      ]
+    },
+    "engine": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "description": "nirs4all-methods for the native kernels; python-shap when the SDK default shap backend produced the values.",
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {"type": "string", "minLength": 1},
+        "abi": {
+          "description": "nirs4all-methods C ABI version (MAJOR.MINOR.PATCH); null or absent for other engines.",
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "exactness": {"enum": ["exact", "sampled", "surrogate", "perturbation"]},
+    "additive": {
+      "description": "True when sum over groups of attributions plus expected_value equals prediction for every row and output.",
+      "type": "boolean"
+    },
+    "group_aggregation": {
+      "description": "group_game: groups are players of the coalition game; sum_of_feature_values: per-feature values summed within groups (TreeSHAP); none: one group per feature.",
+      "enum": ["group_game", "sum_of_feature_values", "none"]
+    },
+    "attribution_space": {
+      "description": "raw_input: the complete fitted pipeline was explained in its raw input space; transformed_features: the terminal estimator was explained after preprocessing.",
+      "enum": ["raw_input", "transformed_features"]
+    },
+    "output": {
+      "type": "object",
+      "required": ["index", "label", "space"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0},
+        "label": {"type": ["string", "null"]},
+        "space": {"enum": ["target", "class_probability", "decision"]}
+      }
+    },
+    "axis": {
+      "type": "object",
+      "required": ["values", "unit", "kind"],
+      "properties": {
+        "values": {
+          "description": "One numeric axis coordinate per feature of the explained space.",
+          "type": "array",
+          "items": {"type": "number"}
+        },
+        "unit": {
+          "description": "Axis unit as recorded by the host (for example nm or cm-1); null when unknown. Never invented.",
+          "type": ["string", "null"]
+        },
+        "kind": {"enum": ["wavelength", "wavenumber", "feature_index"]}
+      },
+      "if": {"properties": {"kind": {"const": "feature_index"}}},
+      "then": {"properties": {"unit": {"type": "null"}}}
+    },
+    "feature_names": {
+      "type": ["array", "null"],
+      "items": {"type": "string"}
+    },
+    "groups": {
+      "description": "One entry per attribution group, in attribution order.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["label", "feature_start", "feature_end", "axis_start", "axis_end", "source"],
+        "properties": {
+          "label": {"type": "string"},
+          "feature_start": {"type": "integer", "minimum": 0},
+          "feature_end": {
+            "description": "Exclusive end feature index.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "axis_start": {"type": ["number", "null"]},
+          "axis_end": {"type": ["number", "null"]},
+          "source": {"enum": ["per_feature", "fixed_width", "ranges", "remainder"]}
+        }
+      }
+    },
+    "rows": {
+      "type": "object",
+      "required": ["count", "sample_indices"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "sample_indices": {
+          "description": "sample_indices[i] is the source-partition index of explained row i; null when the host has no source mapping.",
+          "type": ["array", "null"],
+          "items": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "attributions": {"$ref": "#/$defs/row_group_output"},
+    "std_error": {
+      "description": "Monte-Carlo standard errors (permutation SHAP) with the attributions shape; null otherwise. Individual entries may be null (single draw).",
+      "anyOf": [{"type": "null"}, {"$ref": "#/$defs/row_group_output_nullable"}]
+    },
+    "expected_value": {"$ref": "#/$defs/row_output"},
+    "prediction": {"$ref": "#/$defs/row_output"},
+    "additivity_max_abs_error": {
+      "description": "max |sum(attributions) + expected_value - prediction| over rows and outputs; null when the explainer is not additive.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "settings": {
+      "description": "Explainer settings (baseline, n_background, n_permutations, n_coalitions, seed, ...).",
+      "type": "object",
+      "additionalProperties": {"type": ["number", "string", "boolean", "null"]}
+    },
+    "summary": {
+      "type": "object",
+      "required": ["output_index", "mean_abs", "mean_signed"],
+      "properties": {
+        "output_index": {"type": "integer", "minimum": 0},
+        "mean_abs": {
+          "description": "Per-group mean absolute attribution (magnitude).",
+          "type": "array",
+          "items": {"type": "number", "minimum": 0}
+        },
+        "mean_signed": {
+          "description": "Per-group mean signed attribution.",
+          "type": "array",
+          "items": {"type": "number"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "row_output": {
+      "type": "array",
+      "items": {"type": "array", "items": {"type": "number"}}
+    },
+    "row_group_output": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {"type": "array", "items": {"type": "number"}}
+      }
+    },
+    "row_group_output_nullable": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {"type": "array", "items": {"type": ["number", "null"]}}
+      }
+    }
+  }
+}

@@ -348,6 +348,26 @@ class RankingOptionsV1(Structure):
     ]
 
 
+class ExplainOptionsV1(Structure):
+    """Mirror of ``n4m_explain_options_v1_t`` (``n4m/explain.h``); 72 bytes.
+
+    Defaults come from ``n4m_explain_options_init_v1``.
+    """
+
+    _fields_ = [
+        ("struct_size", c_uint64),
+        ("method", c_int32),
+        ("baseline", c_int32),
+        ("n_outputs", c_int64),
+        ("n_permutations", c_int64),
+        ("n_coalitions", c_int64),
+        ("lime_kernel_width", c_double),
+        ("lime_ridge", c_double),
+        ("max_batch_rows", c_int64),
+        ("seed", c_uint64),
+    ]
+
+
 import ctypes as _component_ct
 
 

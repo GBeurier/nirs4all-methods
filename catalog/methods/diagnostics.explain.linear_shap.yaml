@@ -1,0 +1,44 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "diagnostics.explain.linear_shap"
+family: "diagnostics.explain"
+category: "diagnostics"
+subcategory: "explain"
+since_abi: "2.23.0"
+abi_symbols:
+  - "n4m_explain_linear_v1"
+tu:
+  - "cpp/src/core/explain/linear_shap.cpp"
+  - "cpp/src/core/explain/explain_common.cpp"
+  - "cpp/src/c_api/c_api_explain.cpp"
+headers:
+  - "cpp/include/n4m/explain.h"
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "diagnostics.explain.linear_shap"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.explain"
+    class: "linear_shap"
+    legacy_aliases: []
+  js:
+    function: "linearShap"
+    legacy_aliases: []
+publications: []
+notes: "Exact interventional SHAP of an affine model against background column means; group sums are exact group Shapley values."
+c_surface:
+  - "n4m_explain_linear_v1"
+fq_name: "n4m.explain.linear_shap"
+leaf: "linear_shap"
+legacy_ids:
+  - "diagnostics.explain.linear_shap"
+namespace: "explain"

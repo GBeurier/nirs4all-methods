@@ -14981,3 +14981,145 @@ methods:
       - "n4m_component_normalize_loss_v1"
     legacy_ids:
       - "model_selection.normalize_loss"
+
+  - method_id: "diagnostics.explain.model_agnostic"
+    family: "diagnostics.explain"
+    category: "diagnostics"
+    subcategory: "explain"
+    since_abi: "2.23.0"
+    abi_symbols:
+      - "n4m_explain_options_init_v1"
+      - "n4m_explain_session_create_v1"
+      - "n4m_explain_session_destroy"
+      - "n4m_explain_session_info_v1"
+      - "n4m_explain_session_next_batch_v1"
+      - "n4m_explain_session_submit_v1"
+      - "n4m_explain_session_result_v1"
+      - "n4m_explain_groups_fixed_width_v1"
+      - "n4m_explain_groups_from_ranges_v1"
+      - "n4m_explain_summarize_v1"
+    tu:
+      - "cpp/src/core/explain/explain_session.cpp"
+      - "cpp/src/core/explain/explain_common.cpp"
+      - "cpp/src/core/explain/grouping.cpp"
+      - "cpp/src/c_api/c_api_explain.cpp"
+    headers:
+      - "cpp/include/n4m/explain.h"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.explain.model_agnostic"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.explain"
+        class: "explain"
+        legacy_aliases: []
+      js:
+        function: "explainModel"
+        legacy_aliases: []
+    publications: []
+    notes: "Ask/tell session (never calls a model): exact group SHAP (G <= 16), antithetic permutation SHAP, Kernel SHAP with exact efficiency, LIME over group masks and occlusion, with background, mean or spectral interpolate baselines. Groups are coalition players. Grouping and summary helpers."
+    namespace: "explain"
+    leaf: "model_agnostic"
+    fq_name: "n4m.explain.model_agnostic"
+    c_surface:
+      - "n4m_explain_options_init_v1"
+      - "n4m_explain_session_create_v1"
+      - "n4m_explain_session_destroy"
+      - "n4m_explain_session_info_v1"
+      - "n4m_explain_session_next_batch_v1"
+      - "n4m_explain_session_submit_v1"
+      - "n4m_explain_session_result_v1"
+      - "n4m_explain_groups_fixed_width_v1"
+      - "n4m_explain_groups_from_ranges_v1"
+      - "n4m_explain_summarize_v1"
+    legacy_ids:
+      - "diagnostics.explain.model_agnostic"
+
+  - method_id: "diagnostics.explain.linear_shap"
+    family: "diagnostics.explain"
+    category: "diagnostics"
+    subcategory: "explain"
+    since_abi: "2.23.0"
+    abi_symbols:
+      - "n4m_explain_linear_v1"
+    tu:
+      - "cpp/src/core/explain/linear_shap.cpp"
+      - "cpp/src/core/explain/explain_common.cpp"
+      - "cpp/src/c_api/c_api_explain.cpp"
+    headers:
+      - "cpp/include/n4m/explain.h"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.explain.linear_shap"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.explain"
+        class: "linear_shap"
+        legacy_aliases: []
+      js:
+        function: "linearShap"
+        legacy_aliases: []
+    publications: []
+    notes: "Exact interventional SHAP of an affine model against background column means; group sums are exact group Shapley values."
+    namespace: "explain"
+    leaf: "linear_shap"
+    fq_name: "n4m.explain.linear_shap"
+    c_surface:
+      - "n4m_explain_linear_v1"
+    legacy_ids:
+      - "diagnostics.explain.linear_shap"
+
+  - method_id: "diagnostics.explain.tree_shap"
+    family: "diagnostics.explain"
+    category: "diagnostics"
+    subcategory: "explain"
+    since_abi: "2.23.0"
+    abi_symbols:
+      - "n4m_explain_tree_path_dependent_v1"
+    tu:
+      - "cpp/src/core/explain/tree_shap.cpp"
+      - "cpp/src/core/explain/explain_common.cpp"
+      - "cpp/src/c_api/c_api_explain.cpp"
+    headers:
+      - "cpp/include/n4m/explain.h"
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.explain.tree_shap"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.explain"
+        class: "tree_shap"
+        legacy_aliases: []
+      js:
+        function: "treeShap"
+        legacy_aliases: []
+    publications: []
+    notes: "Path-dependent TreeSHAP (Lundberg et al. 2020, Algorithm 2) over a generic flat multi-output tree ensemble with cover-consistent zero fractions; grouped values are sums of per-feature values."
+    namespace: "explain"
+    leaf: "tree_shap"
+    fq_name: "n4m.explain.tree_shap"
+    c_surface:
+      - "n4m_explain_tree_path_dependent_v1"
+    legacy_ids:
+      - "diagnostics.explain.tree_shap"

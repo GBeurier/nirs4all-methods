@@ -57,8 +57,8 @@ restores the original typed label table; omitting it exposes native class IDs.
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.3.14+abi.2.22.0"
-console.log(n4m.abiVersion());  // [2, 22, 0]
+console.log(n4m.version());     // "1.3.17+abi.2.23.0"
+console.log(n4m.abiVersion());  // [2, 23, 0]
 
 const rows = 40, cols = 6;
 const X = new Float64Array(rows * cols);   // row-major
@@ -375,3 +375,69 @@ quantities are `null`, including ranks across disconnected comparison graphs.
 Bayesian uncertainty is an approximate algorithm posterior standard deviation,
 not a frequentist standard error. The Friedman statistic is descriptive and
 uses complete blocks; the caller must assess independence.
+
+## Explainability
+
+`explainModel`, `linearShap`, `treeShap`, `groupsFixedWidth`,
+`groupsFromRanges` and `summarizeAttributions` wrap `n4m/explain.h`. Every
+attribution is computed by libn4m; the binding only marshals buffers and
+drives the native ask/tell session.
+
+The model-agnostic explainers (`exact_shap`, `permutation_shap`,
+`kernel_shap`, `lime`, `occlusion`) never call a model themselves: the native
+session emits batches of perturbed rows, the host predicts them with any
+backend (a WASM pipeline, ONNX Runtime Web, a worker round trip) and the
+binding submits the predictions back. `predictBatch` may be synchronous or
+return a promise; the rows it receives are a fresh copy that stays valid
+across `await`.
+
+```js
+import { loadModule, explainModel, groupsFixedWidth, summarizeAttributions } from "@nirs4all/methods";
+await loadModule();
+
+// X and background are row-major { data: Float64Array, rows, cols } in the
+// feature space the predictor consumes (for example raw spectra of a fitted pipeline).
+const result = await explainModel({
+  X, background,
+  grouping: groupsFixedWidth(X.cols, 16),         // optional; default one group per feature
+  predictBatch: async (rows, nRows, nFeatures) => pipeline.predict(rows, nRows, nFeatures),
+  options: { method: "permutation_shap", nPermutations: 10, seed: 0 },
+  onProgress: (done, total) => console.log(`${done}/${total} model rows`),
+  signal: abortController.signal,                  // rejects with an "AbortError" DOMException
+});
+// result.attributions is [row][group][output]; expected/predictions are [row][output].
+console.log(result.exactness, result.additivityMaxAbsError);
+const { meanAbs, meanSigned } = summarizeAttributions(result, 0);
+```
+
+| Kind | Exactness | Additive | `groupAggregation` |
+| --- | --- | --- | --- |
+| `exact_shap` (groups ≤ 16) | `exact` | yes | `group_game` |
+| `permutation_shap` (antithetic) | `sampled` (`stdError` is the Monte-Carlo standard error) | yes | `group_game` |
+| `kernel_shap` | `sampled`, or `exact` when the coalition budget covers all 2^G − 2 coalitions | yes | `group_game` |
+| `lime` | `surrogate` | no | `group_game` |
+| `occlusion` | `perturbation` | no | `group_game` |
+| `linear_shap` | `exact` (interventional) | yes | `none`, or `group_game` with grouping (linear group sums are group Shapley values) |
+| `tree_shap` (path-dependent) | `exact` | yes | `none`, or `sum_of_feature_values` with grouping |
+
+Baselines: `background` (interventional average over every background row),
+`mean` (column mean of the background) and `interpolate` (each absent run is
+bridged by a straight line between its present neighbours; contiguous groups
+only, background optional). `nOutputs` is inferred by predicting `X` row 0
+once when omitted; that probe row is counted in `evaluations`. The output space
+(target units, class probability, decision score) is whatever `predictBatch`
+returns; the binding never relabels it. `settings` uses the snake_case keys of
+the `nirs4all.explanation.v1` envelope, which hosts build from the result plus
+their own axis, output and sample-index metadata.
+
+`linearShap({ X, coefficients, intercept, reference, grouping })` explains an
+affine model `X · coefficients + intercept` (`coefficients` is
+`nFeatures × nOutputs`, `reference` the background column means).
+`treeShap({ X, trees, grouping })` takes a generic flat ensemble
+(`treeOffsets` of length `nTrees + 1`, per-node `feature`, `threshold`, local
+`left`/`right` children, `cover`, `value`, optional `defaultLeft`,
+`decisionType` 0 for `x <= threshold` or 1 for `x < threshold`, `baseOffset`
+and `treeScale`); converting a specific library's trees to this layout is the
+host's job. `groupsFromRanges(nFeatures, [[start, end), ...])` turns half-open
+feature-index ranges (for example chemical bands already mapped to indices)
+into a partition and reports `rangeOfGroup` (`-1` for uncovered runs).

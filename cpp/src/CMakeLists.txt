@@ -58,6 +58,11 @@ add_library(n4m_core OBJECT
     core/variable_selection.cpp
     core/ranking/ranking.cpp
     core/component_analysis/fanova.cpp
+    core/explain/explain_common.cpp
+    core/explain/explain_session.cpp
+    core/explain/grouping.cpp
+    core/explain/linear_shap.cpp
+    core/explain/tree_shap.cpp
     core/config.cpp
     core/estimator/registry.cpp
     core/estimator/linear_adapters.cpp

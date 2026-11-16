@@ -1232,6 +1232,7 @@ N4M_API n4m_status_t n4m_pls_cross_validate(
 #include "n4m/lowlevel.h"
 #include "n4m/optimization.h"
 #include "n4m/ranking.h"
+#include "n4m/explain.h"
 
 /* ============================================================================
  * 10. ABI guard rails — fixed-size assertions on the C ABI shape

@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Model explanation kernels (`n4m/explain.h`, ABI 2.23.0): an ask/tell
+  session that never calls a model (hosts predict the emitted perturbed rows in
+  any backend) for exact group SHAP (G <= 16), antithetic permutation SHAP
+  (additive by construction, Monte-Carlo standard errors), Kernel SHAP
+  (efficiency enforced exactly; exact when every coalition fits the budget),
+  LIME over group masks and occlusion, with background, mean and spectral
+  `interpolate` baselines; exact linear SHAP; path-dependent TreeSHAP over a
+  generic flat tree ensemble; fixed-width and range feature grouping and
+  attribution summaries. Groups are players of the coalition game for the
+  model-agnostic explainers. See `docs/EXPLAIN.md` and the
+  `nirs4all.explanation.v1` envelope schema in
+  `docs/explain/explanation_v1.schema.json`.
 - `MultibranchRegressor` (`models.neural.multibranch_regressor`): a jointly trained
   multibranch neural regressor for intermediate multisource fusion through the existing
   generic roles (regressor + transformer). Ordered `blocks` feed dense, conv1d or
