@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **253**
+- Curated records: **256**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -453,6 +453,24 @@ Pearson (1895), *Note on regression and inheritance in the case of two parents*,
 Székely & Rizzo (2004), *Testing for equal distributions in high dimension*, InterStat 5; Rizzo & Székely (2016), *Energy distance*, WIREs Computational Statistics 8(1), 27–38, https://doi.org/10.1002/wics.1375; Székely & Rizzo (2013), *Energy statistics: A class of statistics based on distances*, Journal of Statistical Planning and Inference 143(8), 1249–1272, https://doi.org/10.1016/j.jspi.2013.03.018.
 
 **Provenance:** https://doi.org/10.1002/wics.1375; https://doi.org/10.1016/j.jspi.2013.03.018; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_preflight.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/fixtures/domain_shift_v1.json
+
+### [`diagnostics_explain_linear_shap`](diagnostics_explain_linear_shap.md) — Exact interventional SHAP of affine models
+
+Lundberg and Lee (2017), A Unified Approach to Interpreting Model Predictions, Advances in Neural Information Processing Systems 30 (Linear SHAP under feature independence), https://arxiv.org/abs/1705.07874. The interventional value function follows Janzing, Minorics and Bloebaum (2020), AISTATS, PMLR 108, 2907-2916, https://proceedings.mlr.press/v108/janzing20a.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/linear_shap.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/explain_common.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_explain.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_explain.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_explain.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/EXPLAIN.md
+
+### [`diagnostics_explain_model_agnostic`](diagnostics_explain_model_agnostic.md) — Ask/tell group Shapley, LIME and occlusion explanations of any model
+
+Shapley (1953), A Value for n-Person Games, in Contributions to the Theory of Games II, Annals of Mathematics Studies 28, 307-317, https://doi.org/10.1515/9781400881970-018. Permutation sampling: Strumbelj and Kononenko (2014), Explaining prediction models and individual predictions with feature contributions, Knowledge and Information Systems 41(3), 647-665, https://doi.org/10.1007/s10115-013-0679-x; antithetic (forward/reverse) orders: Mitchell, Cooper, Frank and Holmes (2022), Sampling Permutations for Shapley Value Estimation, Journal of Machine Learning Research 23, https://www.jmlr.org/papers/v23/21-0439.html. Kernel SHAP: Lundberg and Lee (2017), A Unified Approach to Interpreting Model Predictions, NeurIPS 30, https://arxiv.org/abs/1705.07874. LIME: Ribeiro, Singh and Guestrin (2016), "Why Should I Trust You?": Explaining the Predictions of Any Classifier, KDD, 1135-1144, https://doi.org/10.1145/2939672.2939778. Occlusion: Zeiler and Fergus (2014), Visualizing and Understanding Convolutional Networks, ECCV, LNCS 8689, 818-833, https://doi.org/10.1007/978-3-319-10590-1_53. Interventional value function: Janzing, Minorics and Bloebaum (2020), Feature relevance quantification in explainable AI: A causal problem, AISTATS, PMLR 108, 2907-2916, https://proceedings.mlr.press/v108/janzing20a.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/explain_session.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/grouping.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/explain_common.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_explain.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_explain.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_explain.py; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/js/test/run_explain.mjs; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/EXPLAIN.md; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/explain/explanation_v1.schema.json
+
+### [`diagnostics_explain_tree_shap`](diagnostics_explain_tree_shap.md) — Path-dependent TreeSHAP over generic flat tree ensembles
+
+Lundberg, Erion, Chen, DeGrave, Prutkin, Nair, Katz, Himmelfarb, Bansal and Lee (2020), From local explanations to global understanding with explainable AI for trees, Nature Machine Intelligence 2, 56-67, Algorithm 2, https://doi.org/10.1038/s42256-019-0138-9.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/tree_shap.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/explain/explain_common.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/c_api/c_api_explain.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/tests/test_explain.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_explain.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/EXPLAIN.md
 
 ### [`diagnostics_factor_association_exact`](diagnostics_factor_association_exact.md) — Exact permutation distribution of a factor-target association
 

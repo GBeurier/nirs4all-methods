@@ -134,6 +134,7 @@ except ImportError:  # pragma: no cover - permits partial contributor checkouts
 
 from scientific_intrinsic import SCIENTIFIC_CONTENT as _INTRINSIC_SCIENCE
 from scientific_ranking import SCIENTIFIC_CONTENT as _RANKING_SCIENCE
+from scientific_explain import SCIENTIFIC_CONTENT as _EXPLAIN_SCIENCE
 
 SCIENTIFIC_FIELDS = (
     "title", "paper", "principle", "use_cases", "limitations",
@@ -235,6 +236,7 @@ def scientific_content() -> dict[str, dict[str, str]]:
         ("scientific_aom", _AOM_SCIENCE),
         ("scientific_intrinsic", _INTRINSIC_SCIENCE),
         ("scientific_ranking", _RANKING_SCIENCE),
+        ("scientific_explain", _EXPLAIN_SCIENCE),
     )
     merged: dict[str, dict[str, str]] = {}
     for source_name, records in sources:

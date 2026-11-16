@@ -3,7 +3,7 @@
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
 - Catalog entries: **250**
-- Curated scientific records: **253**
+- Curated scientific records: **256**
 - Resolved documentation pages: **250**
 
 | Catalog id | Documentation page | Scientific record |
@@ -74,9 +74,9 @@ This generated report records the documentation source used for each catalog ent
 | `diagnostics.cluster_jaccard_matrix` | [diagnostics_cluster_jaccard_matrix](diagnostics_cluster_jaccard_matrix.md) | curated |
 | `diagnostics.correlation_test` | [diagnostics_correlation_test](diagnostics_correlation_test.md) | curated |
 | `diagnostics.energy_distance` | [diagnostics_energy_distance](diagnostics_energy_distance.md) | curated |
-| `diagnostics.explain.linear_shap` | [diagnostics_explain_linear_shap](diagnostics_explain_linear_shap.md) | missing |
-| `diagnostics.explain.model_agnostic` | [diagnostics_explain_model_agnostic](diagnostics_explain_model_agnostic.md) | missing |
-| `diagnostics.explain.tree_shap` | [diagnostics_explain_tree_shap](diagnostics_explain_tree_shap.md) | missing |
+| `diagnostics.explain.linear_shap` | [diagnostics_explain_linear_shap](diagnostics_explain_linear_shap.md) | curated |
+| `diagnostics.explain.model_agnostic` | [diagnostics_explain_model_agnostic](diagnostics_explain_model_agnostic.md) | curated |
+| `diagnostics.explain.tree_shap` | [diagnostics_explain_tree_shap](diagnostics_explain_tree_shap.md) | curated |
 | `diagnostics.factor_association_exact` | [diagnostics_factor_association_exact](diagnostics_factor_association_exact.md) | curated |
 | `diagnostics.group_means` | [diagnostics_group_means](diagnostics_group_means.md) | curated |
 | `diagnostics.hdbscan` | [diagnostics_hdbscan](diagnostics_hdbscan.md) | curated |
