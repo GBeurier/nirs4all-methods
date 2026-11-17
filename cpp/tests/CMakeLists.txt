@@ -372,3 +372,26 @@ if(TARGET n4m_c_static)
     add_test(NAME n4m_multibranch_gradient_tests COMMAND n4m_multibranch_gradient_tests)
     set_tests_properties(n4m_multibranch_gradient_tests PROPERTIES LABELS "parity" TIMEOUT 60)
 endif()
+
+# Windows has no rpath: a test executable linked to the shared n4m_c only
+# starts when n4m.dll sits beside it. n4m_tests copies its runtime DLLs above,
+# but a build of selected targets (for example the component-analysis CI job,
+# which does not build n4m_tests) left the other executables without n4m.dll.
+# Their launch then blocked ctest on the loader's missing-DLL error until the
+# job was cancelled. Give every test executable linked to n4m_c its own copy.
+if(WIN32)
+    get_property(_n4m_test_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_n4m_test_target IN LISTS _n4m_test_targets)
+        get_target_property(_n4m_test_type ${_n4m_test_target} TYPE)
+        get_target_property(_n4m_test_links ${_n4m_test_target} LINK_LIBRARIES)
+        if(_n4m_test_type STREQUAL "EXECUTABLE"
+           AND NOT _n4m_test_target STREQUAL "n4m_tests"
+           AND "n4m_c" IN_LIST _n4m_test_links)
+            add_custom_command(TARGET ${_n4m_test_target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    $<TARGET_RUNTIME_DLLS:${_n4m_test_target}>
+                    $<TARGET_FILE_DIR:${_n4m_test_target}>
+                COMMAND_EXPAND_LISTS)
+        endif()
+    endforeach()
+endif()
