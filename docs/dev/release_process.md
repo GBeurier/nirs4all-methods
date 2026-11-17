@@ -64,6 +64,56 @@ Also confirm the cross-binding parity gate (`cross-binding-parity.yml`) and the
 self-consistency gate (`make parity-paper-only`) are green for the build you
 ship.
 
+## Cross-repository version constraints
+
+nirs4all packages from different repositories depend on each other at **minor**
+granularity, never more precisely: Rust `"0.4"` (`>=0.4.0, <0.5.0`; `"1.3"` for
+1.x), Python `>=0.4,<0.5` (`>=1.3,<2` for 1.x), npm `^0.4.0` (`^1.3.0`), R
+`pkg (>= 1.3.0), pkg (< 2.0.0)`. Exact, reproducible versions live only in
+lockfiles (`Cargo.lock`, uv/pip locks, `package-lock.json`, hash-locked wheel
+locks) and in the release order. Packages released together from this
+repository (`nirs4all-methods`, `pls4all`, R `n4m`/`pls4all`,
+`@nirs4all/methods`) stay in version lockstep through `bump_version.sh`.
+
+In return, a **patch** release is backward compatible and changes no wire
+format, byte contract, persisted schema (N4MM/N4ME/N4MOPT), `.n4a` payload
+semantics, native ABI or shared fixture; any such change needs at least a
+**minor** release (for 0.x, every minor is breaking). A consumer needing a fix
+from a specific patch gets it from its lockfile and the release order, not from
+a patch floor. The full policy is
+`docs/contracts/release/VERSION_CONSTRAINTS.md` in `nirs4all-ecosystem`.
+
+**Native ABI.** Native libraries are accepted by the ABI check
+(`n4m_check_abi_compatibility(header_major, header_minor)`, exposed in Rust as
+`n4m::runtime_abi_version` and run before any other call), never by package
+version; that check remains the authority and fails closed. A package range
+only selects which ABI the consumer receives:
+
+| Methods project | ABI carried | Rust `n4m` crate |
+|---|---|---|
+| 1.3.11–1.3.14 | 2.20 | 0.4.1 (requires ABI ≥ 2.20) |
+| 1.3.15–1.3.17 | 2.22 | 0.4.2 (requires ABI ≥ 2.22) |
+| 1.3.18 | 2.23 | unreleased crate on `main` (requires ABI ≥ 2.23) |
+
+Methods 1.x carries ABI major 2; an ABI major change requires Methods 2.0. The
+ABI rows above predate this contract, which released additive ABI minors in
+project patches. From now on a Methods minor carries one ABI minor: an additive
+ABI change (new `n4m_*` symbol, enum value or role header) ships in the next
+project minor (1.4.0 for the first one after ABI 2.23) and, because the crate
+is 0.x, in the next `n4m` crate minor. The crate on `main` already requires ABI
+2.23 while the published `n4m` 0.4.2 requires 2.22, so its next publication is
+0.5.0. Consumers that need a newer ABI raise their floor to the minor carrying
+it (for example `>=1.4,<2`), and the runtime ABI check still refuses an older
+library.
+
+Enforcement in this repository: `scripts/bump_version.sh --check` (version
+lockstep and ABI-constant drift across header, Python and Rust loaders), the
+`cpp/abi/expected_symbols_*.txt` snapshots with
+[`docs/abi/changes_log.md`](../abi/changes_log.md), and
+`scripts/check_n4m_crate_release.py` (crate tag, manifest and lockfile
+identity). A guard that fails when the ABI changes without a project/crate
+minor bump is not automated yet.
+
 ## Automated paths (summary)
 
 Each PyPI project gets its own workflow — one workflow per package, so PyPI
