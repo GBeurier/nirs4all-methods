@@ -19,6 +19,8 @@ jobs:
           - os: windows-2022
             preset: analysis-windows
     runs-on: ${{ matrix.os }}
+    # Every leg completes in minutes; a hang must fail, not run for six hours.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7.0.0
       - uses: actions/setup-python@v6.3.0
@@ -37,7 +39,7 @@ jobs:
           N4M_ANALYSIS_PRESET: ${{ matrix.preset }}
           PYTHONPATH: bindings/python/src
         run: |
-          ctest --test-dir 'build/${{ matrix.preset }}' -C Release -R 'n4m_ranking_tests|n4m_fanova_tests|mixed_effects' --output-on-failure
+          ctest --test-dir 'build/${{ matrix.preset }}' -C Release -R 'n4m_ranking_tests|n4m_fanova_tests|mixed_effects' --output-on-failure --timeout 600
           python scripts/test_component_backends.py
       - name: Test installed static dependency closure
         shell: bash
