@@ -157,9 +157,17 @@ if(NOT MSVC)
     target_link_libraries(n4m_finite_column_quantiles_tests PRIVATE m)
 endif()
 add_test(NAME n4m_finite_column_quantiles_tests COMMAND n4m_finite_column_quantiles_tests)
+# ThreadSanitizer slows the complete native suite several-fold: its Debug run
+# takes about 180 s on hosted runners, so the plain Debug bound timed it out
+# intermittently (main included). Keep the hang guard, scaled for TSan.
+if(N4M_ENABLE_TSAN)
+    set(_n4m_tests_timeout 600)
+else()
+    set(_n4m_tests_timeout "$<IF:$<CONFIG:Debug>,180,60>")
+endif()
 set_tests_properties(n4m_tests PROPERTIES
     LABELS "smoke;abi;parity"
-    TIMEOUT "$<IF:$<CONFIG:Debug>,180,60>")
+    TIMEOUT "${_n4m_tests_timeout}")
 
 # Focused N4MM v2 model-pipeline contract. Kept separate so format changes can
 # be gated without rerunning the complete native suite.
