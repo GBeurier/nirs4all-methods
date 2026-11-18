@@ -313,11 +313,11 @@ per-method lists):
   declaration of `N4M_CAP_AFFINE_TRANSFORM` is checked exactly
   (`T(a x + (1 - a) z) = a T(x) + (1 - a) T(z)`) by `cpp/tests/test_importance.cpp`.
 
-Numerical caveat: the raw-input map is as exact as the pipeline itself. A
-feature that is identically zero in exact arithmetic but carries rounding
-(for example the first column of a mirror-mode Savitzky-Golay derivative,
-about 1e-17) and is then autoscaled amplifies that rounding in the model and
-therefore in its predictions and coefficients alike.
+The raw-input map is as exact as the pipeline itself. Columns that are zero up
+to rounding no longer inflate it: every autoscaling path maps a standard
+deviation below `10 * DBL_EPSILON` to 1 (scikit-learn `_handle_zeros_in_scale`
+rule), and the mirror-mode Savitzky-Golay odd derivative writes its exactly
+zero edge values as 0.
 
 Hosts wrap global profiles in the
 [`nirs4all.importance_profile.v1`](explain/importance_profile_v1.schema.json)

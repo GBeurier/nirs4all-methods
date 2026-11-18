@@ -123,6 +123,25 @@ const probe = matrix(5, p, xs.slice(0, 5 * p).map((v, k) => v * 1.1 + 0.01 * Mat
     fitted.dispose(); pipeline.dispose(); snv.dispose();
 }
 
+// ---- review case: mirror SG derivative + default autoscaled PLS -----------
+{
+    const steps = [
+        ["preprocessing.derivatives.savitzky_golay", { window_length: 11, polyorder: 2, deriv: 1 }],
+        ["models.pls.pls_regression", { n_components: 5 }],
+    ];
+    const pipeline = n4m.RolePipeline.fromStates(steps, n4m.RolePipeline.fromSteps(steps).fit(X, y).exportStates());
+    const Z = pipeline.transform(X);
+    for (let i = 0; i < Z.rows; i += 1) {
+        assert.equal(Z.data[i * Z.cols], 0);
+        assert.equal(Z.data[i * Z.cols + Z.cols - 1], 0);
+    }
+    const raw = pipeline.inputAffineCoefficients();
+    assert.ok(raw.coefficients.data.every((v) => Number.isFinite(v) && Math.abs(v) < 1e3));
+    const pred = pipeline.predict(probe).data;
+    assert.ok(maxDiff(applyAffine(raw, probe), pred) <= 1e-10 * (1 + maxAbs(pred)));
+    pipeline.dispose();
+}
+
 // ---- gradient explainer equals linear SHAP on an affine model --------------
 {
     const F = 8, O = 2;

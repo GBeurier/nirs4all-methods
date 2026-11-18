@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
+#include "core/common/column_stats.hpp"
 #include "core/spa_selection.hpp"
 
 #include <algorithm>
@@ -152,10 +153,8 @@ namespace {
 
         double scale = 1.0;
         if (rows > 1U) {
-            scale = std::sqrt(ss / static_cast<double>(rows - 1U));
-            if (!std::isfinite(scale) || scale <= std::numeric_limits<double>::epsilon()) {
-                scale = 1.0;
-            }
+            scale = ::n4m::core::detail::guarded_scale(
+                std::sqrt(ss / static_cast<double>(rows - 1U)));
         }
         for (std::size_t row = 0; row < rows; ++row) {
             out[idx(row, cols, col)] /= scale;

@@ -16,6 +16,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   limit". Messages only: symbols, function and type names, status codes and
   fixtures are unchanged.
 
+### Fixed
+
+- Autoscaling no longer turns rounding noise into a unit-variance variable: a
+  column standard deviation below `10 * DBL_EPSILON` (or nonfinite) is replaced
+  by 1 in every standardization path (PLS-family `scale_x`/`scale_y` through
+  the shared fit helper, Ridge and `StandardScale` through the shared column
+  statistics, sweeps and moment fits, preprocessing pipelines, legacy
+  multiblock PLS, LW-PLS and the UVE/SPA/WVC selector standardizations), the
+  absolute rule of scikit-learn's `_handle_zeros_in_scale`. A mirror-mode
+  Savitzky-Golay first derivative followed by a default autoscaled PLS
+  previously produced edge coefficients of order 1e13 and a nonzero VIP on a
+  pure-noise column. The mirror-mode Savitzky-Golay odd derivative over an
+  odd window now writes its first and last values as exact zeros (they were
+  +-1e-17 rounding); every other output is unchanged.
+
 ### Added
 
 - Model-intrinsic importances and affine pipelines (ABI 2.24.0, project

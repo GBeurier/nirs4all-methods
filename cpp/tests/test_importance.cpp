@@ -467,9 +467,8 @@ void pipeline_input_affine_exact() {
     const int64_t p = 30, q = 2;
     const Spectra d(40, p);
     const Spectra probe(11, p, 0.7);
-    // Note: a mirror-mode Savitzky-Golay derivative has an exactly zero first
-    // column (computed as +-1e-17); autoscaling such a column amplifies the
-    // rounding, so the derivative recipes here do not autoscale it.
+    // (Mirror-mode Savitzky-Golay derivatives followed by autoscaling are
+    // covered by near_zero_scales_are_guarded.)
     const std::vector<std::vector<StepSpec>> recipes = {
         {{"preprocessing.derivatives.savitzky_golay",
           {{"window_length", 7}, {"polyorder", 2}, {"deriv", 0}}},
@@ -539,6 +538,94 @@ void pipeline_input_affine_exact() {
     info.struct_size = sizeof(info);
     N4M_TEST_REQUIRE(n4m_role_pipeline_step_info_v1(pipe, 1, &info) == N4M_OK);
     N4M_TEST_REQUIRE(info.affine == 0 && info.column_aligned == 1);
+    n4m_role_pipeline_destroy(pipe);
+}
+
+// Near-zero autoscaling guard (review case): a model-input column that is
+// zero up to rounding must not become a unit-variance variable.
+Values column(const Values& m, int64_t rows, int64_t cols, int64_t c) {
+    Values out(sz(rows));
+    for (int64_t i = 0; i < rows; ++i) out[sz(i)] = m[sz(i * cols + c)];
+    return out;
+}
+
+void near_zero_scales_are_guarded() {
+    Ctx ctx;
+    const int64_t p = 40, q = 1;
+    const Spectra d(45, p);
+    const Spectra probe(9, p, 0.8);
+
+    // 1. Mirror-mode SG first derivative (window 11, order 2) + default PLS
+    //    (scale_x on): the edge columns are exactly zero and the fitted
+    //    pipeline keeps a sane coefficient profile.
+    const std::vector<StepSpec> sg_pls = {
+        {"preprocessing.derivatives.savitzky_golay",
+         {{"window_length", 11}, {"polyorder", 2}, {"deriv", 1}}},
+        {"models.pls.pls_regression", {{"n_components", 5}}}};
+    n4m_role_pipeline_t* pipe = fit_pipeline(ctx.p, sg_pls, d, q);
+    {
+        Values z(sz(d.n * p));
+        const auto X = view(d.x.data(), d.n, p);
+        auto Z = view(z.data(), d.n, p);
+        N4M_TEST_REQUIRE(n4m_role_pipeline_transform(ctx.p, pipe, &X, &Z) == N4M_OK);
+        for (double v : column(z, d.n, p, 0)) N4M_TEST_REQUIRE(v == 0.0);
+        for (double v : column(z, d.n, p, p - 1)) N4M_TEST_REQUIRE(v == 0.0);
+    }
+    Affine raw{Values(sz(p * q)), Values(sz(q))};
+    N4M_TEST_REQUIRE(n4m_role_pipeline_input_affine_coefficients_v1(
+                         ctx.p, pipe, raw.B.data(), p * q, raw.b.data(), q) == N4M_OK);
+    for (double v : raw.B) N4M_TEST_REQUIRE(std::isfinite(v) && std::fabs(v) < 1e3);
+    const Values pred = pipeline_predict(ctx.p, pipe, probe.x, probe.n, p, q);
+    N4M_TEST_REQUIRE(max_abs_diff(apply_affine(raw, probe.x, probe.n, p, q), pred) <=
+                     1e-10 * (1.0 + max_abs(pred)));
+    n4m_role_pipeline_destroy(pipe);
+
+    // 2. A column of pure rounding noise (1e-17) reaching autoscaled models
+    //    directly: PLS (scale_x), StandardScale + Ridge.
+    Spectra noisy(45, p);
+    for (int64_t i = 0; i < noisy.n; ++i) {
+        noisy.x[sz(i * p)] = 1e-17 * std::sin(3.1 * static_cast<double>(i) + 0.4);
+    }
+    const auto X = view(noisy.x.data(), noisy.n, p);
+    n4m_params_t* params = params_for(ctx.p, "models.pls.pls_regression");
+    N4M_TEST_REQUIRE(n4m_params_set_int(params, "n_components", 5) == N4M_OK);
+    n4m_estimator_t* pls = fit_estimator(ctx.p, "models.pls.pls_regression", params, noisy, q);
+    n4m_params_destroy(params);
+    n4m_estimator_t* imported = roundtrip(ctx.p, pls);
+    const Latent L = latent_of(ctx.p, imported, p, q);
+    N4M_TEST_REQUIRE(L.scale[0] == 1.0);
+    for (int64_t j = 1; j < p; ++j) N4M_TEST_REQUIRE(L.scale[sz(j)] != 1.0);
+    const Affine a = affine_of(ctx.p, imported, p, q);
+    double interior = 0.0;
+    for (int64_t j = 1; j < p; ++j) interior = std::max(interior, std::fabs(a.B[sz(j)]));
+    N4M_TEST_REQUIRE(std::fabs(a.B[0]) <= interior);
+    Values vip(sz(p));
+    N4M_TEST_REQUIRE(n4m_estimator_importance_v1(ctx.p, imported, &X, N4M_IMPORTANCE_VIP, 0,
+                                                 vip.data(), p) == N4M_OK);
+    N4M_TEST_REQUIRE(vip[0] < 1e-9);
+    const Values pred_pls = predict(ctx.p, imported, probe.x, probe.n, p);
+    N4M_TEST_REQUIRE(max_abs_diff(apply_affine(a, probe.x, probe.n, p, q), pred_pls) <=
+                     1e-10 * (1.0 + max_abs(pred_pls)));
+    n4m_estimator_destroy(imported);
+    n4m_estimator_destroy(pls);
+
+    const std::vector<StepSpec> scale_ridge = {{"preprocessing.scaling.standard_scale", {}},
+                                               {"models.regularized.ridge", {}}};
+    pipe = fit_pipeline(ctx.p, scale_ridge, noisy, q);
+    {
+        Values z(sz(noisy.n * p));
+        auto Z = view(z.data(), noisy.n, p);
+        N4M_TEST_REQUIRE(n4m_role_pipeline_transform(ctx.p, pipe, &X, &Z) == N4M_OK);
+        N4M_TEST_REQUIRE(max_abs(column(z, noisy.n, p, 0)) < 1e-15);  // scale 1, not 1e-17
+    }
+    N4M_TEST_REQUIRE(n4m_role_pipeline_input_affine_coefficients_v1(
+                         ctx.p, pipe, raw.B.data(), p * q, raw.b.data(), q) == N4M_OK);
+    interior = 0.0;
+    for (int64_t j = 1; j < p; ++j) interior = std::max(interior, std::fabs(raw.B[sz(j)]));
+    N4M_TEST_REQUIRE(std::isfinite(raw.B[0]) && std::fabs(raw.B[0]) <= interior);
+    const Values pred_ridge = pipeline_predict(ctx.p, pipe, probe.x, probe.n, p, q);
+    N4M_TEST_REQUIRE(max_abs_diff(apply_affine(raw, probe.x, probe.n, p, q), pred_ridge) <=
+                     1e-10 * (1.0 + max_abs(pred_ridge)));
     n4m_role_pipeline_destroy(pipe);
 }
 
@@ -895,6 +982,8 @@ int main() {
           latent_structure_and_importances);
     r.run("pipeline raw-input affine map equals predictions; SNV refused",
           pipeline_input_affine_exact);
+    r.run("near-zero autoscaling is guarded (SG mirror derivative + PLS, Ridge)",
+          near_zero_scales_are_guarded);
     r.run("declared affine transforms are exactly affine", affine_transform_traits_are_exact);
     r.run("GRADIENT equals linear SHAP on affine models",
           gradient_equals_linear_shap_on_affine_models);
