@@ -1324,7 +1324,7 @@ N4M_API n4m_status_t n4m_finetune_estimator(n4m_context_t* ctx, n4m_algorithm_t 
             }
             double score = 0.0;
             if (!regression_metric_value(o.metric, cv.metrics, &score)) {
-                set_error(ctx, "regression metric dispatch failed after preflight validation");
+                set_error(ctx, "regression metric dispatch failed after configuration validation");
                 const n4m_status_t tell_status =
                     finish_failed_trial(t, N4M_ERR_NOT_IMPLEMENTED);
                 return tell_status == N4M_OK ? N4M_ERR_NOT_IMPLEMENTED : tell_status;
