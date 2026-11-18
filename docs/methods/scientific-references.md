@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **256**
+- Curated records: **257**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -565,6 +565,12 @@ A versioned descriptive threshold protocol: native first/second differences, nor
 ### [`diagnostics_spectral_noise_proxy`](diagnostics_spectral_noise_proxy.md) — Second-difference MAD high-frequency descriptive proxy
 
 A declared noise proxy under an approximately smooth signal, using normal-scaled MAD. SciPy documents the median absolute deviation definition used by the independent oracle: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.median_abs_deviation.html.
+
+**Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
+
+### [`diagnostics_spectral_population_events_qc`](diagnostics_spectral_population_events_qc.md) — Population-relative derivative events per band position
+
+A versioned descriptive threshold protocol: at each band position, the normal-scaled median absolute deviation (Rousseeuw and Croux, 1993, Alternatives to the Median Absolute Deviation, https://doi.org/10.1080/01621459.1993.10476408) of the derivatives across spectra. NumPy defines the independent difference oracle: https://numpy.org/doc/stable/reference/generated/numpy.diff.html.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json
 

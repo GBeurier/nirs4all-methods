@@ -2494,6 +2494,42 @@ export class SpectralNoiseProxy extends NativeProcedure implements Procedure {
 }
 NativeMethod.register("diagnostics.spectral_noise_proxy", SpectralNoiseProxy);
 
+/** Parameters of SpectralPopulationEventsQc; unset values take the native defaults. */
+export interface SpectralPopulationEventsQcParams {
+    /** Default []. */
+    valid_mask?: number[];
+    /** Default "index". */
+    axis_basis?: "index" | "physical";
+    /** Default []. */
+    axis_values?: number[];
+    /** Default 8. */
+    outlier_threshold?: number;
+    /** Default 5. */
+    min_spectra?: number;
+}
+
+/** Native `diagnostics.spectral_population_events_qc` (generic). */
+export class SpectralPopulationEventsQc extends NativeProcedure implements Procedure {
+    readonly methodId = "diagnostics.spectral_population_events_qc";
+    readonly paramTypes = {
+        valid_mask: "int_array",
+        axis_basis: "enum",
+        axis_values: "double_array",
+        outlier_threshold: "double",
+        min_spectra: "int",
+    } as const;
+
+    constructor(params: SpectralPopulationEventsQcParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    run(X: Matrix, y?: Matrix | Float64Array | ArrayLike<number>, inputs: FitInputs = {}): Record<string, ProcedureOutput> {
+        return this.runOutputs(X, y, inputs);
+    }
+}
+NativeMethod.register("diagnostics.spectral_population_events_qc", SpectralPopulationEventsQc);
+
 /** Parameters of SpectralReferenceQc; unset values take the native defaults. */
 export interface SpectralReferenceQcParams {
     /** Default []. */

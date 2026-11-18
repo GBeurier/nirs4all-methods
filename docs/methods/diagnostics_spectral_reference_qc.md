@@ -8,7 +8,7 @@ _Namespace_: **`n4m.diagnostics`** · _Fully-qualified_: `n4m.diagnostics.spectr
 
 **Python (verified public re-export):** `from n4m.roles import SpectralReferenceQc`
 
-**Signature:** [`SpectralReferenceQc(*, valid_mask = (), reference_mode = 'dataset_mean', reference_valid_mask = ())`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L2182)
+**Signature:** [`SpectralReferenceQc(*, valid_mask = (), reference_mode = 'dataset_mean', reference_valid_mask = ())`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L2216)
 
 **R (source-verified):** [`n4m_spectral_reference_qc(valid_mask = c(), reference_mode = "dataset_mean", reference_valid_mask = c())`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/estimator_roles_generated.R).
 

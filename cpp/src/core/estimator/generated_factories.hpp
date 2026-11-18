@@ -128,6 +128,7 @@ std::unique_ptr<Adapter> make_select_wvc_threshold(const MethodSpec& spec);
 n4m_status_t run_signal_type(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 n4m_status_t run_spectral_events_qc(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 n4m_status_t run_spectral_noise_proxy(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
+n4m_status_t run_spectral_population_events_qc(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 n4m_status_t run_spectral_reference_qc(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 n4m_status_t run_splitter(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);
 n4m_status_t run_sweep(n4m_context_t* ctx, const Params& params, const FitInputs& inputs, n4m_method_result_t** out);

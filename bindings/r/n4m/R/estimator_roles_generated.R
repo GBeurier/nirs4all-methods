@@ -69,6 +69,7 @@
   "diagnostics.regression_metrics" = c("generic"),
   "diagnostics.spectral_events_qc" = c("generic"),
   "diagnostics.spectral_noise_proxy" = c("generic"),
+  "diagnostics.spectral_population_events_qc" = c("generic"),
   "diagnostics.spectral_reference_qc" = c("generic"),
   "filters.correlation" = c("selector"),
   "filters.high_leverage" = c("sample_filter"),
@@ -292,6 +293,7 @@
   "diagnostics.regression_metrics" = "n4m_regression_metrics",
   "diagnostics.spectral_events_qc" = "n4m_spectral_events_qc",
   "diagnostics.spectral_noise_proxy" = "n4m_spectral_noise_proxy",
+  "diagnostics.spectral_population_events_qc" = "n4m_spectral_population_events_qc",
   "diagnostics.spectral_reference_qc" = "n4m_spectral_reference_qc",
   "filters.correlation" = "n4m_correlation",
   "filters.high_leverage" = "n4m_high_leverage",
@@ -842,6 +844,12 @@ n4m_spectral_events_qc <- function(valid_mask = c(), axis_basis = "index", axis_
 #' @export
 n4m_spectral_noise_proxy <- function(valid_mask = c()) {
   .n4m_estimator("diagnostics.spectral_noise_proxy", c("generic"), list(valid_mask = valid_mask))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_spectral_population_events_qc <- function(valid_mask = c(), axis_basis = "index", axis_values = c(), outlier_threshold = 8.0, min_spectra = 5L) {
+  .n4m_estimator("diagnostics.spectral_population_events_qc", c("generic"), list(valid_mask = valid_mask, axis_basis = axis_basis, axis_values = axis_values, outlier_threshold = outlier_threshold, min_spectra = min_spectra))
 }
 
 #' @rdname n4m_estimator_role_constructors

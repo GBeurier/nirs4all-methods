@@ -811,6 +811,20 @@ const std::map<std::string, Direct>& generic_checks() {
              CHECK(r->int_arrays.at("declared_clip_fraction_status")[0] == 5);
              CHECK(r->scalars.count("global_declared_clip_fraction") == 0);
          }},
+        {"diagnostics.spectral_population_events_qc",
+         [](n4m_context_t*,
+            const n4m_params_t*,
+            const n4m_fit_inputs_v1_t& in,
+            const n4m_method_result_t* r) {
+             // Every complete pair/triple is evaluated across the kRows >= 5 spectra.
+             CHECK(scalar_is(
+                 r, "global_jump_eligible", static_cast<double>(in.X->rows * (in.X->cols - 1))));
+             CHECK(scalar_is(
+                 r, "global_spike_eligible", static_cast<double>(in.X->rows * (in.X->cols - 2))));
+             const auto& evaluated = r->int_arrays.at("spike_band_evaluated");
+             CHECK(evaluated.size() == static_cast<size_t>(in.X->cols));
+             CHECK(evaluated.front() == 0 && evaluated.back() == 0 && evaluated[1] == in.X->rows);
+         }},
         {"diagnostics.spectral_noise_proxy",
          [](n4m_context_t*,
             const n4m_params_t*,
@@ -1219,6 +1233,248 @@ void test_ragged_summary_extremes(n4m_context_t* ctx) {
           f[3] == 1e308);
 }
 
+// ---- diagnostics.spectral_population_events_qc --------------------------------
+
+// Deterministic normal draws (portable: no std::normal_distribution).
+struct Gauss {
+    uint64_t state;
+    double uniform() {
+        state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+        return (static_cast<double>(state >> 11) + 0.5) / 9007199254740992.0;
+    }
+    double normal() {
+        const double u = uniform(), v = uniform();
+        return std::sqrt(-2.0 * std::log(u)) * std::cos(6.283185307179586 * v);
+    }
+};
+
+// 40 smooth spectra: four Gaussian absorption bands whose intensities vary
+// between samples, a varying baseline offset/slope and small white noise.
+std::vector<double> smooth_spectra(int64_t n, int64_t p) {
+    Gauss g{20261118};
+    const double centers[] = {0.15, 0.4, 0.6, 0.85}, widths[] = {0.02, 0.04, 0.03, 0.05},
+                 heights[] = {0.8, 0.5, 1.0, 0.3};
+    std::vector<double> x(static_cast<size_t>(n * p));
+    for (int64_t i = 0; i < n; ++i) {
+        double amp[4];
+        for (double& a : amp)
+            a = 0.5 + g.uniform();
+        const double offset = 0.2 * g.uniform(), slope = 0.1 * g.uniform();
+        for (int64_t j = 0; j < p; ++j) {
+            const double t = static_cast<double>(j) / static_cast<double>(p - 1);
+            double v = offset + slope * t + 1e-4 * g.normal();
+            for (int b = 0; b < 4; ++b) {
+                const double z = (t - centers[b]) / widths[b];
+                v += amp[b] * heights[b] * std::exp(-0.5 * z * z);
+            }
+            x[static_cast<size_t>(i * p + j)] = v;
+        }
+    }
+    return x;
+}
+
+struct Events {
+    n4m_status_t status = N4M_OK;
+    ResultPtr r;
+    double scalar(const char* name) const {
+        return r.p->scalars.at(name);
+    }
+    const std::vector<int32_t>& ints(const char* name) const {
+        return r.p->int_arrays.at(name);
+    }
+    // Per-row count; -1 when the row has no computed value.
+    double row(const char* signal, int64_t i) const {
+        const auto& rows = r.p->int_arrays.at(std::string(signal) + "_rows");
+        const auto& values = r.p->double_arrays.at(std::string(signal) + "_values");
+        for (size_t k = 0; k < rows.size(); ++k)
+            if (rows[k] == i)
+                return values[k];
+        return -1;
+    }
+};
+
+void run_events(n4m_context_t* ctx,
+                const char* method,
+                const std::vector<double>& x,
+                int64_t n,
+                int64_t p,
+                Events& out,
+                const std::vector<int64_t>& mask = {},
+                const std::vector<double>& axis = {},
+                double threshold = 8.0) {
+    int32_t index = -1;
+    CHECK(n4m_method_find(method, &index) == N4M_OK);
+    n4m_params_t* params = nullptr;
+    CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+    if (!mask.empty())
+        CHECK(n4m_params_set_int_array(
+                  params, "valid_mask", mask.data(), static_cast<int64_t>(mask.size()))
+              == N4M_OK);
+    if (!axis.empty()) {
+        CHECK(n4m_params_set_enum(params, "axis_basis", "physical") == N4M_OK);
+        CHECK(n4m_params_set_double_array(
+                  params, "axis_values", axis.data(), static_cast<int64_t>(axis.size()))
+              == N4M_OK);
+    }
+    CHECK(n4m_params_set_double(params, "outlier_threshold", threshold) == N4M_OK);
+    const n4m_matrix_view_t X = view(x.data(), n, p);
+    n4m_fit_inputs_v1_t in{};
+    in.struct_size = sizeof(in);
+    in.X = &X;
+    out.status = n4m_procedure_run(ctx, index, params, &in, &out.r.p);
+    n4m_params_destroy(params);
+}
+
+constexpr const char* kPopulation = "diagnostics.spectral_population_events_qc";
+
+void test_population_events(n4m_context_t* ctx) {
+    current_ = "population events: smooth spectra";
+    const int64_t n = 40, p = 200;
+    const auto smooth = smooth_spectra(n, p);
+    Events local, population;
+    run_events(ctx, "diagnostics.spectral_events_qc", smooth, n, p, local);
+    run_events(ctx, kPopulation, smooth, n, p, population);
+    CHECK(local.status == N4M_OK && population.status == N4M_OK);
+    int64_t flagged = 0;
+    for (int64_t i = 0; i < n; ++i)
+        flagged += local.row("spike_count", i) > 0 || local.row("jump_count", i) > 0;
+    std::printf("n4m_procedure_tests: smooth 40x200 events (row-local vs population): "
+                "spikes %.0f vs %.0f, jumps %.0f vs %.0f, row-local flagged rows %lld/%lld\n",
+                local.scalar("global_spike_count"),
+                population.scalar("global_spike_count"),
+                local.scalar("global_jump_count"),
+                population.scalar("global_jump_count"),
+                static_cast<long long>(flagged),
+                static_cast<long long>(n));
+    // Row-local scale flags genuine absorption bands in (nearly) every spectrum.
+    CHECK(flagged >= n * 3 / 4);
+    CHECK(local.scalar("global_spike_count") > 4 * n);
+    CHECK(local.scalar("global_jump_count") > n);
+    // Bands shared by the population are not events.
+    CHECK(population.scalar("global_spike_count") == 0);
+    CHECK(population.scalar("global_jump_count") == 0);
+    CHECK(population.scalar("global_spike_eligible") == static_cast<double>(n * (p - 2)));
+    CHECK(population.ints("spike_count_status") == std::vector<int32_t>(n, 0));
+
+    current_ = "population events: injected spike and step";
+    auto x = smooth;
+    const int64_t spike_row = 7, spike_band = 100, step_row = 23, step_band = 50;
+    x[static_cast<size_t>(spike_row * p + spike_band)] += 0.05;
+    for (int64_t j = step_band; j < p; ++j)
+        x[static_cast<size_t>(step_row * p + j)] += 0.05;
+    Events injected;
+    run_events(ctx, kPopulation, x, n, p, injected);
+    CHECK(injected.status == N4M_OK);
+    const auto& spikes = injected.ints("spike_band_counts");
+    const auto& jumps = injected.ints("jump_band_counts");
+    CHECK(spikes[spike_band] == 1);
+    // A single-band spike perturbs the three second differences centred on it.
+    for (int64_t j = 0; j < p; ++j)
+        if (std::abs(j - spike_band) > 1 && j != step_band && j != step_band - 1)
+            CHECK(spikes[static_cast<size_t>(j)] == 0);
+    CHECK(injected.row("spike_count", spike_row) >= 1);
+    CHECK(jumps[step_band] == 1);
+    CHECK(injected.row("jump_count", step_row) == 1);
+    for (int64_t i = 0; i < n; ++i)
+        if (i != spike_row && i != step_row) {
+            CHECK(injected.row("spike_count", i) == 0);
+            CHECK(injected.row("jump_count", i) == 0);
+        }
+    for (int64_t j = 0; j < p; ++j) {
+        if (j != step_band && std::abs(j - spike_band) > 1)
+            CHECK(jumps[static_cast<size_t>(j)] == 0);
+        CHECK(injected.ints("jump_band_evaluated")[static_cast<size_t>(j)] == (j >= 1 ? n : 0));
+    }
+    CHECK(std::abs(injected.row("jump_fraction", step_row) - 1.0 / static_cast<double>(p - 1))
+          < 1e-15);
+
+    current_ = "population events: fewer than min_spectra";
+    Events few;
+    run_events(
+        ctx, kPopulation, std::vector<double>(smooth.begin(), smooth.begin() + 4 * p), 4, p, few);
+    CHECK(few.status == N4M_OK);
+    CHECK(few.ints("spike_count_status") == std::vector<int32_t>(4, 1));
+    CHECK(few.ints("jump_fraction_status") == std::vector<int32_t>(4, 1));
+    CHECK(few.ints("global_spike_count_status")[0] == 1);
+    CHECK(few.r.p->scalars.count("global_spike_count") == 0);
+    CHECK(few.ints("spike_band_evaluated") == std::vector<int32_t>(p, 0));
+
+    current_ = "population events: masked bands are never bridged";
+    auto masked_x = smooth;
+    std::vector<int64_t> mask(static_cast<size_t>(n * p), 1);
+    masked_x[static_cast<size_t>(3 * p + 100)] = 1e3;  // invalid cell: never read
+    mask[static_cast<size_t>(3 * p + 100)] = 0;
+    Events masked;
+    run_events(ctx, kPopulation, masked_x, n, p, masked, mask);
+    CHECK(masked.status == N4M_OK);
+    CHECK(masked.ints("jump_eligible_counts")[3] == p - 1 - 2);
+    CHECK(masked.ints("spike_eligible_counts")[3] == p - 2 - 3);
+    CHECK(masked.ints("spike_band_evaluated")[100] == n - 1);
+    CHECK(masked.ints("jump_band_evaluated")[101] == n - 1);
+    CHECK(masked.scalar("global_spike_count") == 0 && masked.scalar("global_jump_count") == 0);
+
+    current_ = "population events: zero population spread is undefined, not clean";
+    std::vector<double> ramps(static_cast<size_t>(n * p));
+    for (int64_t i = 0; i < n; ++i)
+        for (int64_t j = 0; j < p; ++j)
+            ramps[static_cast<size_t>(i * p + j)] = static_cast<double>(j);
+    Events flat;
+    run_events(ctx, kPopulation, ramps, n, p, flat);
+    CHECK(flat.status == N4M_OK);
+    CHECK(flat.ints("spike_scale_floor_status")[0] == 4
+          && flat.ints("jump_scale_floor_status")[0] == 4);
+    CHECK(flat.ints("spike_count_status") == std::vector<int32_t>(n, 4));
+    CHECK(flat.ints("global_jump_fraction_status")[0] == 4);
+    CHECK(flat.r.p->scalars.count("global_jump_fraction") == 0);
+    CHECK(flat.ints("jump_band_evaluated") == std::vector<int32_t>(p, 0));
+
+    current_ = "population events: irregular physical axis";
+    std::vector<double> axis(static_cast<size_t>(p)), linear(static_cast<size_t>(n * p));
+    for (int64_t j = 0; j < p; ++j)
+        axis[static_cast<size_t>(j)] =
+            350.0 * std::pow(2500.0 / 350.0, static_cast<double>(j) / (p - 1));
+    Gauss g{7};
+    for (int64_t i = 0; i < n; ++i) {
+        const double a = 1e-3 * (1 + g.uniform()), b = g.uniform();
+        for (int64_t j = 0; j < p; ++j)
+            linear[static_cast<size_t>(i * p + j)] = a * axis[static_cast<size_t>(j)] + b;
+    }
+    Events physical;
+    auto bumped = linear;
+    bumped[static_cast<size_t>(11 * p + 150)] += 5.0;
+    // Small white noise makes the physical second-derivative population scale defined.
+    for (int64_t i = 0; i < n; ++i)
+        for (int64_t j = 0; j < p; ++j)
+            bumped[static_cast<size_t>(i * p + j)] += 1e-4 * g.normal();
+    run_events(ctx, kPopulation, bumped, n, p, physical, {}, axis);
+    CHECK(physical.status == N4M_OK);
+    CHECK(physical.ints("spike_band_counts")[150] == 1);
+    CHECK(physical.row("spike_count", 11) >= 1);
+    for (int64_t i = 0; i < n; ++i)
+        if (i != 11)
+            CHECK(physical.row("spike_count", i) == 0);
+
+    current_ = "population events: invalid parameters";
+    Events refused;
+    run_events(ctx, kPopulation, smooth, n, p, refused, {}, {}, 0.0);
+    CHECK(refused.status == N4M_ERR_INVALID_ARGUMENT && refused.r.p == nullptr);
+    run_events(ctx, kPopulation, smooth, n, p, refused, {}, std::vector<double>(p - 1, 1.0));
+    CHECK(refused.status == N4M_ERR_INVALID_ARGUMENT);
+    auto reversed = axis;
+    std::swap(reversed[10], reversed[11]);
+    run_events(ctx, kPopulation, smooth, n, p, refused, {}, reversed);
+    CHECK(refused.status == N4M_ERR_INVALID_ARGUMENT);
+    run_events(ctx, kPopulation, smooth, n, p, refused, std::vector<int64_t>(5, 1));
+    CHECK(refused.status == N4M_ERR_INVALID_ARGUMENT);
+    int32_t index_id = -1;
+    CHECK(n4m_method_find(kPopulation, &index_id) == N4M_OK);
+    n4m_params_t* params = nullptr;
+    CHECK(n4m_params_create(ctx, index_id, &params) == N4M_OK);
+    CHECK(n4m_params_set_int(params, "min_spectra", 2) == N4M_ERR_INVALID_ARGUMENT);
+    CHECK(n4m_params_set_int(params, "min_spectra", 3) == N4M_OK);
+    n4m_params_destroy(params);
+}
+
 }  // namespace
 
 int main() {
@@ -1236,6 +1492,7 @@ int main() {
     const Inputs inputs;
     guarded([&] { test_entry_points(ctx); });
     guarded([&] { test_ragged_summary_extremes(ctx); });
+    guarded([&] { test_population_events(ctx); });
     int32_t estimator_index = -1;
     n4m_method_find("models.pls.pls_regression", &estimator_index);
     int32_t count = 0;

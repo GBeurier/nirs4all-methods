@@ -97,6 +97,46 @@ struct Data {
         return x[static_cast<std::size_t>(i * p + j)];
     }
 };
+// Declared derivative axis shared by the derivative-event protocols. Physical
+// slopes divide by the signed axis gap; the physical second derivative accounts
+// for irregular spacing. Index mode uses plain first/second differences.
+struct DeclaredAxis {
+    bool physical;
+    std::vector<double> axis;
+    DeclaredAxis(const Params& params, std::int64_t p)
+        : physical(params.get_int("axis_basis") == 1), axis(params.get_doubles("axis_values")) {
+        if (!physical)
+            return;
+        if (static_cast<std::int64_t>(axis.size()) != p)
+            throw std::invalid_argument("physical axis needs p values");
+        int direction = 0;
+        for (std::int64_t j = 1; j < p; ++j) {
+            const double delta =
+                axis[static_cast<std::size_t>(j)] - axis[static_cast<std::size_t>(j - 1)];
+            if (!std::isfinite(delta) || delta == 0)
+                throw std::invalid_argument("axis must be finite and strictly monotonic");
+            const int sign = delta > 0 ? 1 : -1;
+            if (direction && direction != sign)
+                throw std::invalid_argument("axis must be strictly monotonic");
+            direction = sign;
+        }
+    }
+    // Slope of row i over the pair (j, j+1); both bands must be valid.
+    double first(const Data& d, std::int64_t i, std::int64_t j) const {
+        return (d.at(i, j + 1) - d.at(i, j))
+               / (physical
+                      ? axis[static_cast<std::size_t>(j + 1)] - axis[static_cast<std::size_t>(j)]
+                      : 1.0);
+    }
+    // Second derivative of row i over the triple (j, j+1, j+2); all three must be valid.
+    double second(const Data& d, std::int64_t i, std::int64_t j) const {
+        const double slope = first(d, i, j), next = first(d, i, j + 1);
+        return physical ? 2 * (next - slope)
+                              / (axis[static_cast<std::size_t>(j + 2)]
+                                 - axis[static_cast<std::size_t>(j)])
+                        : next - slope;
+    }
+};
 std::unique_ptr<n4m_method_result_s> result(const Data& d) {
     auto out = std::make_unique<n4m_method_result_s>();
     out->set_scalar("protocol_version", 1);
@@ -233,23 +273,7 @@ n4m_status_t run_spectral_events_qc(n4m_context_t* ctx,
     return guarded(ctx, output, [&] {
         const Data d(params, in);
         auto out = result(d);
-        const auto axis = params.get_doubles("axis_values");
-        const bool physical = params.get_int("axis_basis") == 1;
-        if (physical) {
-            if (static_cast<std::int64_t>(axis.size()) != d.p)
-                throw std::invalid_argument("physical axis needs p values");
-            int direction = 0;
-            for (std::int64_t j = 1; j < d.p; ++j) {
-                const double delta =
-                    axis[static_cast<std::size_t>(j)] - axis[static_cast<std::size_t>(j - 1)];
-                if (!std::isfinite(delta) || delta == 0)
-                    throw std::invalid_argument("axis must be finite and strictly monotonic");
-                const int sign = delta > 0 ? 1 : -1;
-                if (direction && direction != sign)
-                    throw std::invalid_argument("axis must be strictly monotonic");
-                direction = sign;
-            }
-        }
+        const DeclaredAxis axis(params, d.p);
         const double threshold = params.get_double("outlier_threshold");
         if (!(threshold > 0))
             throw std::invalid_argument("threshold must be positive");
@@ -276,22 +300,9 @@ n4m_status_t run_spectral_events_qc(n4m_context_t* ctx,
                         || (std::isfinite(upper) && d.at(i, j) >= upper - tolerance))
                         ++clipped;
                     if (j + 1 < d.p && d.valid(i, j + 1)) {
-                        const double slope = (d.at(i, j + 1) - d.at(i, j))
-                                             / (physical ? axis[static_cast<std::size_t>(j + 1)]
-                                                               - axis[static_cast<std::size_t>(j)]
-                                                         : 1.0);
-                        diff.push_back(slope);
-                        if (j + 2 < d.p && d.valid(i, j + 2)) {
-                            const double next =
-                                (d.at(i, j + 2) - d.at(i, j + 1))
-                                / (physical ? axis[static_cast<std::size_t>(j + 2)]
-                                                  - axis[static_cast<std::size_t>(j + 1)]
-                                            : 1.0);
-                            second.push_back(physical ? 2 * (next - slope)
-                                                            / (axis[static_cast<std::size_t>(j + 2)]
-                                                               - axis[static_cast<std::size_t>(j)])
-                                                      : next - slope);
-                        }
+                        diff.push_back(axis.first(d, i, j));
+                        if (j + 2 < d.p && d.valid(i, j + 2))
+                            second.push_back(axis.second(d, i, j));
                     }
                 }
             auto count = [&](const std::vector<double>& values,
@@ -388,6 +399,115 @@ n4m_status_t run_spectral_events_qc(n4m_context_t* ctx,
         pooled("spike", spikes, sd);
         pooled("declared_clip", clips, cd);
 
+        return out;
+    });
+}
+
+// Derivative events judged against the other spectra at the same position: a
+// feature shared by the population (an absorption band) is not an event.
+n4m_status_t run_spectral_population_events_qc(n4m_context_t* ctx,
+                                               const Params& params,
+                                               const FitInputs& in,
+                                               n4m_method_result_t** output) {
+    return guarded(ctx, output, [&] {
+        const Data d(params, in);
+        auto out = result(d);
+        const DeclaredAxis axis(params, d.p);
+        const double threshold = params.get_double("outlier_threshold");
+        if (!(threshold > 0))
+            throw std::invalid_argument("threshold must be positive");
+        const auto min_spectra = static_cast<std::size_t>(params.get_int("min_spectra"));
+        const auto n = static_cast<std::size_t>(d.n), p = static_cast<std::size_t>(d.p);
+        // order 1: pairs (j, j+1); order 2: triples (j, j+1, j+2). Both attribute to band j+1.
+        auto evaluate = [&](int order, const std::string& kind) {
+            const auto span = static_cast<std::size_t>(order);
+            const std::size_t positions = p > span ? p - span : 0;
+            std::vector<double> value(n * positions, 0), center(positions, 0), scale(positions, 0);
+            std::vector<char> defined(n * positions, 0), evaluated(positions, 0);
+            std::vector<double> evaluated_scales;
+            for (std::size_t k = 0; k < positions; ++k) {
+                std::vector<double> column;
+                for (std::size_t i = 0; i < n; ++i) {
+                    bool all_valid = true;
+                    for (int o = 0; o <= order; ++o)
+                        all_valid = all_valid
+                                    && d.valid(static_cast<std::int64_t>(i),
+                                               static_cast<std::int64_t>(k) + o);
+                    if (!all_valid)
+                        continue;
+                    const auto row = static_cast<std::int64_t>(i),
+                               at = static_cast<std::int64_t>(k);
+                    const double v = order == 1 ? axis.first(d, row, at) : axis.second(d, row, at);
+                    value[i * positions + k] = v;
+                    defined[i * positions + k] = 1;
+                    column.push_back(v);
+                }
+                if (column.size() < min_spectra
+                    || std::any_of(column.begin(), column.end(), [](double v) {
+                           return !std::isfinite(v);
+                       }))
+                    continue;
+                const double c = quantile(column, .5);
+                for (double& v : column)
+                    v = std::abs(v - c);
+                const double sc = 1.4826 * quantile(column, .5);
+                if (!std::isfinite(sc))
+                    continue;
+                center[k] = c;
+                scale[k] = sc;
+                evaluated[k] = 1;
+                evaluated_scales.push_back(sc);
+            }
+            const double floor = evaluated_scales.empty() ? 0 : quantile(evaluated_scales, .5);
+            const auto kind_status = evaluated_scales.empty()                ? TOO_FEW
+                                     : !(floor > 0) || !std::isfinite(floor) ? UNDEFINED
+                                                                             : OK;
+            Signal count(kind + "_count", d.n), fraction(kind + "_fraction", d.n);
+            std::vector<std::int32_t> eligible(n, 0), band_counts(p, 0), band_evaluated(p, 0);
+            double total = 0, denominator = 0;
+            for (std::size_t i = 0; i < n; ++i) {
+                double events = 0;
+                for (std::size_t k = 0; k < positions; ++k) {
+                    if (!evaluated[k] || !defined[i * positions + k])
+                        continue;
+                    ++eligible[i];
+                    if (kind_status != OK)
+                        continue;
+                    ++band_evaluated[k + 1];
+                    if (std::abs(value[i * positions + k] - center[k])
+                        > threshold * std::max(scale[k], floor)) {
+                        ++events;
+                        ++band_counts[k + 1];
+                    }
+                }
+                if (!eligible[i])
+                    continue;  // no evaluated position for this row: TOO_FEW
+                const auto row = static_cast<std::int64_t>(i);
+                count.set(row, events, kind_status);
+                fraction.set(row, events / eligible[i], kind_status);
+                if (kind_status == OK) {
+                    total += events;
+                    denominator += eligible[i];
+                }
+            }
+            count.write(*out);
+            fraction.write(*out);
+            out->set_int_vector(kind + "_eligible_counts", eligible);
+            out->set_int_vector(kind + "_band_counts", band_counts);
+            out->set_int_vector(kind + "_band_evaluated", band_evaluated);
+            out->set_scalar(kind + "_positions_evaluated",
+                            static_cast<double>(evaluated_scales.size()));
+            scalar(*out, kind + "_scale_floor", floor, kind_status);
+            const auto pooled = denominator > 0 ? OK : kind_status == OK ? TOO_FEW : kind_status;
+            scalar(*out, "global_" + kind + "_count", total, pooled);
+            scalar(*out, "global_" + kind + "_eligible", denominator, pooled);
+            scalar(*out,
+                   "global_" + kind + "_fraction",
+                   denominator > 0 ? total / denominator : 0,
+                   pooled);
+        };
+        evaluate(1, "jump");
+        evaluate(2, "spike");
         return out;
     });
 }

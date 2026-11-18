@@ -46,6 +46,34 @@ SCIENTIFIC_CONTENT = {
         "Native generic procedure, signed monotonic physical axis and explicit typed masks. "
         "Synthetic offset/gain, injected jumps/spikes, irregular/reversed axes and bounded-sensor "
         "witnesses are independently checked before cross-binding transport parity."),
+    "diagnostics_spectral_population_events_qc": entry(
+        "Population-relative derivative events per band position",
+        "A versioned descriptive threshold protocol: at each band position, the normal-scaled "
+        "median absolute deviation (Rousseeuw and Croux, 1993, Alternatives to the Median "
+        "Absolute Deviation, https://doi.org/10.1080/01621459.1993.10476408) of the "
+        "derivatives across spectra. NumPy defines the independent difference oracle: "
+        "https://numpy.org/doc/stable/reference/generated/numpy.diff.html.",
+        "Use the same first and second derivatives as the row-local event protocol, including "
+        "signed physical slopes and the irregular-spacing second derivative. For each pair "
+        "(j,j+1) or triple (j,j+1,j+2), take the rows where all bands are valid; with at least "
+        "min_spectra rows, center is their median and scale is 1.4826 times their MAD. "
+        "The scale floor is the median scale over evaluated positions of the same derivative "
+        "order; an event is abs(d-center) > threshold*max(scale,floor). Events are attributed "
+        "to band j+1. Row fractions divide by the row's evaluated positions.",
+        "Flagging narrow spikes and steps that are atypical relative to the other spectra at "
+        "the same band position, so that absorption features shared by the population are not "
+        "reported as events, and locating events along the axis with per-band counts.",
+        "Atypicality is relative to the supplied population: a mixture of instruments, "
+        "products or acquisition settings widens the per-position scale and hides events, "
+        "while a feature present in only a few spectra can be flagged. An event is not proof "
+        "of cosmic rays, detector splices or any physical cause. Positions with fewer than "
+        "min_spectra eligible spectra are not evaluated, and zero population spread makes the "
+        "derivative order undefined rather than clean. Missing bands are not bridged.",
+        "One mask-aware native generic procedure sharing the declared-axis derivative helper "
+        "of the row-local protocol, which is unchanged. Independent NumPy oracles validate "
+        "masks, irregular physical axes, per-band attribution and pooled denominators; smooth "
+        "multi-band synthetic spectra and injected spike/step witnesses check the intended contrast "
+        "with row-local scaling."),
     "diagnostics_spectral_noise_proxy": entry(
         "Second-difference MAD high-frequency descriptive proxy",
         "A declared noise proxy under an approximately smooth signal, using normal-scaled MAD. "

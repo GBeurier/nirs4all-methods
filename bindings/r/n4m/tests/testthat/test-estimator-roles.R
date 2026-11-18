@@ -68,6 +68,7 @@ testthat::test_that("every manifest estimator has a generated R constructor", {
                               "utilities.ragged_summary",
                               "utilities.finite_column_quantiles",
                               "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
+                              "diagnostics.spectral_population_events_qc",
                               "diagnostics.spectral_noise_proxy", "diagnostics.local_density",
                               "diagnostics.pca_reference_qc"))
 })

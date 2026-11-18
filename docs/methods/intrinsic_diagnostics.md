@@ -11,10 +11,14 @@ A binary with ABI 2.20 can predate these methods: call `n4m_method_find` or insp
 the manifest before using an ID. Source version, binary capability and registry
 publication are separate facts.
 
+A sixth procedure, `diagnostics.spectral_population_events_qc`, was added later
+under the unchanged ABI 2.23; discover it by method ID in the same way.
+
 | ID | Native behavior |
 | --- | --- |
 | `diagnostics.spectral_reference_qc` | RMS, SAM in radians, OLS offset/gain, residual RMS; reference is a native per-feature dataset mean or an explicitly supplied frozen reference. |
 | `diagnostics.spectral_events_qc` | Row and pooled jump/spike counts, fractions and eligible denominators; physical-axis derivatives are distinct from index differences. Clipping requires declared sensor bounds. Observed-extrema occupancy is a separate descriptive proxy. |
+| `diagnostics.spectral_population_events_qc` | Jump/spike events judged against the other spectra at the same band position (median and normal-scaled MAD across spectra, floored at the median scale of that derivative order), with the same derivatives and signal names as `spectral_events_qc` plus per-band event and evaluated counts. Positions with fewer than `min_spectra` eligible spectra are not evaluated; heterogeneous populations widen the scale. |
 | `diagnostics.spectral_noise_proxy` | Descriptive second-difference MAD proxy, normalization `1.4826/sqrt(6)`, amplitude ratio and `20 log10` ratio. This is neither instrumental SNR nor the existing SG residual proxy. |
 | `diagnostics.local_density` | Real native fixed-k LOF with stable distance/index ties; training scores exclude self. Novelty uses the fitted reference neighborhood. The legacy distance-ratio proxy is not called LOF by this protocol. |
 | `diagnostics.pca_reference_qc` | Native exact Gram/Jacobi PCA fit on `X_target` only; exposes means, loadings, retained ddof-1 eigenvalues, train/query scores and Q/T² without computing exact full-spectrum moments. |
