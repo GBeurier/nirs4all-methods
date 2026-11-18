@@ -56,8 +56,21 @@ export RUSTFLAGS="${RUSTFLAGS:-} -C linker=$clang -C link-arg=-fsanitize=$clang_
 # Build the exact Rust test harness first, then prove that it dynamically
 # resolves clang's selected runtime before executing it. This prevents a green
 # Cargo test that only happened to load a system GCC sanitizer runtime.
-cargo test --locked --workspace --no-run
-mapfile -t test_binaries < <(find "$CARGO_TARGET_DIR/debug/deps" -maxdepth 1 -type f -perm -111 -name 'n4m-*' -print)
+# Ask Cargo for the library unit-test executable instead of assuming a
+# target-directory layout: newer Cargo places test binaries outside debug/deps.
+mapfile -t test_binaries < <(
+  cargo test --locked --workspace --no-run --message-format=json \
+    | python3 -c '
+import json, sys
+for line in sys.stdin:
+    message = json.loads(line)
+    target = message.get("target") or {}
+    if (message.get("reason") == "compiler-artifact" and target.get("name") == "n4m"
+            and "test" not in target.get("kind", []) and (message.get("profile") or {}).get("test")
+            and message.get("executable")):
+        print(message["executable"])
+'
+)
 if (( ${#test_binaries[@]} != 1 )); then
   echo "expected exactly one Rust n4m test executable, found ${#test_binaries[@]}" >&2
   printf '%s\n' "${test_binaries[@]}" >&2
