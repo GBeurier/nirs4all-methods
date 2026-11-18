@@ -49,6 +49,8 @@ To regenerate the per-platform ABI snapshots after an intentional surface change
 
 ABI versioning (`N4M_ABI_VERSION_*` in `cpp/include/n4m/n4m_version.h`) is **independent of project version** and bumps only on surface change. `n4m_check_abi_compatibility(header_major, header_minor)` is how bindings detect header/runtime skew.
 
+Versioning: versions are `X.Y.Z`. `Z` = fixes and purely additive, backward-compatible features (for example a new catalog method) with existing outputs, wire formats, schemas and ABI symbols unchanged; `Y` = any compatibility break (changed/removed API signature, ABI break or ABI version change, wire/byte/schema/fixture change, renamed ids, changed numerical results of existing operations); `X` = product version. This repository classifies its bumps: an ABI version change, additive or not, ships in a Methods minor and an `n4m` crate minor. Cross-repository dependencies accept one tested series, `>=X.Y[.Z],<X.(Y+1)` (patch floor only when a fix or feature from that patch is required); for 1.x packages never npm `^1.x` or Cargo `"1.x"`: use `~1.4.1`, `">=1.4.1, <1.5"`, `>=1.4.1,<1.5`. Exact pins only in lockfiles and wheel locks; the packages of this repository stay in lockstep. See [release process](docs/dev/release_process.md#cross-repository-version-constraints) and the [ecosystem version constraints](https://github.com/GBeurier/nirs4all-ecosystem/blob/main/docs/contracts/release/VERSION_CONSTRAINTS.md).
+
 
 ## Working rules
 
