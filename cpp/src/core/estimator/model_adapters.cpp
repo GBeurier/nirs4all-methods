@@ -651,7 +651,7 @@ std::unique_ptr<Adapter> make_tr_ds(const MethodSpec&) {
                    ? N4M_OK
                    : N4M_ERR_CORRUPT_BUFFER;
     };
-    return fitted(std::move(kernel));
+    return with_traits(fitted(std::move(kernel)), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_pds(const MethodSpec&) {
@@ -684,7 +684,7 @@ std::unique_ptr<Adapter> make_tr_pds(const MethodSpec&) {
         }
         return N4M_OK;
     };
-    return fitted(std::move(kernel));
+    return with_traits(fitted(std::move(kernel)), kAffine);
 }
 
 }  // namespace n4m::estimator

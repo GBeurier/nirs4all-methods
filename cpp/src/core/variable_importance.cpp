@@ -126,24 +126,21 @@ template <typename Value>
 
 namespace n4m::core {
 
-n4m_status_t compute_vip_scores(Context& ctx,
-                                const Model& model,
-                                std::vector<double>& out) {
+n4m_status_t compute_vip_from_scores(Context& ctx,
+                                     const Model& model,
+                                     const std::vector<double>& scores,
+                                     std::size_t n,
+                                     std::vector<double>& out) {
     try {
         out.clear();
-        n4m_status_t status = validate_scores_available(ctx, model);
-        if (status != N4M_OK) {
-            return status;
-        }
-        status = validate_model_arrays(ctx, model);
-        if (status != N4M_OK) {
-            return status;
-        }
-
-        const auto n = static_cast<std::size_t>(model.n_samples);
         const auto p = static_cast<std::size_t>(model.n_features);
         const auto q = static_cast<std::size_t>(model.n_targets);
         const auto a = static_cast<std::size_t>(model.n_components);
+        if (p == 0 || q == 0 || a == 0 || n == 0 || scores.size() != n * a ||
+            model.weights_w.size() != p * a || model.y_loadings_q.size() != q * a) {
+            ctx.set_error("fitted model arrays are inconsistent for variable importance");
+            return N4M_ERR_INTERNAL;
+        }
 
         // VIP_j = sqrt(p sum_a SSY_a (w_ja / ||w_a||)^2 / sum_a SSY_a), with
         // SSY_a = ||t_a||^2 ||q_a||^2 (R plsVarSel::VIP, which normalises each
@@ -166,7 +163,7 @@ n4m_status_t compute_vip_scores(Context& ctx,
                 continue;
             }
             const double t_norm = scaled_norm(
-                n, [&](std::size_t row) { return model.scores_t[idx(row, a, comp)]; });
+                n, [&](std::size_t row) { return scores[idx(row, a, comp)]; });
             const double q_norm = scaled_norm(
                 q, [&](std::size_t target) { return model.y_loadings_q[idx(target, a, comp)]; });
             explained[comp] = t_norm * q_norm;
@@ -209,6 +206,96 @@ n4m_status_t compute_vip_scores(Context& ctx,
     }
 }
 
+n4m_status_t compute_vip_scores(Context& ctx,
+                                const Model& model,
+                                std::vector<double>& out) {
+    out.clear();
+    n4m_status_t status = validate_scores_available(ctx, model);
+    if (status != N4M_OK) {
+        return status;
+    }
+    status = validate_model_arrays(ctx, model);
+    if (status != N4M_OK) {
+        return status;
+    }
+    return compute_vip_from_scores(ctx, model, model.scores_t,
+                                   static_cast<std::size_t>(model.n_samples), out);
+}
+
+n4m_status_t selectivity_ratio_from_reconstruction(Context& ctx,
+                                                   const std::vector<double>& z,
+                                                   std::size_t n,
+                                                   std::size_t p,
+                                                   const std::vector<double>& scores,
+                                                   const std::vector<double>& loadings,
+                                                   std::size_t a,
+                                                   std::vector<double>& out) {
+    try {
+        out.clear();
+        if (z.size() != n * p || scores.size() != n * a || loadings.size() != p * a) {
+            ctx.set_error("selectivity ratio arrays are inconsistent");
+            return N4M_ERR_INTERNAL;
+        }
+        // SR_j = ||T P_j'||^2 / ||z_j - T P_j'||^2 on the model-space column
+        // z_j. The ratio does not depend on the units of z_j: both sums are
+        // accumulated on the column divided by the exact power of two of its
+        // largest magnitude, then divided, with no floor on the residual. A
+        // column reconstructed exactly (residual 0) has SR = +inf when it
+        // carries explained variation and SR = 0 when it is identically zero
+        // in model space (nothing to explain).
+        std::vector<double> column_max(p, 0.0);
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                column_max[feature] =
+                    std::max(column_max[feature], std::fabs(z[idx(row, p, feature)]));
+            }
+        }
+        std::vector<int> column_exponent(p, 0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            if (column_max[feature] > 0.0) {
+                column_exponent[feature] = std::ilogb(column_max[feature]);
+            }
+        }
+
+        std::vector<double> explained(p, 0.0);
+        std::vector<double> residual(p, 0.0);
+        for (std::size_t row = 0; row < n; ++row) {
+            for (std::size_t feature = 0; feature < p; ++feature) {
+                double reconstructed = 0.0;
+                for (std::size_t comp = 0; comp < a; ++comp) {
+                    reconstructed += scores[idx(row, a, comp)] * loadings[idx(feature, a, comp)];
+                }
+                const int e = column_exponent[feature];
+                const double fitted = std::ldexp(reconstructed, -e);
+                const double error = std::ldexp(z[idx(row, p, feature)] - reconstructed, -e);
+                explained[feature] += fitted * fitted;
+                residual[feature] += error * error;
+            }
+        }
+
+        out.assign(p, 0.0);
+        for (std::size_t feature = 0; feature < p; ++feature) {
+            if (residual[feature] > 0.0) {
+                out[feature] = explained[feature] / residual[feature];
+            } else {
+                out[feature] = explained[feature] > 0.0
+                                   ? std::numeric_limits<double>::infinity()
+                                   : 0.0;
+            }
+        }
+        ctx.clear_error();
+        return N4M_OK;
+    } catch (const std::bad_alloc&) {
+        ctx.set_error("out of memory while computing selectivity ratio");
+        out.clear();
+        return N4M_ERR_OUT_OF_MEMORY;
+    } catch (...) {
+        ctx.set_error("unexpected exception while computing selectivity ratio");
+        out.clear();
+        return N4M_ERR_INTERNAL;
+    }
+}
+
 n4m_status_t compute_selectivity_ratio(Context& ctx,
                                        const Model& model,
                                        const n4m_matrix_view_t& X,
@@ -232,15 +319,9 @@ n4m_status_t compute_selectivity_ratio(Context& ctx,
         const auto p = static_cast<std::size_t>(model.n_features);
         const auto a = static_cast<std::size_t>(model.n_components);
 
-        // SR_j = ||T P_j'||^2 / ||x_j - T P_j'||^2 on the model-space column
-        // x_j = (X_j - x_mean_j) / x_scale_j. The ratio does not depend on the
-        // units of x_j: both sums are accumulated on the column divided by the
-        // exact power of two of its largest magnitude, then divided, with no
-        // floor on the residual. A column reconstructed exactly (residual 0)
-        // has SR = +inf when it carries explained variation and SR = 0 when
-        // it is identically zero in model space (nothing to explain).
+        // Model-space column x_j = (X_j - x_mean_j) / x_scale_j, reconstructed
+        // by the stored training scores and the X loadings.
         std::vector<double> x_model(n * p, 0.0);
-        std::vector<double> column_max(p, 0.0);
         for (std::size_t row = 0; row < n; ++row) {
             for (std::size_t feature = 0; feature < p; ++feature) {
                 const double value = read_value(X, row, feature);
@@ -251,49 +332,12 @@ n4m_status_t compute_selectivity_ratio(Context& ctx,
                     out.clear();
                     return N4M_ERR_INVALID_ARGUMENT;
                 }
-                const double x_scaled = (value - model.x_mean[feature]) / model.x_scale[feature];
-                x_model[idx(row, p, feature)] = x_scaled;
-                column_max[feature] = std::max(column_max[feature], std::fabs(x_scaled));
+                x_model[idx(row, p, feature)] =
+                    (value - model.x_mean[feature]) / model.x_scale[feature];
             }
         }
-        std::vector<int> column_exponent(p, 0);
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            if (column_max[feature] > 0.0) {
-                column_exponent[feature] = std::ilogb(column_max[feature]);
-            }
-        }
-
-        std::vector<double> explained(p, 0.0);
-        std::vector<double> residual(p, 0.0);
-        for (std::size_t row = 0; row < n; ++row) {
-            for (std::size_t feature = 0; feature < p; ++feature) {
-                double reconstructed = 0.0;
-                for (std::size_t comp = 0; comp < a; ++comp) {
-                    reconstructed +=
-                        model.scores_t[idx(row, a, comp)] *
-                        model.loadings_p[idx(feature, a, comp)];
-                }
-                const int e = column_exponent[feature];
-                const double fitted = std::ldexp(reconstructed, -e);
-                const double error = std::ldexp(x_model[idx(row, p, feature)] - reconstructed, -e);
-                explained[feature] += fitted * fitted;
-                residual[feature] += error * error;
-            }
-        }
-
-        out.assign(p, 0.0);
-        for (std::size_t feature = 0; feature < p; ++feature) {
-            if (residual[feature] > 0.0) {
-                out[feature] = explained[feature] / residual[feature];
-            } else {
-                out[feature] = explained[feature] > 0.0
-                                   ? std::numeric_limits<double>::infinity()
-                                   : 0.0;
-            }
-        }
-
-        ctx.clear_error();
-        return N4M_OK;
+        return selectivity_ratio_from_reconstruction(ctx, x_model, n, p, model.scores_t,
+                                                     model.loadings_p, a, out);
     } catch (const std::bad_alloc&) {
         ctx.set_error("out of memory while computing selectivity ratio");
         out.clear();

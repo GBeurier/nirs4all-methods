@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
+#include "core/common/column_stats.hpp"
 #include "core/pipeline.hpp"
 
 #include <algorithm>
@@ -164,9 +165,8 @@ void fit_column_scale(const std::vector<double>& values,
             const double centered = values[idx(row, cols, col)] - mean[col];
             sumsq += centered * centered;
         }
-        const double stddev = std::sqrt(sumsq / denom);
-        const double raw_scale = pareto ? std::sqrt(stddev) : stddev;
-        scale[col] = (raw_scale == 0.0 || !std::isfinite(raw_scale)) ? 1.0 : raw_scale;
+        const double stddev = ::n4m::core::detail::guarded_scale(std::sqrt(sumsq / denom));
+        scale[col] = pareto ? std::sqrt(stddev) : stddev;
     }
 }
 

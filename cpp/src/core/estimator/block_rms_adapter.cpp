@@ -128,7 +128,7 @@ class BlockRmsAdapter final : public Adapter {
 }  // namespace
 
 std::unique_ptr<Adapter> make_tr_block_rms(const MethodSpec&) {
-    return std::make_unique<BlockRmsAdapter>();
+    return with_traits(std::make_unique<BlockRmsAdapter>(), kAffineAligned);
 }
 
 }  // namespace n4m::estimator

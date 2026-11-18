@@ -11,6 +11,7 @@
 #include <new>
 
 #include "core/common/context.hpp"
+#include "core/estimator/intrinsic_importance.hpp"
 #include "core/estimator/spec.hpp"
 #include "core/method_result.hpp"
 #include "n4m/estimator.h"
@@ -272,7 +273,8 @@ N4M_API n4m_status_t n4m_method_info_v1(int32_t index, n4m_method_info_v1_t* out
         info.fq_name = spec->fq_name;
         info.roles = spec->roles;
         info.n_params = spec->n_params;
-        info.capabilities = spec->factory != nullptr ? spec->factory(*spec)->capabilities() : 0;
+        info.capabilities =
+            spec->factory != nullptr ? spec->factory(*spec)->public_capabilities() : 0;
         info.state_format = spec->state_format;
         for (int k = 0; k < N4M_FIT_INPUT_COUNT; ++k) info.inputs[k] = spec->inputs[k];
         return write_descriptor(out, sizeof(n4m_method_info_v1_t), info);
@@ -493,7 +495,7 @@ N4M_API n4m_status_t n4m_estimator_info(const n4m_estimator_t* est, int32_t* out
         return N4M_ERR_NULL_POINTER;
     }
     *out_method_index = est->method_index;
-    *out_capabilities = est->fitted ? est->adapter->capabilities() : 0;
+    *out_capabilities = est->fitted ? est->adapter->public_capabilities() : 0;
     return N4M_OK;
 }
 
@@ -787,5 +789,129 @@ N4M_API n4m_status_t n4m_estimator_import_from_buffer(n4m_context_t* ctx, const 
             est);
         if (st == N4M_OK) *out = est.release();
         return st;
+    });
+}
+
+/* ---- Model-intrinsic structure and importances (ABI 2.24) ----------- */
+
+namespace {
+// Copies `values` into a caller buffer of `capacity` doubles (NULL allowed
+// when `optional`).
+n4m_status_t copy_out(n4m_context_t* ctx, const std::vector<double>& values, double* out,
+                      int64_t capacity, const char* name, bool optional) {
+    if (out == nullptr) {
+        if (optional) return N4M_OK;
+        n4m::estimator::set_error_named(ctx, "output buffer is NULL", name);
+        return N4M_ERR_NULL_POINTER;
+    }
+    if (capacity < 0 || static_cast<std::uint64_t>(capacity) < values.size()) {
+        n4m::estimator::set_error_named(ctx, "output buffer is too small", name);
+        return N4M_ERR_SHAPE_MISMATCH;
+    }
+    std::copy(values.begin(), values.end(), out);
+    return N4M_OK;
+}
+
+n4m_status_t check_estimator(n4m_context_t* ctx, const n4m_estimator_t* est) {
+    if (ctx == nullptr) return N4M_ERR_NULL_POINTER;
+    if (est == nullptr) {
+        set_error(ctx, "estimator is NULL");
+        return N4M_ERR_NULL_POINTER;
+    }
+    ctx->clear_error();
+    return N4M_OK;
+}
+}  // namespace
+
+N4M_API n4m_status_t n4m_estimator_affine_coefficients_v1(n4m_context_t* ctx,
+                                                          const n4m_estimator_t* est,
+                                                          double* coefficients,
+                                                          int64_t coefficients_size,
+                                                          double* intercept,
+                                                          int64_t intercept_size) {
+    n4m_status_t st = check_estimator(ctx, est);
+    if (st != N4M_OK) return st;
+    return guarded(ctx, [&]() {
+        std::vector<double> B, b;
+        n4m_status_t s = n4m::estimator::affine_map(ctx, *est, B, b);
+        if (s != N4M_OK) return s;
+        if (coefficients == nullptr || intercept == nullptr) {
+            set_error(ctx, "coefficients and intercept must be non-NULL");
+            return N4M_ERR_NULL_POINTER;
+        }
+        if (coefficients_size < 0 || static_cast<std::uint64_t>(coefficients_size) < B.size() ||
+            intercept_size < 0 || static_cast<std::uint64_t>(intercept_size) < b.size()) {
+            set_error(ctx, "coefficients needs n_features_in * n_outputs and intercept "
+                           "n_outputs doubles");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        std::copy(B.begin(), B.end(), coefficients);
+        std::copy(b.begin(), b.end(), intercept);
+        return N4M_OK;
+    });
+}
+
+N4M_API n4m_status_t n4m_estimator_latent_structure_v1(n4m_context_t* ctx,
+                                                       const n4m_estimator_t* est,
+                                                       int64_t* out_n_components,
+                                                       double* x_weights,
+                                                       double* x_rotations,
+                                                       double* x_loadings,
+                                                       int64_t features_size,
+                                                       double* y_loadings,
+                                                       int64_t targets_size,
+                                                       double* x_mean,
+                                                       double* x_scale,
+                                                       int64_t mean_size) {
+    n4m_status_t st = check_estimator(ctx, est);
+    if (st != N4M_OK) return st;
+    if (out_n_components == nullptr) {
+        set_error(ctx, "out_n_components is NULL");
+        return N4M_ERR_NULL_POINTER;
+    }
+    *out_n_components = 0;
+    return guarded(ctx, [&]() {
+        n4m::estimator::LatentStructure latent;
+        n4m_status_t s = n4m::estimator::latent_structure(ctx, *est, latent);
+        if (s != N4M_OK) return s;
+        const std::uint64_t pa = latent.x_weights->size(), qa = latent.y_loadings->size(),
+                            p = latent.x_mean->size();
+        const auto small = [](const double* buf, int64_t size, std::uint64_t need) {
+            return buf != nullptr && (size < 0 || static_cast<std::uint64_t>(size) < need);
+        };
+        if (small(x_weights, features_size, pa) || small(x_rotations, features_size, pa) ||
+            small(x_loadings, features_size, pa) || small(y_loadings, targets_size, qa) ||
+            small(x_mean, mean_size, p) || small(x_scale, mean_size, p)) {
+            set_error(ctx, "latent structure buffers are too small (p x a, q x a, p)");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        const auto put = [](const std::vector<double>* src, double* dst) {
+            if (dst != nullptr) std::copy(src->begin(), src->end(), dst);
+        };
+        put(latent.x_weights, x_weights);
+        put(latent.x_rotations, x_rotations);
+        put(latent.x_loadings, x_loadings);
+        put(latent.y_loadings, y_loadings);
+        put(latent.x_mean, x_mean);
+        put(latent.x_scale, x_scale);
+        *out_n_components = latent.n_components;
+        return N4M_OK;
+    });
+}
+
+N4M_API n4m_status_t n4m_estimator_importance_v1(n4m_context_t* ctx,
+                                                 const n4m_estimator_t* est,
+                                                 const n4m_matrix_view_t* X,
+                                                 int32_t kind,
+                                                 int64_t output_index,
+                                                 double* out,
+                                                 int64_t out_size) {
+    n4m_status_t st = check_estimator(ctx, est);
+    if (st != N4M_OK) return st;
+    return guarded(ctx, [&]() {
+        std::vector<double> values;
+        n4m_status_t s = n4m::estimator::importance(ctx, *est, X, kind, output_index, values);
+        if (s != N4M_OK) return s;
+        return copy_out(ctx, values, out, out_size, "out", false);
     });
 }

@@ -141,7 +141,7 @@ std::unique_ptr<Adapter> make_tr_cow_align(const MethodSpec&) {
 
 std::unique_ptr<Adapter> make_tr_direct_standardization(const MethodSpec&) {
     using H = n4m_pp_direct_standardization_handle_t;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params& p) {
              return n4m_domain_adaptation_direct_standardization_create(
                  h, p.get_bool("fit_intercept") ? 1 : 0, p.get_double("ridge"));
@@ -153,12 +153,12 @@ std::unique_ptr<Adapter> make_tr_direct_standardization(const MethodSpec&) {
          n4m_domain_adaptation_direct_standardization_destroy,
          {},
          direct_standardization_state_save,
-         direct_standardization_state_load});
+         direct_standardization_state_load}), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_robust_direct_standardization(const MethodSpec&) {
     using H = n4m_pp_robust_direct_standardization_handle_t;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params& p) {
              return n4m_domain_adaptation_robust_direct_standardization_create(
                  h, p.get_bool("fit_intercept") ? 1 : 0, p.get_double("ridge"),
@@ -171,12 +171,12 @@ std::unique_ptr<Adapter> make_tr_robust_direct_standardization(const MethodSpec&
          n4m_domain_adaptation_robust_direct_standardization_destroy,
          {},
          robust_direct_standardization_state_save,
-         robust_direct_standardization_state_load});
+         robust_direct_standardization_state_load}), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_piecewise_direct_standardization(const MethodSpec&) {
     using H = n4m_pp_piecewise_direct_standardization_handle_t;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params& p) {
              return n4m_domain_adaptation_piecewise_direct_standardization_create(
                  h, to_i32(p.get_int("window_size")), p.get_bool("fit_intercept") ? 1 : 0,
@@ -189,7 +189,7 @@ std::unique_ptr<Adapter> make_tr_piecewise_direct_standardization(const MethodSp
          n4m_domain_adaptation_piecewise_direct_standardization_destroy,
          {},
          piecewise_direct_standardization_state_save,
-         piecewise_direct_standardization_state_load});
+         piecewise_direct_standardization_state_load}), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_saps(const MethodSpec&) {
@@ -225,22 +225,22 @@ std::unique_ptr<Adapter> make_tr_local_centering(const MethodSpec&) {
 }
 
 std::unique_ptr<Adapter> make_tr_piecewise_msc(const MethodSpec&) {
-    return msc<n4m_pp_piecewise_msc_handle_t>(
+    return with_traits(msc<n4m_pp_piecewise_msc_handle_t>(
         n4m_transform_piecewise_msc_create, n4m_transform_piecewise_msc_fit,
         n4m_transform_piecewise_msc_transform, n4m_transform_piecewise_msc_destroy,
-        piecewise_msc_state_save, piecewise_msc_state_load);
+        piecewise_msc_state_save, piecewise_msc_state_load), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_localized_msc(const MethodSpec&) {
-    return msc<n4m_pp_localized_msc_handle_t>(
+    return with_traits(msc<n4m_pp_localized_msc_handle_t>(
         n4m_transform_localized_msc_create, n4m_transform_localized_msc_fit,
         n4m_transform_localized_msc_transform, n4m_transform_localized_msc_destroy,
-        localized_msc_state_save, localized_msc_state_load);
+        localized_msc_state_save, localized_msc_state_load), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_piecewise_snv(const MethodSpec&) {
     using H = n4m_pp_piecewise_snv_handle_t;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params& p) {
              return n4m_transform_piecewise_snv_create(h, to_i32(p.get_int("window_size")),
                                                        to_i32(p.get_int("ddof")),
@@ -253,12 +253,12 @@ std::unique_ptr<Adapter> make_tr_piecewise_snv(const MethodSpec&) {
          n4m_transform_piecewise_snv_destroy,
          {},
          piecewise_snv_state_save,
-         piecewise_snv_state_load});
+         piecewise_snv_state_load}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_weighted_snv(const MethodSpec&) {
     using H = n4m_pp_weighted_snv_handle_t;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params& p) {
              const std::vector<double> weights = p.get_doubles("weights");
              return n4m_transform_weighted_snv_create(h, weights.data(),
@@ -273,12 +273,12 @@ std::unique_ptr<Adapter> make_tr_weighted_snv(const MethodSpec&) {
          n4m_transform_weighted_snv_destroy,
          {},
          weighted_snv_state_save,
-         weighted_snv_state_load});
+         weighted_snv_state_load}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_vsn(const MethodSpec&) {
     using H = n4m_pp_vsn_handle_t;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params& p) { return n4m_transform_vsn_create(h, p.get_double("eps")); },
          [](n4m_context_t*, H* h, const FitInputs& in) {
              return fit_x(n4m_transform_vsn_fit, h, in);
@@ -287,12 +287,12 @@ std::unique_ptr<Adapter> make_tr_vsn(const MethodSpec&) {
          n4m_transform_vsn_destroy,
          {},
          vsn_state_save,
-         vsn_state_load});
+         vsn_state_load}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_slope_bias(const MethodSpec&) {
     using H = SlopeBiasColumns;
-    return fitted<H>(
+    return with_traits(fitted<H>(
         {[](H** h, const Params&) {
              *h = new H();
              return N4M_OK;
@@ -344,7 +344,7 @@ std::unique_ptr<Adapter> make_tr_slope_bias(const MethodSpec&) {
                  if (st == N4M_OK) st = slope_bias_state_load(c, r, 1);
              }
              return st;
-         }});
+         }}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_interval_generator(const MethodSpec&) {

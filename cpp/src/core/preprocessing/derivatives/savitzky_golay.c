@@ -519,6 +519,16 @@ n4m_status_t n4m_pp_savgol_state_apply(const n4m_pp_savgol_state_t* state,
                 }
                 dst[j] = acc;
             }
+            /* Mirror padding makes the neighbourhoods of the first and last
+             * samples symmetric, so an odd-order derivative over an odd
+             * (centred) window is exactly zero there. Write that exact value
+             * instead of the rounding of the convolution (about 1e-17),
+             * which downstream autoscaling would amplify. Every other output
+             * is unchanged. */
+            if (pad == N4M_PAD_MIRROR && (w % 2) == 1 && (state->deriv % 2) == 1) {
+                dst[0] = 0.0;
+                dst[cols - 1] = 0.0;
+            }
         }
 
         if (in_place) {

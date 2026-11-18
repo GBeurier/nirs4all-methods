@@ -2,6 +2,7 @@
 //
 // Exact Ridge CV sweep over row-additive moments.
 
+#include "core/common/column_stats.hpp"
 #include "core/sweep.hpp"
 
 #include <algorithm>
@@ -402,7 +403,7 @@ void column_means(const std::vector<double>& mat,
                 ss += v * v;
             }
             const double scale = std::sqrt(ss / static_cast<double>(rows));
-            out.x_scale[c] = (scale > 0.0) ? scale : 1.0;
+            out.x_scale[c] = ::n4m::core::detail::guarded_scale(scale);
         }
         for (std::size_t r = 0; r < rows; ++r) {
             for (std::size_t c = 0; c < p; ++c) {
@@ -981,7 +982,7 @@ void design_cross_moments(const Config& cfg,
         for (std::size_t i = 0; i < p; ++i) {
             const double var = std::max(0.0, xx[i * p + i] * inv_n);
             const double s = std::sqrt(var);
-            scale[i] = (s > 0.0) ? s : 1.0;
+            scale[i] = ::n4m::core::detail::guarded_scale(s);
         }
         for (std::size_t i = 0; i < p; ++i) {
             for (std::size_t j = 0; j < p; ++j) {
@@ -1060,7 +1061,7 @@ void design_cross_moments(const Config& cfg,
         for (std::size_t i = 0; i < p; ++i) {
             const double var = std::max(0.0, xx[i * p + i] * inv_n);
             const double s = std::sqrt(var);
-            scale[i] = (s > 0.0) ? s : 1.0;
+            scale[i] = ::n4m::core::detail::guarded_scale(s);
         }
         for (std::size_t i = 0; i < p; ++i) {
             for (std::size_t j = 0; j < p; ++j) {
@@ -1412,7 +1413,7 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
         for (std::size_t i = 0; i < p; ++i) {
             const double var = std::max(0.0, xx[i * p + i] / denom);
             const double s = std::sqrt(var);
-            x_scale[i] = (s > 0.0 && std::isfinite(s)) ? s : 1.0;
+            x_scale[i] = ::n4m::core::detail::guarded_scale(s);
         }
     }
     if (cfg.scale_y != 0) {
@@ -1420,7 +1421,7 @@ double ridge_heldout_sse_from_moments(const MomentStats& heldout,
             static_cast<double>(std::max<std::int64_t>(stats.n_samples - 1, 1));
         const double var = std::max(0.0, yy / denom);
         const double s = std::sqrt(var);
-        y_scale[0] = (s > 0.0 && std::isfinite(s)) ? s : 1.0;
+        y_scale[0] = ::n4m::core::detail::guarded_scale(s);
     }
 
     for (std::size_t i = 0; i < p; ++i) {

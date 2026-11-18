@@ -347,7 +347,9 @@ _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_export_to_buffer, n4m_status_
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_estimator_import_from_buffer, n4m_status_t (*)(n4m_context_t*, const void*, size_t, n4m_estimator_t**)), "n4m_estimator_import_from_buffer signature drifted");
 
 /* Role pipelines (n4m/estimator.h, ABI 2.14). */
-_Static_assert(sizeof(n4m_role_pipeline_step_info_v1_t) == 48, "Rust RolePipelineStepInfoV1Raw size is stale relative to the C header");
+/* The Rust struct is the ABI 2.14 prefix (48 bytes): the library writes only struct_size bytes, and
+ * ABI 2.24 appended affine/column_aligned after n_features_out. */
+_Static_assert(offsetof(n4m_role_pipeline_step_info_v1_t, n_features_out) + sizeof(int64_t) == 48, "Rust RolePipelineStepInfoV1Raw prefix size is stale relative to the C header");
 _Static_assert(offsetof(n4m_role_pipeline_step_info_v1_t, role) == 16, "Rust RolePipelineStepInfoV1Raw.role offset is stale relative to the C header");
 _Static_assert(offsetof(n4m_role_pipeline_step_info_v1_t, n_features_in) == 32, "Rust RolePipelineStepInfoV1Raw.n_features_in offset is stale relative to the C header");
 _Static_assert(N4M_RUST_SIGNATURE_IS(n4m_role_pipeline_create, n4m_status_t (*)(n4m_context_t*, int32_t, const char* const*, const n4m_params_t* const*, n4m_role_pipeline_t**)), "n4m_role_pipeline_create signature drifted");

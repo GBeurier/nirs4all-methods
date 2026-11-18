@@ -342,6 +342,13 @@ target_include_directories(n4m_explain_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 n4m_add_warnings(n4m_explain_tests)
 add_test(NAME n4m_explain_tests COMMAND n4m_explain_tests)
 
+# Model-intrinsic importances, affine pipelines and the gradient explainer (ABI 2.24).
+add_executable(n4m_importance_tests test_importance.cpp)
+target_link_libraries(n4m_importance_tests PRIVATE n4m_c)
+target_include_directories(n4m_importance_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+n4m_add_warnings(n4m_importance_tests)
+add_test(NAME n4m_importance_tests COMMAND n4m_importance_tests)
+
 add_executable(n4m_fanova_tests test_fanova.cpp include_check_fanova.c)
 target_link_libraries(n4m_fanova_tests PRIVATE n4m_c)
 target_include_directories(n4m_fanova_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
