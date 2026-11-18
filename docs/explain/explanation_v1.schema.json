@@ -28,7 +28,7 @@
   "properties": {
     "schema": {"const": "nirs4all.explanation.v1"},
     "kind": {
-      "description": "Explainer that produced the attributions.",
+      "description": "Explainer that produced the attributions (gradient: ABI 2.24 local finite-difference gradient times (x - background mean), not additive).",
       "enum": [
         "exact_shap",
         "permutation_shap",
@@ -37,7 +37,8 @@
         "occlusion",
         "linear_shap",
         "tree_shap",
-        "deep_shap"
+        "deep_shap",
+        "gradient"
       ]
     },
     "engine": {

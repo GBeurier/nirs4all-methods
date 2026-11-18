@@ -1,8 +1,10 @@
-# Model explanations (ABI 2.23)
+# Model explanations (ABI 2.23, importances ABI 2.24)
 
 `n4m/explain.h` provides attribution kernels for any fitted model: Shapley-value
 estimators of a feature-group game, LIME, occlusion, exact linear SHAP and
-path-dependent TreeSHAP. The numerics live once in the C++17 core and reach
+path-dependent TreeSHAP, a local finite-difference gradient explainer (ABI
+2.24) and model-intrinsic importance profiles (ABI 2.24, see
+[Model-intrinsic importances](#model-intrinsic-importances-abi-224)). The numerics live once in the C++17 core and reach
 every host (Python `n4m.explain`, JavaScript/WebAssembly `explainModel`, Rust
 FFI) through the same C ABI. Results are exchanged as the
 [`nirs4all.explanation.v1`](explain/explanation_v1.schema.json) envelope built
@@ -20,6 +22,7 @@ Status vocabulary: **implemented** (tested in this release), **experimental**
 | Occlusion / ablation | session `N4M_EXPLAIN_OCCLUSION` | implemented | perturbation | no |
 | Linear SHAP | `n4m_explain_linear_v1` | implemented | exact (interventional) | yes |
 | Path-dependent TreeSHAP | `n4m_explain_tree_path_dependent_v1` | implemented | exact | yes |
+| Local gradient (ABI 2.24) | session `N4M_EXPLAIN_GRADIENT` | implemented | perturbation (central finite differences) | no (exact for affine models) |
 | Integrated Gradients | — | planned | — | — |
 | Conditional / on-manifold baselines | — | planned | — | — |
 
@@ -148,6 +151,7 @@ and `C` is the number of non-full coalitions per row:
 | Kernel SHAP | `K` | `K + 1` |
 | LIME | `N - 1` | `N - 1` (no empty coalition) |
 | Occlusion | `G` | `G + 1` |
+| Gradient | `2F` (`F` features; `B` = 1) | refused |
 
 `P = n_permutations` (antithetic pairs), `N = n_coalitions` for LIME (default
 1000, the all-present mask included), and for Kernel SHAP `K = 2^G - 2` when the
@@ -244,6 +248,81 @@ exports). Path-dependent TreeSHAP conditions on the training distribution
 encoded by the covers; it is not interventional SHAP against a background.
 Hosts own the model exporters.
 
+### Local gradient — implemented (ABI 2.24)
+
+`N4M_EXPLAIN_GRADIENT` evaluates, per explained row `x` and feature `j`, the
+central difference `g_j = (f(x + h_j e_j) - f(x - h_j e_j)) / ((x_j + h_j) -
+(x_j - h_j))` (the denominator is the step actually represented, so rounding of
+the perturbed coordinate is exact in the quotient), and the first-order
+attribution `phi_j = g_j (x_j - r_j)` with `r` the column mean of the
+background (both `BACKGROUND` and `MEAN` select this mean reference;
+`INTERPOLATE` is refused). `expected = f(r)` (one evaluation), `predictions =
+f(x)`; grouped values are sums over the group's features
+(`sum_of_feature_values`). The cost is `R (2F + 1) + 1` evaluations.
+
+Step: `h_j = step * s_j`, `s_j` the population standard deviation of background
+column `j` (or `|r_j|` when it is zero, 1 when `r_j` is zero too); `step`
+defaults to `1e-3` and is set with `n4m_explain_session_set_gradient_step_v1`
+before the first batch. For smooth models the truncation error is `O(h^2)`; for
+piecewise-constant models (trees) a central difference measures a local slope
+over `[x - h, x + h]` and is generally not meaningful.
+
+The method is not additive in general; for an exactly affine model `f(z) = z B
++ c`, `g = B` and the attributions equal linear SHAP with the mean reference
+(tested to 1e-8). `n4m_explain_session_gradients_v1` returns the per-row
+gradients `[row][feature][output]`, their mean over rows (the "mean local
+coefficient" profile) and the steps.
+
+## Model-intrinsic importances (ABI 2.24)
+
+Exact properties of fitted estimators, through the generic estimator surface
+(`n4m/estimator.h`), for any method whose fitted state exposes them (no
+per-method lists):
+
+* `n4m_estimator_affine_coefficients_v1`: `predict(X) = X B + b` of any
+  estimator declaring `N4M_CAP_AFFINE` (PLS family, PCR, OPLS, Ridge, the
+  affine AOM and multiblock heads), also after N4ME import. Typed refusal
+  (`N4M_ERR_UNSUPPORTED`) otherwise.
+* `n4m_estimator_latent_structure_v1`: `W`, `R = W (P'W)^-1`, `P`, `Q`, x mean
+  and scale of latent-variable models fitted through `n4m_model_fit` (PLS
+  regression, PCR, OPLS, recursive PLS). Affine predictors that keep only
+  coefficients refuse.
+* `n4m_estimator_importance_v1` on rows supplied in the estimator's input space
+  (normally the preprocessed training partition; the host records which):
+  * VIP: `SSY_a = ||t_a||^2 ||q_a||^2` with `T = ((X - x_mean) / x_scale) R`
+    of the supplied rows; the formula of
+    `n4m_feature_selection_variable_select_rank` (shared kernel). Mean of
+    `VIP_j^2` is 1. All outputs together.
+  * Selectivity ratio: target projection (Rajalahti et al. 2009) on one output:
+    `Z = (X - row mean) / x_scale`, `w = B_model[:, o] / ||B_model[:, o]||`
+    (`B_model = x_scale * B`), `t = Z w`, `p = Z't / t't`,
+    `SR_j = ||t p_j||^2 / ||z_j - t p_j||^2` (shared ratio kernel; `+inf` for a
+    column reconstructed exactly). Any affine estimator. This is not the
+    all-components ratio of `n4m_feature_selection_variable_select_rank`.
+  * Standardized coefficients: `B[j][o] * sd_j`, sample standard deviation
+    (`ddof = 1`) of the supplied rows.
+* `n4m_role_pipeline_input_affine_coefficients_v1`: exact raw-input map of a
+  pipeline whose transformers / selectors declare `N4M_CAP_AFFINE_TRANSFORM`
+  and whose terminal step is affine: `B_raw = A' B`, `b_raw = c' B + b`, with
+  `z = A x + c` the composed transform chain read from the fitted transforms
+  (`c = T(0)`, `A e_j = T(e_j) - T(0)`, batched). The first non-affine step is
+  named in the refusal. The method-level traits `N4M_CAP_AFFINE_TRANSFORM`
+  and `N4M_CAP_COLUMN_ALIGNED` are reported by `n4m_method_info_v1`, the
+  manifest (`affine_transform`, `column_aligned`) and, per step,
+  `n4m_role_pipeline_step_info_v1` (`affine`, `column_aligned`). Every
+  declaration of `N4M_CAP_AFFINE_TRANSFORM` is checked exactly
+  (`T(a x + (1 - a) z) = a T(x) + (1 - a) T(z)`) by `cpp/tests/test_importance.cpp`.
+
+Numerical caveat: the raw-input map is as exact as the pipeline itself. A
+feature that is identically zero in exact arithmetic but carries rounding
+(for example the first column of a mirror-mode Savitzky-Golay derivative,
+about 1e-17) and is then autoscaled amplifies that rounding in the model and
+therefore in its predictions and coefficients alike.
+
+Hosts wrap global profiles in the
+[`nirs4all.importance_profile.v1`](explain/importance_profile_v1.schema.json)
+envelope.
+
 ## Helpers
 
 * `n4m_explain_groups_fixed_width_v1`: feature `j` goes to group `j / width`;
@@ -255,14 +334,26 @@ Hosts own the model exporters.
   refused.
 * `n4m_explain_summarize_v1`: per-group mean absolute (magnitude) and mean
   signed attribution over rows for one output.
+* `n4m_explain_summarize_std_error_v1` (ABI 2.24): Monte-Carlo standard error
+  of the row-mean signed attribution, `sqrt(sum_r se_rg^2) / R`.
+* `n4m_explain_perturb_rows_v1` (ABI 2.24): the rows a session sends to the
+  model for one coalition (absent groups filled by the baseline with the
+  session's filling code), for baseline previews.
+* `n4m_explain_aggregate_profile_v1` (ABI 2.24): per-feature profile to groups
+  (`sum`, `mean`, `sum_abs`, `mean_abs`, `max_abs`).
+* `n4m_explain_compare_profiles_v1` (ABI 2.24): `m x m` Spearman correlation of
+  average ranks (through `n4m_stats_correlation_test`, equal to
+  `scipy.stats.spearmanr`; NaN for a constant profile) and top-K Jaccard overlap
+  by `|value|` (lowest index on ties).
 
 ## Limitations
 
 * No conditional or on-manifold baselines: absent groups take background, mean
   or interpolated values independently of the present groups. Interpolation
   mitigates, but does not remove, off-manifold perturbations.
-* No Integrated Gradients or other gradient methods (neural models are not
-  available in every host).
+* No Integrated Gradients or analytic gradients (neural models are not
+  available in every host); the local gradient explainer uses finite
+  differences of the host predictions.
 * TreeSHAP is path-dependent only; grouped tree values are sums of per-feature
   values, not group-game values.
 * Kernel SHAP and LIME are experimental; validation covers exactness on full

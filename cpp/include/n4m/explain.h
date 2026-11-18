@@ -64,7 +64,23 @@ typedef enum n4m_explain_method_t {
     N4M_EXPLAIN_LIME = 3,
     /* Occlusion / ablation: attribution[g] = f(x) - f(x with group g replaced
      * by the baseline). expected holds f(baseline). Not additive. */
-    N4M_EXPLAIN_OCCLUSION = 4
+    N4M_EXPLAIN_OCCLUSION = 4,
+    /* ABI 2.24. Local gradient (first order, not a Shapley method): per
+     * explained row x and feature j, the central finite difference
+     *   g_j = (f(x + h_j e_j) - f(x - h_j e_j)) / ((x_j + h_j) - (x_j - h_j))
+     * (2 n_features evaluations per row, plus f(x) per row and f(r) once),
+     * and the first-order attribution phi_j = g_j (x_j - r_j) with the
+     * reference r = column mean of the background rows (the BACKGROUND and
+     * MEAN baselines both select this mean reference; INTERPOLATE is
+     * refused). Grouped attributions are sums over the group's features.
+     * expected = f(r), predictions = f(x). Not additive in general
+     * (sum_j phi_j + f(r) = f(x) exactly when f is affine, where the result
+     * equals linear SHAP with the mean reference). Step h_j = step * s_j,
+     * s_j the population standard deviation of background column j, or
+     * |r_j| when that is 0 (1 when r_j is 0 too); step defaults to 1e-3
+     * (n4m_explain_session_set_gradient_step_v1). The gradients are read
+     * with n4m_explain_session_gradients_v1. */
+    N4M_EXPLAIN_GRADIENT = 5
 } n4m_explain_method_t;
 
 /* How an "absent" group is filled. */
@@ -157,6 +173,48 @@ N4M_API n4m_status_t n4m_explain_session_result_v1(n4m_context_t* ctx,
                                                    int64_t predictions_size,
                                                    double* std_error,
                                                    int64_t std_error_size);
+
+/* ABI 2.24. GRADIENT sessions only, before the first next_batch: relative
+ * step of the central differences (finite and > 0; default 1e-3). */
+N4M_API n4m_status_t n4m_explain_session_set_gradient_step_v1(n4m_context_t* ctx,
+                                                              n4m_explain_session_t* session,
+                                                              double relative_step);
+
+/* ABI 2.24. GRADIENT sessions only, once the plan is complete. Every output
+ * is nullable: gradients [row][feature][output] (n_rows * n_features *
+ * n_outputs), mean_gradient [feature][output] (mean over the explained
+ * rows, n_features * n_outputs) and steps (the absolute step h_j of each
+ * feature, n_features). */
+N4M_API n4m_status_t n4m_explain_session_gradients_v1(n4m_context_t* ctx,
+                                                      const n4m_explain_session_t* session,
+                                                      double* gradients,
+                                                      int64_t gradients_size,
+                                                      double* mean_gradient,
+                                                      int64_t mean_gradient_size,
+                                                      double* steps,
+                                                      int64_t steps_size);
+
+/* ABI 2.24. The rows a session sends to the model for one coalition: for
+ * every row of X, the features of the n_absent groups listed in
+ * absent_groups (distinct, in [0, n_groups)) are filled by the baseline
+ * with the session's own filling code, the other features keep X. Inputs
+ * are validated as by n4m_explain_session_create_v1 (background required
+ * for BACKGROUND and MEAN, contiguous groups for INTERPOLATE). Output,
+ * row-major n_features columns: BACKGROUND writes n_background rows per
+ * row of X (row i, background row b at i * n_background + b); MEAN and
+ * INTERPOLATE one row per row of X. *out_n_rows receives the row count;
+ * out_rows may be NULL (with capacity 0) to query it. */
+N4M_API n4m_status_t n4m_explain_perturb_rows_v1(n4m_context_t* ctx,
+                                                 const n4m_matrix_view_t* X,
+                                                 const n4m_matrix_view_t* background,
+                                                 const int64_t* feature_group,
+                                                 int64_t n_groups,
+                                                 int32_t baseline,
+                                                 const int64_t* absent_groups,
+                                                 int64_t n_absent,
+                                                 double* out_rows,
+                                                 int64_t out_rows_capacity,
+                                                 int64_t* out_n_rows);
 
 /* ---------------------------------------------------------------------------
  * 2. Model-specific exact explainers.
@@ -267,6 +325,58 @@ N4M_API n4m_status_t n4m_explain_summarize_v1(const double* attributions,
                                               double* mean_abs,
                                               double* mean_signed,
                                               int64_t summary_size);
+
+/* ABI 2.24. Monte-Carlo standard error of the row-mean signed attribution
+ * of one output, per group: sqrt(sum_r std_error[r][g][o]^2) / n_rows (rows
+ * are independent draws). NaN propagates (a single antithetic pair). */
+N4M_API n4m_status_t n4m_explain_summarize_std_error_v1(const double* std_error,
+                                                        int64_t n_rows,
+                                                        int64_t n_groups,
+                                                        int64_t n_outputs,
+                                                        int64_t output_index,
+                                                        double* mean_signed_std_error,
+                                                        int64_t summary_size);
+
+/* ---------------------------------------------------------------------------
+ * 4. Importance profiles (ABI 2.24): aggregation and comparison.
+ * --------------------------------------------------------------------------- */
+
+typedef enum n4m_profile_aggregation_t {
+    N4M_PROFILE_SUM = 0,      /* sum of the group's values */
+    N4M_PROFILE_MEAN = 1,     /* mean of the group's values */
+    N4M_PROFILE_SUM_ABS = 2,  /* sum of |value| */
+    N4M_PROFILE_MEAN_ABS = 3, /* mean of |value| */
+    N4M_PROFILE_MAX_ABS = 4   /* max of |value| */
+} n4m_profile_aggregation_t;
+
+/* Aggregates a per-feature profile (n_features values, not NaN; +-inf is
+ * kept, e.g. an infinite selectivity ratio) over a feature partition
+ * (feature_group as in section 1; NULL = one group per feature) into
+ * n_groups values (out_size >= n_groups). */
+N4M_API n4m_status_t n4m_explain_aggregate_profile_v1(n4m_context_t* ctx,
+                                                      const double* values,
+                                                      int64_t n_features,
+                                                      const int64_t* feature_group,
+                                                      int64_t n_groups,
+                                                      int32_t rule,
+                                                      double* out,
+                                                      int64_t out_size);
+
+/* Pairwise agreement of m profiles over the same G entries (profiles: F64
+ * view m x G, m >= 1, G >= 2, no NaN; +-inf allowed). spearman (m x m,
+ * row-major, nullable): Spearman correlation of average ranks, computed by
+ * the Spearman correlation primitive of metrics.h (equals
+ * scipy.stats.spearmanr; NaN when a
+ * profile is constant). top_k_jaccard (m x m, nullable): |A_i n A_k| /
+ * |A_i u A_k| with A_i the K = min(top_k, G) entries of largest |value| of
+ * profile i (lowest index on ties); top_k >= 1. */
+N4M_API n4m_status_t n4m_explain_compare_profiles_v1(n4m_context_t* ctx,
+                                                     const n4m_matrix_view_t* profiles,
+                                                     int64_t top_k,
+                                                     double* spearman,
+                                                     int64_t spearman_size,
+                                                     double* top_k_jaccard,
+                                                     int64_t jaccard_size);
 
 #ifdef __cplusplus
 }

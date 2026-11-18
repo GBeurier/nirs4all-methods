@@ -208,152 +208,152 @@ std::unique_ptr<Adapter> stateless(Kernel<H> kernel) {
 // ---- baselines --------------------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_airpls(const MethodSpec&) {
-    return stateless<n4m_pp_airpls_handle_t>(
+    return with_traits(stateless<n4m_pp_airpls_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_airpls_create(h, p.get_double("lam"), i32(p.get_int("max_iter")),
                                                 p.get_double("tol"));
          },
-         n4m_transform_airpls_transform, n4m_transform_airpls_destroy, {}});
+         n4m_transform_airpls_transform, n4m_transform_airpls_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_arpls(const MethodSpec&) {
-    return stateless<n4m_pp_arpls_handle_t>(
+    return with_traits(stateless<n4m_pp_arpls_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_arpls_create(h, p.get_double("lam"), i32(p.get_int("max_iter")),
                                                p.get_double("tol"));
          },
-         n4m_transform_arpls_transform, n4m_transform_arpls_destroy, {}});
+         n4m_transform_arpls_transform, n4m_transform_arpls_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_asls(const MethodSpec&) {
-    return stateless<n4m_pp_asls_handle_t>(
+    return with_traits(stateless<n4m_pp_asls_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_asls_create(h, p.get_double("lam"), p.get_double("p"),
                                               i32(p.get_int("max_iter")), p.get_double("tol"));
          },
-         n4m_transform_asls_transform, n4m_transform_asls_destroy, {}});
+         n4m_transform_asls_transform, n4m_transform_asls_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_beads(const MethodSpec&) {
-    return stateless<n4m_pp_beads_handle_t>(
+    return with_traits(stateless<n4m_pp_beads_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_beads_create(h, p.get_double("lam_0"), p.get_double("lam_1"),
                                                p.get_double("lam_2"), i32(p.get_int("max_iter")),
                                                p.get_double("tol"));
          },
-         n4m_transform_beads_transform, n4m_transform_beads_destroy, {}});
+         n4m_transform_beads_transform, n4m_transform_beads_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_detrend(const MethodSpec&) {
-    return stateless<n4m_pp_detrend_handle_t>(
+    return with_traits(stateless<n4m_pp_detrend_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_detrend_create(h, i32(p.get_int("polyorder")));
          },
-         n4m_transform_detrend_transform, n4m_transform_detrend_destroy, {}});
+         n4m_transform_detrend_transform, n4m_transform_detrend_destroy, {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_imodpoly(const MethodSpec&) {
-    return stateless<n4m_pp_imodpoly_handle_t>(
+    return with_traits(stateless<n4m_pp_imodpoly_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_imodpoly_create(h, i32(p.get_int("polyorder")),
                                                   i32(p.get_int("max_iter")), p.get_double("tol"));
          },
-         n4m_transform_imodpoly_transform, n4m_transform_imodpoly_destroy, {}});
+         n4m_transform_imodpoly_transform, n4m_transform_imodpoly_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_modpoly(const MethodSpec&) {
-    return stateless<n4m_pp_modpoly_handle_t>(
+    return with_traits(stateless<n4m_pp_modpoly_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_modpoly_create(h, i32(p.get_int("polyorder")),
                                                  i32(p.get_int("max_iter")), p.get_double("tol"));
          },
-         n4m_transform_modpoly_transform, n4m_transform_modpoly_destroy, {}});
+         n4m_transform_modpoly_transform, n4m_transform_modpoly_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_rolling_ball(const MethodSpec&) {
-    return stateless<n4m_pp_rolling_ball_handle_t>(
+    return with_traits(stateless<n4m_pp_rolling_ball_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_rolling_ball_create(h, i32(p.get_int("half_window")),
                                                       i32(p.get_int("smooth_half_window")));
          },
-         n4m_transform_rolling_ball_transform, n4m_transform_rolling_ball_destroy, {}});
+         n4m_transform_rolling_ball_transform, n4m_transform_rolling_ball_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_snip(const MethodSpec&) {
-    return stateless<n4m_pp_snip_handle_t>(
+    return with_traits(stateless<n4m_pp_snip_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_snip_create(h, i32(p.get_int("max_half_window")));
          },
-         n4m_transform_snip_transform, n4m_transform_snip_destroy, {}});
+         n4m_transform_snip_transform, n4m_transform_snip_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_iasls(const MethodSpec&) {
-    return stateless<n4m_pp_iasls_handle_t>(
+    return with_traits(stateless<n4m_pp_iasls_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_iasls_create_ex(
                  h, p.get_double("lam"), p.get_double("p"), p.get_double("lam_1"),
                  i32(p.get_int("polyorder")), i32(p.get_int("diff_order")),
                  i32(p.get_int("max_iter")), p.get_double("tol"));
          },
-         n4m_transform_iasls_transform, n4m_transform_iasls_destroy, {}});
+         n4m_transform_iasls_transform, n4m_transform_iasls_destroy, {}}), kAligned);
 }
 
 // ---- derivatives and smoothing ---------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_first_derivative(const MethodSpec&) {
-    return stateless<n4m_pp_first_derivative_handle_t>(
+    return with_traits(stateless<n4m_pp_first_derivative_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_first_derivative_create(h, p.get_double("delta"),
                                                           i32(p.get_int("edge_order")));
          },
-         n4m_transform_first_derivative_transform, n4m_transform_first_derivative_destroy, {}});
+         n4m_transform_first_derivative_transform, n4m_transform_first_derivative_destroy, {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_second_derivative(const MethodSpec&) {
-    return stateless<n4m_pp_second_derivative_handle_t>(
+    return with_traits(stateless<n4m_pp_second_derivative_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_second_derivative_create(h, p.get_double("delta"),
                                                            i32(p.get_int("edge_order")));
          },
-         n4m_transform_second_derivative_transform, n4m_transform_second_derivative_destroy, {}});
+         n4m_transform_second_derivative_transform, n4m_transform_second_derivative_destroy, {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_norris_williams(const MethodSpec&) {
-    return stateless<n4m_pp_norris_williams_handle_t>(
+    return with_traits(stateless<n4m_pp_norris_williams_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_norris_williams_create(
                  h, i32(p.get_int("segment")), i32(p.get_int("gap")),
                  i32(p.get_int("derivative_order")), p.get_double("delta"));
          },
-         n4m_transform_norris_williams_transform, n4m_transform_norris_williams_destroy, {}});
+         n4m_transform_norris_williams_transform, n4m_transform_norris_williams_destroy, {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_savitzky_golay(const MethodSpec&) {
-    return stateless<n4m_pp_savgol_handle_t>(
+    return with_traits(stateless<n4m_pp_savgol_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_savitzky_golay_create(
                  h, i32(p.get_int("window_length")), i32(p.get_int("polyorder")),
                  i32(p.get_int("deriv")), p.get_double("delta"),
                  static_cast<n4m_pp_savgol_mode_t>(p.get_int("mode")), p.get_double("cval"));
          },
-         n4m_transform_savitzky_golay_transform, n4m_transform_savitzky_golay_destroy, {}});
+         n4m_transform_savitzky_golay_transform, n4m_transform_savitzky_golay_destroy, {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_gaussian(const MethodSpec&) {
-    return stateless<n4m_pp_gaussian_handle_t>(
+    return with_traits(stateless<n4m_pp_gaussian_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_gaussian_create(
                  h, p.get_double("sigma"), i32(p.get_int("order")),
                  static_cast<n4m_pp_gaussian_mode_t>(p.get_int("mode")), p.get_double("cval"),
                  p.get_double("truncate"));
          },
-         n4m_transform_gaussian_transform, n4m_transform_gaussian_destroy, {}});
+         n4m_transform_gaussian_transform, n4m_transform_gaussian_destroy, {}}), kAffineAligned);
 }
 
 // ---- resampling ------------------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_crop(const MethodSpec&) {
-    return stateless<n4m_pp_crop_handle_t>(
+    return with_traits(stateless<n4m_pp_crop_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_crop_create(h, p.get_int("start"), p.get_int("end"));
          },
@@ -361,11 +361,11 @@ std::unique_ptr<Adapter> make_tr_crop(const MethodSpec&) {
          [](const n4m_pp_crop_handle_t* h, std::int64_t in, std::int64_t* out) {
              *out = n4m_transform_crop_output_cols(h, in);
              return N4M_OK;
-         }});
+         }}), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_resample(const MethodSpec&) {
-    return stateless<n4m_pp_resample_handle_t>(
+    return with_traits(stateless<n4m_pp_resample_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_resample_transformer_create(h, p.get_int("num_samples"));
          },
@@ -373,47 +373,47 @@ std::unique_ptr<Adapter> make_tr_resample(const MethodSpec&) {
          [](const n4m_pp_resample_handle_t* h, std::int64_t in, std::int64_t* out) {
              *out = n4m_transform_resample_transformer_output_cols(h, in);
              return N4M_OK;
-         }});
+         }}), kAffine);
 }
 
 // ---- scatter ----------------------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_area_normalization(const MethodSpec&) {
-    return stateless<n4m_pp_area_handle_t>(
+    return with_traits(stateless<n4m_pp_area_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_area_normalization_create(h, i32(p.get_int("method")));
          },
-         n4m_transform_area_normalization_transform, n4m_transform_area_normalization_destroy, {}});
+         n4m_transform_area_normalization_transform, n4m_transform_area_normalization_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_local_snv(const MethodSpec&) {
-    return stateless<n4m_pp_lsnv_handle_t>(
+    return with_traits(stateless<n4m_pp_lsnv_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_local_snv_create(h, i32(p.get_int("window")),
                                                    i32(p.get_int("pad_mode")),
                                                    p.get_double("constant_value"));
          },
-         n4m_transform_local_snv_transform, n4m_transform_local_snv_destroy, {}});
+         n4m_transform_local_snv_transform, n4m_transform_local_snv_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_robust_snv(const MethodSpec&) {
-    return stateless<n4m_pp_rnv_handle_t>(
+    return with_traits(stateless<n4m_pp_rnv_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_robust_snv_create(h, p.get_bool("with_center") ? 1 : 0,
                                                     p.get_bool("with_scale") ? 1 : 0,
                                                     p.get_double("k"));
          },
-         n4m_transform_robust_snv_transform, n4m_transform_robust_snv_destroy, {}});
+         n4m_transform_robust_snv_transform, n4m_transform_robust_snv_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_snv(const MethodSpec&) {
-    return stateless<n4m_pp_snv_handle_t>(
+    return with_traits(stateless<n4m_pp_snv_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_snv_create(h, p.get_bool("with_mean") ? 1 : 0,
                                              p.get_bool("with_std") ? 1 : 0,
                                              i32(p.get_int("ddof")));
          },
-         n4m_transform_snv_transform, n4m_transform_snv_destroy, {}});
+         n4m_transform_snv_transform, n4m_transform_snv_destroy, {}}), kAligned);
 }
 
 // ---- row scaling -----------------------------------------------------------
@@ -421,7 +421,7 @@ std::unique_ptr<Adapter> make_tr_snv(const MethodSpec&) {
 std::unique_ptr<Adapter> make_tr_row_l2_normalize(const MethodSpec&) {
     // No learned statistics or method-specific public handle. Reuse WTD1 width state.
     struct RowL2Kernel {};
-    return stateless<RowL2Kernel>(
+    return with_traits(stateless<RowL2Kernel>(
         {[](RowL2Kernel** h, const Params&) {
              *h = new RowL2Kernel{};
              return N4M_OK;
@@ -434,76 +434,76 @@ std::unique_ptr<Adapter> make_tr_row_l2_normalize(const MethodSpec&) {
          },
          {},
          true,
-         n4m::core::row_l2_validate_input});
+         n4m::core::row_l2_validate_input}), kAligned);
 }
 
 // ---- signal conversion -----------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_fraction_to_percent(const MethodSpec&) {
-    return stateless<n4m_pp_frac_to_pct_handle_t>(
+    return with_traits(stateless<n4m_pp_frac_to_pct_handle_t>(
         {[](auto** h, const Params&) { return n4m_transform_fraction_to_percent_create(h); },
          n4m_transform_fraction_to_percent_transform, n4m_transform_fraction_to_percent_destroy,
-         {}});
+         {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_percent_to_fraction(const MethodSpec&) {
-    return stateless<n4m_pp_pct_to_frac_handle_t>(
+    return with_traits(stateless<n4m_pp_pct_to_frac_handle_t>(
         {[](auto** h, const Params&) { return n4m_transform_percent_to_fraction_create(h); },
          n4m_transform_percent_to_fraction_transform, n4m_transform_percent_to_fraction_destroy,
-         {}});
+         {}}), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_from_absorbance(const MethodSpec&) {
-    return stateless<n4m_pp_from_absorbance_handle_t>(
+    return with_traits(stateless<n4m_pp_from_absorbance_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_from_absorbance_create(h, p.get_bool("is_percent") ? 1 : 0);
          },
-         n4m_transform_from_absorbance_transform, n4m_transform_from_absorbance_destroy, {}});
+         n4m_transform_from_absorbance_transform, n4m_transform_from_absorbance_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_kubelka_munk(const MethodSpec&) {
-    return stateless<n4m_pp_kubelka_munk_handle_t>(
+    return with_traits(stateless<n4m_pp_kubelka_munk_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_kubelka_munk_create(h, p.get_bool("is_percent") ? 1 : 0,
                                                       p.get_double("epsilon"));
          },
-         n4m_transform_kubelka_munk_transform, n4m_transform_kubelka_munk_destroy, {}});
+         n4m_transform_kubelka_munk_transform, n4m_transform_kubelka_munk_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_to_absorbance(const MethodSpec&) {
-    return stateless<n4m_pp_to_absorbance_handle_t>(
+    return with_traits(stateless<n4m_pp_to_absorbance_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_to_absorbance_create(h, p.get_bool("is_percent") ? 1 : 0,
                                                        p.get_double("epsilon"),
                                                        p.get_bool("clip_negative") ? 1 : 0);
          },
-         n4m_transform_to_absorbance_transform, n4m_transform_to_absorbance_destroy, {}});
+         n4m_transform_to_absorbance_transform, n4m_transform_to_absorbance_destroy, {}}), kAligned);
 }
 
 // ---- wavelets ---------------------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_haar(const MethodSpec&) {
-    return stateless<n4m_pp_haar_handle_t>(
+    return with_traits(stateless<n4m_pp_haar_handle_t>(
         {[](auto** h, const Params&) { return n4m_transform_haar_create(h); },
          n4m_transform_haar_transform, n4m_transform_haar_destroy,
          [](const n4m_pp_haar_handle_t*, std::int64_t in, std::int64_t* out) {
              return n4m_transform_haar_output_cols(in, out);
-         }});
+         }}), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_wavelet(const MethodSpec&) {
-    return stateless<n4m_pp_wavelet_handle_t>(
+    return with_traits(stateless<n4m_pp_wavelet_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_wavelet_create(
                  h, static_cast<n4m_pp_wavelet_family_t>(p.get_int("family")),
                  static_cast<n4m_pp_wavelet_boundary_t>(p.get_int("mode")));
          },
          n4m_transform_wavelet_transform, n4m_transform_wavelet_destroy,
-         n4m_transform_wavelet_output_cols});
+         n4m_transform_wavelet_output_cols}), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_wavelet_denoise(const MethodSpec&) {
-    return stateless<n4m_pp_wavelet_denoise_handle_t>(
+    return with_traits(stateless<n4m_pp_wavelet_denoise_handle_t>(
         {[](auto** h, const Params& p) {
              return n4m_transform_wavelet_denoise_create(
                  h, static_cast<n4m_pp_wavelet_family_t>(p.get_int("family")),
@@ -512,7 +512,7 @@ std::unique_ptr<Adapter> make_tr_wavelet_denoise(const MethodSpec&) {
                  static_cast<n4m_pp_wavelet_threshold_t>(p.get_int("threshold_mode")),
                  static_cast<n4m_pp_wavelet_noise_t>(p.get_int("noise_estimator")));
          },
-         n4m_transform_wavelet_denoise_transform, n4m_transform_wavelet_denoise_destroy, {}});
+         n4m_transform_wavelet_denoise_transform, n4m_transform_wavelet_denoise_destroy, {}}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_wavelet_features(const MethodSpec&) {

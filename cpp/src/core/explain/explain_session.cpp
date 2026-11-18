@@ -72,12 +72,17 @@ n4m_status_t Session::create(n4m_context_t* ctx, const n4m_matrix_view_t* X,
     }
     const int32_t method = options->method;
     const int32_t baseline = options->baseline;
-    if (method < N4M_EXPLAIN_EXACT_SHAP || method > N4M_EXPLAIN_OCCLUSION) {
+    if (method < N4M_EXPLAIN_EXACT_SHAP || method > N4M_EXPLAIN_GRADIENT) {
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "unknown explanation method");
     }
     if (baseline < N4M_EXPLAIN_BASELINE_BACKGROUND
         || baseline > N4M_EXPLAIN_BASELINE_INTERPOLATE) {
         return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "unknown explanation baseline");
+    }
+    if (method == N4M_EXPLAIN_GRADIENT && baseline == N4M_EXPLAIN_BASELINE_INTERPOLATE) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "GRADIENT uses the background mean as reference: choose the BACKGROUND or "
+                    "MEAN baseline");
     }
     n4m_status_t status = validate_f64_view(ctx, X, "X", 1);
     if (status != N4M_OK) {
@@ -161,7 +166,37 @@ n4m_status_t Session::create(n4m_context_t* ctx, const n4m_matrix_view_t* X,
                         "background must contain only finite values");
         }
         const auto n_bg = to_size(background->rows);
-        if (baseline == N4M_EXPLAIN_BASELINE_BACKGROUND) {
+        if (method == N4M_EXPLAIN_GRADIENT) {
+            // Mean reference r (both background baselines), and the
+            // per-feature scale of the finite-difference steps.
+            const std::size_t F = s.n_features_;
+            s.baseline_ = N4M_EXPLAIN_BASELINE_MEAN;
+            s.reference_.assign(F, 0.0);
+            s.gradient_scale_.assign(F, 0.0);
+            for (std::size_t b = 0; b < n_bg; ++b) {
+                for (std::size_t j = 0; j < F; ++j) {
+                    s.reference_[j] += bg[b * F + j];
+                }
+            }
+            for (double& v : s.reference_) {
+                v /= static_cast<double>(n_bg);
+            }
+            for (std::size_t b = 0; b < n_bg; ++b) {
+                for (std::size_t j = 0; j < F; ++j) {
+                    const double d = bg[b * F + j] - s.reference_[j];
+                    s.gradient_scale_[j] += d * d;
+                }
+            }
+            for (std::size_t j = 0; j < F; ++j) {
+                double scale = std::sqrt(s.gradient_scale_[j] / static_cast<double>(n_bg));
+                if (!(scale > 0.0)) {
+                    scale = s.reference_[j] != 0.0 ? std::fabs(s.reference_[j]) : 1.0;
+                }
+                s.gradient_scale_[j] = scale;
+            }
+            s.update_gradient_steps(s.gradient_step_);
+            s.n_base_ = 1;
+        } else if (baseline == N4M_EXPLAIN_BASELINE_BACKGROUND) {
             s.background_ = std::move(bg);
             s.n_base_ = n_bg;
         } else {
@@ -241,6 +276,12 @@ n4m_status_t Session::create(n4m_context_t* ctx, const n4m_matrix_view_t* X,
             s.lime_ridge_ = options->lime_ridge;
             break;
         }
+        case N4M_EXPLAIN_GRADIENT:
+            // Coalition 1 + 2j: x + h_j e_j; coalition 2 + 2j: x - h_j e_j.
+            if (!checked_mul(2, n_features, n_method)) {
+                return fail(ctx, N4M_ERR_UNSUPPORTED, "gradient plan size overflows");
+            }
+            break;
         default:  // N4M_EXPLAIN_OCCLUSION
             n_method = g64;
             break;
@@ -269,6 +310,14 @@ n4m_status_t Session::create(n4m_context_t* ctx, const n4m_matrix_view_t* X,
     s.predictions_.assign(s.n_rows_ * s.n_outputs_, 0.0);
     if (method == N4M_EXPLAIN_PERMUTATION_SHAP) {
         s.std_error_.assign(to_size(output_size), 0.0);
+    }
+    if (method == N4M_EXPLAIN_GRADIENT) {
+        int64_t gradient_size = 0;
+        if (!checked_mul(X->rows, n_features, gradient_size)
+            || !checked_mul(gradient_size, options->n_outputs, gradient_size)) {
+            return fail(ctx, N4M_ERR_UNSUPPORTED, "gradient result size overflows int64");
+        }
+        s.gradients_.assign(to_size(gradient_size), 0.0);
     }
     s.global_empty_value_.assign(s.n_outputs_, 0.0);
     s.group_mask_.assign(G, 0);
@@ -466,6 +515,13 @@ void Session::fill_row(const Cursor& cursor, const RowPlan* plan, double* out) {
         std::copy(x, x + F, out);
         return;
     }
+    if (method_ == N4M_EXPLAIN_GRADIENT) {
+        const std::size_t k = cursor.coalition - first_method_coalition_;
+        const std::size_t j = k / 2;
+        std::copy(x, x + F, out);
+        out[j] = k % 2 == 0 ? x[j] + gradient_steps_[j] : x[j] - gradient_steps_[j];
+        return;
+    }
     if (cached_row_ != cursor.row || cached_coalition_ != cursor.coalition) {
         coalition_mask(*plan, cursor.coalition, group_mask_.data());
         for (std::size_t j = 0; j < F; ++j) {
@@ -474,9 +530,14 @@ void Session::fill_row(const Cursor& cursor, const RowPlan* plan, double* out) {
         cached_row_ = cursor.row;
         cached_coalition_ = cursor.coalition;
     }
+    fill_present(x, cursor.base, out);
+}
+
+void Session::fill_present(const double* x, std::size_t base, double* out) const {
+    const std::size_t F = n_features_;
     switch (baseline_) {
         case N4M_EXPLAIN_BASELINE_BACKGROUND: {
-            const double* b = &background_[cursor.base * F];
+            const double* b = &background_[base * F];
             for (std::size_t j = 0; j < F; ++j) {
                 out[j] = present_[j] != 0 ? x[j] : b[j];
             }
@@ -693,6 +754,9 @@ n4m_status_t Session::finalize_row(n4m_context_t* ctx, std::size_t row, const Ro
             return finalize_kernel(ctx, row, plan);
         case N4M_EXPLAIN_LIME:
             return finalize_lime(ctx, row, plan);
+        case N4M_EXPLAIN_GRADIENT:
+            finalize_gradient(row, plan);
+            return N4M_OK;
         default:
             finalize_occlusion(row, plan);
             return N4M_OK;
@@ -961,4 +1025,179 @@ void Session::finalize_occlusion(std::size_t row, const RowPlan& plan) {
     }
 }
 
+void Session::finalize_gradient(std::size_t row, const RowPlan& plan) {
+    const std::size_t F = n_features_;
+    const std::size_t O = n_outputs_;
+    const double* x = &x_[row * F];
+    double* phi = &attributions_[row * n_groups_ * O];
+    double* grad = &gradients_[row * F * O];
+    for (std::size_t j = 0; j < F; ++j) {
+        // The step actually taken (x_j + h) - (x_j - h), not 2h: rounding of
+        // the perturbed coordinates enters the quotient exactly.
+        const double span = (x[j] + gradient_steps_[j]) - (x[j] - gradient_steps_[j]);
+        const std::size_t plus = first_method_coalition_ + 2 * j;
+        const double offset = x[j] - reference_[j];
+        double* phi_g = &phi[group_of_feature_[j] * O];
+        for (std::size_t o = 0; o < O; ++o) {
+            const double g = (value(plan, plus, o) - value(plan, plus + 1, o)) / span;
+            grad[j * O + o] = g;
+            phi_g[o] += g * offset;
+        }
+    }
+    for (std::size_t o = 0; o < O; ++o) {
+        expected_[row * O + o] = global_empty_value_[o];
+    }
+}
+
+void Session::update_gradient_steps(double relative_step) {
+    gradient_step_ = relative_step;
+    gradient_steps_.resize(gradient_scale_.size());
+    for (std::size_t j = 0; j < gradient_scale_.size(); ++j) {
+        gradient_steps_[j] = relative_step * gradient_scale_[j];
+    }
+}
+
+n4m_status_t Session::set_gradient_step(n4m_context_t* ctx, double relative_step) {
+    if (method_ != N4M_EXPLAIN_GRADIENT) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "the gradient step applies to GRADIENT sessions");
+    }
+    const Cursor start = start_cursor();
+    if (state_ != State::kReady || emit_.row != start.row || emit_.coalition != 0
+        || emit_.base != 0) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "the gradient step must be set before the first next_batch");
+    }
+    if (!std::isfinite(relative_step) || !(relative_step > 0.0)) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "the gradient step must be finite and > 0");
+    }
+    for (std::size_t j = 0; j < gradient_scale_.size(); ++j) {
+        const double h = relative_step * gradient_scale_[j];
+        const double* x = &x_[j];
+        for (std::size_t r = 0; r < n_rows_; ++r) {
+            if (!std::isfinite(x[r * n_features_] + h) || !std::isfinite(x[r * n_features_] - h)
+                || !(h > 0.0)) {
+                return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                            "the gradient step overflows or underflows a feature");
+            }
+        }
+    }
+    update_gradient_steps(relative_step);
+    return N4M_OK;
+}
+
+n4m_status_t Session::gradients(n4m_context_t* ctx, double* gradients, int64_t gradients_size,
+                                double* mean_gradient, int64_t mean_gradient_size,
+                                double* steps, int64_t steps_size) const {
+    if (method_ != N4M_EXPLAIN_GRADIENT) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "gradients are available for GRADIENT sessions");
+    }
+    if (state_ == State::kPoisoned) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "explanation session was poisoned by an earlier failure");
+    }
+    if (state_ != State::kComplete) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                    "explanation plan is not complete; keep calling next_batch/submit");
+    }
+    const std::size_t F = n_features_;
+    const std::size_t O = n_outputs_;
+    if ((gradients != nullptr
+         && (gradients_size < 0 || to_size(gradients_size) < gradients_.size()))
+        || (mean_gradient != nullptr
+            && (mean_gradient_size < 0 || to_size(mean_gradient_size) < F * O))
+        || (steps != nullptr && (steps_size < 0 || to_size(steps_size) < F))) {
+        return fail(ctx, N4M_ERR_SHAPE_MISMATCH,
+                    "gradient buffers are smaller than n_rows * n_features * n_outputs, "
+                    "n_features * n_outputs or n_features");
+    }
+    if (gradients != nullptr) {
+        std::copy(gradients_.begin(), gradients_.end(), gradients);
+    }
+    if (mean_gradient != nullptr) {
+        std::fill(mean_gradient, mean_gradient + F * O, 0.0);
+        for (std::size_t r = 0; r < n_rows_; ++r) {
+            for (std::size_t k = 0; k < F * O; ++k) {
+                mean_gradient[k] += gradients_[r * F * O + k];
+            }
+        }
+        for (std::size_t k = 0; k < F * O; ++k) {
+            mean_gradient[k] /= static_cast<double>(n_rows_);
+        }
+    }
+    if (steps != nullptr) {
+        std::copy(gradient_steps_.begin(), gradient_steps_.end(), steps);
+    }
+    return N4M_OK;
+}
+
+n4m_status_t Session::perturb_rows(n4m_context_t* ctx, const n4m_matrix_view_t* X,
+                                   const n4m_matrix_view_t* background,
+                                   const int64_t* feature_group, int64_t n_groups,
+                                   int32_t baseline, const int64_t* absent_groups,
+                                   int64_t n_absent, double* out_rows,
+                                   int64_t out_rows_capacity, int64_t* out_n_rows) {
+    if (out_n_rows == nullptr) {
+        return fail(ctx, N4M_ERR_NULL_POINTER, "out_n_rows is NULL");
+    }
+    *out_n_rows = 0;
+    // The session constructor validates the inputs exactly as for an
+    // explanation; occlusion keeps the plan small.
+    n4m_explain_options_v1_t options{};
+    options.struct_size = sizeof(options);
+    options.method = N4M_EXPLAIN_OCCLUSION;
+    options.baseline = baseline;
+    options.n_outputs = 1;
+    options.n_permutations = 1;
+    options.lime_ridge = 1.0;
+    options.max_batch_rows = 1;
+    n4m_explain_session_t* raw = nullptr;
+    n4m_status_t status = create(ctx, X, background, feature_group, n_groups, &options, raw);
+    if (status != N4M_OK) {
+        return status;
+    }
+    std::unique_ptr<n4m_explain_session_s> session(raw);
+    Session& s = *session;
+    if (n_absent < 0 || (n_absent > 0 && absent_groups == nullptr)) {
+        return fail(ctx, N4M_ERR_INVALID_ARGUMENT, "absent_groups must list n_absent >= 0 groups");
+    }
+    std::fill(s.group_mask_.begin(), s.group_mask_.end(), static_cast<unsigned char>(1));
+    for (int64_t k = 0; k < n_absent; ++k) {
+        const int64_t g = absent_groups[k];
+        if (g < 0 || g >= n_groups || s.group_mask_[to_size(g)] == 0) {
+            return fail(ctx, N4M_ERR_INVALID_ARGUMENT,
+                        "absent_groups must hold distinct groups in [0, n_groups)");
+        }
+        s.group_mask_[to_size(g)] = 0;
+    }
+    for (std::size_t j = 0; j < s.n_features_; ++j) {
+        s.present_[j] = s.group_mask_[s.group_of_feature_[j]];
+    }
+    int64_t total = 0;
+    if (!checked_mul(X->rows, static_cast<int64_t>(s.n_base_), total)) {
+        return fail(ctx, N4M_ERR_UNSUPPORTED, "perturbed row count overflows int64");
+    }
+    *out_n_rows = total;
+    if (out_rows == nullptr && out_rows_capacity == 0) {
+        return N4M_OK;
+    }
+    if (out_rows == nullptr) {
+        return fail(ctx, N4M_ERR_NULL_POINTER, "out_rows is NULL");
+    }
+    if (out_rows_capacity < total) {
+        return fail(ctx, N4M_ERR_SHAPE_MISMATCH, "out_rows_capacity is smaller than the row count");
+    }
+    const std::size_t F = s.n_features_;
+    std::size_t written = 0;
+    for (std::size_t i = 0; i < s.n_rows_; ++i) {
+        for (std::size_t b = 0; b < s.n_base_; ++b) {
+            s.fill_present(&s.x_[i * F], b, out_rows + written * F);
+            ++written;
+        }
+    }
+    return N4M_OK;
+}
+
 }  // namespace n4m::explain
+

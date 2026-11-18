@@ -194,7 +194,38 @@ class Adapter {
     // tolerances, seeds, ...) leave no trace in it and are provenance.
     // Called by decode_state after load_state.
     virtual n4m_status_t check_params(n4m_context_t* ctx, const Params& params) const = 0;
+
+    // The N4MM model behind an affine predictor or latent-variable model
+    // (n4m_estimator_affine_coefficients_v1, _latent_structure_v1,
+    // _importance_v1), or nullptr. Valid while the estimator is fitted.
+    virtual const n4m_model_t* linear_model() const noexcept { return nullptr; }
+
+    // Transformer traits of the method class (N4M_CAP_AFFINE_TRANSFORM,
+    // N4M_CAP_COLUMN_ALIGNED), set by the factory. The public introspection
+    // reports them with capabilities(); N4ME headers record capabilities()
+    // only, so states written before ABI 2.24 still import.
+    std::uint64_t transform_traits() const noexcept { return transform_traits_; }
+    void set_transform_traits(std::uint64_t traits) noexcept { transform_traits_ = traits; }
+    // capabilities() | transform_traits(): what n4m_method_info_v1 and
+    // n4m_estimator_info report.
+    std::uint64_t public_capabilities() const noexcept {
+        return capabilities() | transform_traits_;
+    }
+
+  private:
+    std::uint64_t transform_traits_ = 0;
 };
+
+// Transformer trait sets (N4M_CAP_AFFINE_TRANSFORM, N4M_CAP_COLUMN_ALIGNED).
+constexpr std::uint64_t kAffine = N4M_CAP_AFFINE_TRANSFORM;
+constexpr std::uint64_t kAligned = N4M_CAP_COLUMN_ALIGNED;
+constexpr std::uint64_t kAffineAligned = N4M_CAP_AFFINE_TRANSFORM | N4M_CAP_COLUMN_ALIGNED;
+
+inline std::unique_ptr<Adapter> with_traits(std::unique_ptr<Adapter> adapter,
+                                            std::uint64_t traits) {
+    adapter->set_transform_traits(traits);
+    return adapter;
+}
 
 // Splitter procedure results: the indices of every fold concatenated, with
 // n_folds + 1 offsets per side (read by n4m_method_result_get_fold).

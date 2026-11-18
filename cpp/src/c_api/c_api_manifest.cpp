@@ -109,7 +109,8 @@ n4m_status_t render(std::string& o) {
     static const char* const kCaps[] = {"transform", "predict", "predict_proba",
                                         "decision_function", "predict_labels",
                                         "selected_indices", "apply_mask", "serializable",
-                                        "affine", "retains_training_rows"};
+                                        "affine", "retains_training_rows",
+                                        "affine_transform", "column_aligned"};
     static const char* const kInputs[] = {"y",      "labels", "sample_weight",
                                           "groups", "feature_groups", "blocks",
                                           "axis",   "target_domain",  "fold_ids"};
@@ -159,7 +160,7 @@ n4m_status_t render(std::string& o) {
         kind(N4M_ROLE_AUGMENTER, "augmentation");
         o += "],\"capabilities\":[";
         first = true;
-        for (uint32_t c = 0; c < 10; ++c) {
+        for (uint32_t c = 0; c < 12; ++c) {
             if ((info.capabilities & (UINT64_C(1) << c)) == 0) continue;
             o += first ? "\"" : ",\"";
             o += kCaps[c];

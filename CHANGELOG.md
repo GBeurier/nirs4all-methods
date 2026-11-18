@@ -18,6 +18,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Model-intrinsic importances and affine pipelines (ABI 2.24.0, project
+  version unchanged): affine coefficients of any fitted `N4M_CAP_AFFINE`
+  estimator (also after N4ME import), the PLS-family latent structure (W, R,
+  P, Q, x mean/scale), VIP / target-projection selectivity ratio /
+  standardized coefficients on host-supplied rows, the transformer traits
+  `N4M_CAP_AFFINE_TRANSFORM` / `N4M_CAP_COLUMN_ALIGNED` (manifest
+  `affine_transform`, `column_aligned`; per-step `affine` / `column_aligned`
+  in the role-pipeline step descriptor), exact raw-input coefficients of
+  affine role pipelines with a typed refusal naming the first non-affine step,
+  a local central-difference gradient explainer (`N4M_EXPLAIN_GRADIENT`),
+  coalition-row previews, the Monte-Carlo standard error of mean attributions,
+  and importance-profile aggregation and comparison (Spearman through the
+  correlation primitive, top-K Jaccard). JS: `NativeEstimator.affineCoefficients`,
+  `latentStructure`, `modelImportance`, `RolePipeline.inputAffineCoefficients`,
+  `stepInfo`, `explainModel({method: "gradient"})`, `perturbRows`,
+  `aggregateProfile`, `compareProfiles`. Envelope schema
+  `docs/explain/importance_profile_v1.schema.json`.
 - Project 1.3.18 (ABI 2.23.0) adds the explainability kernels below and a
   bit-identical, faster SNV (exact power-of-two scaling instead of `ldexp` in
   the hot loops; three times faster in WebAssembly).

@@ -247,4 +247,91 @@ N4M_API n4m_status_t n4m_explain_summarize_v1(const double* attributions,
     });
 }
 
+N4M_API n4m_status_t n4m_explain_session_set_gradient_step_v1(n4m_context_t* ctx,
+                                                              n4m_explain_session_t* session,
+                                                              double relative_step) {
+    return guarded(ctx, [&]() {
+        if (session == nullptr) {
+            return n4m::explain::fail(ctx, N4M_ERR_NULL_POINTER, "session is NULL");
+        }
+        return session->set_gradient_step(ctx, relative_step);
+    });
+}
+
+N4M_API n4m_status_t n4m_explain_session_gradients_v1(n4m_context_t* ctx,
+                                                      const n4m_explain_session_t* session,
+                                                      double* gradients,
+                                                      int64_t gradients_size,
+                                                      double* mean_gradient,
+                                                      int64_t mean_gradient_size,
+                                                      double* steps,
+                                                      int64_t steps_size) {
+    return guarded(ctx, [&]() {
+        if (session == nullptr) {
+            return n4m::explain::fail(ctx, N4M_ERR_NULL_POINTER, "session is NULL");
+        }
+        return session->gradients(ctx, gradients, gradients_size, mean_gradient,
+                                  mean_gradient_size, steps, steps_size);
+    });
+}
+
+N4M_API n4m_status_t n4m_explain_perturb_rows_v1(n4m_context_t* ctx,
+                                                 const n4m_matrix_view_t* X,
+                                                 const n4m_matrix_view_t* background,
+                                                 const int64_t* feature_group,
+                                                 int64_t n_groups,
+                                                 int32_t baseline,
+                                                 const int64_t* absent_groups,
+                                                 int64_t n_absent,
+                                                 double* out_rows,
+                                                 int64_t out_rows_capacity,
+                                                 int64_t* out_n_rows) {
+    return guarded(ctx, [&]() {
+        return n4m::explain::Session::perturb_rows(ctx, X, background, feature_group, n_groups,
+                                                   baseline, absent_groups, n_absent, out_rows,
+                                                   out_rows_capacity, out_n_rows);
+    });
+}
+
+N4M_API n4m_status_t n4m_explain_summarize_std_error_v1(const double* std_error,
+                                                        int64_t n_rows,
+                                                        int64_t n_groups,
+                                                        int64_t n_outputs,
+                                                        int64_t output_index,
+                                                        double* mean_signed_std_error,
+                                                        int64_t summary_size) {
+    return guarded_noctx([&]() {
+        return n4m::explain::summarize_std_error(std_error, n_rows, n_groups, n_outputs,
+                                                 output_index, mean_signed_std_error,
+                                                 summary_size);
+    });
+}
+
+N4M_API n4m_status_t n4m_explain_aggregate_profile_v1(n4m_context_t* ctx,
+                                                      const double* values,
+                                                      int64_t n_features,
+                                                      const int64_t* feature_group,
+                                                      int64_t n_groups,
+                                                      int32_t rule,
+                                                      double* out,
+                                                      int64_t out_size) {
+    return guarded(ctx, [&]() {
+        return n4m::explain::aggregate_profile(ctx, values, n_features, feature_group, n_groups,
+                                               rule, out, out_size);
+    });
+}
+
+N4M_API n4m_status_t n4m_explain_compare_profiles_v1(n4m_context_t* ctx,
+                                                     const n4m_matrix_view_t* profiles,
+                                                     int64_t top_k,
+                                                     double* spearman,
+                                                     int64_t spearman_size,
+                                                     double* top_k_jaccard,
+                                                     int64_t jaccard_size) {
+    return guarded(ctx, [&]() {
+        return n4m::explain::compare_profiles(ctx, profiles, top_k, spearman, spearman_size,
+                                              top_k_jaccard, jaccard_size);
+    });
+}
+
 }  // extern "C"

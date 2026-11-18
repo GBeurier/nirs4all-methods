@@ -89,4 +89,15 @@ n4m_status_t summarize(const double* attributions, int64_t n_rows, int64_t n_gro
                        int64_t n_outputs, int64_t output_index, double* mean_abs,
                        double* mean_signed, int64_t summary_size);
 
+// Section 4 of explain.h (ABI 2.24), core/explain/profiles.cpp.
+n4m_status_t summarize_std_error(const double* std_error, int64_t n_rows, int64_t n_groups,
+                                 int64_t n_outputs, int64_t output_index, double* out,
+                                 int64_t out_size);
+n4m_status_t aggregate_profile(n4m_context_t* ctx, const double* values, int64_t n_features,
+                               const int64_t* feature_group, int64_t n_groups, int32_t rule,
+                               double* out, int64_t out_size);
+n4m_status_t compare_profiles(n4m_context_t* ctx, const n4m_matrix_view_t* profiles,
+                              int64_t top_k, double* spearman, int64_t spearman_size,
+                              double* jaccard, int64_t jaccard_size);
+
 }  // namespace n4m::explain

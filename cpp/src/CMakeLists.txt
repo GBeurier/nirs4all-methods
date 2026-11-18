@@ -62,6 +62,7 @@ add_library(n4m_core OBJECT
     core/explain/explain_session.cpp
     core/explain/grouping.cpp
     core/explain/linear_shap.cpp
+    core/explain/profiles.cpp
     core/explain/tree_shap.cpp
     core/config.cpp
     core/estimator/registry.cpp
@@ -84,6 +85,7 @@ add_library(n4m_core OBJECT
     core/estimator/aom_adapters.cpp
     core/estimator/model_adapters.cpp
     core/estimator/role_pipeline.cpp
+    core/estimator/intrinsic_importance.cpp
     core/estimator/multimodal_pipeline.cpp
     core/cross_validation.cpp
     core/mb_pls.cpp

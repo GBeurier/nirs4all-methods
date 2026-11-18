@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://methods.nirs4all.org/contracts/importance_profile.v1.json",
+  "title": "nirs4all importance profile envelope v1",
+  "description": "Host-built envelope around one global importance profile of a fitted model (nirs4all-methods ABI 2.24 model-intrinsic importances, or a mean local gradient) plus host metadata. Sibling of nirs4all.explanation.v1 (local, per-row attributions). values[j] belongs to axis.values[j]. A model_input profile is drawn on the raw spectral axis only when every preprocessing step is column aligned; a raw_input profile is exact (exactness exact) only when every preprocessing step is affine, otherwise it is a mean of local gradients (exactness local_mean). The two are never silently mixed. Consumers ignore unknown keys.",
+  "type": "object",
+  "required": [
+    "schema",
+    "kind",
+    "scope",
+    "space",
+    "exactness",
+    "signed",
+    "component",
+    "output",
+    "axis",
+    "values",
+    "rows",
+    "model",
+    "preprocessing",
+    "engine",
+    "settings"
+  ],
+  "properties": {
+    "schema": {"const": "nirs4all.importance_profile.v1"},
+    "kind": {
+      "description": "regression_coefficients: B[:, output] of predict(X) = X B + b (n4m_estimator_affine_coefficients_v1, or n4m_role_pipeline_input_affine_coefficients_v1 in raw_input space); standardized_coefficients: B[j, output] * sd_j (ddof 1) of the rows used; vip: variable importance in projection (all outputs); selectivity_ratio: target-projection selectivity ratio of the output (Rajalahti et al. 2009); x_weights / x_loadings: column `component` of W / P; mean_local_gradient: mean over rows of the local raw-space gradients (gradient explainer).",
+      "enum": [
+        "regression_coefficients",
+        "standardized_coefficients",
+        "vip",
+        "selectivity_ratio",
+        "x_weights",
+        "x_loadings",
+        "mean_local_gradient"
+      ]
+    },
+    "scope": {"const": "global"},
+    "space": {
+      "description": "model_input: the features the model consumes after preprocessing; raw_input: the raw spectral input of the complete fitted pipeline.",
+      "enum": ["model_input", "raw_input"]
+    },
+    "exactness": {
+      "description": "exact: an exact property of the fitted model (raw_input only through affine preprocessing, B_raw = A' B); local_mean: a mean of local gradients over the rows used.",
+      "enum": ["exact", "local_mean"]
+    },
+    "signed": {
+      "description": "True when the sign is meaningful (coefficients, weights, loadings, gradients); false for VIP and the selectivity ratio.",
+      "type": "boolean"
+    },
+    "component": {
+      "description": "Latent component index (0-based) for x_weights and x_loadings; null otherwise.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "output": {
+      "type": "object",
+      "required": ["index", "label", "space"],
+      "properties": {
+        "index": {"type": "integer", "minimum": 0},
+        "label": {"type": ["string", "null"]},
+        "space": {"const": "target"}
+      }
+    },
+    "axis": {
+      "type": "object",
+      "required": ["values", "unit", "kind"],
+      "properties": {
+        "values": {
+          "description": "One coordinate per profile value.",
+          "type": "array",
+          "items": {"type": "number"}
+        },
+        "unit": {
+          "description": "Axis unit as recorded by the host (for example nm or cm-1); null when unknown. Never invented.",
+          "type": ["string", "null"]
+        },
+        "kind": {
+          "description": "wavelength / wavenumber / feature_index on the raw axis; model_feature for model-input features that are not column aligned with the raw axis.",
+          "enum": ["wavelength", "wavenumber", "feature_index", "model_feature"]
+        }
+      },
+      "if": {"properties": {"kind": {"enum": ["feature_index", "model_feature"]}}},
+      "then": {"properties": {"unit": {"type": "null"}}}
+    },
+    "values": {
+      "description": "Profile values, one per axis coordinate (finite JSON numbers). The native selectivity ratio is +Infinity for an exactly reconstructed column; JSON cannot carry it, so the host records its replacement policy in settings.",
+      "type": "array",
+      "items": {"type": "number"}
+    },
+    "rows": {
+      "description": "Rows used (VIP, selectivity ratio, standardization, gradients): count and the host's description of their source (for example train partition, preprocessed); null when the kind uses no rows.",
+      "type": ["object", "null"],
+      "required": ["count", "source"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 1},
+        "source": {"type": "string", "minLength": 1}
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["method_id", "n_components"],
+      "properties": {
+        "method_id": {"type": "string", "minLength": 1},
+        "n_components": {"type": ["integer", "null"], "minimum": 1}
+      }
+    },
+    "preprocessing": {
+      "type": "object",
+      "required": ["steps", "affine", "column_aligned"],
+      "properties": {
+        "steps": {
+          "description": "Method ids of the preprocessing steps, in order.",
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "affine": {
+          "description": "Every step declares the affine-transform trait (N4M_CAP_AFFINE_TRANSFORM) or is a sample filter.",
+          "type": "boolean"
+        },
+        "column_aligned": {
+          "description": "Every step keeps output column j at the spectral position of input column j (N4M_CAP_COLUMN_ALIGNED with equal widths).",
+          "type": "boolean"
+        }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "required": ["name", "version", "abi"],
+      "properties": {
+        "name": {"const": "nirs4all-methods"},
+        "version": {"type": "string", "minLength": 1},
+        "abi": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"}
+      }
+    },
+    "settings": {
+      "description": "Kind settings (for example gradient_step, ddof, reference).",
+      "type": "object",
+      "additionalProperties": {"type": ["number", "string", "boolean", "null"]}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"kind": {"enum": ["x_weights", "x_loadings"]}}},
+      "then": {"properties": {"component": {"type": "integer"}}},
+      "else": {"properties": {"component": {"type": "null"}}}
+    },
+    {
+      "if": {"properties": {"kind": {"const": "mean_local_gradient"}}},
+      "then": {"properties": {"exactness": {"const": "local_mean"}}}
+    }
+  ]
+}

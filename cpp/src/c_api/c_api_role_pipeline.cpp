@@ -3,6 +3,7 @@
 // C ABI of the role pipeline (n4m/estimator.h, ABI 2.14).
 
 #include <algorithm>
+#include <cstddef>
 #include <cstring>
 #include <exception>
 #include <memory>
@@ -10,6 +11,7 @@
 #include <vector>
 
 #include "core/common/context.hpp"
+#include "core/estimator/intrinsic_importance.hpp"
 #include "core/estimator/role_pipeline.hpp"
 #include "n4m/estimator.h"
 
@@ -169,7 +171,9 @@ N4M_API n4m_status_t n4m_role_pipeline_step_info_v1(const n4m_role_pipeline_t* p
     if (pipeline == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
     const std::size_t caller = out->struct_size;
     const std::size_t n = std::min(caller, sizeof(*out));
-    if (caller < sizeof(n4m_role_pipeline_step_info_v1_t) || step < 0 ||
+    // The ABI 2.14 layout ends before `affine` (ABI 2.24 appended two fields).
+    constexpr std::size_t kV1Size = offsetof(n4m_role_pipeline_step_info_v1_t, affine);
+    if (caller < kV1Size || step < 0 ||
         static_cast<std::size_t>(step) >= pipeline->steps.size()) {
         std::memset(out, 0, n);
         return N4M_ERR_INVALID_ARGUMENT;
@@ -181,6 +185,21 @@ N4M_API n4m_status_t n4m_role_pipeline_step_info_v1(const n4m_role_pipeline_t* p
     info.method_id = rp::method_at(s.method_index)->method_id;
     info.role = s.role;
     info.state_index = s.state_index;
+    // ABI 2.24 predict-time traits (estimator.h): method-level before fit.
+    const bool terminal = (s.role & (N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER)) != 0;
+    if (s.state_index < 0) {
+        info.affine = 1;  // a sample filter is the identity at predict time
+        info.column_aligned = 1;
+    } else {
+        const auto* spec = rp::method_at(s.method_index);
+        const auto state = static_cast<std::size_t>(s.state_index);
+        const std::uint64_t caps =
+            pipeline->fitted
+                ? pipeline->states[state]->adapter->public_capabilities()
+                : (spec->factory != nullptr ? spec->factory(*spec)->public_capabilities() : 0);
+        info.affine = (caps & (terminal ? N4M_CAP_AFFINE : N4M_CAP_AFFINE_TRANSFORM)) != 0 ? 1 : 0;
+        info.column_aligned = !terminal && (caps & N4M_CAP_COLUMN_ALIGNED) != 0 ? 1 : 0;
+    }
     if (pipeline->fitted) {
         if (s.state_index < 0) {
             info.n_features_in = info.n_features_out = pipeline->n_features;
@@ -192,6 +211,7 @@ N4M_API n4m_status_t n4m_role_pipeline_step_info_v1(const n4m_role_pipeline_t* p
             info.n_features_out = (s.role & (N4M_ROLE_REGRESSOR | N4M_ROLE_CLASSIFIER)) != 0
                                       ? adapter.n_outputs()
                                       : adapter.transform_cols();
+            if (info.n_features_out != info.n_features_in) info.column_aligned = 0;
         }
     }
     std::memcpy(out, &info, n);
@@ -339,4 +359,30 @@ N4M_API n4m_status_t n4m_role_pipeline_export_state_to_buffer(
     ctx->clear_error();
     st = n4m_estimator_export_to_buffer(ctx, est, flags, buffer, buffer_size, out_written);
     return st == N4M_OK ? st : state_error(ctx, pipeline, st, state);
+}
+
+N4M_API n4m_status_t n4m_role_pipeline_input_affine_coefficients_v1(
+    n4m_context_t* ctx, const n4m_role_pipeline_t* pipeline, double* coefficients,
+    int64_t coefficients_size, double* intercept, int64_t intercept_size) {
+    n4m_status_t st = check_args(ctx, pipeline);
+    if (st != N4M_OK) return st;
+    return guarded(ctx, [&]() {
+        ctx->clear_error();
+        std::vector<double> B, b;
+        n4m_status_t s = rp::pipeline_input_affine(ctx, *pipeline, B, b);
+        if (s != N4M_OK) return s;
+        if (coefficients == nullptr || intercept == nullptr) {
+            ctx->set_error("coefficients and intercept must be non-NULL");
+            return N4M_ERR_NULL_POINTER;
+        }
+        if (coefficients_size < 0 || static_cast<std::uint64_t>(coefficients_size) < B.size() ||
+            intercept_size < 0 || static_cast<std::uint64_t>(intercept_size) < b.size()) {
+            ctx->set_error("coefficients needs n_features_in * n_outputs and intercept "
+                           "n_outputs doubles");
+            return N4M_ERR_SHAPE_MISMATCH;
+        }
+        std::copy(B.begin(), B.end(), coefficients);
+        std::copy(b.begin(), b.end(), intercept);
+        return N4M_OK;
+    });
 }

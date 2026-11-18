@@ -103,8 +103,11 @@ class SelectorAdapter final : public Adapter {
   public:
     using FitFn = std::function<n4m_status_t(n4m_context_t*, const Params&, const FitInputs&,
                                              n4m_method_result_t**)>;
+    // Column selection is exact-affine (a 0/1 matrix), never column aligned.
     explicit SelectorAdapter(FitFn fit_fn, SelectionRule rule = {})
-        : fit_fn_(std::move(fit_fn)), rule_(std::move(rule)) {}
+        : fit_fn_(std::move(fit_fn)), rule_(std::move(rule)) {
+        set_transform_traits(kAffine);
+    }
 
     std::uint64_t capabilities() const noexcept override {
         return N4M_CAP_TRANSFORM | N4M_CAP_SELECTED_INDICES | N4M_CAP_SERIALIZABLE;

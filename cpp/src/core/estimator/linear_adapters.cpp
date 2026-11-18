@@ -111,6 +111,7 @@ class ModelAdapter : public Adapter {
         return n4m_model_transform(ctx, model_.get(), &X, &out);
     }
     const n4m_method_result_t* fit_result() const noexcept override { return result_.get(); }
+    const n4m_model_t* linear_model() const noexcept override { return model_.get(); }
 
     n4m_status_t save_state(n4m_context_t*, std::vector<StateBlock>& out) const override {
         return export_model(model_.get(), out);
@@ -194,7 +195,9 @@ class ModelFitAdapter final : public ModelAdapter {
         : ModelAdapter(N4M_CAP_PREDICT | N4M_CAP_TRANSFORM | N4M_CAP_AFFINE |
                        N4M_CAP_SERIALIZABLE),
           configure_(std::move(configure)),
-          required_algorithm_(required_algorithm) {}
+          required_algorithm_(required_algorithm) {
+        set_transform_traits(kAffine);  // latent scores ((x - mean) / scale) R
+    }
 
     n4m_status_t fit(n4m_context_t* ctx, const Params& params,
                      const FitInputs& in) override {
@@ -324,7 +327,9 @@ class RecursivePlsAdapter final : public ModelAdapter {
   public:
     RecursivePlsAdapter()
         : ModelAdapter(N4M_CAP_PREDICT | N4M_CAP_TRANSFORM | N4M_CAP_AFFINE |
-                       N4M_CAP_SERIALIZABLE) {}
+                       N4M_CAP_SERIALIZABLE) {
+        set_transform_traits(kAffine);
+    }
 
     n4m_status_t fit(n4m_context_t* ctx, const Params& params, const FitInputs& in) override {
         reset();

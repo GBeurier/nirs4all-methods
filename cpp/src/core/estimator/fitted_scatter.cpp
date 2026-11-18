@@ -45,7 +45,7 @@ n4m_status_t fit_x(n4m_status_t (*fit)(n4m_pp_msc_handle_t*, n4m_matrix_view_t),
 // MSC stores per-row coefficients for its inverse during transform, so its
 // transform takes a mutable handle; the estimator owns it exclusively.
 std::unique_ptr<Adapter> make_tr_msc(const MethodSpec&) {
-    return fitted<n4m_pp_msc_handle_t>(
+    return with_traits(fitted<n4m_pp_msc_handle_t>(
         {[](n4m_pp_msc_handle_t** h, const Params&) { return n4m_transform_msc_create(h); },
          [](n4m_context_t*, n4m_pp_msc_handle_t* h, const FitInputs& in) {
              return fit_x(n4m_transform_msc_fit, h, in);
@@ -61,11 +61,11 @@ std::unique_ptr<Adapter> make_tr_msc(const MethodSpec&) {
          },
          [](n4m_pp_msc_handle_t* h, n4m_state_reader_t* r, std::int64_t width) {
              return load_reference(h, r, width, n4m_transform_msc_set_reference);
-         }});
+         }}), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_emsc(const MethodSpec&) {
-    return fitted<n4m_pp_emsc_handle_t>(
+    return with_traits(fitted<n4m_pp_emsc_handle_t>(
         {[](n4m_pp_emsc_handle_t** h, const Params& p) {
              return n4m_transform_emsc_create(h, to_i32(p.get_int("degree")));
          },
@@ -82,7 +82,7 @@ std::unique_ptr<Adapter> make_tr_emsc(const MethodSpec&) {
          },
          [](n4m_pp_emsc_handle_t* h, n4m_state_reader_t* r, std::int64_t width) {
              return load_reference(h, r, width, n4m_transform_emsc_set_reference);
-         }});
+         }}), kAligned);
 }
 
 }  // namespace n4m::estimator
