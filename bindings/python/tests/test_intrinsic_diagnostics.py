@@ -153,6 +153,146 @@ def test_masked_events_do_not_join_nonadjacent_bands():
     assert out["global_spike_eligible"] == 6
 
 
+def population_oracle(x, mask, axis, order, threshold=8.0, min_spectra=5):
+    """Independent NumPy reading of the population derivative-event protocol."""
+    n, p = x.shape
+    if axis is None:
+        derivative = np.diff(x, n=order, axis=1)
+    else:
+        slope = np.diff(x, axis=1) / np.diff(axis)
+        derivative = (
+            slope if order == 1 else 2 * np.diff(slope, axis=1) / (axis[2:] - axis[:-2])
+        )
+    defined = np.ones((n, p - order), dtype=bool)
+    for offset in range(order + 1):
+        defined &= mask[:, offset : p - order + offset]
+    center = np.zeros(p - order)
+    scale = np.full(p - order, np.nan)
+    for k in range(p - order):
+        column = derivative[defined[:, k], k]
+        if column.size >= min_spectra:
+            center[k] = np.median(column)
+            scale[k] = 1.4826 * np.median(abs(column - center[k]))
+    evaluated = ~np.isnan(scale)
+    floor = np.median(scale[evaluated])
+    assert floor > 0
+    events = (
+        defined
+        & evaluated
+        & (
+            abs(derivative - center)
+            > threshold * np.maximum(np.nan_to_num(scale), floor)
+        )
+    )
+    eligible = (defined & evaluated).sum(axis=1)
+    band_counts = np.zeros(p, dtype=int)
+    band_evaluated = np.zeros(p, dtype=int)
+    band_counts[1 : p - order + 1] = events.sum(axis=0)
+    band_evaluated[1 : p - order + 1] = (defined & evaluated).sum(axis=0)
+    return events.sum(axis=1), eligible, band_counts, band_evaluated
+
+
+def smooth_population(n=40, p=200, seed=20261118):
+    """Gaussian absorption bands whose intensities vary across samples."""
+    rng = np.random.default_rng(seed)
+    t = np.linspace(0, 1, p)
+    bands = [(0.15, 0.02, 0.8), (0.4, 0.04, 0.5), (0.6, 0.03, 1.0), (0.85, 0.05, 0.3)]
+    x = rng.uniform(0, 0.2, (n, 1)) + rng.uniform(0, 0.1, (n, 1)) * t
+    for center, width, height in bands:
+        x = x + rng.uniform(0.5, 1.5, (n, 1)) * height * np.exp(
+            -0.5 * ((t - center) / width) ** 2
+        )
+    return x + rng.normal(0, 1e-4, x.shape)
+
+
+@pytest.mark.parametrize("physical", [False, True])
+def test_population_events_match_independent_oracle_with_masks(physical):
+    rng = np.random.default_rng(1118)
+    n, p = 30, 60
+    axis = np.geomspace(2500, 900, p) if physical else None
+    x = np.cumsum(rng.normal(size=(n, p)), axis=1)
+    x[[3, 9], [20, 41]] += 40
+    x[17, 30:] += 25
+    mask = rng.random((n, p)) > 0.05
+    mask[: n - 4, 50] = False  # only four spectra at bands 49..51: not evaluated
+    x[~mask] = 0.0
+    params = {"valid_mask": mask.ravel().astype(int).tolist()}
+    if physical:
+        params.update(axis_basis="physical", axis_values=axis.tolist())
+    out = run("spectral_population_events_qc", x, **params)
+    for order, kind in [(1, "jump"), (2, "spike")]:
+        counts, eligible, band_counts, band_evaluated = population_oracle(
+            x, mask, axis, order
+        )
+        assert counts.sum() > 0
+        assert_array_equal(out[kind + "_eligible_counts"], eligible)
+        assert_array_equal(out[kind + "_band_counts"], band_counts)
+        assert_array_equal(out[kind + "_band_evaluated"], band_evaluated)
+        assert_array_equal(out[kind + "_count_rows"], np.flatnonzero(eligible))
+        assert_array_equal(values(out, kind + "_count"), counts[eligible > 0])
+        assert_allclose(
+            values(out, kind + "_fraction"),
+            counts[eligible > 0] / eligible[eligible > 0],
+            rtol=1e-15,
+        )
+        assert out["global_" + kind + "_count"] == counts.sum()
+        assert out["global_" + kind + "_eligible"] == eligible.sum()
+        assert_allclose(
+            out["global_" + kind + "_fraction"], counts.sum() / eligible.sum()
+        )
+    assert out["jump_band_evaluated"][50] == 0 and out["jump_band_evaluated"][51] == 0
+    json.dumps({k: np.asarray(v).tolist() for k, v in out.items()}, allow_nan=False)
+
+
+def test_population_events_do_not_flag_bands_shared_by_smooth_spectra():
+    x = smooth_population()
+    local = run("spectral_events_qc", x)
+    population = run("spectral_population_events_qc", x)
+    flagged = (values(local, "spike_count") > 0) | (values(local, "jump_count") > 0)
+    assert flagged.mean() >= 0.75
+    assert local["global_spike_count"] > 4 * len(x)
+    assert population["global_spike_count"] == 0
+    assert population["global_jump_count"] == 0
+    assert_array_equal(population["spike_count_status"], [0] * len(x))
+
+    spiked = x.copy()
+    spiked[7, 100] += 0.05
+    spiked[23, 50:] += 0.05
+    out = run("spectral_population_events_qc", spiked)
+    assert out["spike_band_counts"][100] == 1
+    assert np.flatnonzero(out["spike_band_counts"]).tolist() == [49, 50, 99, 100, 101]
+    assert np.flatnonzero(out["jump_band_counts"]).tolist() == [50, 100, 101]
+    assert values(out, "spike_count")[7] == 3
+    assert values(out, "jump_count")[23] == 1
+    assert np.count_nonzero(values(out, "jump_count")) == 2
+
+
+def test_population_events_need_min_spectra_and_valid_parameters():
+    x = smooth_population(n=4, p=30)
+    out = run("spectral_population_events_qc", x)
+    assert_array_equal(out["spike_count_status"], [1] * 4)
+    assert_array_equal(out["global_jump_count_status"], [1])
+    assert "global_jump_count" not in out and "spike_count_values" not in out
+    assert_array_equal(out["spike_band_evaluated"], [0] * 30)
+    assert (
+        run("spectral_population_events_qc", x, min_spectra=3)["global_spike_eligible"]
+        == 4 * 28
+    )
+    ramps = np.tile(np.arange(10.0), (6, 1))
+    flat = run("spectral_population_events_qc", ramps)
+    assert_array_equal(flat["jump_count_status"], [4] * 6)
+    assert_array_equal(flat["spike_scale_floor_status"], [4])
+    for params in [
+        {"outlier_threshold": 0.0},
+        {"min_spectra": 2},
+        {"axis_basis": "physical"},
+        {"axis_basis": "physical", "axis_values": [1.0, 2.0, 2.0] + list(range(3, 30))},
+        {"valid_mask": [1] * 5},
+    ]:
+        with pytest.raises((N4MError, ValueError)):
+            run("spectral_population_events_qc", x, **params)
+
+
 def test_noise_proxy_exact_mad_normalization_and_db():
     rng = np.random.default_rng(39)
     x = 2 + rng.normal(0, 0.02, (10, 60))
@@ -243,6 +383,7 @@ def test_zero_rank_pca_publishes_q_and_explicit_unavailable_t2():
         "spectral_reference_qc",
         "spectral_noise_proxy",
         "spectral_events_qc",
+        "spectral_population_events_qc",
         "local_density",
     ],
 )

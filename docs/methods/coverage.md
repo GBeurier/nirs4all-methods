@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **250**
-- Curated scientific records: **256**
-- Resolved documentation pages: **250**
+- Catalog entries: **251**
+- Curated scientific records: **257**
+- Resolved documentation pages: **251**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -95,6 +95,7 @@ This generated report records the documentation source used for each catalog ent
 | `diagnostics.regression_scores` | [diagnostics_regression_scores](diagnostics_regression_scores.md) | curated |
 | `diagnostics.spectral_events_qc` | [diagnostics_spectral_events_qc](diagnostics_spectral_events_qc.md) | curated |
 | `diagnostics.spectral_noise_proxy` | [diagnostics_spectral_noise_proxy](diagnostics_spectral_noise_proxy.md) | curated |
+| `diagnostics.spectral_population_events_qc` | [diagnostics_spectral_population_events_qc](diagnostics_spectral_population_events_qc.md) | curated |
 | `diagnostics.spectral_reference_qc` | [diagnostics_spectral_reference_qc](diagnostics_spectral_reference_qc.md) | curated |
 | `diagnostics.variance_components` | [diagnostics_variance_components](diagnostics_variance_components.md) | curated |
 | `filters.composite` | [filter_composite](filter_composite.md) | curated |

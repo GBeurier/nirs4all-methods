@@ -32,6 +32,14 @@ cases = [
     ("local_density", x, None, {"n_neighbors": 3}),
     ("pca_reference_qc", x[:3] * 1.1 + 0.02, x, {"n_components": 3}),
 ]
+# Appended with its own generator so the earlier cases keep their draws.
+population_rng = np.random.default_rng(20261118)
+t = np.linspace(0, 1, 24)
+population = population_rng.uniform(0.5, 1.5, (8, 1)) * np.exp(
+    -0.5 * ((t - 0.5) / 0.1) ** 2
+) + population_rng.normal(0, 1e-3, (8, 24))
+population[2, 7] += 0.2
+cases.append(("spectral_population_events_qc", population, None, {"min_spectra": 5}))
 output = []
 for name, X, target, params in cases:
     inputs = {} if target is None else {"X_target": target}

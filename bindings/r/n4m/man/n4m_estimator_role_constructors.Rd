@@ -67,6 +67,7 @@
 \alias{n4m_regression_metrics}
 \alias{n4m_spectral_events_qc}
 \alias{n4m_spectral_noise_proxy}
+\alias{n4m_spectral_population_events_qc}
 \alias{n4m_spectral_reference_qc}
 \alias{n4m_correlation}
 \alias{n4m_high_leverage}
@@ -289,6 +290,7 @@ n4m_pls_monitoring(n_components = 2L, center_x = TRUE, scale_x = TRUE, center_y 
 n4m_regression_metrics()
 n4m_spectral_events_qc(valid_mask = c(), axis_basis = "index", axis_values = c(), outlier_threshold = 8.0, clip_lower = NULL, clip_upper = NULL, clip_tolerance = 0.0)
 n4m_spectral_noise_proxy(valid_mask = c())
+n4m_spectral_population_events_qc(valid_mask = c(), axis_basis = "index", axis_values = c(), outlier_threshold = 8.0, min_spectra = 5L)
 n4m_spectral_reference_qc(valid_mask = c(), reference_mode = "dataset_mean", reference_valid_mask = c())
 n4m_correlation(threshold = 0.0, top_k = -1L)
 n4m_high_leverage(method = "hat", threshold_multiplier = 2.0, absolute_threshold = NULL, n_components = 0L, center = TRUE)
@@ -610,6 +612,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{min_path_length}{Native parameter (double); defaults come from the n4m manifest.}
 \item{min_selected}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_size}{Native parameter (int); defaults come from the n4m manifest.}
+\item{min_spectra}{Native parameter (int); defaults come from the n4m manifest.}
 \item{min_value}{Native parameter (double); defaults come from the n4m manifest.}
 \item{min_variance}{Native parameter (double); defaults come from the n4m manifest.}
 \item{missing_policy}{Native parameter (enum); defaults come from the n4m manifest.}
@@ -874,6 +877,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_regression_metrics}: \code{diagnostics.regression_metrics} (generic)
 \item \code{n4m_spectral_events_qc}: \code{diagnostics.spectral_events_qc} (generic)
 \item \code{n4m_spectral_noise_proxy}: \code{diagnostics.spectral_noise_proxy} (generic)
+\item \code{n4m_spectral_population_events_qc}: \code{diagnostics.spectral_population_events_qc} (generic)
 \item \code{n4m_spectral_reference_qc}: \code{diagnostics.spectral_reference_qc} (generic)
 \item \code{n4m_correlation}: \code{filters.correlation} (selector)
 \item \code{n4m_high_leverage}: \code{filters.high_leverage} (sample_filter)

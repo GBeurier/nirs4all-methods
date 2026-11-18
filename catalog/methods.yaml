@@ -14594,6 +14594,68 @@ methods:
           type: double
           default: 0.0
           min: 0
+  - method_id: "diagnostics.spectral_population_events_qc"
+    family: "utilities"
+    category: "utilities"
+    subcategory: "spectral_diagnostics"
+    since_abi: "2.23.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    parity:
+      fixtures: []
+      tolerance_row: "spectral_diagnostics_v1"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "diagnostics.spectral_population_events_qc"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "SpectralPopulationEventsQc"
+        legacy_aliases: []
+      r:
+        function: "n4m_spectral_population_events_qc"
+        legacy_aliases: []
+    publications: []
+    notes: "Versioned descriptive protocol: derivative events relative to the across-spectra distribution at each band position; see docs/intrinsic_diagnostics_contract.v1.json."
+    namespace: "diagnostics"
+    leaf: "spectral_population_events_qc"
+    fq_name: "n4m.diagnostics.spectral_population_events_qc"
+    c_surface: "none"
+    legacy_ids:
+      - "diagnostics.spectral_population_events_qc"
+    estimator:
+      kind: procedure
+      adapter: spectral_population_events_qc
+      roles: [generic]
+      params:
+        - name: valid_mask
+          type: int_array
+          default: []
+          min: 0
+          max: 1
+        - name: axis_basis
+          type: enum
+          default: index
+          choices: [index, physical]
+        - name: axis_values
+          type: double_array
+          default: []
+        - name: outlier_threshold
+          type: double
+          default: 8.0
+          min: 0
+        - name: min_spectra
+          type: int
+          default: 5
+          min: 3
+          max: 2147483647
   - method_id: "diagnostics.spectral_noise_proxy"
     family: "utilities"
     category: "utilities"

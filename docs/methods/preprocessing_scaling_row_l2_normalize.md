@@ -8,7 +8,7 @@ _Namespace_: **`n4m.transform.scaling`** · _Fully-qualified_: `n4m.transform.sc
 
 **Python (verified public re-export):** `from n4m.roles import RowL2Normalize`
 
-**Signature:** [`RowL2Normalize()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L4029)
+**Signature:** [`RowL2Normalize()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L4063)
 
 **R (source-verified):** [`n4m_row_l2_normalize()`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/estimator_roles_generated.R).
 

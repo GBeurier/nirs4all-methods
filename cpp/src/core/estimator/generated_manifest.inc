@@ -876,6 +876,19 @@ const std::int64_t kDefault_diagnostics_spectral_noise_proxy_valid_mask[] = {0};
 const ParamSpec kParams_diagnostics_spectral_noise_proxy[] = {
     {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_spectral_noise_proxy_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_diagnostics_spectral_population_events_qc_valid_mask[] = {0};
+const std::int64_t kDefault_diagnostics_spectral_population_events_qc_axis_basis[] = {0};
+const char* const kChoices_diagnostics_spectral_population_events_qc_axis_basis[] = {"index", "physical"};
+const double kDefault_diagnostics_spectral_population_events_qc_axis_values[] = {0};
+const double kDefault_diagnostics_spectral_population_events_qc_outlier_threshold[] = {8.0};
+const std::int64_t kDefault_diagnostics_spectral_population_events_qc_min_spectra[] = {5};
+const ParamSpec kParams_diagnostics_spectral_population_events_qc[] = {
+    {"valid_mask", N4M_METHOD_PARAM_INT_ARRAY, true, kDefault_diagnostics_spectral_population_events_qc_valid_mask, nullptr, 0, 0.0, 1.0, nullptr, 0, false, false},
+    {"axis_basis", N4M_METHOD_PARAM_ENUM, true, kDefault_diagnostics_spectral_population_events_qc_axis_basis, nullptr, 1, kNaN, kNaN, kChoices_diagnostics_spectral_population_events_qc_axis_basis, 2, false, false},
+    {"axis_values", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_diagnostics_spectral_population_events_qc_axis_values, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"outlier_threshold", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_diagnostics_spectral_population_events_qc_outlier_threshold, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"min_spectra", N4M_METHOD_PARAM_INT, true, kDefault_diagnostics_spectral_population_events_qc_min_spectra, nullptr, 1, 3.0, 2147483647.0, nullptr, 0, false, false},
+};
 const std::int64_t kDefault_diagnostics_spectral_reference_qc_valid_mask[] = {0};
 const std::int64_t kDefault_diagnostics_spectral_reference_qc_reference_mode[] = {0};
 const char* const kChoices_diagnostics_spectral_reference_qc_reference_mode[] = {"dataset_mean", "supplied"};
@@ -2186,6 +2199,7 @@ const MethodSpec kMethods[] = {
     {"diagnostics.regression_metrics", "n4m.metrics.scoring.regression_metrics", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, nullptr, 0, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_regression_metrics},
     {"diagnostics.spectral_events_qc", "n4m.diagnostics.spectral_events_qc", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_events_qc, 7, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_spectral_events_qc},
     {"diagnostics.spectral_noise_proxy", "n4m.diagnostics.spectral_noise_proxy", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_noise_proxy, 1, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_spectral_noise_proxy},
+    {"diagnostics.spectral_population_events_qc", "n4m.diagnostics.spectral_population_events_qc", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_population_events_qc, 5, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "", nullptr, &run_spectral_population_events_qc},
     {"diagnostics.spectral_reference_qc", "n4m.diagnostics.spectral_reference_qc", N4M_METHOD_PROCEDURE, N4M_ROLE_GENERIC, kParams_diagnostics_spectral_reference_qc, 3, {N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_OPTIONAL, N4M_INPUT_NONE}, "", nullptr, &run_spectral_reference_qc},
     {"filters.correlation", "n4m.feature_selection.filter.correlation", N4M_METHOD_ESTIMATOR, N4M_ROLE_SELECTOR, kParams_filters_correlation, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "selection", &make_select_correlation, nullptr},
     {"filters.high_leverage", "n4m.outlier_detection.high_leverage", N4M_METHOD_ESTIMATOR, N4M_ROLE_SAMPLE_FILTER, kParams_filters_high_leverage, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "leverage_model", &make_filter_high_leverage, nullptr},

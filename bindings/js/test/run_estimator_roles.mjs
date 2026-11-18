@@ -57,6 +57,7 @@ const newMethods = ["preprocessing.scaling.standard_scale", "models.pls.opls",
     "preprocessing.scaling.row_l2_normalize", "preprocessing.scaling.block_rms", "models.neural.multibranch_regressor"];
 const newProcedures = ["utilities.finite_column_quantiles", "utilities.ragged_summary",
     "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
+    "diagnostics.spectral_population_events_qc",
     "diagnostics.spectral_noise_proxy", "diagnostics.local_density", "diagnostics.pca_reference_qc"];
 const legacyMethods = fixture.cases.map((c) => c.method_id);
 assert.ok(newMethods.every((id) => !legacyMethods.includes(id)));

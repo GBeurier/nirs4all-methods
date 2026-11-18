@@ -525,7 +525,7 @@ fn replays_the_cross_language_fixture() {
     assert!(listed.insert("utilities.finite_column_quantiles"));
     let intrinsic = intrinsic_fixture();
     let intrinsic_cases = intrinsic["cases"].as_array().unwrap();
-    assert_eq!(intrinsic_cases.len(), 5);
+    assert_eq!(intrinsic_cases.len(), 6);
     for case in intrinsic_cases {
         assert!(listed.insert(case["method_id"].as_str().unwrap()));
     }
@@ -932,7 +932,7 @@ fn replays_intrinsic_diagnostics_fixture() {
     let ctx = Context::new().unwrap();
     let fixture = intrinsic_fixture();
     let cases = fixture["cases"].as_array().unwrap();
-    assert_eq!(cases.len(), 5);
+    assert_eq!(cases.len(), 6);
     for case in cases {
         let method_id = case["method_id"].as_str().unwrap();
         let x = Dense::new(&case["X"]);

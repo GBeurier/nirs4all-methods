@@ -8,7 +8,7 @@ _Namespace_: **`n4m.estimators.neural`** · _Fully-qualified_: `n4m.estimators.n
 
 **Python (verified public re-export):** `from n4m.roles import MultibranchRegressor`
 
-**Signature:** [`MultibranchRegressor(*, branch_kinds = (), branch_shapes = (), filters = 4, kernel_size = 5, pool_size = 2, embedding_dim = 8, head_hidden = 8, epochs = 100, batch_size = 16, learning_rate = 0.01, weight_decay = 0.0001, seed = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L2718)
+**Signature:** [`MultibranchRegressor(*, branch_kinds = (), branch_shapes = (), filters = 4, kernel_size = 5, pool_size = 2, embedding_dim = 8, head_hidden = 8, epochs = 100, batch_size = 16, learning_rate = 0.01, weight_decay = 0.0001, seed = None)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/src/n4m/roles/_generated.py#L2752)
 
 **R (source-verified):** [`n4m_multibranch_regressor(branch_kinds = c(), branch_shapes = c(), filters = 4L, kernel_size = 5L, pool_size = 2L, embedding_dim = 8L, head_hidden = 8L, epochs = 100L, batch_size = 16L, learning_rate = 0.01, weight_decay = 0.0001, seed = NULL)`](https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/r/n4m/R/estimator_roles_generated.R).
 

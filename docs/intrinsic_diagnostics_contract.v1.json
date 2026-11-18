@@ -169,6 +169,65 @@
       "extrema_proxy": "lo/hi observed valid dataset extrema, epsilon=max(1e-12,max(abs(lo),abs(hi))*1e-8); occupancy=within epsilon of lo or hi; NOT physical clipping",
       "legacy_equivalence": "index mode equals Datasets artefact differences on complete matrices with sufficient features; valid denominator differs explicitly when masks/missing cells occur"
     },
+    "diagnostics.spectral_population_events_qc": {
+      "signals": [
+        "jump_count",
+        "jump_fraction",
+        "spike_count",
+        "spike_fraction"
+      ],
+      "protocol_id": "spectral-events-population-position.v1",
+      "availability": "added after Methods 1.3.19 under the unchanged ABI 2.23; discover by method_id (n4m_method_find or manifest), not by ABI",
+      "parameters": {
+        "axis_basis": {
+          "kind": "enum",
+          "values": [
+            "index",
+            "physical"
+          ],
+          "default": "index"
+        },
+        "outlier_threshold": {
+          "kind": "double",
+          "default": 8.0,
+          "constraint": ">0"
+        },
+        "min_spectra": {
+          "kind": "int",
+          "default": 5,
+          "constraint": ">=3"
+        }
+      },
+      "formulae": {
+        "derivatives": "identical to diagnostics.spectral_events_qc: index first/second differences, or physical signed slopes and 2*(slope[j+1]-slope[j])/(axis[j+2]-axis[j])",
+        "position": "jump position k=(j,j+1) and spike position k=(j,j+1,j+2); a row contributes only when every band of the position is valid; never bridge masked holes",
+        "position_statistics": "over contributing rows, when at least min_spectra rows and all finite: center_k=median, scale_k=1.4826*median(abs(d-center_k)); otherwise the position is not evaluated",
+        "scale_floor": "floor=median of scale_k over evaluated positions of the same derivative order; effective scale=max(scale_k,floor); floor zero or nonfinite makes that order status4 for every row with an evaluated position",
+        "events": "abs(d-center_k) > outlier_threshold*max(scale_k,floor)",
+        "fraction": "row events divided by the row's evaluated positions; a row without any evaluated position is status1",
+        "attribution": "a jump at (j,j+1) and a spike at (j,j+1,j+2) are both attributed to band j+1"
+      },
+      "extra_outputs": {
+        "jump_eligible_counts": "integer vector n; evaluated jump positions per row",
+        "spike_eligible_counts": "integer vector n; evaluated spike positions per row",
+        "jump_band_counts": "integer vector p; jump events attributed to each band",
+        "spike_band_counts": "integer vector p; spike events attributed to each band",
+        "jump_band_evaluated": "integer vector p; rows evaluated at each attribution band, 0 where not evaluated or the order is undefined",
+        "spike_band_evaluated": "integer vector p; rows evaluated at each attribution band, 0 where not evaluated or the order is undefined",
+        "jump_positions_evaluated": "native scalar",
+        "spike_positions_evaluated": "native scalar",
+        "jump_scale_floor": "native scalar plus status integer vector length1",
+        "spike_scale_floor": "native scalar plus status integer vector length1",
+        "global_jump_count": "native scalar plus status integer vector length1; pooled over rows with computed statistic",
+        "global_jump_fraction": "native scalar plus status integer vector length1; pooled over rows with computed statistic",
+        "global_jump_eligible": "native scalar plus status integer vector length1; pooled over rows with computed statistic",
+        "global_spike_count": "native scalar plus status integer vector length1; pooled over rows with computed statistic",
+        "global_spike_fraction": "native scalar plus status integer vector length1; pooled over rows with computed statistic",
+        "global_spike_eligible": "native scalar plus status integer vector length1; pooled over rows with computed statistic"
+      },
+      "interpretation": "atypicality relative to the supplied population at the same band position; heterogeneous populations widen the scale; not a physical-cause label",
+      "relation": "the row-local diagnostics.spectral_events_qc protocol is unchanged; signal names match so consumers can switch by method_id"
+    },
     "diagnostics.spectral_noise_proxy": {
       "signals": [
         "noise_sigma",

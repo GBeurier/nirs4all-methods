@@ -18,6 +18,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
+- Generic procedure `diagnostics.spectral_population_events_qc` (ABI 2.23.0
+  unchanged; no new public symbol; discover it by method id). It flags
+  first/second-derivative events that are atypical relative to the other
+  spectra at the same band position (median and 1.4826*MAD across spectra,
+  floored at the median scale of the derivative order), so absorption bands
+  shared by a smooth population are no longer reported as spikes or jumps. It
+  reuses the declared-axis derivatives of `diagnostics.spectral_events_qc`,
+  whose row-local behaviour is unchanged, publishes the same per-row and
+  global signal names, and adds per-band event/evaluated counts
+  (`jump_band_counts`, `spike_band_counts`, `jump_band_evaluated`,
+  `spike_band_evaluated`). Positions with fewer than `min_spectra` (default 5)
+  eligible spectra are not evaluated.
 - Project 1.3.18 (ABI 2.23.0) adds the explainability kernels below and a
   bit-identical, faster SNV (exact power-of-two scaling instead of `ldexp` in
   the hot loops; three times faster in WebAssembly).

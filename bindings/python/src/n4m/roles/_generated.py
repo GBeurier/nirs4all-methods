@@ -2179,6 +2179,40 @@ class SpectralNoiseProxy(NativeProcedure):
         self.valid_mask = valid_mask
 
 
+class SpectralPopulationEventsQc(NativeProcedure):
+    """Native ``diagnostics.spectral_population_events_qc`` (generic)."""
+
+    _method_id = "diagnostics.spectral_population_events_qc"
+    _param_types: ClassVar[dict[str, str]] = {
+        "valid_mask": "int_array",
+        "axis_basis": "enum",
+        "axis_values": "double_array",
+        "outlier_threshold": "double",
+        "min_spectra": "int",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "axis_basis": (
+            "index",
+            "physical",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        valid_mask=(),
+        axis_basis="index",
+        axis_values=(),
+        outlier_threshold=8,
+        min_spectra=5,
+    ) -> None:
+        self.valid_mask = valid_mask
+        self.axis_basis = axis_basis
+        self.axis_values = axis_values
+        self.outlier_threshold = outlier_threshold
+        self.min_spectra = min_spectra
+
+
 class SpectralReferenceQc(NativeProcedure):
     """Native ``diagnostics.spectral_reference_qc`` (generic)."""
 
@@ -6053,6 +6087,7 @@ __all__ = [
     "SparseSIMPLS",
     "SpectralEventsQc",
     "SpectralNoiseProxy",
+    "SpectralPopulationEventsQc",
     "SpectralQualityFilter",
     "SpectralReferenceQc",
     "SpikeNoise",

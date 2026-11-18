@@ -1608,6 +1608,35 @@
     {
       "links": [
         {
+          "kind": "doi",
+          "value": "10.1080/01621459.1993.10476408"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1080/01621459.1993.10476408"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/intrinsic_diagnostics.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/docs/intrinsic_diagnostics_contract.v1.json"
+        },
+        {
+          "kind": "url",
+          "value": "https://numpy.org/doc/stable/reference/generated/numpy.diff.html"
+        }
+      ],
+      "page": "diagnostics_spectral_population_events_qc"
+    },
+    {
+      "links": [
+        {
           "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/bindings/python/tests/test_intrinsic_diagnostics.py"
         },
