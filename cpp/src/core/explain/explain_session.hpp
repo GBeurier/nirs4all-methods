@@ -49,6 +49,20 @@ class Session {
                         double* expected, int64_t expected_size, double* predictions,
                         int64_t predictions_size, double* std_error,
                         int64_t std_error_size) const;
+    // GRADIENT sessions (ABI 2.24).
+    n4m_status_t set_gradient_step(n4m_context_t* ctx, double relative_step);
+    n4m_status_t gradients(n4m_context_t* ctx, double* gradients, int64_t gradients_size,
+                           double* mean_gradient, int64_t mean_gradient_size, double* steps,
+                           int64_t steps_size) const;
+
+    // n4m_explain_perturb_rows_v1: the rows the session's baseline filling
+    // writes for one coalition (absent groups), for every row of X.
+    static n4m_status_t perturb_rows(n4m_context_t* ctx, const n4m_matrix_view_t* X,
+                                     const n4m_matrix_view_t* background,
+                                     const int64_t* feature_group, int64_t n_groups,
+                                     int32_t baseline, const int64_t* absent_groups,
+                                     int64_t n_absent, double* out_rows,
+                                     int64_t out_rows_capacity, int64_t* out_n_rows);
 
   private:
     enum class State { kReady, kPending, kComplete, kPoisoned };
@@ -72,6 +86,9 @@ class Session {
     void coalition_mask(const RowPlan& plan, std::size_t coalition, unsigned char* mask) const;
     void fill_row(const Cursor& cursor, const RowPlan* plan, double* out);
     void interpolate(const double* x, const unsigned char* present, double* out) const;
+    // Fills absent features (present_ == 0) of x from the baseline (background
+    // row `base` for BACKGROUND); the one filling rule of every coalition.
+    void fill_present(const double* x, std::size_t base, double* out) const;
     double value(const RowPlan& plan, std::size_t coalition, std::size_t output) const noexcept;
     double empty_value(const RowPlan& plan, std::size_t output) const noexcept;
     n4m_status_t finalize_row(n4m_context_t* ctx, std::size_t row, const RowPlan& plan);
@@ -80,6 +97,8 @@ class Session {
     n4m_status_t finalize_kernel(n4m_context_t* ctx, std::size_t row, const RowPlan& plan);
     n4m_status_t finalize_lime(n4m_context_t* ctx, std::size_t row, const RowPlan& plan);
     void finalize_occlusion(std::size_t row, const RowPlan& plan);
+    void finalize_gradient(std::size_t row, const RowPlan& plan);
+    void update_gradient_steps(double relative_step);
     void sample_subset(std::size_t size, unsigned char* mask, unsigned char present_value);
 
     // Configuration.
@@ -106,6 +125,11 @@ class Session {
     std::vector<double> reference_;
     std::vector<std::size_t> group_of_feature_;
     std::vector<double> kernel_size_cdf_;  // sampled KERNEL: cumulative size weights
+    // GRADIENT: per-feature scale s_j, absolute steps h_j = step * s_j.
+    double gradient_step_ = 1e-3;
+    std::vector<double> gradient_scale_;
+    std::vector<double> gradient_steps_;
+    std::vector<double> gradients_;  // [row][feature][output]
     n4m_rng_pcg64 rng_{};
 
     // Ask/tell state.

@@ -6,6 +6,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-18
+
+ABI 2.24.0 (additive). From this release an ABI minor ships in a Methods
+minor release; consumers accept it by moving their range to `1.4`, and the
+runtime `n4m_check_abi_compatibility` check stays the authority.
+
+**Numeric change.** Standardization replaces a column standard deviation below
+`10 * DBL_EPSILON` (or nonfinite) by 1 in every autoscaling path, and the
+mirror-mode Savitzky-Golay odd derivative over an odd window writes exact zeros
+at its first and last values. Models fitted on columns whose standard deviation
+was pure rounding noise produce different (correct) coefficients, VIPs and
+predictions; all other results are unchanged. See *Fixed* below.
+
+### Added
+
+- Model-intrinsic importances and affine pipelines (ABI 2.24.0): affine
+  coefficients of any fitted `N4M_CAP_AFFINE` estimator (also after
+  N4ME import), the PLS-family latent structure (W, R, P, Q, x mean/scale), VIP / target-projection selectivity ratio /
+  standardized coefficients on host-supplied rows, the transformer traits
+  `N4M_CAP_AFFINE_TRANSFORM` / `N4M_CAP_COLUMN_ALIGNED` (manifest
+  `affine_transform`, `column_aligned`; per-step `affine` / `column_aligned`
+  in the role-pipeline step descriptor), exact raw-input coefficients of
+  affine role pipelines with a typed refusal naming the first non-affine step,
+  a local central-difference gradient explainer (`N4M_EXPLAIN_GRADIENT`),
+  coalition-row previews, the Monte-Carlo standard error of mean attributions,
+  and importance-profile aggregation and comparison (Spearman through the
+  correlation primitive, top-K Jaccard). JS: `NativeEstimator.affineCoefficients`,
+  `latentStructure`, `modelImportance`, `RolePipeline.inputAffineCoefficients`,
+  `stepInfo`, `explainModel({method: "gradient"})`, `perturbRows`,
+  `aggregateProfile`, `compareProfiles`. Envelope schema
+  `docs/explain/importance_profile_v1.schema.json`; the
+  `nirs4all.explanation.v1` envelope gains the `gradient` method kind.
+
+### Changed
+
+- The independent Rust crate `n4m` on `main` requires libn4m ABI >= 2.24
+  (unreleased; its next publication is a crate minor).
+
+### Fixed
+
+- Autoscaling no longer turns rounding noise into a unit-variance variable: a
+  column standard deviation below `10 * DBL_EPSILON` (or nonfinite) is replaced
+  by 1 in every standardization path (PLS-family `scale_x`/`scale_y` through
+  the shared fit helper, Ridge and `StandardScale` through the shared column
+  statistics, sweeps and moment fits, preprocessing pipelines, legacy
+  multiblock PLS, LW-PLS and the UVE/SPA/WVC selector standardizations), the
+  absolute rule of scikit-learn's `_handle_zeros_in_scale`. A mirror-mode
+  Savitzky-Golay first derivative followed by a default autoscaled PLS
+  previously produced edge coefficients of order 1e13 and a nonzero VIP on a
+  pure-noise column. The mirror-mode Savitzky-Golay odd derivative over an
+  odd window now writes its first and last values as exact zeros (they were
+  +-1e-17 rounding); every other output is unchanged.
+
+## [1.3.15] - [1.3.19] - 2026-11-18
+
+Entries accumulated while 1.3.15 through 1.3.19 shipped as project patches
+(ABI 2.21 through 2.23); most entries name the version that introduced them.
+
 ### Changed
 
 - Project 1.3.19 (ABI 2.23.0 unchanged) rewords the error messages that used

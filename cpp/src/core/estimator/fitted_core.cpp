@@ -191,15 +191,15 @@ FittedKernel<S> owned_state(S* (*make)(const Params&), void (*destroy)(S*),
 }  // namespace
 
 std::unique_ptr<Adapter> make_tr_standard_scale(const MethodSpec&) {
-    return fitted(owned_state<StandardScaleState>(
+    return with_traits(fitted(owned_state<StandardScaleState>(
         standard_scale_create, [](StandardScaleState* state) { delete state; },
-        standard_scale_fit, standard_scale_apply, standard_scale_save, standard_scale_load));
+        standard_scale_fit, standard_scale_apply, standard_scale_save, standard_scale_load)), kAffineAligned);
 }
 
 // ---- orthogonalization -----------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_osc(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_osc_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_osc_handle_t>(
         {[](n4m_pp_osc_handle_t** h, const Params& p) {
              return n4m_transform_osc_create(h, to_i32(p.get_int("n_components")),
                                              p.get_bool("scale") ? 1 : 0);
@@ -214,14 +214,14 @@ std::unique_ptr<Adapter> make_tr_osc(const MethodSpec&) {
              return n4m_transform_osc_fit(h, contiguous_view(*in.X, x_storage),
                                           static_cast<const double*>(y.data), y.rows);
          },
-         n4m_transform_osc_transform, n4m_transform_osc_destroy, {}, {}, {}}));
+         n4m_transform_osc_transform, n4m_transform_osc_destroy, {}, {}, {}})), kAffineAligned);
 }
 
 // EPO: the external parameter d comes through y (one continuous value per
 // row). Without d for new rows the EPO transform is its calibration-only
 // form (centering and uncentering at the calibration mean of d).
 std::unique_ptr<Adapter> make_tr_epo(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_epo_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_epo_handle_t>(
         {[](n4m_pp_epo_handle_t** h, const Params& p) {
              return n4m_domain_adaptation_epo_create(h, p.get_bool("scale") ? 1 : 0);
          },
@@ -235,13 +235,13 @@ std::unique_ptr<Adapter> make_tr_epo(const MethodSpec&) {
              return n4m_domain_adaptation_epo_fit(h, contiguous_view(*in.X, x_storage),
                                                   static_cast<const double*>(d.data), d.rows);
          },
-         n4m_domain_adaptation_epo_transform, n4m_domain_adaptation_epo_destroy, {}, {}, {}}));
+         n4m_domain_adaptation_epo_transform, n4m_domain_adaptation_epo_destroy, {}, {}, {}})), kAffineAligned);
 }
 
 // ---- projections -----------------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_flexible_pca(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_flex_pca_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_flex_pca_handle_t>(
         {[](n4m_pp_flex_pca_handle_t** h, const Params& p) {
              return n4m_decomposition_flexible_pca_create(h, p.get_double("n_components"));
          },
@@ -250,11 +250,11 @@ std::unique_ptr<Adapter> make_tr_flexible_pca(const MethodSpec&) {
          [](const n4m_pp_flex_pca_handle_t* h, std::int64_t, std::int64_t* out) {
              return n4m_decomposition_flexible_pca_output_cols(h, out);
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_flexible_svd(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_flex_svd_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_flex_svd_handle_t>(
         {[](n4m_pp_flex_svd_handle_t** h, const Params& p) {
              return n4m_decomposition_flexible_svd_create(h, p.get_double("n_components"));
          },
@@ -263,11 +263,11 @@ std::unique_ptr<Adapter> make_tr_flexible_svd(const MethodSpec&) {
          [](const n4m_pp_flex_svd_handle_t* h, std::int64_t, std::int64_t* out) {
              return n4m_decomposition_flexible_svd_output_cols(h, out);
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_wavelet_pca(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_wavelet_pca_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_wavelet_pca_handle_t>(
         {[](n4m_pp_wavelet_pca_handle_t** h, const Params& p) {
              return n4m_transform_wavelet_pca_create(
                  h, static_cast<n4m_pp_wavelet_family_t>(p.get_int("family")),
@@ -279,11 +279,11 @@ std::unique_ptr<Adapter> make_tr_wavelet_pca(const MethodSpec&) {
          [](const n4m_pp_wavelet_pca_handle_t* h, std::int64_t, std::int64_t* out) {
              return n4m_transform_wavelet_pca_output_cols(h, out);
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 std::unique_ptr<Adapter> make_tr_wavelet_svd(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_wavelet_svd_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_wavelet_svd_handle_t>(
         {[](n4m_pp_wavelet_svd_handle_t** h, const Params& p) {
              return n4m_transform_wavelet_svd_create(
                  h, static_cast<n4m_pp_wavelet_family_t>(p.get_int("family")),
@@ -295,7 +295,7 @@ std::unique_ptr<Adapter> make_tr_wavelet_svd(const MethodSpec&) {
          [](const n4m_pp_wavelet_svd_handle_t* h, std::int64_t, std::int64_t* out) {
              return n4m_transform_wavelet_svd_output_cols(h, out);
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 // ---- discretizers and resampling ------------------------------------------
@@ -334,7 +334,7 @@ std::unique_ptr<Adapter> make_tr_range_discretizer(const MethodSpec&) {
 // The target grid is `target_wavelengths`, or tgt_min + tgt_step * i for
 // i < tgt_n; neither selects the identity grid (the post-crop source axis).
 std::unique_ptr<Adapter> make_tr_resampler(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_resampler_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_resampler_handle_t>(
         {[](n4m_pp_resampler_handle_t** h, const Params& p) {
              std::vector<double> target = p.get_doubles("target_wavelengths");
              const std::int64_t tgt_n = p.get_int("tgt_n");
@@ -361,22 +361,22 @@ std::unique_ptr<Adapter> make_tr_resampler(const MethodSpec&) {
              *out = n4m_transform_resampler_output_cols(h);
              return N4M_OK;
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 // ---- scaling and derivative -----------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_baseline(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_baseline_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_baseline_handle_t>(
         {[](n4m_pp_baseline_handle_t** h, const Params&) {
              return n4m_transform_baseline_center_create(h);
          },
          fit_on_x(n4m_transform_baseline_center_fit), n4m_transform_baseline_center_transform,
-         n4m_transform_baseline_center_destroy, {}, {}, {}}));
+         n4m_transform_baseline_center_destroy, {}, {}, {}})), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_log_transform(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_log_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_log_handle_t>(
         {[](n4m_pp_log_handle_t** h, const Params& p) {
              return n4m_transform_log_transform_create(h, p.get_double("base"),
                                                        p.get_double("offset"),
@@ -384,11 +384,11 @@ std::unique_ptr<Adapter> make_tr_log_transform(const MethodSpec&) {
                                                        p.get_double("min_value"));
          },
          fit_on_x(n4m_transform_log_transform_fit), n4m_transform_log_transform_transform,
-         n4m_transform_log_transform_destroy, {}, {}, {}}));
+         n4m_transform_log_transform_destroy, {}, {}, {}})), kAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_derivate(const MethodSpec&) {
-    return fitted(with_core_state<n4m_pp_derivate_handle_t>(
+    return with_traits(fitted(with_core_state<n4m_pp_derivate_handle_t>(
         {[](n4m_pp_derivate_handle_t** h, const Params& p) {
              return n4m_transform_derivative_create(h, to_i32(p.get_int("order")),
                                                     p.get_double("delta"));
@@ -399,33 +399,33 @@ std::unique_ptr<Adapter> make_tr_derivate(const MethodSpec&) {
              *out = kernel_output_cols(h, in);
              return N4M_OK;
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 // Column statistics learned at fit and applied to new rows (the public
 // n4m_transform_normalize / simple_scale recompute them per batch).
 std::unique_ptr<Adapter> make_tr_normalize(const MethodSpec&) {
-    return fitted(owned_state<n4m_pp_normalize_state_t>(
+    return with_traits(fitted(owned_state<n4m_pp_normalize_state_t>(
         [](const Params& p) {
             return n4m_pp_normalize_state_new(p.get_double("feature_min"),
                                               p.get_double("feature_max"));
         },
         n4m_pp_normalize_state_free, n4m_pp_normalize_state_fit, n4m_pp_normalize_apply,
-        n4m_pp_normalize_state_save, n4m_pp_normalize_state_load));
+        n4m_pp_normalize_state_save, n4m_pp_normalize_state_load)), kAffineAligned);
 }
 
 std::unique_ptr<Adapter> make_tr_simple_scale(const MethodSpec&) {
-    return fitted(owned_state<n4m_pp_simple_scale_fit_state_t>(
+    return with_traits(fitted(owned_state<n4m_pp_simple_scale_fit_state_t>(
         [](const Params&) { return n4m_pp_simple_scale_fit_state_new(); },
         n4m_pp_simple_scale_fit_state_free, n4m_pp_simple_scale_fit_state_fit,
         n4m_pp_simple_scale_fit_state_apply, n4m_pp_simple_scale_fit_state_save,
-        n4m_pp_simple_scale_fit_state_load));
+        n4m_pp_simple_scale_fit_state_load)), kAffineAligned);
 }
 
 // ---- specialized -----------------------------------------------------------
 
 std::unique_ptr<Adapter> make_tr_fck_static(const MethodSpec&) {
-    return fitted(width_only<n4m_pp_fck_static_handle_t>(
+    return with_traits(fitted(width_only<n4m_pp_fck_static_handle_t>(
         {[](n4m_pp_fck_static_handle_t** h, const Params& p) {
              const std::vector<double> alphas = p.get_doubles("alphas");
              const std::vector<double> sigmas = p.get_doubles("sigmas");
@@ -439,7 +439,7 @@ std::unique_ptr<Adapter> make_tr_fck_static(const MethodSpec&) {
              *out = kernel_output_cols(h, in);
              return N4M_OK;
          },
-         {}, {}}));
+         {}, {}})), kAffine);
 }
 
 }  // namespace n4m::estimator

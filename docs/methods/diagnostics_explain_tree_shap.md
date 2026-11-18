@@ -4,7 +4,7 @@ _Namespace_: **`n4m.explain`** · _Fully-qualified_: `n4m.explain.tree_shap` · 
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_explain_tree_path_dependent_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h#L207). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_explain_tree_path_dependent_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h#L265). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.explain import tree_shap`
 

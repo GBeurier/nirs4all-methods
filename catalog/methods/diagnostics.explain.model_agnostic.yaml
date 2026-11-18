@@ -17,10 +17,17 @@ abi_symbols:
   - "n4m_explain_groups_fixed_width_v1"
   - "n4m_explain_groups_from_ranges_v1"
   - "n4m_explain_summarize_v1"
+  - "n4m_explain_session_set_gradient_step_v1"
+  - "n4m_explain_session_gradients_v1"
+  - "n4m_explain_perturb_rows_v1"
+  - "n4m_explain_summarize_std_error_v1"
+  - "n4m_explain_aggregate_profile_v1"
+  - "n4m_explain_compare_profiles_v1"
 tu:
   - "cpp/src/core/explain/explain_session.cpp"
   - "cpp/src/core/explain/explain_common.cpp"
   - "cpp/src/core/explain/grouping.cpp"
+  - "cpp/src/core/explain/profiles.cpp"
   - "cpp/src/c_api/c_api_explain.cpp"
 headers:
   - "cpp/include/n4m/explain.h"
@@ -44,7 +51,7 @@ bindings:
     function: "explainModel"
     legacy_aliases: []
 publications: []
-notes: "Ask/tell session (never calls a model): exact group SHAP (G <= 16), antithetic permutation SHAP, Kernel SHAP with exact efficiency, LIME over group masks and occlusion, with background, mean or spectral interpolate baselines. Groups are coalition players. Grouping and summary helpers."
+notes: "Ask/tell session (never calls a model): exact group SHAP (G <= 16), antithetic permutation SHAP, Kernel SHAP with exact efficiency, LIME over group masks, occlusion and (ABI 2.24) local central-difference gradients against the background mean, with background, mean or spectral interpolate baselines. Groups are coalition players. Grouping, summary and standard-error helpers, coalition-row previews, and (ABI 2.24) importance-profile aggregation and comparison (Spearman, top-K Jaccard)."
 c_surface:
   - "n4m_explain_options_init_v1"
   - "n4m_explain_session_create_v1"
@@ -56,6 +63,12 @@ c_surface:
   - "n4m_explain_groups_fixed_width_v1"
   - "n4m_explain_groups_from_ranges_v1"
   - "n4m_explain_summarize_v1"
+  - "n4m_explain_session_set_gradient_step_v1"
+  - "n4m_explain_session_gradients_v1"
+  - "n4m_explain_perturb_rows_v1"
+  - "n4m_explain_summarize_std_error_v1"
+  - "n4m_explain_aggregate_profile_v1"
+  - "n4m_explain_compare_profiles_v1"
 fq_name: "n4m.explain.model_agnostic"
 leaf: "model_agnostic"
 legacy_ids:

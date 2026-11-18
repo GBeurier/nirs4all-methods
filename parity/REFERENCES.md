@@ -89,6 +89,14 @@ scikit-learn trees/forests/boosting, `PermutationExplainer`, `ExactExplainer`).
 Sampled explainers (permutation, kernel, LIME) are statistical: parity is a
 tolerance on the estimate, not bitwise agreement.
 
+ABI 2.24 additions are pinned in `cpp/tests/test_importance.cpp` against direct
+formulas: the local gradient explainer equals linear SHAP (mean reference) on
+affine models and `2x` on a quadratic; VIP, the target-projection selectivity
+ratio (Rajalahti et al. 2009) and standardized coefficients are recomputed from
+the exported latent structure; raw-input pipeline coefficients reproduce the
+pipeline predictions (1e-10 relative); profile Spearman matrices equal
+`scipy.stats.spearmanr` 1.15.3 on tied data.
+
 ## Setup (one command)
 
 ```bash

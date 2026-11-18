@@ -1,5 +1,50 @@
 # ABI — Changes Log
 
+## 2026-11-18 — ABI 2.24.0: model-intrinsic importances, affine pipelines, gradient explainer
+
+Additive (unreleased; project version unchanged at 1.3.18). Existing signatures,
+enums, layouts and serialized formats keep their meaning; N4ME payloads are
+unchanged (the new transformer traits are not recorded in N4ME headers, so
+states written by 2.23 import unchanged). Ten new public symbols, present in all
+three `cpp/abi/expected_symbols_*.txt` snapshots:
+
+```c
+/* n4m/estimator.h */
+n4m_status_t n4m_estimator_affine_coefficients_v1(/* ctx, est, coefficients, size, intercept, size */);
+n4m_status_t n4m_estimator_latent_structure_v1(/* ctx, est, out_n_components, W, R, P, size, Q, size, x_mean, x_scale, size */);
+n4m_status_t n4m_estimator_importance_v1(/* ctx, est, X, kind, output_index, out, size */);
+n4m_status_t n4m_role_pipeline_input_affine_coefficients_v1(/* ctx, pipeline, coefficients, size, intercept, size */);
+/* n4m/explain.h */
+n4m_status_t n4m_explain_session_set_gradient_step_v1(/* ctx, session, relative_step */);
+n4m_status_t n4m_explain_session_gradients_v1(/* ctx, session, gradients, size, mean_gradient, size, steps, size */);
+n4m_status_t n4m_explain_perturb_rows_v1(/* ctx, X, background, groups, n_groups, baseline, absent_groups, n_absent, out_rows, capacity, out_n_rows */);
+n4m_status_t n4m_explain_summarize_std_error_v1(/* std_error, n_rows, n_groups, n_outputs, output_index, out, size */);
+n4m_status_t n4m_explain_aggregate_profile_v1(/* ctx, values, n_features, groups, n_groups, rule, out, size */);
+n4m_status_t n4m_explain_compare_profiles_v1(/* ctx, profiles, top_k, spearman, size, top_k_jaccard, size */);
+```
+
+- **Capabilities.** `N4M_CAP_AFFINE_TRANSFORM` (bit 10, `transform(x) = A x + c`
+  exactly) and `N4M_CAP_COLUMN_ALIGNED` (bit 11, output column j is the spectral
+  position of input column j) are method-class traits reported by
+  `n4m_method_info_v1`, `n4m_estimator_info` and the manifest
+  (`affine_transform`, `column_aligned`). Every affine declaration is checked
+  for exact linearity in `cpp/tests/test_importance.cpp`.
+- **Step descriptor.** `n4m_role_pipeline_step_info_v1_t` appends
+  `int32_t affine` and `int32_t column_aligned` (struct_size convention; the
+  2.14 layout, which ends before `affine`, still reads the prefix).
+- **Enums.** `N4M_EXPLAIN_GRADIENT = 5` (local central-difference gradients
+  against the background mean; the options struct is unchanged, the step is
+  set with `n4m_explain_session_set_gradient_step_v1`); new
+  `n4m_importance_kind_t` (VIP, target-projection selectivity ratio,
+  standardized coefficients) and `n4m_profile_aggregation_t`.
+- VIP and the selectivity-ratio ratio share their kernels with
+  `n4m_feature_selection_variable_select_rank` (refactored, results unchanged).
+- See [EXPLAIN.md](../EXPLAIN.md) and the new envelope schema
+  [`importance_profile_v1.schema.json`](../explain/importance_profile_v1.schema.json);
+  `explanation_v1.schema.json` gains the `gradient` kind.
+- `N4M_ABI_VERSION_MINOR` is 24; Python/Rust loader constants, the R version
+  test and the generated role-file headers follow.
+
 ## 2026-11-16 — ABI 2.23.0: model explanation kernels
 
 Additive (unreleased); existing signatures, enums, layouts and serialized

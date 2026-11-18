@@ -4,7 +4,7 @@ _Namespace_: **`n4m.explain`** Â· _Fully-qualified_: `n4m.explain.linear_shap` Â
 
 ## API surface
 
-**C ABI (ABI 2):** [`n4m_explain_linear_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h#L173). Use the linked public header for the exact signature, configuration, and result handles.
+**C ABI (ABI 2):** [`n4m_explain_linear_v1`](https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/include/n4m/explain.h#L231). Use the linked public header for the exact signature, configuration, and result handles.
 
 **Python (verified public re-export):** `from n4m.explain import linear_shap`
 

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
+#include "core/common/column_stats.hpp"
 #include "core/model.hpp"
 
 #include <algorithm>
@@ -383,7 +384,7 @@ void center_scale_in_place(const std::vector<double>& original,
         const double denom = static_cast<double>(rows - 1U);
         for (std::size_t j = 0; j < cols; ++j) {
             const double stddev = std::sqrt(sumsq[j] / denom);
-            scale[j] = (stddev == 0.0 || !std::isfinite(stddev)) ? 1.0 : stddev;
+            scale[j] = ::n4m::core::detail::guarded_scale(stddev);
         }
         for (std::size_t i = 0; i < rows; ++i) {
             double* row = standardized.data() + i * cols;

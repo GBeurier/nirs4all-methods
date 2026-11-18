@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: CECILL-2.1 OR AGPL-3.0-or-later
 
+#include "core/common/column_stats.hpp"
 #include "core/wvc_selection.hpp"
 
 #include <algorithm>
@@ -150,10 +151,10 @@ void center_scale_columns(std::vector<double>& values,
             values[idx(row, cols, col)] = centered;
             sumsq += centered * centered;
         }
-        double scale = rows > 1U ? std::sqrt(sumsq / static_cast<double>(rows - 1U)) : 1.0;
-        if (!std::isfinite(scale) || scale == 0.0) {
-            scale = 1.0;
-        }
+        const double scale =
+            rows > 1U ? ::n4m::core::detail::guarded_scale(
+                            std::sqrt(sumsq / static_cast<double>(rows - 1U)))
+                      : 1.0;
         for (std::size_t row = 0; row < rows; ++row) {
             values[idx(row, cols, col)] /= scale;
         }

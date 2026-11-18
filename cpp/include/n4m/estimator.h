@@ -55,6 +55,23 @@ typedef enum n4m_method_kind_t {
 #define N4M_CAP_SERIALIZABLE          (UINT64_C(1) << 7)
 #define N4M_CAP_AFFINE                (UINT64_C(1) << 8)
 #define N4M_CAP_RETAINS_TRAINING_ROWS (UINT64_C(1) << 9)
+/* ABI 2.24. Transformer traits of a method (properties of the method's
+ * transformer role, identical for every fitted state). n4m_method_info_v1,
+ * n4m_estimator_info and the manifest ("affine_transform", "column_aligned")
+ * report them with the capabilities; N4ME payloads do not record them.
+ *   N4M_CAP_AFFINE_TRANSFORM: transform(x) = A x + c exactly, with A
+ *     (n_out x n_in) and c fixed by the fitted state: Savitzky-Golay and
+ *     finite-difference derivatives, Gaussian smoothing, detrend, centring
+ *     and scaling by fitted column statistics, crop, linear resampling,
+ *     column selection, wavelet coefficients, PCA/PLS projections. Row
+ *     statistic corrections (SNV, MSC, area or L2 normalization),
+ *     logarithms, iterative baselines and thresholding are not affine.
+ *   N4M_CAP_COLUMN_ALIGNED: output column j is the spectral position of
+ *     input column j (same width): smoothing, derivatives, SNV, MSC,
+ *     baselines, centring; not projections, crops, resampling, selections.
+ *     n4m_role_pipeline_step_info_v1 further requires equal fitted widths. */
+#define N4M_CAP_AFFINE_TRANSFORM      (UINT64_C(1) << 10)
+#define N4M_CAP_COLUMN_ALIGNED        (UINT64_C(1) << 11)
 
 /* Input requirement levels, one per n4m_fit_inputs_v1_t input. */
 typedef enum n4m_input_requirement_t {
@@ -254,6 +271,84 @@ N4M_API n4m_status_t n4m_estimator_apply_mask(n4m_context_t* ctx, const n4m_esti
 N4M_API n4m_status_t n4m_estimator_fit_result(const n4m_estimator_t* est,
                                               const n4m_method_result_t** out_borrowed);
 
+/* ---- Model-intrinsic structure and importances (ABI 2.24) ----------- */
+
+/* Affine map of a fitted estimator whose state declares N4M_CAP_AFFINE:
+ * predict(X) = X B + b exactly, B (n_features_in x n_outputs, row-major,
+ * coefficients_size >= n_features_in * n_outputs) in the units of the
+ * estimator's input, b (intercept_size >= n_outputs) in the units of its
+ * output. Available after N4ME import. N4M_ERR_UNSUPPORTED with a message
+ * when the estimator has no affine predictor; nothing is written on error. */
+N4M_API n4m_status_t n4m_estimator_affine_coefficients_v1(n4m_context_t* ctx,
+                                                          const n4m_estimator_t* est,
+                                                          double* coefficients,
+                                                          int64_t coefficients_size,
+                                                          double* intercept,
+                                                          int64_t intercept_size);
+
+/* Latent structure of a fitted latent-variable model (PLS / PCR / OPLS
+ * family): p = n_features_in, q = n_outputs, a = *out_n_components.
+ *   x_weights   W (p x a), x_rotations R = W (P'W)^-1 (p x a, scores
+ *   T = ((X - x_mean) / x_scale) R), x_loadings P (p x a), y_loadings Q
+ *   (q x a, in the fitted Y units: scaled when the model scales Y),
+ *   x_mean / x_scale (p): centring and scaling applied at fit (0 / 1 when
+ *   the model does not centre / scale).
+ * Row-major; every buffer is nullable: call with NULL buffers to read a.
+ * A component that the solver publishes as null (unresolved, see
+ * n4m_model_get_array) has zero columns. features_size >= p * a for every
+ * non-NULL p x a buffer, targets_size >= q * a, mean_size >= p.
+ * N4M_ERR_UNSUPPORTED when the fitted state keeps no latent structure
+ * (affine predictors that keep coefficients only, nonlinear models). */
+N4M_API n4m_status_t n4m_estimator_latent_structure_v1(n4m_context_t* ctx,
+                                                       const n4m_estimator_t* est,
+                                                       int64_t* out_n_components,
+                                                       double* x_weights,
+                                                       double* x_rotations,
+                                                       double* x_loadings,
+                                                       int64_t features_size,
+                                                       double* y_loadings,
+                                                       int64_t targets_size,
+                                                       double* x_mean,
+                                                       double* x_scale,
+                                                       int64_t mean_size);
+
+typedef enum n4m_importance_kind_t {
+    /* Variable importance in projection over the latent structure, with
+     * SSY_a = ||t_a||^2 ||q_a||^2 from the supplied rows (T as above; same
+     * formula as the VIP ranker of feature_selection.h). All outputs
+     * together; output_index is ignored. Needs a latent structure. */
+    N4M_IMPORTANCE_VIP = 0,
+    /* Selectivity ratio on the target-projected component of output
+     * output_index (Rajalahti et al. 2009): in model space
+     * Z = (X - column mean of the rows) / x_scale (x_scale = 1 without a
+     * latent structure), w = B_model[:, o] / ||B_model[:, o]|| with
+     * B_model = x_scale * B, t = Z w, p = Z't / t't, and
+     * SR_j = ||t p_j||^2 / ||z_j - t p_j||^2, with the same zero-residual
+     * convention as the ranker of feature_selection.h (+inf when
+     * only the residual vanishes, 0 for an identically zero column). Any
+     * affine estimator. */
+    N4M_IMPORTANCE_SELECTIVITY_RATIO = 1,
+    /* B[j][o] * s_j, s_j the sample standard deviation (ddof = 1) of
+     * column j over the supplied rows. Any affine estimator; >= 2 rows. */
+    N4M_IMPORTANCE_STANDARDIZED_COEFFICIENTS = 2
+} n4m_importance_kind_t;
+
+/* Importance profile (n_features_in doubles, out_size >= n_features_in) of a
+ * fitted estimator on rows X supplied in the estimator's input space
+ * (normally the preprocessed training partition; the host records which
+ * rows). X: F64, finite, n_features_in columns, >= 1 row (2 for
+ * standardized coefficients). output_index in [0, n_outputs). Typed
+ * refusals: N4M_ERR_UNSUPPORTED when the estimator lacks the structure the
+ * kind needs, N4M_ERR_NUMERICAL_FAILURE when VIP is undefined (no resolved
+ * component explains Y) or the selected coefficient column is zero. */
+N4M_API n4m_status_t n4m_estimator_importance_v1(n4m_context_t* ctx,
+                                                 const n4m_estimator_t* est,
+                                                 const n4m_matrix_view_t* X,
+                                                 int32_t kind,
+                                                 int64_t output_index,
+                                                 double* out,
+                                                 int64_t out_size);
+
 /* ---- Procedures ------------------------------------------------------ */
 
 /* Runs a procedure (kind N4M_METHOD_PROCEDURE) once. `params` may be NULL
@@ -365,6 +460,15 @@ typedef struct n4m_role_pipeline_step_info_v1_t {
                                        N4M_EXPORT_ALLOW_TRAINING_ROWS) */
     int64_t n_features_in;          /* fitted widths; 0 while unfitted */
     int64_t n_features_out;
+    /* ABI 2.24; callers with the shorter 2.14 layout get the prefix.
+     * affine: 1 when the step is exact-affine at predict time: a
+     * transformer / selector declaring N4M_CAP_AFFINE_TRANSFORM, a terminal
+     * step declaring N4M_CAP_AFFINE, or a sample filter (identity at
+     * predict time). column_aligned: 1 for a transformer / selector
+     * declaring N4M_CAP_COLUMN_ALIGNED (once fitted, with equal widths) and
+     * for a sample filter; 0 for the terminal step. */
+    int32_t affine;
+    int32_t column_aligned;
 } n4m_role_pipeline_step_info_v1_t;
 
 /* method_ids: n_steps catalog ids. params: NULL (all defaults) or n_steps
@@ -454,6 +558,20 @@ N4M_API n4m_status_t n4m_role_pipeline_predict_labels(n4m_context_t* ctx,
 N4M_API n4m_status_t n4m_role_pipeline_classes(const n4m_role_pipeline_t* pipeline,
                                                int64_t* out, int64_t capacity,
                                                int64_t* out_count);
+/* ABI 2.24. Raw-input affine map of a fitted pipeline whose every
+ * transformer / selector declares N4M_CAP_AFFINE_TRANSFORM and whose
+ * terminal step is affine (N4M_CAP_AFFINE): predict(X) = X B_raw + b_raw
+ * exactly, B_raw (n_features_in x n_outputs, row-major) = A' B and
+ * b_raw = c' B + b, where z = A x + c is the composed transform chain and
+ * (B, b) the terminal affine map (n4m_estimator_affine_coefficients_v1).
+ * Sample filters do not act at predict time and are skipped. The chain is
+ * read exactly from the fitted transforms: c = T(0) and column j of A is
+ * T(e_j) - T(0), e_j the j-th unit row, evaluated in batches. Refusals:
+ * N4M_ERR_UNSUPPORTED naming the first non-affine step ("step <i>
+ * (<method id>): ..."), N4M_ERR_NOT_FITTED before fit or import. */
+N4M_API n4m_status_t n4m_role_pipeline_input_affine_coefficients_v1(
+    n4m_context_t* ctx, const n4m_role_pipeline_t* pipeline, double* coefficients,
+    int64_t coefficients_size, double* intercept, int64_t intercept_size);
 /* N4ME state of stateful step `state` (see state_index). States that embed
  * training rows export only with N4M_EXPORT_ALLOW_TRAINING_ROWS. */
 N4M_API n4m_status_t n4m_role_pipeline_export_state_size(n4m_context_t* ctx,

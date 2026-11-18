@@ -31,7 +31,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
             "818-833, https://doi.org/10.1007/978-3-319-10590-1_53. Interventional value "
             "function: Janzing, Minorics and Bloebaum (2020), Feature relevance quantification "
             "in explainable AI: A causal problem, AISTATS, PMLR 108, 2907-2916, "
-            "https://proceedings.mlr.press/v108/janzing20a.html."
+            "https://proceedings.mlr.press/v108/janzing20a.html. Local gradient explanations: "
+            "Baehrens, Schroeter, Harmeling, Kawanabe, Hansen and Mueller (2010), How to Explain "
+            "Individual Classification Decisions, Journal of Machine Learning Research 11, "
+            "1803-1831, https://www.jmlr.org/papers/v11/baehrens10a.html."
         ),
         "principle": (
             "Feature groups partitioning the explained features are the players of a coalition "
@@ -49,7 +52,11 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
             "(then equal to exact SHAP) and otherwise samples coalition sizes proportionally to "
             "their kernel mass with complement pairing. LIME fits a weighted ridge surrogate of "
             "v(z) on binary group masks with an exponential kernel of the cosine distance to "
-            r"the all-present mask. Occlusion reports $f(x)-v(\text{all except } g)$."
+            r"the all-present mask. Occlusion reports $f(x)-v(\text{all except } g)$. "
+            "The local gradient method (ABI 2.24) is not a coalition game: it estimates each "
+            r"partial derivative by a central difference $g_j=(f(x+h_je_j)-f(x-h_je_j))/(2h_j)$ "
+            r"with a step scaled by the background spread, and reports $g_j(x_j-r_j)$ against "
+            "the background mean r, summed within groups."
         ),
         "use_cases": (
             "Explaining any fitted regressor or classifier output (prediction in original units, "
@@ -70,7 +77,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
             "but does not remove this, and no conditional baseline is provided. Attributions "
             "describe the model's response under the declared value function, not causal effects "
             "in the measured system. Cost grows as 2^G for exact SHAP and linearly with the "
-            "background size; inputs and predictions must be finite."
+            "background size; inputs and predictions must be finite. Local gradients are "
+            "first-order, not additive except for affine models (where they equal linear SHAP "
+            "with the mean reference), and meaningless for piecewise-constant models such as "
+            "trees."
         ),
         "implementation": (
             "A C++17 ask/tell session in the ABI 2.23 n4m/explain.h surface never calls a model: "
