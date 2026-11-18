@@ -57,8 +57,8 @@ restores the original typed label table; omitting it exposes native class IDs.
 import * as n4m from "@nirs4all/methods";
 
 await n4m.loadModule();
-console.log(n4m.version());     // "1.3.19+abi.2.23.0"
-console.log(n4m.abiVersion());  // [2, 23, 0]
+console.log(n4m.version());     // "1.3.19+abi.2.24.0"
+console.log(n4m.abiVersion());  // [2, 24, 0]
 
 const rows = 40, cols = 6;
 const X = new Float64Array(rows * cols);   // row-major
@@ -419,6 +419,7 @@ const { meanAbs, meanSigned } = summarizeAttributions(result, 0);
 | `occlusion` | `perturbation` | no | `group_game` |
 | `linear_shap` | `exact` (interventional) | yes | `none`, or `group_game` with grouping (linear group sums are group Shapley values) |
 | `tree_shap` (path-dependent) | `exact` | yes | `none`, or `sum_of_feature_values` with grouping |
+| `gradient` (ABI 2.24; central differences) | `perturbation` | no (exact for affine models; `additivityMaxAbsError` reported) | `sum_of_feature_values` |
 
 Baselines: `background` (interventional average over every background row),
 `mean` (column mean of the background) and `interpolate` (each absent run is
@@ -441,3 +442,32 @@ and `treeScale`); converting a specific library's trees to this layout is the
 host's job. `groupsFromRanges(nFeatures, [[start, end), ...])` turns half-open
 feature-index ranges (for example chemical bands already mapped to indices)
 into a partition and reports `rangeOfGroup` (`-1` for uncovered runs).
+
+`method: "gradient"` (ABI 2.24) returns, besides the first-order attributions
+`g_j (x_j - r_j)` against the background mean `r`, `gradients`
+(`[row][feature][output]`), `meanGradient` (`[feature][output]`) and
+`gradientSteps`; `options.gradientStep` sets the relative step (default
+`1e-3`, scaled by the background column spread). `perturbRows({ X, background,
+grouping, absentGroups, baseline })` returns exactly the rows a session sends
+to the model for one coalition (baseline preview; `background` yields
+`X.rows * background.rows` rows). `summarizeAttributions` also returns
+`meanSignedStdError` (`sqrt(sum_r se_rg^2) / nRows`, `null` without
+`stdError`).
+
+### Model-intrinsic importances (ABI 2.24)
+
+```js
+const est = NativeEstimator.fromN4me(state);           // e.g. a fitted PLSRegression or Ridge
+const { coefficients, intercept } = est.affineCoefficients();   // predict(X) = X·B + b
+const latent = est.latentStructure();                  // W, R, P, Q, xMean, xScale (PLS family)
+const vip = modelImportance(est, Xtrain, { kind: "vip" });      // or "selectivity_ratio" / "standardized_coefficients"
+const raw = pipeline.inputAffineCoefficients();        // exact raw-input map of an affine RolePipeline
+pipeline.stepsInfo().map((s) => [s.affine, s.columnAligned]);
+aggregateProfile(vip, groupsFixedWidth(vip.length, 8), "mean");
+const { spearman, topKJaccard } = compareProfiles(profilesMatrix, { topK: 10 });
+```
+
+Refusals are native `N4mError`s (`UNSUPPORTED` for a non-affine estimator or a
+model without latent structure; the pipeline refusal names the first
+non-affine step). See `docs/EXPLAIN.md` and
+`docs/explain/importance_profile_v1.schema.json`.
