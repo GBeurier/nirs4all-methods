@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Changed
+
+- Project 1.3.19 (ABI 2.23.0 unchanged) rewords the error messages that used
+  the word "preflight", which users read as the separate nirs4all-preflight
+  library. The optimizer reports "regression metric dispatch failed after
+  configuration validation"; the JS/WASM diagnostics wrappers throw "invalid
+  diagnostic matrix dimensions" and "diagnostic buffer exceeds WASM allocation
+  limit". Messages only: symbols, function and type names, status codes and
+  fixtures are unchanged.
+
 ### Added
 
 - Project 1.3.18 (ABI 2.23.0) adds the explainability kernels below and a
