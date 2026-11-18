@@ -6,15 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-18
+
+ABI 2.24.0 (additive). From this release an ABI minor ships in a Methods
+minor release; consumers accept it by moving their range to `1.4`, and the
+runtime `n4m_check_abi_compatibility` check stays the authority.
+
+**Numeric change.** Standardization replaces a column standard deviation below
+`10 * DBL_EPSILON` (or nonfinite) by 1 in every autoscaling path, and the
+mirror-mode Savitzky-Golay odd derivative over an odd window writes exact zeros
+at its first and last values. Models fitted on columns whose standard deviation
+was pure rounding noise produce different (correct) coefficients, VIPs and
+predictions; all other results are unchanged. See *Fixed* below.
+
+### Added
+
+- Model-intrinsic importances and affine pipelines (ABI 2.24.0): affine
+  coefficients of any fitted `N4M_CAP_AFFINE` estimator (also after
+  N4ME import), the PLS-family latent structure (W, R, P, Q, x mean/scale), VIP / target-projection selectivity ratio /
+  standardized coefficients on host-supplied rows, the transformer traits
+  `N4M_CAP_AFFINE_TRANSFORM` / `N4M_CAP_COLUMN_ALIGNED` (manifest
+  `affine_transform`, `column_aligned`; per-step `affine` / `column_aligned`
+  in the role-pipeline step descriptor), exact raw-input coefficients of
+  affine role pipelines with a typed refusal naming the first non-affine step,
+  a local central-difference gradient explainer (`N4M_EXPLAIN_GRADIENT`),
+  coalition-row previews, the Monte-Carlo standard error of mean attributions,
+  and importance-profile aggregation and comparison (Spearman through the
+  correlation primitive, top-K Jaccard). JS: `NativeEstimator.affineCoefficients`,
+  `latentStructure`, `modelImportance`, `RolePipeline.inputAffineCoefficients`,
+  `stepInfo`, `explainModel({method: "gradient"})`, `perturbRows`,
+  `aggregateProfile`, `compareProfiles`. Envelope schema
+  `docs/explain/importance_profile_v1.schema.json`; the
+  `nirs4all.explanation.v1` envelope gains the `gradient` method kind.
+
 ### Changed
 
-- Project 1.3.19 (ABI 2.23.0 unchanged) rewords the error messages that used
-  the word "preflight", which users read as the separate nirs4all-preflight
-  library. The optimizer reports "regression metric dispatch failed after
-  configuration validation"; the JS/WASM diagnostics wrappers throw "invalid
-  diagnostic matrix dimensions" and "diagnostic buffer exceeds WASM allocation
-  limit". Messages only: symbols, function and type names, status codes and
-  fixtures are unchanged.
+- The independent Rust crate `n4m` on `main` requires libn4m ABI >= 2.24
+  (unreleased; its next publication is a crate minor).
 
 ### Fixed
 
@@ -31,25 +59,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
   odd window now writes its first and last values as exact zeros (they were
   +-1e-17 rounding); every other output is unchanged.
 
+## [1.3.15] - [1.3.19] - 2026-11-18
+
+Entries accumulated while 1.3.15 through 1.3.19 shipped as project patches
+(ABI 2.21 through 2.23); most entries name the version that introduced them.
+
+### Changed
+
+- Project 1.3.19 (ABI 2.23.0 unchanged) rewords the error messages that used
+  the word "preflight", which users read as the separate nirs4all-preflight
+  library. The optimizer reports "regression metric dispatch failed after
+  configuration validation"; the JS/WASM diagnostics wrappers throw "invalid
+  diagnostic matrix dimensions" and "diagnostic buffer exceeds WASM allocation
+  limit". Messages only: symbols, function and type names, status codes and
+  fixtures are unchanged.
+
 ### Added
 
-- Model-intrinsic importances and affine pipelines (ABI 2.24.0, project
-  version unchanged): affine coefficients of any fitted `N4M_CAP_AFFINE`
-  estimator (also after N4ME import), the PLS-family latent structure (W, R,
-  P, Q, x mean/scale), VIP / target-projection selectivity ratio /
-  standardized coefficients on host-supplied rows, the transformer traits
-  `N4M_CAP_AFFINE_TRANSFORM` / `N4M_CAP_COLUMN_ALIGNED` (manifest
-  `affine_transform`, `column_aligned`; per-step `affine` / `column_aligned`
-  in the role-pipeline step descriptor), exact raw-input coefficients of
-  affine role pipelines with a typed refusal naming the first non-affine step,
-  a local central-difference gradient explainer (`N4M_EXPLAIN_GRADIENT`),
-  coalition-row previews, the Monte-Carlo standard error of mean attributions,
-  and importance-profile aggregation and comparison (Spearman through the
-  correlation primitive, top-K Jaccard). JS: `NativeEstimator.affineCoefficients`,
-  `latentStructure`, `modelImportance`, `RolePipeline.inputAffineCoefficients`,
-  `stepInfo`, `explainModel({method: "gradient"})`, `perturbRows`,
-  `aggregateProfile`, `compareProfiles`. Envelope schema
-  `docs/explain/importance_profile_v1.schema.json`.
 - Project 1.3.18 (ABI 2.23.0) adds the explainability kernels below and a
   bit-identical, faster SNV (exact power-of-two scaling instead of `ldexp` in
   the hot loops; three times faster in WebAssembly).
