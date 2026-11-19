@@ -22,6 +22,20 @@ entries are unchanged.
   `aom_pop.pop_pls` adds `component_scores` and `prefix_scores`. Both echo the
   screened bank (`operator_kinds`, `operator_param_offsets`, `operator_params`).
 
+### Fixed
+
+- A NULL context no longer crashes the generic estimator layer. Sixteen
+  estimators (the AOM superblocks and chain Ridge-PLS, PLS-QDA, PLS-Cox,
+  PLS-GLM, LW-PLS, ON-PLS, kernel PLS, GPR-PLS, missing-aware NIPALS, DS and
+  PDS) dereferenced it during fit, and two during prediction. Estimator fit,
+  transform / predict and the other applications, `n4m_procedure_run`, state
+  export and fitted-state introspection now return `N4M_ERR_NULL_POINTER` for
+  a NULL context, as estimator import and the role-pipeline and multimodal
+  functions already did; output handles and sizes are cleared first (estimator
+  import and role-pipeline creation now clear theirs too). Parameter and
+  estimator creation still accept NULL. The bindings always pass a context and
+  are unaffected.
+
 ## [1.4.1] - 2026-11-18
 
 ABI 2.24.0 unchanged. Purely additive catalog procedure: no ABI, wire or

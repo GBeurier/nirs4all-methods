@@ -1018,6 +1018,66 @@ void test_aom_fit_diagnostics(n4m_context_t* ctx, Inputs& in) {
     }
 }
 
+// Every context-taking entry point refuses a NULL context before reaching a
+// method (some adapters and kernels dereference it), for every method.
+void test_null_context_refused(n4m_context_t* ctx, Inputs& in) {
+    int32_t count = 0;
+    CHECK(n4m_method_count(&count) == N4M_OK);
+    std::vector<double> buffer(static_cast<size_t>(kTrain * kCols));
+    auto out = view(buffer.data(), kTrain, 1);
+    for (int32_t index = 0; index < count; ++index) {
+        n4m_method_info_v1_t info{};
+        info.struct_size = sizeof(info);
+        CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+        current_ = std::string(info.method_id) + " NULL context";
+        n4m_params_t* params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+        n4m_fit_inputs_v1_t inputs = in.for_method(info);
+        if (info.kind != N4M_METHOD_ESTIMATOR) {
+            auto* result = reinterpret_cast<n4m_method_result_t*>(std::uintptr_t{0x1234});
+            CHECK(n4m_procedure_run(nullptr, index, params, &inputs, &result) == N4M_ERR_NULL_POINTER);
+            CHECK(result == nullptr);
+            n4m_params_destroy(params);
+            continue;
+        }
+        fill_required(index, params);
+        n4m_estimator_t* est = nullptr;
+        CHECK(n4m_estimator_create(ctx, info.method_id, params, &est) == N4M_OK);
+        n4m_params_destroy(params);
+        CHECK(n4m_estimator_fit(nullptr, est, &inputs) == N4M_ERR_NULL_POINTER);
+        int32_t fitted = -1;
+        CHECK(n4m_estimator_is_fitted(est, &fitted) == N4M_OK && fitted == 0);
+        CHECK(n4m_estimator_predict(nullptr, est, &in.X, &out) == N4M_ERR_NULL_POINTER);
+        CHECK(n4m_estimator_transform(nullptr, est, &in.X, &out) == N4M_ERR_NULL_POINTER);
+        size_t size = 99;
+        CHECK(n4m_estimator_export_size(nullptr, est, 0, &size) == N4M_ERR_NULL_POINTER);
+        CHECK(size == 0);
+        auto* imported = reinterpret_cast<n4m_estimator_t*>(std::uintptr_t{0x1234});
+        const unsigned char byte = 0;
+        CHECK(n4m_estimator_import_from_buffer(nullptr, &byte, 1, &imported) == N4M_ERR_NULL_POINTER);
+        CHECK(imported == nullptr);
+        n4m_estimator_destroy(est);
+    }
+    current_ = "role pipeline NULL context";
+    size_t size = 0;
+    const char* ids[] = {"models.pls.pls_regression"};
+    auto* pipeline = reinterpret_cast<n4m_role_pipeline_t*>(std::uintptr_t{0x1234});
+    CHECK(n4m_role_pipeline_create(nullptr, 1, ids, nullptr, &pipeline) == N4M_ERR_NULL_POINTER);
+    CHECK(pipeline == nullptr);
+    CHECK(n4m_role_pipeline_create(ctx, 1, ids, nullptr, &pipeline) == N4M_OK);
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &in.X;
+    inputs.Y = &in.Y;
+    CHECK(n4m_role_pipeline_fit(nullptr, pipeline, &inputs) == N4M_ERR_NULL_POINTER);
+    CHECK(n4m_role_pipeline_fit(ctx, pipeline, &inputs) == N4M_OK);
+    CHECK(n4m_role_pipeline_predict(nullptr, pipeline, &in.X, &out) == N4M_ERR_NULL_POINTER);
+    size = 99;
+    CHECK(n4m_role_pipeline_export_state_size(nullptr, pipeline, 0, 0, &size) == N4M_ERR_NULL_POINTER);
+    CHECK(size == 0);
+    n4m_role_pipeline_destroy(pipeline);
+}
+
 // A failed refit keeps the previous fitted state; per-row inputs must match
 // the rows of X exactly (never broadcast).
 void test_refit_and_input_lengths(n4m_context_t* ctx, Inputs& in) {
@@ -1765,6 +1825,7 @@ int main() {
     run([&] { test_in_sample_equivalence(ctx, in); });
     run([&] { test_aom_in_sample(ctx, in); });
     run([&] { test_aom_fit_diagnostics(ctx, in); });
+    run([&] { test_null_context_refused(ctx, in); });
     run([&] { test_refit_and_input_lengths(ctx, in); });
     run([&] { test_input_views(ctx, in); });
     run([&] { test_param_descriptors(); });

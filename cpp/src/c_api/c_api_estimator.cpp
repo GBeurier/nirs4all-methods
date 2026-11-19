@@ -177,7 +177,10 @@ n4m_status_t normalize_inputs(n4m_context_t* ctx, const MethodSpec& spec,
     return N4M_OK;
 }
 
+// Method code requires a context (adapters and kernels report through it);
+// callers initialize their outputs before this check.
 n4m_status_t check_fitted(n4m_context_t* ctx, const n4m_estimator_t* est) {
+    if (ctx == nullptr) return N4M_ERR_NULL_POINTER;
     if (est == nullptr) {
         set_error(ctx, "estimator is NULL");
         return N4M_ERR_NULL_POINTER;
@@ -463,6 +466,7 @@ N4M_API void n4m_estimator_destroy(n4m_estimator_t* est) { delete est; }
 
 N4M_API n4m_status_t n4m_estimator_fit(n4m_context_t* ctx, n4m_estimator_t* est,
                                        const n4m_fit_inputs_v1_t* inputs) {
+    if (ctx == nullptr) return N4M_ERR_NULL_POINTER;
     if (est == nullptr) {
         set_error(ctx, "estimator is NULL");
         return N4M_ERR_NULL_POINTER;
@@ -640,6 +644,7 @@ N4M_API n4m_status_t n4m_procedure_run(n4m_context_t* ctx, int32_t method_index,
         return N4M_ERR_NULL_POINTER;
     }
     *out = nullptr;
+    if (ctx == nullptr) return N4M_ERR_NULL_POINTER;
     const MethodSpec* spec = n4m::estimator::method_at(method_index);
     if (spec == nullptr) {
         set_error(ctx, "unknown method index");
@@ -780,8 +785,9 @@ N4M_API n4m_status_t n4m_estimator_export_to_buffer(n4m_context_t* ctx,
 
 N4M_API n4m_status_t n4m_estimator_import_from_buffer(n4m_context_t* ctx, const void* buffer,
                                                       size_t buffer_size, n4m_estimator_t** out) {
-    if (out == nullptr || buffer == nullptr || ctx == nullptr) return N4M_ERR_NULL_POINTER;
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
+    if (buffer == nullptr || ctx == nullptr) return N4M_ERR_NULL_POINTER;
     return guarded(ctx, [&]() {
         std::unique_ptr<n4m_estimator_s> est;
         n4m_status_t st = n4m::estimator::decode_state(
