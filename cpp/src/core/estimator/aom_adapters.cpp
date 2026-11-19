@@ -15,8 +15,10 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "core/aom_calibration.hpp"
 #include "core/aom_superblock.hpp"
 #include "core/estimator/generated_factories.hpp"
 #include "core/estimator/state_io.hpp"
@@ -427,6 +429,52 @@ n4m_status_t copy_matrix(n4m_method_result_s& out, const char* name, const R* r,
 }
 
 // The selectors' PLS: regression SIMPLS, as the n4m reference configures it.
+// The screened operator list, echoed in a fit result so hosts can describe the
+// candidates without re-deriving the method's defaults: operator_kinds
+// (N4M_OP_*), operator_param_offsets and operator_params (one column).
+void set_operators(n4m_method_result_s& out, const std::vector<std::int32_t>& kinds,
+                   const std::vector<std::int32_t>& offsets, const std::vector<double>& values) {
+    out.set_int_vector("operator_kinds", kinds);
+    out.set_int_vector("operator_param_offsets", offsets);
+    out.set_double_matrix("operator_params", values, size_of(values), 1);
+}
+
+void set_operators(n4m_method_result_s& out, const Params& params) {
+    const Operators ops = operators_of(params, "op_params");
+    set_operators(out, ops.kinds, ops.offsets, ops.values);
+}
+
+// An int32-shaped score buffer of an AOM selection result, as a double matrix.
+template <typename R>
+n4m_status_t copy_scores(n4m_method_result_s& out, const char* name, const R* r,
+                         n4m_status_t (*get)(const R*, const double**, std::int32_t*,
+                                             std::int32_t*)) {
+    const double* data = nullptr;
+    std::int32_t rows = 0, cols = 0;
+    const n4m_status_t st = get(r, &data, &rows, &cols);
+    if (st == N4M_OK) {
+        const std::size_t n = static_cast<std::size_t>(rows) * static_cast<std::size_t>(cols);
+        std::vector<double> values;
+        if (data) values.assign(data, data + n);
+        out.set_double_matrix(name, std::move(values), rows, cols);
+    }
+    return st;
+}
+
+template <typename R>
+n4m_status_t copy_scores(n4m_method_result_s& out, const char* name, const R* r,
+                         n4m_status_t (*get)(const R*, const double**, std::int32_t*)) {
+    const double* data = nullptr;
+    std::int32_t size = 0;
+    const n4m_status_t st = get(r, &data, &size);
+    if (st == N4M_OK) {
+        std::vector<double> values;
+        if (data) values.assign(data, data + size);
+        out.set_double_matrix(name, std::move(values), size, 1);
+    }
+    return st;
+}
+
 n4m_status_t selector_setup(n4m_context_t* ctx, n4m_config_t* cfg, const Params& params,
                             const FitInputs& in, BankPtr& bank, PlanPtr& plan) {
     n4m_status_t st = n4m_config_set_algorithm(cfg, N4M_ALGO_PLS_REGRESSION);
@@ -475,6 +523,14 @@ n4m_status_t fit_aom_pls(n4m_context_t* ctx, n4m_config_t* cfg, const Params& pa
     }
     if (st == N4M_OK) st = n4m_model_selection_aom_pls_result_get_best_score(r.get(), &score);
     if (st != N4M_OK) return st;
+    st = copy_scores<G>(*result, "operator_scores", r.get(),
+                        n4m_model_selection_aom_pls_result_get_operator_scores);
+    if (st == N4M_OK) {
+        st = copy_scores<G>(*result, "rmse_curves", r.get(),
+                            n4m_model_selection_aom_pls_result_get_rmse_curves);
+    }
+    if (st != N4M_OK) return st;
+    set_operators(*result, params);
     result->set_scalar("selected_operator_index", op);
     result->set_scalar("selected_n_components", k);
     result->set_scalar("best_score", score);
@@ -519,6 +575,14 @@ n4m_status_t fit_pop_pls(n4m_context_t* ctx, n4m_config_t* cfg, const Params& pa
     }
     if (st == N4M_OK) st = n4m_model_selection_pop_pls_result_get_best_score(r.get(), &score);
     if (st != N4M_OK) return st;
+    st = copy_scores<P>(*result, "component_scores", r.get(),
+                        n4m_model_selection_pop_pls_result_get_component_scores);
+    if (st == N4M_OK) {
+        st = copy_scores<P>(*result, "prefix_scores", r.get(),
+                            n4m_model_selection_pop_pls_result_get_prefix_scores);
+    }
+    if (st != N4M_OK) return st;
+    set_operators(*result, params);
     result->set_int64_vector("selected_operator_indices",
                              std::vector<std::int64_t>(ops, ops + n_ops));
     result->set_scalar("selected_n_components", k);
@@ -647,13 +711,17 @@ class CalibrationAdapter final : public Adapter {
         st = n4m_operator_bank_create(&raw_bank);
         if (st != N4M_OK) return st;
         const BankPtr bank(raw_bank);
-        std::vector<std::int32_t> offsets = {0};
+        std::vector<std::int32_t> offsets = {0}, op_kinds, param_offsets = {0};
+        std::vector<double> op_params;
         for (const auto& chain : chains) {
             for (std::size_t op : chain) {
                 const BankOperator& b = kStrict10[op];
                 st = n4m_operator_bank_add(raw_bank, b.kind, b.n_params > 0 ? b.params : nullptr,
                                            b.n_params);
                 if (st != N4M_OK) return st;
+                op_kinds.push_back(static_cast<std::int32_t>(b.kind));
+                op_params.insert(op_params.end(), b.params, b.params + b.n_params);
+                param_offsets.push_back(static_cast<std::int32_t>(op_params.size()));
             }
             offsets.push_back(offsets.back() + static_cast<std::int32_t>(chain.size()));
         }
@@ -671,36 +739,56 @@ class CalibrationAdapter final : public Adapter {
                                          : to_i32(params.get_int("max_components"));
         const bool fast = params.get_bool("fast");
         const std::int64_t n_chains = size_of(chains);
-        const std::int64_t n_scores = fast ? count : size_of(branches) * n_chains * count;
         const std::int64_t p = in.X->cols;
-        std::vector<double> coef(static_cast<std::size_t>(p));
-        std::vector<double> state(static_cast<std::size_t>(2 * p + 2));
-        std::vector<double> scores(static_cast<std::size_t>(n_scores));
-        std::int32_t selected[3] = {0, 0, 0};
-        st = n4m_model_selection_aom_calibration_fit(
-            ctx, in.X, in.Y, bank.get(), offsets.data(), static_cast<std::int32_t>(n_chains),
+        // The kernel itself (not its C wrapper) so the Fast screening criteria
+        // reach the fit result; the inputs were validated above and by the
+        // estimator layer, and the kernel translates exceptions to status.
+        core::AomCalibrationResult fitted;
+        st = core::fit_aom_calibration(
+            *ctx, *in.X, *in.Y, *bank, offsets.data(), static_cast<std::int32_t>(n_chains),
             branches.data(), static_cast<std::int32_t>(branches.size()), folds.data(), n_folds,
-            head, fast ? 1 : 0, to_i32(params.get_int("rank")), data_or_null(alphas), count,
-            coef.data(), p, state.data(), size_of(state), scores.data(), n_scores, selected);
-        if (st != N4M_OK) return st;
+            head, fast, to_i32(params.get_int("rank")), data_or_null(alphas), count, fitted);
+        if (st != N4M_OK) {
+            set_error(ctx, "AOM calibration failed; check folds, branch/operator parameters and "
+                           "numerical rank");
+            return st;
+        }
+        const std::size_t selected_branch = static_cast<std::size_t>(fitted.branch);
+        const std::size_t selected_parameter = static_cast<std::size_t>(fitted.parameter);
+        const double alpha_base = fitted.state[static_cast<std::size_t>(2 * p + 1)];
 
+        // Fit diagnostics. Rows of cv_scores and screen_scores are the
+        // (branch, chain) pairs, branch-major in the order of `branches`;
+        // chain c holds operators chain_offsets[c] .. chain_offsets[c + 1] of
+        // operator_kinds / operator_params. cv_scores columns are the
+        // components 1..max_components (PLS) or the absolute `alphas` (Ridge).
         auto result = std::make_unique<n4m_method_result_s>();
         const std::int64_t score_rows = fast ? 1 : size_of(branches) * n_chains;
-        result->set_double_matrix("cv_scores", std::move(scores), score_rows, count);
-        result->set_double_matrix("coefficients", coef, p, 1);
-        result->set_double_matrix("intercept", {state[static_cast<std::size_t>(2 * p)]}, 1, 1);
-        result->set_scalar("selected_branch", branches[static_cast<std::size_t>(selected[0])]);
-        result->set_scalar("selected_chain_index", selected[1]);
-        result->set_scalar("selected_parameter_index", selected[2]);
-        if (ridge) {
-            result->set_scalar("selected_alpha", alphas[static_cast<std::size_t>(selected[2])] *
-                                                     state[static_cast<std::size_t>(2 * p + 1)]);
-        } else {
-            result->set_scalar("selected_n_components", selected[2] + 1);
+        result->set_double_matrix("cv_scores", std::move(fitted.scores), score_rows, count);
+        if (fast) {
+            result->set_double_matrix("screen_scores", std::move(fitted.screen_scores),
+                                      size_of(branches) * n_chains, 1);
         }
-        branch_ = branches[static_cast<std::size_t>(selected[0])];
-        coef_ = std::move(coef);
-        state_ = std::move(state);
+        result->set_int_vector("branches", branches);
+        result->set_int_vector("chain_offsets", offsets);
+        set_operators(*result, op_kinds, param_offsets, op_params);
+        result->set_double_matrix("coefficients", fitted.coefficients, p, 1);
+        result->set_double_matrix("intercept", {fitted.state[static_cast<std::size_t>(2 * p)]}, 1,
+                                  1);
+        result->set_scalar("selected_branch", branches[selected_branch]);
+        result->set_scalar("selected_chain_index", fitted.chain);
+        result->set_scalar("selected_parameter_index", fitted.parameter);
+        if (ridge) {
+            std::vector<double> absolute(alphas);
+            for (double& a : absolute) a *= alpha_base;
+            result->set_scalar("selected_alpha", absolute[selected_parameter]);
+            result->set_double_matrix("alphas", std::move(absolute), 1, count);
+        } else {
+            result->set_scalar("selected_n_components", fitted.parameter + 1);
+        }
+        branch_ = branches[selected_branch];
+        coef_ = std::move(fitted.coefficients);
+        state_ = std::move(fitted.state);
         result_.reset(result.release());
         return N4M_OK;
     }

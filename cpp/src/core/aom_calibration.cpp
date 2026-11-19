@@ -456,7 +456,10 @@ std::pair<std::size_t, std::size_t> screen(Context& ctx,
                                            const OperatorBank& bank,
                                            const std::int32_t* offsets,
                                            std::size_t chains,
-                                           std::size_t rank) {
+                                           std::size_t rank,
+                                           Vec* criteria = nullptr) {
+    if (criteria)
+        criteria->assign(branches.size() * chains, std::numeric_limits<double>::quiet_NaN());
     double best = -1;
     std::pair<std::size_t, std::size_t> selected{0, 0};
     double yy = dot(y, y);
@@ -494,6 +497,8 @@ std::pair<std::size_t, std::size_t> screen(Context& ctx,
                 av = project(av, r);
             }
             double score = dot(ag, ag) / (dot(av, av) * yy + 1e-12);
+            if (criteria)
+                (*criteria)[b * chains + c] = score;
             if (score > best) {
                 best = score;
                 selected = {b, c};
@@ -710,8 +715,16 @@ n4m_status_t fit_aom_calibration(Context& ctx,
         for (std::size_t b = 0; b < branch_count; ++b)
             branches.push_back(prepare(x, {}, n, 0, p, kinds[b]));
         if (fast) {
-            auto selected_pair = screen(
-                ctx, branches, y, n, p, bank, offsets, chain_count, static_cast<std::size_t>(rank));
+            auto selected_pair = screen(ctx,
+                                        branches,
+                                        y,
+                                        n,
+                                        p,
+                                        bank,
+                                        offsets,
+                                        chain_count,
+                                        static_cast<std::size_t>(rank),
+                                        &out.screen_scores);
             out.branch = static_cast<std::int32_t>(selected_pair.first);
             out.chain = static_cast<std::int32_t>(selected_pair.second);
         }

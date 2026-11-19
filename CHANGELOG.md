@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+ABI 2.24.0 unchanged. Purely additive fit diagnostics: no ABI, wire or
+serialization change; fitted states, predictions and existing fit-result
+entries are unchanged.
+
+### Added
+
+- The `aom_pop.calibration` estimator fit result now describes every screened
+  candidate: `branches`, `chain_offsets`, `operator_kinds`,
+  `operator_param_offsets` and `operator_params` (the chain universe in
+  `cv_scores` row order), the absolute Ridge `alphas`, and in Fast mode the
+  per-(branch, chain) covariance screening criterion `screen_scores`, so hosts
+  can name the selected chain and rank the others.
+- The `aom_pop.aom_pls` fit result adds `operator_scores` and `rmse_curves`;
+  `aom_pop.pop_pls` adds `component_scores` and `prefix_scores`. Both echo the
+  screened bank (`operator_kinds`, `operator_param_offsets`, `operator_params`).
+
 ## [1.4.1] - 2026-11-18
 
 ABI 2.24.0 unchanged. Purely additive catalog procedure: no ABI, wire or

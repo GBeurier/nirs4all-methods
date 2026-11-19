@@ -95,6 +95,42 @@ scores; native `ridge_pls` applies PLS to an L2-augmented design. Their latent
 spaces and tuning grids differ. `aom_chain_ridge_pls` uses the latter and is
 not a parity port of the former. See [Ridge-PLS](ridge_pls.md).
 
+## Estimator fit result
+
+The generic estimator role (`aom_pop.calibration`, read with
+`n4m_estimator_fit_result` or `fitResult()` in JavaScript) reports the
+internal selection together with every screened candidate:
+
+- `branches`: the requested branch kinds (0 raw, 1 SNV, 2 MSC), in row order.
+- `chain_offsets`: chain `c` holds operators `chain_offsets[c]` up to
+  `chain_offsets[c + 1]` of `operator_kinds` (`N4M_OP_*`), whose parameters
+  are `operator_params[operator_param_offsets[i]]` up to
+  `operator_params[operator_param_offsets[i + 1]]`. The chains are the
+  `strict10-gaussian-density-v2` chain universe for `max_depth`, in signature
+  order (10, 62 or 206 chains).
+- `cv_scores`: mean-fold validation RMSE. Rows are the (branch, chain) pairs,
+  branch-major; columns are the components 1 to `max_components` (PLS head) or
+  the absolute `alphas` (Ridge head, also reported). Fast mode keeps only the
+  curve of the chain screened in each fold (one row).
+- `screen_scores` (Fast mode only): the covariance screening criterion of every
+  (branch, chain) pair on the full training data, one column, branch-major;
+  higher is better and the maximum is the selected pair. NaN marks a chain that
+  failed numerically. It is a screening criterion, not an RMSE.
+- `selected_branch`, `selected_chain_index`, `selected_parameter_index`, and
+  `selected_n_components` (PLS) or `selected_alpha` (Ridge).
+
+`aom_pop.aom_pls` reports `operator_scores` (best validation RMSE per bank
+operator), `rmse_curves` (operators x components) and the bank it screened
+(`operator_kinds`, `operator_param_offsets`, `operator_params`);
+`aom_pop.pop_pls` reports `component_scores` (components x operators),
+`prefix_scores` and the same bank. All these scores come from the internal
+cross-validation of the training data passed to `fit`. They describe the
+internal selection and are not outer out-of-fold or test scores.
+
+Method results carry no strings, so hosts format chain and operator names from
+these descriptors. An owner string entry is tracked as ecosystem debt
+TD-2026-11-19-01.
+
 ## Verification
 
 `bindings/python/tests/test_aom_calibration.py` checks the complete candidate
