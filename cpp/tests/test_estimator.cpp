@@ -1058,6 +1058,30 @@ void test_null_context_refused(n4m_context_t* ctx, Inputs& in) {
         CHECK(imported == nullptr);
         n4m_estimator_destroy(est);
     }
+    current_ = "fitted estimator NULL context output counts";
+    n4m_estimator_t* fitted_pls = nullptr;
+    CHECK(n4m_estimator_create(ctx, "models.pls.pls_regression", nullptr, &fitted_pls) == N4M_OK);
+    n4m_fit_inputs_v1_t fitted_inputs{};
+    fitted_inputs.struct_size = sizeof(fitted_inputs);
+    fitted_inputs.X = &in.X;
+    fitted_inputs.Y = &in.Y;
+    CHECK(n4m_estimator_fit(ctx, fitted_pls, &fitted_inputs) == N4M_OK);
+    int64_t components = 99;
+    CHECK(n4m_estimator_latent_structure_v1(nullptr, fitted_pls, &components, nullptr, nullptr,
+                                           nullptr, 0, nullptr, 0, nullptr, nullptr, 0) ==
+          N4M_ERR_NULL_POINTER);
+    CHECK(components == 0);
+    size_t written = 99;
+    CHECK(n4m_estimator_export_to_buffer(nullptr, fitted_pls, 0, nullptr, 0, &written) ==
+          N4M_ERR_NULL_POINTER);
+    CHECK(written == 0);
+    unsigned char export_buffer = 0;
+    written = 99;
+    CHECK(n4m_estimator_export_to_buffer(nullptr, fitted_pls, 0, &export_buffer, 1, &written) ==
+          N4M_ERR_NULL_POINTER);
+    CHECK(written == 0);
+    n4m_estimator_destroy(fitted_pls);
+
     current_ = "role pipeline NULL context";
     size_t size = 0;
     const char* ids[] = {"models.pls.pls_regression"};

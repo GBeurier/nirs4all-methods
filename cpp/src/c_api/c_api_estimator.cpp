@@ -767,8 +767,9 @@ N4M_API n4m_status_t n4m_estimator_export_to_buffer(n4m_context_t* ctx,
                                                     const n4m_estimator_t* est, uint32_t flags,
                                                     void* buffer, size_t buffer_size,
                                                     size_t* out_written) {
-    if (out_written == nullptr || buffer == nullptr) return N4M_ERR_NULL_POINTER;
+    if (out_written == nullptr) return N4M_ERR_NULL_POINTER;
     *out_written = 0;
+    if (buffer == nullptr) return N4M_ERR_NULL_POINTER;
     return guarded(ctx, [&]() {
         std::vector<unsigned char> bytes;
         n4m_status_t st = encode_checked(ctx, est, flags, bytes);
@@ -869,13 +870,13 @@ N4M_API n4m_status_t n4m_estimator_latent_structure_v1(n4m_context_t* ctx,
                                                        double* x_mean,
                                                        double* x_scale,
                                                        int64_t mean_size) {
-    n4m_status_t st = check_estimator(ctx, est);
-    if (st != N4M_OK) return st;
     if (out_n_components == nullptr) {
         set_error(ctx, "out_n_components is NULL");
         return N4M_ERR_NULL_POINTER;
     }
     *out_n_components = 0;
+    n4m_status_t st = check_estimator(ctx, est);
+    if (st != N4M_OK) return st;
     return guarded(ctx, [&]() {
         n4m::estimator::LatentStructure latent;
         n4m_status_t s = n4m::estimator::latent_structure(ctx, *est, latent);
