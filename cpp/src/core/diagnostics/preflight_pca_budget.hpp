@@ -10,7 +10,8 @@
 // 1/16. With s = min(n,p), l = max(n,p) and the Gram matrix on the smaller
 // side, the bound adds, as upper bounds of what the code executes:
 //  - compensated: sum of squares n p, Gram s(s+1)/2 * l, trace(C^2) s(s+1),
-//    projections (scores or loadings) k s l and their division k l;
+//    projections (scores or loadings) k s l and their division k l; for
+//    n <= p, another k n p for scores projected onto the final loadings;
 //  - double, at 1/16: input copy, domain scan and centring 32 n p; Gram
 //    storage s^2; eigensolver scaling and copies 4 s^2 + s; Householder
 //    tridiagonalisation with accumulation 4 s^3 / 3 + 3 s^2 + 10 s; the QL
@@ -68,7 +69,8 @@ inline PreflightPcaBudget preflight_pca_budget(std::int64_t n, std::int64_t p,
     const long double s = std::min(N, P), l = std::max(N, P);
     const bool wide = n <= p;
     const long double extended =
-        N * P + s * (s + 1.0L) / 2.0L * l + s * (s + 1.0L) + K * s * l + K * l;
+        N * P + s * (s + 1.0L) / 2.0L * l + s * (s + 1.0L) + K * s * l + K * l +
+        (wide ? K * N * P : 0.0L);
     const long double ql_ceiling = 30.0L * s * ((s - 1.0L) * (4.0L * s + 32.0L) + 2.0L * s);
     const long double dbl =
         32.0L * N * P + s * s + (4.0L * s * s + s) +

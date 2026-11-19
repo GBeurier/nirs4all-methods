@@ -4,11 +4,11 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-19
 
-ABI 2.24.0 unchanged. Purely additive fit diagnostics: no ABI, wire or
-serialization change; fitted states, predictions and existing fit-result
-entries are unchanged.
+ABI 2.24.0 unchanged. Numeric change limited to the wide-branch Preflight
+PCA scores described below. AOM diagnostics are additive; fitted states,
+predictions and existing AOM fit-result entries are unchanged.
 
 ### Added
 
@@ -23,6 +23,15 @@ entries are unchanged.
   screened bank (`operator_kinds`, `operator_param_offsets`, `operator_params`).
 
 ### Fixed
+
+- **Numeric change:** Preflight PCA now projects centred
+  observations onto the final loading vectors in the wide (`n <= p`) branch,
+  as the tall branch already does. The former `u * sigma` scores amplified
+  Gram eigenvector error on weak resolved components, including Domains F4.3
+  PC5 after SNV. Eigenvalues, moments, resolution, unresolved flags and zero
+  unresolved scores retain their existing contract. The guaranteed work
+  estimate includes the added score projection; wide requests close to the
+  work limit can consequently be refused. No ABI symbols change.
 
 - A NULL context no longer crashes the generic estimator layer. Sixteen
   estimators (the AOM superblocks and chain Ridge-PLS, PLS-QDA, PLS-Cox,
