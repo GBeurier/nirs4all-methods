@@ -30,8 +30,8 @@ author = "G. Beurier and contributors"
 copyright = f"{_dt.datetime.now().year}, {author}"
 
 # Read version from cpp version header when available, else fallback.
-release = "1.4.1"
-version = "1.4"
+release = "1.5.0"
+version = "1.5"
 
 # ---- extensions -----------------------------------------------------
 

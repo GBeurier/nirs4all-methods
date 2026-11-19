@@ -10,6 +10,11 @@ ABI 2.24.0 unchanged. Numeric change limited to the wide-branch Preflight
 PCA scores described below. AOM diagnostics are additive; fitted states,
 predictions and existing AOM fit-result entries are unchanged.
 
+### Changed
+
+- Rust `n4m` 0.5.0 publishes the binding requiring libn4m ABI >= 2.24;
+  consumers explicitly select this tested crate series.
+
 ### Added
 
 - The `aom_pop.calibration` estimator fit result now describes every screened
