@@ -1158,20 +1158,14 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
             if (!wide) {
                 // Loadings are Gram eigenvectors; scores = Xc v.
                 for (size_t j = 0; j < up; ++j) row[j] = vec[j * m + c];
-                if (!lost)
-                    for (size_t i = 0; i < un; ++i) {
-                        CompensatedSum dot;
-                        for (size_t j = 0; j < up; ++j) dot.add(data[i * up + j] * row[j]);
-                        sc[i * uk + a] = dot.value();
-                    }
                 continue;
             }
-            // Wide: scores = u sigma, loadings = Xc^T u / sigma (for an
-            // unresolved component rounding noise, left 0); the rows are
-            // orthonormalised and completed below.
+            // Wide: recover loadings as Xc^T u / sigma. The rows are
+            // orthonormalised below, then scores are projected onto those
+            // final loadings. u sigma amplifies the Gram residual on weak
+            // resolved components and need not equal that projection.
             if (!lost) {
                 const double sigma = std::sqrt(lam[c]);
-                for (size_t i = 0; i < un; ++i) sc[i * uk + a] = vec[i * m + c] * sigma;
                 for (size_t j = 0; j < up; ++j) {
                     CompensatedSum dot;
                     for (size_t i = 0; i < un; ++i) dot.add(data[i * up + j] * vec[i * m + c]);
@@ -1241,6 +1235,17 @@ n4m_status_t pca_compute(n4m_context_t* ctx, const n4m_matrix_view_t* X, int32_t
                     dot *= beta[j];
                     for (size_t i = j; i < up; ++i) row[i] -= dot * v[i];
                 }
+            }
+        }
+        // Scores describe the same centred observations and final loading
+        // vectors that we publish. Keep unresolved score columns at zero.
+        for (size_t a = 0; a < uk; ++a) {
+            if (unresolved[a]) continue;
+            const double* row = load.data() + a * up;
+            for (size_t i = 0; i < un; ++i) {
+                CompensatedSum dot;
+                for (size_t j = 0; j < up; ++j) dot.add(data[i * up + j] * row[j]);
+                sc[i * uk + a] = dot.value();
             }
         }
         // Sign convention (as n4m_pca_fit / sklearn): the largest-magnitude

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+### Fixed
+
+- **Numeric change (next minor release):** Preflight PCA now projects centred
+  observations onto the final loading vectors in the wide (`n <= p`) branch,
+  as the tall branch already does. The former `u * sigma` scores amplified
+  Gram eigenvector error on weak resolved components, including Domains F4.3
+  PC5 after SNV. Eigenvalues, moments, resolution, unresolved flags and zero
+  unresolved scores retain their existing contract. The guaranteed work
+  estimate includes the added score projection; wide requests close to the
+  work limit can consequently be refused. No ABI symbols change.
+
 ## [1.4.1] - 2026-11-18
 
 ABI 2.24.0 unchanged. Purely additive catalog procedure: no ABI, wire or
