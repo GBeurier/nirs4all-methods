@@ -7,6 +7,10 @@
 namespace n4m::core {
 struct AomCalibrationResult {
     std::vector<double> scores, coefficients, state;
+    // Fast mode only: the covariance screening criterion of every (branch,
+    // chain) pair on the full training data, branch-major (higher is better;
+    // NaN where the chain failed numerically). Empty otherwise.
+    std::vector<double> screen_scores;
     std::int32_t branch{0}, chain{0}, parameter{0};
 };
 n4m_status_t fit_aom_calibration(Context&,

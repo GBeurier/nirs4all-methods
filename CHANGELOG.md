@@ -4,7 +4,51 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5.0] - 2026-11-19
+
+ABI 2.24.0 unchanged. Numeric change limited to the wide-branch Preflight
+PCA scores described below. AOM diagnostics are additive; fitted states,
+predictions and existing AOM fit-result entries are unchanged.
+
+### Changed
+
+- Rust `n4m` 0.5.0 publishes the binding requiring libn4m ABI >= 2.24;
+  consumers explicitly select this tested crate series.
+
+### Added
+
+- The `aom_pop.calibration` estimator fit result now describes every screened
+  candidate: `branches`, `chain_offsets`, `operator_kinds`,
+  `operator_param_offsets` and `operator_params` (the chain universe in
+  `cv_scores` row order), the absolute Ridge `alphas`, and in Fast mode the
+  per-(branch, chain) covariance screening criterion `screen_scores`, so hosts
+  can name the selected chain and rank the others.
+- The `aom_pop.aom_pls` fit result adds `operator_scores` and `rmse_curves`;
+  `aom_pop.pop_pls` adds `component_scores` and `prefix_scores`. Both echo the
+  screened bank (`operator_kinds`, `operator_param_offsets`, `operator_params`).
+
+### Fixed
+
+- **Numeric change:** Preflight PCA now projects centred
+  observations onto the final loading vectors in the wide (`n <= p`) branch,
+  as the tall branch already does. The former `u * sigma` scores amplified
+  Gram eigenvector error on weak resolved components, including Domains F4.3
+  PC5 after SNV. Eigenvalues, moments, resolution, unresolved flags and zero
+  unresolved scores retain their existing contract. The guaranteed work
+  estimate includes the added score projection; wide requests close to the
+  work limit can consequently be refused. No ABI symbols change.
+
+- A NULL context no longer crashes the generic estimator layer. Sixteen
+  estimators (the AOM superblocks and chain Ridge-PLS, PLS-QDA, PLS-Cox,
+  PLS-GLM, LW-PLS, ON-PLS, kernel PLS, GPR-PLS, missing-aware NIPALS, DS and
+  PDS) dereferenced it during fit, and two during prediction. Estimator fit,
+  transform / predict and the other applications, `n4m_procedure_run`, state
+  export and fitted-state introspection now return `N4M_ERR_NULL_POINTER` for
+  a NULL context, as estimator import and the role-pipeline and multimodal
+  functions already did; output handles and sizes are cleared first (estimator
+  import and role-pipeline creation now clear theirs too). Parameter and
+  estimator creation still accept NULL. The bindings always pass a context and
+  are unaffected.
 
 ## [1.4.1] - 2026-11-18
 

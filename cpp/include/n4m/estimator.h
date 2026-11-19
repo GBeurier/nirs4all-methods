@@ -19,6 +19,12 @@
  *     the caller's struct_size are treated as absent.
  *   - Strings returned in descriptors are library-owned static storage.
  *   - Matrix views may be strided.
+ *   - A function that runs method code (fit, transform / predict and the
+ *     other applications, procedures, state export / import, fitted-state
+ *     introspection) and every role-pipeline or multimodal function taking a
+ *     context requires a non-NULL `ctx` and returns N4M_ERR_NULL_POINTER
+ *     otherwise, after clearing its output handles and sizes. Parameter and
+ *     estimator creation accept a NULL `ctx` (no error message is reported).
  */
 #ifndef N4M_ESTIMATOR_H
 #define N4M_ESTIMATOR_H

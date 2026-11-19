@@ -64,12 +64,15 @@ extern "C" {
  * Xc^T u / sigma of resolved components (which lose orthonormality as sigma
  * nears the resolution) are re-orthonormalised by modified Gram-Schmidt
  * applied twice, and unresolved rows complete them by Householder QR; for
- * n > p the rows are the Gram eigenvectors.
+ * n > p the rows are the Gram eigenvectors. Resolved scores are Xc times
+ * these final loading vectors in both branches, using compensated sums.
+ * Their variances agree with the eigenvalues within the absolute accuracy
+ * contract above; no relative agreement is claimed for weak components.
  * Budget: N4M_ERR_UNSUPPORTED before allocating when a GUARANTEED bound
  * exceeds its limit; both bounds count every pass and every buffer, not a
  * typical cost. Work, in compensated multiply-adds with other double operations at
  * 1/16 (s = min(n,p), l = max(n,p)): sum of squares n p, Gram s(s+1)/2 * l,
- * projections k s l, centring and scans, tridiagonalisation, the QL
+ * projections k s l (plus k n p for scores when n <= p), centring and scans, tridiagonalisation, the QL
  * iteration at the solver's ceiling (30 s sweeps of s - 1 rotations), and
  * for n <= p the loading re-orthonormalisation and completion; limit 4e10
  * (1.3.12; 2.4e9 before).

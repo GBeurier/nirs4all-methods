@@ -98,8 +98,9 @@ N4M_API n4m_status_t n4m_role_pipeline_create(n4m_context_t* ctx, int32_t n_step
                                               const char* const* method_ids,
                                               const n4m_params_t* const* params,
                                               n4m_role_pipeline_t** out) {
-    if (ctx == nullptr || out == nullptr) return N4M_ERR_NULL_POINTER;
+    if (out == nullptr) return N4M_ERR_NULL_POINTER;
     *out = nullptr;
+    if (ctx == nullptr) return N4M_ERR_NULL_POINTER;
     if (method_ids == nullptr && n_steps > 0) {
         ctx->set_error("method_ids is NULL");
         return N4M_ERR_NULL_POINTER;
