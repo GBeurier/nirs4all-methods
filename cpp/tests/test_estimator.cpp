@@ -859,6 +859,225 @@ void test_aom_in_sample(n4m_context_t* ctx, Inputs& in) {
     }
 }
 
+// The AOM fit results describe every screened candidate (chain or operator
+// descriptors plus internal scores) consistently with the reported selection.
+struct AomFit {
+    n4m_estimator_t* est = nullptr;
+    const n4m_method_result_t* result = nullptr;
+    ~AomFit() { n4m_estimator_destroy(est); }
+    std::vector<double> matrix(const char* name, int64_t& rows, int64_t& cols) const {
+        const double* data = nullptr;
+        CHECK(n4m_method_result_get_double_matrix(result, name, &data, &rows, &cols) == N4M_OK);
+        return std::vector<double>(data, data + rows * cols);
+    }
+    std::vector<int32_t> ints(const char* name) const {
+        const int32_t* data = nullptr;
+        int32_t size = 0;
+        CHECK(n4m_method_result_get_int_vector(result, name, &data, &size) == N4M_OK);
+        return std::vector<int32_t>(data, data + size);
+    }
+    double scalar(const char* name) const {
+        double value = 0.0;
+        CHECK(n4m_method_result_get_scalar(result, name, &value) == N4M_OK);
+        return value;
+    }
+    bool has(const char* name) const {
+        double value = 0.0;
+        const double* data = nullptr;
+        int64_t r = 0, c = 0;
+        return n4m_method_result_get_scalar(result, name, &value) == N4M_OK ||
+               n4m_method_result_get_double_matrix(result, name, &data, &r, &c) == N4M_OK;
+    }
+};
+
+template <typename Setup>
+void fit_aom(n4m_context_t* ctx, Inputs& in, const char* method_id, Setup setup, AomFit& out) {
+    int32_t index = -1;
+    CHECK(n4m_method_find(method_id, &index) == N4M_OK);
+    n4m_params_t* params = nullptr;
+    CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+    setup(params);
+    CHECK(n4m_estimator_create(ctx, method_id, params, &out.est) == N4M_OK);
+    n4m_params_destroy(params);
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &in.X;
+    inputs.Y = &in.Y;
+    CHECK(n4m_estimator_fit(ctx, out.est, &inputs) == N4M_OK);
+    CHECK(n4m_estimator_fit_result(out.est, &out.result) == N4M_OK);
+}
+
+// chain_offsets partitions operator_kinds; operator_param_offsets partitions
+// operator_params; the identity occurs once, as a singleton chain.
+void check_chain_descriptors(const AomFit& fit, int64_t n_chains) {
+    const auto chains = fit.ints("chain_offsets");
+    const auto kinds = fit.ints("operator_kinds");
+    const auto param_offsets = fit.ints("operator_param_offsets");
+    int64_t rows = 0, cols = 0;
+    const auto values = fit.matrix("operator_params", rows, cols);
+    CHECK(static_cast<int64_t>(chains.size()) == n_chains + 1);
+    CHECK(chains.front() == 0 && chains.back() == static_cast<int32_t>(kinds.size()));
+    CHECK(std::is_sorted(chains.begin(), chains.end()));
+    CHECK(param_offsets.size() == kinds.size() + 1 && param_offsets.front() == 0);
+    CHECK(param_offsets.back() == static_cast<int32_t>(values.size()) && cols == 1);
+    int identity = 0;
+    for (size_t c = 0; c + 1 < chains.size(); ++c) {
+        const bool single = chains[c + 1] - chains[c] == 1;
+        identity += single && kinds[static_cast<size_t>(chains[c])] == N4M_OP_IDENTITY;
+    }
+    CHECK(identity == 1);
+}
+
+void test_aom_fit_diagnostics(n4m_context_t* ctx, Inputs& in) {
+    current_ = "aom calibration diagnostics";
+    {
+        AomFit fit;
+        fit_aom(ctx, in, "aom_pop.calibration", [](n4m_params_t* p) {
+            CHECK(n4m_params_set_int(p, "max_components", 4) == N4M_OK);
+            CHECK(n4m_params_set_int(p, "max_depth", 2) == N4M_OK);
+        }, fit);
+        check_chain_descriptors(fit, 62);
+        const auto branches = fit.ints("branches");
+        CHECK((branches == std::vector<int32_t>{0, 1, 2}));
+        CHECK(!fit.has("screen_scores"));
+        int64_t rows = 0, cols = 0;
+        const auto scores = fit.matrix("cv_scores", rows, cols);
+        CHECK(rows == 3 * 62 && cols == 4);
+        const auto best = static_cast<int64_t>(
+            std::min_element(scores.begin(), scores.end()) - scores.begin());
+        CHECK(branches[static_cast<size_t>(best / cols / 62)] == fit.scalar("selected_branch"));
+        CHECK((best / cols) % 62 == fit.scalar("selected_chain_index"));
+        CHECK(best % cols == fit.scalar("selected_parameter_index"));
+        CHECK(fit.scalar("selected_n_components") == best % cols + 1);
+    }
+    current_ = "aom calibration fast diagnostics";
+    {
+        AomFit fit;
+        fit_aom(ctx, in, "aom_pop.calibration", [](n4m_params_t* p) {
+            CHECK(n4m_params_set_int(p, "max_components", 4) == N4M_OK);
+            CHECK(n4m_params_set_bool(p, "fast", 1) == N4M_OK);
+        }, fit);
+        check_chain_descriptors(fit, 10);
+        int64_t rows = 0, cols = 0;
+        const auto cv = fit.matrix("cv_scores", rows, cols);
+        CHECK(rows == 1 && cols == 4);
+        const auto screen = fit.matrix("screen_scores", rows, cols);
+        CHECK(rows == 3 * 10 && cols == 1);
+        int64_t best = -1;
+        for (int64_t i = 0; i < rows; ++i) {
+            const double v = screen[static_cast<size_t>(i)];
+            if (std::isfinite(v) && (best < 0 || v > screen[static_cast<size_t>(best)])) best = i;
+        }
+        CHECK(best >= 0);
+        const auto branches = fit.ints("branches");
+        CHECK(branches[static_cast<size_t>(best / 10)] == fit.scalar("selected_branch"));
+        CHECK(best % 10 == fit.scalar("selected_chain_index"));
+    }
+    current_ = "aom calibration ridge diagnostics";
+    {
+        AomFit fit;
+        fit_aom(ctx, in, "aom_pop.calibration", [](n4m_params_t* p) {
+            CHECK(n4m_params_set_enum(p, "head", "ridge") == N4M_OK);
+            CHECK(n4m_params_set_int(p, "max_depth", 1) == N4M_OK);
+        }, fit);
+        int64_t rows = 0, cols = 0;
+        const auto alphas = fit.matrix("alphas", rows, cols);
+        CHECK(rows == 1 && cols == 50);
+        const auto scores = fit.matrix("cv_scores", rows, cols);
+        CHECK(rows == 3 * 10 && cols == 50);
+        const auto parameter = static_cast<size_t>(fit.scalar("selected_parameter_index"));
+        CHECK(alphas[parameter] == fit.scalar("selected_alpha"));
+        CHECK(!fit.has("selected_n_components"));
+    }
+    current_ = "aom pls diagnostics";
+    {
+        AomFit fit;
+        fit_aom(ctx, in, "aom_pop.aom_pls", [](n4m_params_t*) {}, fit);
+        const auto kinds = fit.ints("operator_kinds");
+        CHECK((kinds == std::vector<int32_t>{0, 7, 7, 8, 8, 9, 9, 10, 15}));
+        CHECK(fit.ints("operator_param_offsets").size() == kinds.size() + 1);
+        int64_t rows = 0, cols = 0;
+        const auto scores = fit.matrix("operator_scores", rows, cols);
+        CHECK(rows == static_cast<int64_t>(kinds.size()) && cols == 1);
+        const auto op = static_cast<size_t>(fit.scalar("selected_operator_index"));
+        CHECK(scores[op] == fit.scalar("best_score"));
+        CHECK(*std::min_element(scores.begin(), scores.end()) == scores[op]);
+        const auto curves = fit.matrix("rmse_curves", rows, cols);
+        CHECK(rows == static_cast<int64_t>(kinds.size()) && cols == 3);
+    }
+    current_ = "pop pls diagnostics";
+    {
+        AomFit fit;
+        fit_aom(ctx, in, "aom_pop.pop_pls", [](n4m_params_t*) {}, fit);
+        const auto kinds = fit.ints("operator_kinds");
+        int64_t rows = 0, cols = 0;
+        fit.matrix("component_scores", rows, cols);
+        CHECK(rows == 3 && cols == static_cast<int64_t>(kinds.size()));
+        fit.matrix("prefix_scores", rows, cols);
+        CHECK(rows == 3 && cols == 1);
+    }
+}
+
+// Every context-taking entry point refuses a NULL context before reaching a
+// method (some adapters and kernels dereference it), for every method.
+void test_null_context_refused(n4m_context_t* ctx, Inputs& in) {
+    int32_t count = 0;
+    CHECK(n4m_method_count(&count) == N4M_OK);
+    std::vector<double> buffer(static_cast<size_t>(kTrain * kCols));
+    auto out = view(buffer.data(), kTrain, 1);
+    for (int32_t index = 0; index < count; ++index) {
+        n4m_method_info_v1_t info{};
+        info.struct_size = sizeof(info);
+        CHECK(n4m_method_info_v1(index, &info) == N4M_OK);
+        current_ = std::string(info.method_id) + " NULL context";
+        n4m_params_t* params = nullptr;
+        CHECK(n4m_params_create(ctx, index, &params) == N4M_OK);
+        n4m_fit_inputs_v1_t inputs = in.for_method(info);
+        if (info.kind != N4M_METHOD_ESTIMATOR) {
+            auto* result = reinterpret_cast<n4m_method_result_t*>(std::uintptr_t{0x1234});
+            CHECK(n4m_procedure_run(nullptr, index, params, &inputs, &result) == N4M_ERR_NULL_POINTER);
+            CHECK(result == nullptr);
+            n4m_params_destroy(params);
+            continue;
+        }
+        fill_required(index, params);
+        n4m_estimator_t* est = nullptr;
+        CHECK(n4m_estimator_create(ctx, info.method_id, params, &est) == N4M_OK);
+        n4m_params_destroy(params);
+        CHECK(n4m_estimator_fit(nullptr, est, &inputs) == N4M_ERR_NULL_POINTER);
+        int32_t fitted = -1;
+        CHECK(n4m_estimator_is_fitted(est, &fitted) == N4M_OK && fitted == 0);
+        CHECK(n4m_estimator_predict(nullptr, est, &in.X, &out) == N4M_ERR_NULL_POINTER);
+        CHECK(n4m_estimator_transform(nullptr, est, &in.X, &out) == N4M_ERR_NULL_POINTER);
+        size_t size = 99;
+        CHECK(n4m_estimator_export_size(nullptr, est, 0, &size) == N4M_ERR_NULL_POINTER);
+        CHECK(size == 0);
+        auto* imported = reinterpret_cast<n4m_estimator_t*>(std::uintptr_t{0x1234});
+        const unsigned char byte = 0;
+        CHECK(n4m_estimator_import_from_buffer(nullptr, &byte, 1, &imported) == N4M_ERR_NULL_POINTER);
+        CHECK(imported == nullptr);
+        n4m_estimator_destroy(est);
+    }
+    current_ = "role pipeline NULL context";
+    size_t size = 0;
+    const char* ids[] = {"models.pls.pls_regression"};
+    auto* pipeline = reinterpret_cast<n4m_role_pipeline_t*>(std::uintptr_t{0x1234});
+    CHECK(n4m_role_pipeline_create(nullptr, 1, ids, nullptr, &pipeline) == N4M_ERR_NULL_POINTER);
+    CHECK(pipeline == nullptr);
+    CHECK(n4m_role_pipeline_create(ctx, 1, ids, nullptr, &pipeline) == N4M_OK);
+    n4m_fit_inputs_v1_t inputs{};
+    inputs.struct_size = sizeof(inputs);
+    inputs.X = &in.X;
+    inputs.Y = &in.Y;
+    CHECK(n4m_role_pipeline_fit(nullptr, pipeline, &inputs) == N4M_ERR_NULL_POINTER);
+    CHECK(n4m_role_pipeline_fit(ctx, pipeline, &inputs) == N4M_OK);
+    CHECK(n4m_role_pipeline_predict(nullptr, pipeline, &in.X, &out) == N4M_ERR_NULL_POINTER);
+    size = 99;
+    CHECK(n4m_role_pipeline_export_state_size(nullptr, pipeline, 0, 0, &size) == N4M_ERR_NULL_POINTER);
+    CHECK(size == 0);
+    n4m_role_pipeline_destroy(pipeline);
+}
+
 // A failed refit keeps the previous fitted state; per-row inputs must match
 // the rows of X exactly (never broadcast).
 void test_refit_and_input_lengths(n4m_context_t* ctx, Inputs& in) {
@@ -1605,6 +1824,8 @@ int main() {
     run([&] { test_pls_fit_simple_equivalence(ctx, in); });
     run([&] { test_in_sample_equivalence(ctx, in); });
     run([&] { test_aom_in_sample(ctx, in); });
+    run([&] { test_aom_fit_diagnostics(ctx, in); });
+    run([&] { test_null_context_refused(ctx, in); });
     run([&] { test_refit_and_input_lengths(ctx, in); });
     run([&] { test_input_views(ctx, in); });
     run([&] { test_param_descriptors(); });
