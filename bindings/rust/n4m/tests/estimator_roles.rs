@@ -518,6 +518,12 @@ fn replays_the_cross_language_fixture() {
     // The multibranch neural regressor postdates the frozen fixture; it is qualified by the
     // native probe (cpp/tests/test_multibranch_regressor.cpp) and the generic conformance sweep.
     assert!(listed.insert("models.neural.multibranch_regressor"));
+    // The spectral conversions postdate the frozen fixture; the native analytic contract
+    // (test_estimator.cpp::test_spectral_conversions) and external-reference parity cover them.
+    assert!(listed.insert("preprocessing.signal_conversion.reflectance_from_references"));
+    assert!(listed.insert("preprocessing.signal_conversion.from_kubelka_munk"));
+    assert!(listed.insert("preprocessing.resampling.axis_unit_conversion"));
+    assert!(listed.insert("preprocessing.signal_conversion.splice_correction"));
     assert!(listed.insert("utilities.ragged_summary"));
     // OPLS and finite-column quantiles postdate the frozen fixture: they are not waived,
     // each is accounted for by its own explicit test below.

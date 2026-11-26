@@ -304,6 +304,10 @@ def test_cross_language_fixture_states_replay():
         "preprocessing.scaling.row_l2_normalize",
         "preprocessing.scaling.block_rms",
         "models.neural.multibranch_regressor",
+        "preprocessing.signal_conversion.reflectance_from_references",
+        "preprocessing.signal_conversion.from_kubelka_munk",
+        "preprocessing.resampling.axis_unit_conversion",
+        "preprocessing.signal_conversion.splice_correction",
     }
     assert legacy_methods.isdisjoint(new_methods)
     # Preserve every old fixture packet; StandardScale has its actual native
@@ -314,6 +318,9 @@ def test_cross_language_fixture_states_replay():
     # it postdates this historical cross-binding state fixture.
     # MultibranchRegressor postdates the fixture; the generic regressor sweep and the native
     # multibranch probe (cpp/tests/test_multibranch_regressor.cpp) cover it.
+    # The spectral conversions postdate the fixture; the native analytic contract
+    # (test_estimator.cpp::test_spectral_conversions) and the external-reference
+    # parity fixture (test_spectral_conversions.py) cover them.
     assert legacy_methods | new_methods == {
         m for m, c in _REGISTRY.items() if issubclass(c, roles.NativeEstimator)
     }
@@ -763,6 +770,8 @@ TRANSFORMER_PARAMS = {
     "kernel_size": 5,
     "alphas": [0.0, 1.0],
     "sigmas": [1.0, 2.0],
+    "white_reference": [2.0] * N_FEATURES,
+    "splices": [1008.0, 1016.0],
 }
 
 
@@ -827,12 +836,23 @@ def reference_transformer(cls, est):
     return ref_cls(**{k: v for k, v in est.get_params().items() if k in accepted})
 
 
+# Role-only methods without a legacy n4m.transform class; their external-reference
+# parity lives in test_spectral_conversions.py.
+ROLE_ONLY_CLASSES = {
+    "AxisUnitConversion",
+    "FromKubelkaMunk",
+    "ReflectanceFromReferences",
+    "SpliceCorrection",
+}
+
+
 @pytest.mark.parametrize(
     "cls",
     [
         c
         for c in PURE_TRANSFORMERS
         if c.__name__ not in FITTED_REFERENCE_CLASSES
+        and c.__name__ not in ROLE_ONLY_CLASSES
         and not c._method_id.startswith("aom_pop.")
     ],
     ids=lambda c: c.__name__,

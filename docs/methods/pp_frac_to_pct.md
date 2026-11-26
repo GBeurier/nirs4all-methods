@@ -46,7 +46,7 @@ This operation does not infer the signal type and will silently produce wrong un
 
 ### Implementation
 
-`n4m.transform.signal_conversion.FractionToPercent` uses `n4m_transform_fraction_to_percent_*`; the element-wise kernel is in `signal_conversion/fraction_to_percent.c`.
+`n4m.transform.signal_conversion.FractionToPercent` uses `n4m_transform_fraction_to_percent_*`; the element-wise kernel is in `signal_conversion/fraction_to_percent.c`. External-reference parity (project 1.5.2, parity/spectral_conversions): astropy.units percent conversion, identical.
 
 The ABI-2 implementation is the `n4m_transform_fraction_to_percent_*` lifecycle in libn4m.
 

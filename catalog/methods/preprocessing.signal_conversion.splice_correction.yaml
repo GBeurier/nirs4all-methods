@@ -1,0 +1,68 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.signal_conversion.splice_correction"
+family: "preprocessing.signal_conversion"
+category: "preprocessing"
+subcategory: "signal_conversion"
+since_abi: "2.24.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/preprocessing/signal_conversion/splice_correction.cpp"
+  - "cpp/src/core/estimator/axis_adapters.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.signal_conversion.splice_correction"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "SpliceCorrection"
+    legacy_aliases: []
+  r:
+    function: "n4m_splice_correction"
+    legacy_aliases: []
+publications: []
+notes: "Detector splice (jump) correction of multi-detector spectra (ASD, Spectral Evolution, SVC) through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged. splices are the first wavelengths of each following detector; segments are corrected outward from reference_segment (0-based), each matched to its corrected neighbour by the ratio (multiplicative) or difference (additive) of the mean levels of the bands within window axis units of the splice on each side (window 0: the two adjacent bands). taper spreads the correction linearly from full at the splice to none at the far end of the segment. Additive with window 0 is the specdal jump_correct convention; multiplicative with taper is spectrolab match_sensors. A segment whose factor is not finite, and those beyond it, are NaN. The fitted state is the source axis."
+c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "tr_splice_correction"
+  roles: "[transformer]"
+  state: "source_axis"
+  inputs:
+    y: "optional"
+    axis: "required"
+  params:
+    - name: "splices"
+      type: "double_array"
+    - name: "reference_segment"
+      type: "int"
+      default: 1
+      min: 0
+    - name: "method"
+      type: "enum"
+      choices: "[multiplicative, additive]"
+      default: "multiplicative"
+    - name: "window"
+      type: "double"
+      default: 0.0
+      min: 0.0
+    - name: "taper"
+      type: "bool"
+      default: false
+fq_name: "n4m.transform.signal_conversion.splice_correction"
+leaf: "splice_correction"
+legacy_ids:
+  - "preprocessing.signal_conversion.splice_correction"
+namespace: "transform.signal_conversion"

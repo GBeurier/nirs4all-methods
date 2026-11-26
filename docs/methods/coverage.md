@@ -2,9 +2,9 @@
 
 This generated report records the documentation source used for each catalog entry. It is a content-coverage check, not a parity score.
 
-- Catalog entries: **251**
-- Curated scientific records: **257**
-- Resolved documentation pages: **251**
+- Catalog entries: **255**
+- Curated scientific records: **261**
+- Resolved documentation pages: **255**
 
 | Catalog id | Documentation page | Scientific record |
 |---|---|---|
@@ -175,6 +175,7 @@ This generated report records the documentation source used for each catalog ent
 | `preprocessing.feature_selection.spectral_encoding` | [preprocessing_feature_selection_spectral_encoding](preprocessing_feature_selection_spectral_encoding.md) | curated |
 | `preprocessing.orthogonalization.epo` | [pp_epo](pp_epo.md) | curated |
 | `preprocessing.orthogonalization.osc` | [pp_osc](pp_osc.md) | curated |
+| `preprocessing.resampling.axis_unit_conversion` | [preprocessing_resampling_axis_unit_conversion](preprocessing_resampling_axis_unit_conversion.md) | curated |
 | `preprocessing.resampling.crop` | [pp_crop](pp_crop.md) | curated |
 | `preprocessing.resampling.kbins_discretizer` | [pp_kbins_disc](pp_kbins_disc.md) | curated |
 | `preprocessing.resampling.range_discretizer` | [pp_range_disc](pp_range_disc.md) | curated |
@@ -201,8 +202,11 @@ This generated report records the documentation source used for each catalog ent
 | `preprocessing.scatter.weighted_snv` | [pp_weighted_snv](pp_weighted_snv.md) | curated |
 | `preprocessing.signal_conversion.fraction_to_percent` | [pp_frac_to_pct](pp_frac_to_pct.md) | curated |
 | `preprocessing.signal_conversion.from_absorbance` | [pp_from_absorbance](pp_from_absorbance.md) | curated |
+| `preprocessing.signal_conversion.from_kubelka_munk` | [preprocessing_signal_conversion_from_kubelka_munk](preprocessing_signal_conversion_from_kubelka_munk.md) | curated |
 | `preprocessing.signal_conversion.kubelka_munk` | [pp_kubelka_munk](pp_kubelka_munk.md) | curated |
 | `preprocessing.signal_conversion.percent_to_fraction` | [pp_pct_to_frac](pp_pct_to_frac.md) | curated |
+| `preprocessing.signal_conversion.reflectance_from_references` | [preprocessing_signal_conversion_reflectance_from_references](preprocessing_signal_conversion_reflectance_from_references.md) | curated |
+| `preprocessing.signal_conversion.splice_correction` | [preprocessing_signal_conversion_splice_correction](preprocessing_signal_conversion_splice_correction.md) | curated |
 | `preprocessing.signal_conversion.to_absorbance` | [pp_to_absorbance](pp_to_absorbance.md) | curated |
 | `preprocessing.smoothing.gaussian` | [pp_gaussian](pp_gaussian.md) | curated |
 | `preprocessing.specialized.fck_static` | [pp_fck_static](pp_fck_static.md) | curated |

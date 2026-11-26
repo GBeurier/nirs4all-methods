@@ -46,7 +46,7 @@ The operator does not detect current units; applying it to fractional or absorba
 
 ### Implementation
 
-`n4m.transform.signal_conversion.PercentToFraction` calls `n4m_transform_percent_to_fraction_*`; the kernel is `signal_conversion/percent_to_fraction.c`.
+`n4m.transform.signal_conversion.PercentToFraction` calls `n4m_transform_percent_to_fraction_*`; the kernel is `signal_conversion/percent_to_fraction.c`. External-reference parity (project 1.5.2, parity/spectral_conversions): astropy.units percent conversion within 2e-16 relative.
 
 The ABI-2 implementation is the `n4m_transform_percent_to_fraction_*` lifecycle in libn4m.
 

@@ -3864,6 +3864,43 @@ class OSC(NativeTransformer):
         self.scale = scale
 
 
+class AxisUnitConversion(NativeTransformer):
+    """Native ``preprocessing.resampling.axis_unit_conversion`` (transformer).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "preprocessing.resampling.axis_unit_conversion"
+    _param_types: ClassVar[dict[str, str]] = {
+        "source_unit": "enum",
+        "target_unit": "enum",
+        "spectral_density": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "source_unit": (
+            "nm",
+            "um",
+            "cm-1",
+        ),
+        "target_unit": (
+            "nm",
+            "um",
+            "cm-1",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        source_unit="nm",
+        target_unit="cm-1",
+        spectral_density=False,
+    ) -> None:
+        self.source_unit = source_unit
+        self.target_unit = target_unit
+        self.spectral_density = spectral_density
+
+
 class CropTransformer(NativeTransformer):
     """Native ``preprocessing.resampling.crop`` (transformer)."""
 
@@ -4367,6 +4404,22 @@ class FromAbsorbance(NativeTransformer):
         self.is_percent = is_percent
 
 
+class FromKubelkaMunk(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.from_kubelka_munk`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.from_kubelka_munk"
+    _param_types: ClassVar[dict[str, str]] = {
+        "is_percent": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        is_percent=False,
+    ) -> None:
+        self.is_percent = is_percent
+
+
 class KubelkaMunk(NativeTransformer):
     """Native ``preprocessing.signal_conversion.kubelka_munk`` (transformer)."""
 
@@ -4394,6 +4447,65 @@ class PercentToFraction(NativeTransformer):
 
     def __init__(self) -> None:
         pass
+
+
+class ReflectanceFromReferences(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.reflectance_from_references`` (transformer)."""
+
+    _method_id = "preprocessing.signal_conversion.reflectance_from_references"
+    _param_types: ClassVar[dict[str, str]] = {
+        "white_reference": "double_array",
+        "dark_reference": "double_array",
+        "as_percent": "bool",
+    }
+
+    def __init__(
+        self,
+        *,
+        white_reference=None,
+        dark_reference=(),
+        as_percent=False,
+    ) -> None:
+        self.white_reference = white_reference
+        self.dark_reference = dark_reference
+        self.as_percent = as_percent
+
+
+class SpliceCorrection(NativeTransformer):
+    """Native ``preprocessing.signal_conversion.splice_correction`` (transformer).
+
+    Required fit inputs: axis.
+    """
+
+    _method_id = "preprocessing.signal_conversion.splice_correction"
+    _param_types: ClassVar[dict[str, str]] = {
+        "splices": "double_array",
+        "reference_segment": "int",
+        "method": "enum",
+        "window": "double",
+        "taper": "bool",
+    }
+    _enum_choices: ClassVar[dict[str, tuple[str, ...]]] = {
+        "method": (
+            "multiplicative",
+            "additive",
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        splices=None,
+        reference_segment=1,
+        method="multiplicative",
+        window=0,
+        taper=False,
+    ) -> None:
+        self.splices = splices
+        self.reference_segment = reference_segment
+        self.method = method
+        self.window = window
+        self.taper = taper
 
 
 class ToAbsorbance(NativeTransformer):
@@ -5967,6 +6079,7 @@ __all__ = [
     "ArPLS",
     "AreaNormalization",
     "AsLS",
+    "AxisUnitConversion",
     "BaggingPLS",
     "BandMask",
     "BandPerturb",
@@ -5998,6 +6111,7 @@ __all__ = [
     "FlexibleSVD",
     "FractionToPercent",
     "FromAbsorbance",
+    "FromKubelkaMunk",
     "FusedSparsePLS",
     "GaussJitter",
     "Gaussian",
@@ -6060,6 +6174,7 @@ __all__ = [
     "Randomization",
     "RangeDiscretizer",
     "RecursivePLS",
+    "ReflectanceFromReferences",
     "RegressionMetrics",
     "ResampleTransformer",
     "Resampler",
@@ -6091,6 +6206,7 @@ __all__ = [
     "SpectralQualityFilter",
     "SpectralReferenceQc",
     "SpikeNoise",
+    "SpliceCorrection",
     "SplineCurveSimplification",
     "SplineSmoothing",
     "SplineXPerturbations",

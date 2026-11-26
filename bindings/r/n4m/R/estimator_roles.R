@@ -203,7 +203,10 @@
 #' @return \code{n4m_estimator_fit()} returns the fitted estimator (a failed fit
 #'   leaves the object passed in unchanged); \code{predict()} and
 #'   \code{n4m_estimator_transform()} return numeric results; \code{n4m_estimator_export()} a raw
-#'   vector; \code{n4m_estimator_import()} a fitted estimator.
+#'   vector; \code{n4m_fit_result()} the named diagnostics of the last fit
+#'   (\code{NULL} when the method keeps none, including after import; for
+#'   example the converted axis of \code{n4m_axis_unit_conversion()});
+#'   \code{n4m_estimator_import()} a fitted estimator.
 #' @name n4m_estimator_roles
 NULL
 
@@ -345,6 +348,13 @@ n4m_estimator_export <- function(object, allow_training_rows = FALSE) {
 #' @export
 n4m_contains_training_rows <- function(object) {
   .Call("r_n4m_estimator_contains_training_rows", .n4m_pointer(object), PACKAGE = "n4m")
+}
+
+#' @rdname n4m_estimator_roles
+#' @export
+n4m_fit_result <- function(object) {
+  if (is.null(object$state)) stop("n4m estimator is not fitted", call. = FALSE)
+  .Call("r_n4m_estimator_fit_result", .n4m_pointer(object), PACKAGE = "n4m")
 }
 
 #' @rdname n4m_estimator_roles

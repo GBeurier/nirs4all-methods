@@ -2,7 +2,7 @@
 
 Every native method in the library, grouped by the `n4m.<role>` namespace (ABI 2.0). Each row links to the method's documentation page and shows its fully-qualified name `n4m.<role>.<sub>...<leaf>`. Parameters, bibliographic sources, mathematical principles, binding signatures, and benchmark rows are on the linked pages. The [current method-science reference index](scientific-references.md) collects every rendered citation and source provenance.
 
-_Total catalogued native methods_: **251**. Additional Python reference
+_Total catalogued native methods_: **255**. Additional Python reference
 surfaces are documented where relevant.
 
 Python facade guides: [AOM calibration contracts](aom_calibration.md), [moment-based fitting and diagnostics](moments.md), [moment sweeps](sweep_run.md), [moment stacks](moment_stack.md), and the [direct Ridge facade](ridge.md).
@@ -237,9 +237,13 @@ pp_wavelet_svd
 pp_weighted_snv
 pp_xcorr_align
 preprocessing_feature_selection_spectral_encoding
+preprocessing_resampling_axis_unit_conversion
 preprocessing_scaling_block_rms
 preprocessing_scaling_row_l2_normalize
 preprocessing_scaling_standard_scale
+preprocessing_signal_conversion_from_kubelka_munk
+preprocessing_signal_conversion_reflectance_from_references
+preprocessing_signal_conversion_splice_correction
 pso_search
 pso_select
 racing
@@ -317,6 +321,7 @@ wvc_threshold_select
 | [`saps`](pp_saps.md) | `n4m.transform.baseline.saps` | `n4m.transform.baseline` | C |
 | [`snip`](pp_snip.md) | `n4m.transform.baseline.snip` | `n4m.transform.baseline` | C |
 | [`osc`](pp_osc.md) | `n4m.transform.orthogonalization.osc` | `n4m.transform.orthogonalization` | C |
+| [`axis_unit_conversion`](preprocessing_resampling_axis_unit_conversion.md) | `n4m.transform.resampling.axis_unit_conversion` | `n4m.transform.resampling` | Py |
 | [`crop`](pp_crop.md) | `n4m.transform.resampling.crop` | `n4m.transform.resampling` | C |
 | [`kbins_discretizer`](pp_kbins_disc.md) | `n4m.transform.resampling.kbins_discretizer` | `n4m.transform.resampling` | C |
 | [`range_discretizer`](pp_range_disc.md) | `n4m.transform.resampling.range_discretizer` | `n4m.transform.resampling` | C |
@@ -343,9 +348,12 @@ wvc_threshold_select
 | [`weighted_snv`](pp_weighted_snv.md) | `n4m.transform.scatter.weighted_snv` | `n4m.transform.scatter` | C |
 | [`fraction_to_percent`](pp_frac_to_pct.md) | `n4m.transform.signal_conversion.fraction_to_percent` | `n4m.transform.signal_conversion` | C |
 | [`from_absorbance`](pp_from_absorbance.md) | `n4m.transform.signal_conversion.from_absorbance` | `n4m.transform.signal_conversion` | C |
+| [`from_kubelka_munk`](preprocessing_signal_conversion_from_kubelka_munk.md) | `n4m.transform.signal_conversion.from_kubelka_munk` | `n4m.transform.signal_conversion` | Py |
 | [`kubelka_munk`](pp_kubelka_munk.md) | `n4m.transform.signal_conversion.kubelka_munk` | `n4m.transform.signal_conversion` | C |
 | [`percent_to_fraction`](pp_pct_to_frac.md) | `n4m.transform.signal_conversion.percent_to_fraction` | `n4m.transform.signal_conversion` | C |
+| [`reflectance_from_references`](preprocessing_signal_conversion_reflectance_from_references.md) | `n4m.transform.signal_conversion.reflectance_from_references` | `n4m.transform.signal_conversion` | Py |
 | [`signal_type_detector`](utilities_signal_type_detector.md) | `n4m.transform.signal_conversion.signal_type_detector` | `n4m.transform.signal_conversion` | C |
+| [`splice_correction`](preprocessing_signal_conversion_splice_correction.md) | `n4m.transform.signal_conversion.splice_correction` | `n4m.transform.signal_conversion` | Py |
 | [`to_absorbance`](pp_to_absorbance.md) | `n4m.transform.signal_conversion.to_absorbance` | `n4m.transform.signal_conversion` | C |
 | [`derivative`](pp_derivate.md) | `n4m.transform.smoothing.derivative` | `n4m.transform.smoothing` | C |
 | [`first_derivative`](pp_first_derivative.md) | `n4m.transform.smoothing.first_derivative` | `n4m.transform.smoothing` | C |

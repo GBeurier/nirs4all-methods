@@ -8,7 +8,7 @@ A method is covered when it is reachable through the generic role surface
 *Python, R, JS/WASM* means the shared fixture replays its N4ME state in all
 three bindings and each binding's own fit reproduces the Python fit.
 
-**221 of 251 catalog entries covered.**
+**225 of 255 catalog entries covered.**
 
 | Category | Covered | Total |
 |---|---:|---:|
@@ -17,7 +17,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | diagnostics | 5 | 24 |
 | filters | 6 | 7 |
 | models | 39 | 40 |
-| preprocessing | 65 | 66 |
+| preprocessing | 69 | 70 |
 | selection | 26 | 26 |
 | splitters | 9 | 9 |
 | utilities | 14 | 19 |
@@ -191,6 +191,7 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.feature_selection.spectral_encoding` | not yet | - | - |
 | `preprocessing.orthogonalization.epo` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.orthogonalization.osc` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.resampling.axis_unit_conversion` | estimator | transformer | manifest only |
 | `preprocessing.resampling.crop` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.resampling.kbins_discretizer` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.resampling.range_discretizer` | estimator | transformer | Python, R, JS/WASM |
@@ -217,8 +218,11 @@ three bindings and each binding's own fit reproduces the Python fit.
 | `preprocessing.scatter.weighted_snv` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.fraction_to_percent` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.from_absorbance` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.signal_conversion.from_kubelka_munk` | estimator | transformer | manifest only |
 | `preprocessing.signal_conversion.kubelka_munk` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.signal_conversion.percent_to_fraction` | estimator | transformer | Python, R, JS/WASM |
+| `preprocessing.signal_conversion.reflectance_from_references` | estimator | transformer | manifest only |
+| `preprocessing.signal_conversion.splice_correction` | estimator | transformer | manifest only |
 | `preprocessing.signal_conversion.to_absorbance` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.smoothing.gaussian` | estimator | transformer | Python, R, JS/WASM |
 | `preprocessing.specialized.fck_static` | estimator | transformer | Python, R, JS/WASM |

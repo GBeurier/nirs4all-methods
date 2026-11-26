@@ -1,0 +1,281 @@
+{
+ "versions": {
+  "python": "3.11.15",
+  "pandas": "3.1.1",
+  "specdal": "0.2.1",
+  "numpy": "2.4.6",
+  "scipy": "1.17.1",
+  "astropy": "8.0.3",
+  "R": [
+   "4.3.3"
+  ],
+  "photobiology": [
+   "0.14.3"
+  ],
+  "mdatools": [
+   "0.15.0"
+  ],
+  "prospectr": [
+   "0.2.8"
+  ],
+  "asdreader": [
+   "0.1.3"
+  ],
+  "spectrolab": [
+   "0.0.19"
+  ]
+ },
+ "cases": [
+  {
+   "name": "to_absorbance/fraction",
+   "reference": "photobiology::T2A",
+   "max_abs": 2.220446049250313e-16,
+   "max_rel": 1.9146076297163232e-16,
+   "ok": true
+  },
+  {
+   "name": "to_absorbance/percent",
+   "reference": "photobiology::T2A on the fraction",
+   "max_abs": 4.440892098500626e-16,
+   "max_rel": 3.1061062922472823e-15,
+   "ok": true
+  },
+  {
+   "name": "from_absorbance/fraction",
+   "reference": "photobiology::A2T",
+   "max_abs": 1.1102230246251565e-16,
+   "max_rel": 1.111667854510589e-15,
+   "ok": true
+  },
+  {
+   "name": "from_absorbance/percent",
+   "reference": "photobiology::A2T times 100",
+   "max_abs": 1.4210854715202004e-14,
+   "max_rel": 1.0672011403301656e-15,
+   "ok": true
+  },
+  {
+   "name": "kubelka_munk/fraction",
+   "reference": "mdatools::prep.ref2km",
+   "max_abs": 3.552713678800501e-15,
+   "max_rel": 2.7734721793421008e-12,
+   "ok": true
+  },
+  {
+   "name": "kubelka_munk/percent",
+   "reference": "mdatools::prep.ref2km on the fraction",
+   "max_abs": 7.105427357601002e-15,
+   "max_rel": 3.616805322933401e-14,
+   "ok": true
+  },
+  {
+   "name": "from_kubelka_munk/fraction",
+   "reference": "stats::uniroot over mdatools::prep.ref2km",
+   "max_abs": 2.220446049250313e-16,
+   "max_rel": 3.989255070292387e-16,
+   "ok": true
+  },
+  {
+   "name": "from_kubelka_munk/percent",
+   "reference": "stats::uniroot over mdatools::prep.ref2km, times 100",
+   "max_abs": 2.842170943040401e-14,
+   "max_rel": 4.019127309836621e-16,
+   "ok": true
+  },
+  {
+   "name": "percent_to_fraction",
+   "reference": "astropy.units percent -> dimensionless",
+   "max_abs": 1.1102230246251565e-16,
+   "max_rel": 1.727844840225617e-16,
+   "ok": true
+  },
+  {
+   "name": "fraction_to_percent",
+   "reference": "astropy.units dimensionless -> percent",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "reflectance_from_references/prospectr/v6sample00000.asd",
+   "reference": "prospectr::readASD reflectance",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "reflectance_from_references/asdreader/v6sample00000.asd",
+   "reference": "asdreader::get_spectra reflectance",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "reflectance_from_references/prospectr/v7sample00000.asd",
+   "reference": "prospectr::readASD reflectance",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "reflectance_from_references/asdreader/v7sample00000.asd",
+   "reference": "asdreader::get_spectra reflectance",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "reflectance_from_references/prospectr/v8sample00001.asd",
+   "reference": "prospectr::readASD reflectance",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "reflectance_from_references/asdreader/v8sample00001.asd",
+   "reference": "asdreader::get_spectra reflectance",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "splice_correction/specdal_additive/reference_0",
+   "reference": "specdal.operator.jump_correct (additive)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "splice_correction/specdal_additive/reference_1",
+   "reference": "specdal.operator.jump_correct (additive)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "splice_correction/specdal_additive/reference_2",
+   "reference": "specdal.operator.jump_correct (additive)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "splice_correction/spectrolab_match_sensors",
+   "reference": "spectrolab::match_sensors (fixed sensor 2, interpolate_wvl 5)",
+   "max_abs": 1.1102230246251565e-16,
+   "max_rel": 4.169896491444726e-16,
+   "ok": true
+  },
+  {
+   "name": "resampler/linear",
+   "reference": "scipy.interpolate interp1d linear",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "resampler/nearest",
+   "reference": "scipy.interpolate interp1d nearest",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "resampler/cubic",
+   "reference": "scipy.interpolate CubicSpline not-a-knot",
+   "max_abs": 7.105427357601002e-15,
+   "max_rel": 2.5857458774662776e-15,
+   "ok": true
+  },
+  {
+   "name": "axis_unit_conversion/nm->um/axis",
+   "reference": "astropy.units spectral() (column order)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true,
+   "axis_max_rel": 1.8493773469987125e-16
+  },
+  {
+   "name": "axis_unit_conversion/nm->um/density",
+   "reference": "astropy.units spectral_density()",
+   "max_abs": 9.094947017729282e-13,
+   "max_rel": 2.2056127139472008e-16,
+   "ok": true
+  },
+  {
+   "name": "axis_unit_conversion/nm->cm-1/axis",
+   "reference": "astropy.units spectral() (column order)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true,
+   "axis_max_rel": 3.007039967181041e-16
+  },
+  {
+   "name": "axis_unit_conversion/nm->cm-1/density",
+   "reference": "astropy.units spectral_density()",
+   "max_abs": 6.661338147750939e-16,
+   "max_rel": 5.228263995250729e-16,
+   "ok": true
+  },
+  {
+   "name": "axis_unit_conversion/um->nm/axis",
+   "reference": "astropy.units spectral() (column order)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true,
+   "axis_max_rel": 2.110784909866428e-16
+  },
+  {
+   "name": "axis_unit_conversion/um->nm/density",
+   "reference": "astropy.units spectral_density()",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true
+  },
+  {
+   "name": "axis_unit_conversion/um->cm-1/axis",
+   "reference": "astropy.units spectral() (column order)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true,
+   "axis_max_rel": 2.2190206818182181e-16
+  },
+  {
+   "name": "axis_unit_conversion/um->cm-1/density",
+   "reference": "astropy.units spectral_density()",
+   "max_abs": 8.673617379884035e-19,
+   "max_rel": 4.1625857403545316e-16,
+   "ok": true
+  },
+  {
+   "name": "axis_unit_conversion/cm-1->nm/axis",
+   "reference": "astropy.units spectral() (column order)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true,
+   "axis_max_rel": 2.8389488844093206e-16
+  },
+  {
+   "name": "axis_unit_conversion/cm-1->nm/density",
+   "reference": "astropy.units spectral_density()",
+   "max_abs": 2.1316282072803006e-14,
+   "max_rel": 6.741427718630644e-16,
+   "ok": true
+  },
+  {
+   "name": "axis_unit_conversion/cm-1->um/axis",
+   "reference": "astropy.units spectral() (column order)",
+   "max_abs": 0.0,
+   "max_rel": 0.0,
+   "ok": true,
+   "axis_max_rel": 2.4945349410709283e-16
+  },
+  {
+   "name": "axis_unit_conversion/cm-1->um/density",
+   "reference": "astropy.units spectral_density()",
+   "max_abs": 2.1827872842550278e-11,
+   "max_rel": 5.349308050489229e-16,
+   "ok": true
+  }
+ ]
+}

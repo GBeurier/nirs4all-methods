@@ -138,6 +138,7 @@
 \alias{n4m_flexible_svd}
 \alias{n4m_epo}
 \alias{n4m_osc}
+\alias{n4m_axis_unit_conversion}
 \alias{n4m_crop}
 \alias{n4m_kbins_discretizer}
 \alias{n4m_range_discretizer}
@@ -164,8 +165,11 @@
 \alias{n4m_weighted_snv}
 \alias{n4m_fraction_to_percent}
 \alias{n4m_from_absorbance}
+\alias{n4m_from_kubelka_munk}
 \alias{n4m_kubelka_munk}
 \alias{n4m_percent_to_fraction}
+\alias{n4m_reflectance_from_references}
+\alias{n4m_splice_correction}
 \alias{n4m_to_absorbance}
 \alias{n4m_gaussian}
 \alias{n4m_fck_static}
@@ -361,6 +365,7 @@ n4m_flexible_pca(n_components = 5.0)
 n4m_flexible_svd(n_components = 5.0)
 n4m_epo(scale = TRUE)
 n4m_osc(n_components = 1L, scale = TRUE)
+n4m_axis_unit_conversion(source_unit = "nm", target_unit = "cm-1", spectral_density = FALSE)
 n4m_crop(start = NULL, end = NULL)
 n4m_kbins_discretizer(n_bins = 5L, strategy = "uniform")
 n4m_range_discretizer(edges = NULL)
@@ -387,8 +392,11 @@ n4m_vsn(eps = 1e-12)
 n4m_weighted_snv(weights = c(), ddof = 0L, eps = 1e-12)
 n4m_fraction_to_percent()
 n4m_from_absorbance(is_percent = FALSE)
+n4m_from_kubelka_munk(is_percent = FALSE)
 n4m_kubelka_munk(is_percent = FALSE, epsilon = 1e-10)
 n4m_percent_to_fraction()
+n4m_reflectance_from_references(white_reference = NULL, dark_reference = c(), as_percent = FALSE)
+n4m_splice_correction(splices = NULL, reference_segment = 1L, method = "multiplicative", window = 0.0, taper = FALSE)
 n4m_to_absorbance(is_percent = FALSE, epsilon = 1e-10, clip_negative = TRUE)
 n4m_gaussian(sigma = 1.0, order = 0L, mode = "reflect", cval = 0.0, truncate = 4.0)
 n4m_fck_static(kernel_size = NULL, alphas = NULL, sigmas = NULL)
@@ -464,6 +472,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{amount_lo}{Native parameter (double); defaults come from the n4m manifest.}
 \item{amplitude_max}{Native parameter (double); defaults come from the n4m manifest.}
 \item{amplitude_min}{Native parameter (double); defaults come from the n4m manifest.}
+\item{as_percent}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{asymmetry}{Native parameter (double); defaults come from the n4m manifest.}
 \item{auto_offset}{Native parameter (bool); defaults come from the n4m manifest.}
 \item{aw_high}{Native parameter (double); defaults come from the n4m manifest.}
@@ -511,6 +520,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{cv}{Native parameter (int); defaults come from the n4m manifest.}
 \item{cval}{Native parameter (double); defaults come from the n4m manifest.}
 \item{damping}{Native parameter (double); defaults come from the n4m manifest.}
+\item{dark_reference}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{ddof}{Native parameter (int); defaults come from the n4m manifest.}
 \item{degree}{Native parameter (int); defaults come from the n4m manifest.}
 \item{delta}{Native parameter (double); defaults come from the n4m manifest.}
@@ -704,6 +714,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{ratio_kept}{Native parameter (double); defaults come from the n4m manifest.}
 \item{reference}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{reference_mode}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{reference_segment}{Native parameter (int); defaults come from the n4m manifest.}
 \item{reference_size_um}{Native parameter (double); defaults come from the n4m manifest.}
 \item{reference_valid_mask}{Native parameter (int_array); defaults come from the n4m manifest.}
 \item{reference_water_activity}{Native parameter (double); defaults come from the n4m manifest.}
@@ -740,7 +751,10 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{slope_std}{Native parameter (double); defaults come from the n4m manifest.}
 \item{smooth_half_window}{Native parameter (int); defaults come from the n4m manifest.}
 \item{solver}{Native parameter (enum); defaults come from the n4m manifest.}
+\item{source_unit}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{sparsity_lambda}{Native parameter (double); defaults come from the n4m manifest.}
+\item{spectral_density}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{splices}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{spline_degree}{Native parameter (int); defaults come from the n4m manifest.}
 \item{spline_points}{Native parameter (int); defaults come from the n4m manifest.}
 \item{start}{Native parameter (int); defaults come from the n4m manifest.}
@@ -751,6 +765,8 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{stray_light_fraction}{Native parameter (double); defaults come from the n4m manifest.}
 \item{stretch_hi}{Native parameter (double); defaults come from the n4m manifest.}
 \item{stretch_lo}{Native parameter (double); defaults come from the n4m manifest.}
+\item{taper}{Native parameter (bool); defaults come from the n4m manifest.}
+\item{target_unit}{Native parameter (enum); defaults come from the n4m manifest.}
 \item{target_wavelengths}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{tau}{Native parameter (double); defaults come from the n4m manifest.}
 \item{temp_high}{Native parameter (double); defaults come from the n4m manifest.}
@@ -789,6 +805,7 @@ n4m_transfer_metrics(n_components = 10L, k_neighbors = 10L, seed = NULL)
 \item{weight_decay}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weight_floor}{Native parameter (double); defaults come from the n4m manifest.}
 \item{weights}{Native parameter (double_array); defaults come from the n4m manifest.}
+\item{white_reference}{Native parameter (double_array); defaults come from the n4m manifest.}
 \item{width_hi}{Native parameter (int); defaults come from the n4m manifest.}
 \item{width_high}{Native parameter (int); defaults come from the n4m manifest.}
 \item{width_lo}{Native parameter (int); defaults come from the n4m manifest.}
@@ -948,6 +965,7 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_flexible_svd}: \code{preprocessing.feature_selection.flexible_svd} (transformer)
 \item \code{n4m_epo}: \code{preprocessing.orthogonalization.epo} (transformer)
 \item \code{n4m_osc}: \code{preprocessing.orthogonalization.osc} (transformer)
+\item \code{n4m_axis_unit_conversion}: \code{preprocessing.resampling.axis_unit_conversion} (transformer)
 \item \code{n4m_crop}: \code{preprocessing.resampling.crop} (transformer)
 \item \code{n4m_kbins_discretizer}: \code{preprocessing.resampling.kbins_discretizer} (transformer)
 \item \code{n4m_range_discretizer}: \code{preprocessing.resampling.range_discretizer} (transformer)
@@ -974,8 +992,11 @@ One constructor per native method of the n4m manifest:
 \item \code{n4m_weighted_snv}: \code{preprocessing.scatter.weighted_snv} (transformer)
 \item \code{n4m_fraction_to_percent}: \code{preprocessing.signal_conversion.fraction_to_percent} (transformer)
 \item \code{n4m_from_absorbance}: \code{preprocessing.signal_conversion.from_absorbance} (transformer)
+\item \code{n4m_from_kubelka_munk}: \code{preprocessing.signal_conversion.from_kubelka_munk} (transformer)
 \item \code{n4m_kubelka_munk}: \code{preprocessing.signal_conversion.kubelka_munk} (transformer)
 \item \code{n4m_percent_to_fraction}: \code{preprocessing.signal_conversion.percent_to_fraction} (transformer)
+\item \code{n4m_reflectance_from_references}: \code{preprocessing.signal_conversion.reflectance_from_references} (transformer)
+\item \code{n4m_splice_correction}: \code{preprocessing.signal_conversion.splice_correction} (transformer)
 \item \code{n4m_to_absorbance}: \code{preprocessing.signal_conversion.to_absorbance} (transformer)
 \item \code{n4m_gaussian}: \code{preprocessing.smoothing.gaussian} (transformer)
 \item \code{n4m_fck_static}: \code{preprocessing.specialized.fck_static} (transformer)

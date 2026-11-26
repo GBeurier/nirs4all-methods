@@ -49,7 +49,7 @@ The two-flux, infinite-thickness, homogeneous-sample assumptions often fail. Val
 
 ### Implementation
 
-`n4m.transform.signal_conversion.KubelkaMunk` wraps `n4m_transform_kubelka_munk_*`; the guarded formula is in `signal_conversion/kubelka_munk.c`.
+`n4m.transform.signal_conversion.KubelkaMunk` wraps `n4m_transform_kubelka_munk_*`; the guarded formula is in `signal_conversion/kubelka_munk.c`. External-reference parity (project 1.5.2, parity/spectral_conversions): mdatools `prep.ref2km` within 4e-14 absolute. The SSE2 (x86-64) path evaluates the equivalent 0.5/R - 1 + 0.5R, whose relative error grows as R approaches 1 (about 3e-12 near F = 1e-4; absolute error stays below 1e-14), while other targets such as WASM evaluate the literal form.
 
 The ABI-2 implementation is the `n4m_transform_kubelka_munk_*` lifecycle in libn4m.
 

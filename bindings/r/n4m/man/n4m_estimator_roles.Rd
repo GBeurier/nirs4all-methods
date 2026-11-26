@@ -15,6 +15,7 @@
 \alias{n4m_selected_indices.n4m_selector}
 \alias{n4m_estimator_export}
 \alias{n4m_contains_training_rows}
+\alias{n4m_fit_result}
 \alias{n4m_estimator_import}
 \alias{print.n4m_method}
 \title{Generic native estimator roles}
@@ -50,6 +51,8 @@ n4m_selected_indices(object)
 n4m_estimator_export(object, allow_training_rows = FALSE)
 
 n4m_contains_training_rows(object)
+
+n4m_fit_result(object)
 
 n4m_estimator_import(bytes)
 
@@ -89,7 +92,10 @@ the object passed in unchanged); \code{predict()} and
 \code{predict(type = "class")}); \code{n4m_classes()} the fitted classes; \code{n4m_sample_mask()} a logical
 vector (\code{TRUE} keeps the row);
 \code{n4m_estimator_export()} a raw vector; \code{n4m_contains_training_rows()}
-a logical; \code{n4m_estimator_import()} a fitted estimator.
+a logical; \code{n4m_fit_result()} the named diagnostics of the last fit
+(\code{NULL} when the method keeps none, including after import; for example
+the converted axis of \code{n4m_axis_unit_conversion()});
+\code{n4m_estimator_import()} a fitted estimator.
 }
 \description{
 Constructors such as \code{n4m_pls_regression()} or \code{n4m_cppls()} return

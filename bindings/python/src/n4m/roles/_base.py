@@ -571,6 +571,20 @@ class NativeEstimator(NativeMethod):
         )
         return bool(out.value)
 
+    @property
+    def fit_result_(self) -> dict[str, Any] | None:
+        """Named diagnostics of the last fit (``n4m_estimator_fit_result``),
+        for example the converted axis of :class:`AxisUnitConversion`, which
+        an import rebuilds; None when the method keeps none (fit diagnostics
+        such as loss histories are not state and are absent after
+        :meth:`from_n4me`)."""
+        result = ctypes.c_void_p()
+        status = lib.n4m_estimator_fit_result(self._handle(), ctypes.byref(result))
+        if status == Status.ERR_UNSUPPORTED:
+            return None
+        check(status, "n4m_estimator_fit_result")
+        return _result_dict(result)
+
     def to_n4me(self, *, allow_training_rows: bool = False) -> bytes:
         """Portable fitted state readable by every n4m binding.
 

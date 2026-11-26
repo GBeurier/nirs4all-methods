@@ -1,0 +1,53 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.signal_conversion.from_kubelka_munk"
+family: "preprocessing.signal_conversion"
+category: "preprocessing"
+subcategory: "signal_conversion"
+since_abi: "2.24.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp"
+  - "cpp/src/core/estimator/transform_adapters.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.signal_conversion.from_kubelka_munk"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "FromKubelkaMunk"
+    legacy_aliases: []
+  r:
+    function: "n4m_from_kubelka_munk"
+    legacy_aliases: []
+publications: []
+notes: "Inverse Kubelka-Munk function through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged: R = 1 / (1 + F + sqrt(F (F + 2))), the root in (0, 1] of F = (1 - R)^2 / (2 R), written without cancellation. is_percent scales the output by 100. F < 0 gives NaN; NaN propagates. Width-only WTD1 state."
+c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "tr_from_kubelka_munk"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "is_percent"
+      type: "bool"
+      default: false
+fq_name: "n4m.transform.signal_conversion.from_kubelka_munk"
+leaf: "from_kubelka_munk"
+legacy_ids:
+  - "preprocessing.signal_conversion.from_kubelka_munk"
+namespace: "transform.signal_conversion"

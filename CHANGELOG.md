@@ -4,6 +4,42 @@ All notable changes to `nirs4all-methods` (`n4m`) will be documented in this fil
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+ABI 2.24.0 unchanged; existing numerical results and fitted-state formats are
+unchanged. The new methods use the generic estimator roles and add no C symbol.
+
+### Added
+
+- `ReflectanceFromReferences` (`preprocessing.signal_conversion.reflectance_from_references`):
+  reflectance or transmittance (X - D) / (W - D) from sample, white and optional dark
+  spectra, as a fraction or a percentage; NaN where W - D is not positive.
+- `FromKubelkaMunk` (`preprocessing.signal_conversion.from_kubelka_munk`): inverse of
+  the Kubelka-Munk function, R = 1 / (1 + F + sqrt(F (F + 2))).
+- `SpliceCorrection` (`preprocessing.signal_conversion.splice_correction`): detector
+  jump correction of multi-detector spectra (ASD, Spectral Evolution, SVC), additive or
+  multiplicative, constant or tapered, chained outward from a reference detector.
+- `AxisUnitConversion` (`preprocessing.resampling.axis_unit_conversion`): spectral axes
+  between nm, um and cm-1 (vacuum), columns reordered to an ascending axis, with the
+  Jacobian for spectral densities; the converted axis is the fit result entry `axis`.
+- Python `fit_result_` and R `n4m_fit_result()` return the fit diagnostics of an
+  estimator, as `fitResult()` already did in JS.
+- External-reference parity of the spectral conversions
+  (`parity/spectral_conversions/`, fixture `spectral_conversions_external_v1.json`,
+  replayed by `bindings/python/tests/test_spectral_conversions.py`): photobiology,
+  mdatools, astropy, scipy, specdal, spectrolab, prospectr and asdreader agree within
+  1e-12 relative for every case, most within 1e-15. The vendor comparison
+  (`parity/results/spectral_conversions_vendor.json`) matches AvaSoft 6/7 binary files
+  and OceanView bit for bit and SVC within its file rounding; AvaSoft 8 text exports
+  and Spectral Evolution DARWin apply further processing (up to 0.6 % and a few
+  percent apart).
+
+### Notes
+
+- `KubelkaMunk` on x86-64 builds evaluates the equivalent 0.5/R - 1 + 0.5R, whose
+  relative error near R = 1 reaches a few 1e-12 (absolute error below 1e-14); other
+  targets evaluate the literal formula. Results are unchanged in this release.
+
 ## [1.5.1] - 2026-11-19
 
 ABI 2.24.0, Rust `n4m` 0.5.0, numerical results and fitted-state formats
