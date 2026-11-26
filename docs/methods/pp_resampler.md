@@ -55,7 +55,7 @@ Both grids must be ordered and represent the same physical coordinate. Extrapola
 
 ### Implementation
 
-`n4m.transform.resampling.Resampler` wraps `n4m_transform_resampler_*`; cached brackets and all three interpolation paths are in `resampling/resampler.c`.
+`n4m.transform.resampling.Resampler` wraps `n4m_transform_resampler_*`; cached brackets and all three interpolation paths are in `resampling/resampler.c`. External-reference parity (project 1.5.2, parity/spectral_conversions): scipy `interp1d` (linear, nearest) identical and `CubicSpline` (not-a-knot) within 3e-15 relative.
 
 The ABI-2 implementation is the `n4m_transform_resampler_*` lifecycle in libn4m.
 

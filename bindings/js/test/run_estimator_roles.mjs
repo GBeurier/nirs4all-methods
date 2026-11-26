@@ -9,6 +9,7 @@ import * as n4m from "../dist/index.js";
 import { assertN4meReexportEquivalent } from "./_n4me_compat.mjs";
 import { checkStandardScale } from "./run_standard_scale.mjs";
 import { checkRowL2Normalize } from "./run_row_l2_normalize.mjs";
+import { checkSpectralConversions } from "./run_spectral_conversions.mjs";
 import { checkFiniteColumnQuantiles } from "./run_finite_column_quantiles.mjs";
 
 await n4m.loadModule();
@@ -54,7 +55,9 @@ const classes = Object.values(n4m).filter(
     (c) => typeof c === "function" && c.prototype instanceof n4m.NativeEstimator);
 const byMethod = new Map(classes.map((c) => [new c().methodId, c]));
 const newMethods = ["preprocessing.scaling.standard_scale", "models.pls.opls",
-    "preprocessing.scaling.row_l2_normalize", "preprocessing.scaling.block_rms", "models.neural.multibranch_regressor"];
+    "preprocessing.scaling.row_l2_normalize", "preprocessing.scaling.block_rms", "models.neural.multibranch_regressor",
+    "preprocessing.signal_conversion.reflectance_from_references", "preprocessing.signal_conversion.from_kubelka_munk", "preprocessing.resampling.axis_unit_conversion",
+    "preprocessing.signal_conversion.splice_correction"];
 const newProcedures = ["utilities.finite_column_quantiles", "utilities.ragged_summary",
     "diagnostics.spectral_reference_qc", "diagnostics.spectral_events_qc",
     "diagnostics.spectral_population_events_qc",
@@ -65,6 +68,7 @@ assert.deepEqual([...byMethod.keys()].sort(), [...legacyMethods, ...newMethods].
 
 checkStandardScale();
 checkRowL2Normalize();
+checkSpectralConversions();
 checkFiniteColumnQuantiles();
 
 const yTest = Float64Array.from(fixture.y_test);

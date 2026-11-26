@@ -83,6 +83,7 @@ SEXP r_n4m_estimator_predict(SEXP, SEXP);
 SEXP r_n4m_estimator_transform(SEXP, SEXP);
 SEXP r_n4m_estimator_export(SEXP, SEXP);
 SEXP r_n4m_estimator_contains_training_rows(SEXP);
+SEXP r_n4m_estimator_fit_result(SEXP);
 SEXP r_n4m_estimator_import(SEXP);
 SEXP r_n4m_estimator_alive(SEXP);
 SEXP r_n4m_estimator_info(SEXP);
@@ -220,6 +221,7 @@ static const R_CallMethodDef callMethods[] = {
     {"r_n4m_estimator_export", (DL_FUNC)&r_n4m_estimator_export, 2},
     {"r_n4m_estimator_contains_training_rows",
      (DL_FUNC)&r_n4m_estimator_contains_training_rows, 1},
+    {"r_n4m_estimator_fit_result", (DL_FUNC)&r_n4m_estimator_fit_result, 1},
     {"r_n4m_estimator_import", (DL_FUNC)&r_n4m_estimator_import, 1},
     {"r_n4m_estimator_alive", (DL_FUNC)&r_n4m_estimator_alive, 1},
     {"r_n4m_estimator_info", (DL_FUNC)&r_n4m_estimator_info, 1},

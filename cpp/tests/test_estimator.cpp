@@ -153,6 +153,12 @@ void fill_required(int32_t index, n4m_params_t* params) {
         } else if (std::strcmp(pi.name, "alpha_thresholds") == 0) {
             const double v[] = {0.95, 0.99};
             CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "splices") == 0) {
+            const double v[] = {1008.0, 1016.0};  // within the 1000-1022 test axis
+            CHECK(n4m_params_set_double_array(params, pi.name, v, 2) == N4M_OK);
+        } else if (std::strcmp(pi.name, "white_reference") == 0) {
+            const std::vector<double> v(static_cast<size_t>(kCols), 4.0);
+            CHECK(n4m_params_set_double_array(params, pi.name, v.data(), kCols) == N4M_OK);
         } else if (std::strcmp(pi.name, "edges") == 0) {
             const double v[] = {-0.5, 0.0, 0.5};
             CHECK(n4m_params_set_double_array(params, pi.name, v, 3) == N4M_OK);
@@ -477,7 +483,8 @@ void conformance_transform_only(n4m_context_t* ctx, const n4m_estimator_t* est, 
     CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
     auto O2 = view(out2.data(), kTest, cols);
     CHECK(n4m_estimator_transform(ctx, back, &X_test, &O2) == N4M_OK);
-    CHECK(out == out2);
+    // Bitwise: NaN is a valid output of some transformers.
+    CHECK(std::memcmp(out.data(), out2.data(), out.size() * sizeof(double)) == 0);
     CHECK(export_bytes(ctx, back) == bytes);
     n4m_estimator_destroy(back);
 }
@@ -1735,6 +1742,256 @@ void test_standard_scale_ddof(n4m_context_t* ctx) {
     CHECK(n4m_params_set_double(params.get(), "ddof", 0.5) == N4M_ERR_INVALID_ARGUMENT);
 }
 
+using EstimatorPtr = std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)>;
+using ParamsPtr = std::unique_ptr<n4m_params_t, decltype(&n4m_params_destroy)>;
+
+ParamsPtr method_params(n4m_context_t* ctx, const char* method_id) {
+    int32_t index = -1;
+    CHECK(n4m_method_find(method_id, &index) == N4M_OK);
+    n4m_params_t* raw = nullptr;
+    CHECK(n4m_params_create(ctx, index, &raw) == N4M_OK);
+    return ParamsPtr(raw, n4m_params_destroy);
+}
+
+// Fits `method_id` on X (with an optional axis); returns null when refused.
+EstimatorPtr fit_with(n4m_context_t* ctx, const char* method_id, const n4m_params_t* params,
+                      std::vector<double>& X, int64_t rows, int64_t cols,
+                      const std::vector<double>* axis = nullptr,
+                      n4m_status_t expected = N4M_OK) {
+    n4m_estimator_t* raw = nullptr;
+    CHECK(n4m_estimator_create(ctx, method_id, params, &raw) == N4M_OK);
+    EstimatorPtr est(raw, n4m_estimator_destroy);
+    auto V = view(X.data(), rows, cols);
+    n4m_fit_inputs_v1_t fit{};
+    fit.struct_size = sizeof(fit);
+    fit.X = &V;
+    if (axis != nullptr) {
+        fit.axis = axis->data();
+        fit.n_axis = static_cast<int64_t>(axis->size());
+    }
+    const n4m_status_t st = n4m_estimator_fit(ctx, est.get(), &fit);
+    CHECK(st == expected);
+    if (st != N4M_OK) est.reset();
+    return est;
+}
+
+std::vector<double> transform_with(n4m_context_t* ctx, const n4m_estimator_t* est,
+                                   std::vector<double>& X, int64_t rows, int64_t cols) {
+    std::vector<double> out(X.size(), -1.0);
+    auto V = view(X.data(), rows, cols);
+    auto O = view(out.data(), rows, cols);
+    CHECK(n4m_estimator_transform(ctx, est, &V, &O) == N4M_OK);
+    return out;
+}
+
+void test_spectral_conversions(n4m_context_t* ctx) {
+    // (X - D) / (W - D): 40 / 100, 30 / 60, and a dead pixel (W == D).
+    current_ = "reflectance_from_references/analytic";
+    {
+        const char* id = "preprocessing.signal_conversion.reflectance_from_references";
+        auto params = method_params(ctx, id);
+        const double white[] = {110.0, 60.0, 10.0}, dark[] = {10.0, 0.0, 10.0};
+        CHECK(n4m_params_set_double_array(params.get(), "white_reference", white, 3) == N4M_OK);
+        CHECK(n4m_params_set_double_array(params.get(), "dark_reference", dark, 3) == N4M_OK);
+        std::vector<double> X{50.0, 30.0, 10.0, 10.0, 60.0, 99.0};
+        auto est = fit_with(ctx, id, params.get(), X, 2, 3);
+        auto out = transform_with(ctx, est.get(), X, 2, 3);
+        CHECK(out[0] == 0.4);
+        CHECK(out[1] == 0.5);
+        CHECK(std::isnan(out[2]));
+        CHECK(out[3] == 0.0);
+        CHECK(out[4] == 1.0);
+        CHECK(std::isnan(out[5]));
+        CHECK(n4m_params_set_bool(params.get(), "as_percent", 1) == N4M_OK);
+        auto pct = fit_with(ctx, id, params.get(), X, 2, 3);
+        auto out_pct = transform_with(ctx, pct.get(), X, 2, 3);
+        CHECK(out_pct[0] == 40.0);
+        CHECK(out_pct[1] == 50.0);
+        // N4ME replays the references.
+        const auto bytes = export_bytes(ctx, pct.get());
+        n4m_estimator_t* back = nullptr;
+        CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+        EstimatorPtr replay(back, n4m_estimator_destroy);
+        auto again = transform_with(ctx, replay.get(), X, 2, 3);
+        CHECK(std::memcmp(again.data(), out_pct.data(), again.size() * sizeof(double)) == 0);
+        // References of another width are refused.
+        std::vector<double> narrow{1.0, 2.0};
+        fit_with(ctx, id, params.get(), narrow, 1, 2, nullptr, N4M_ERR_SHAPE_MISMATCH);
+        const double short_dark[] = {0.0};
+        CHECK(n4m_params_set_double_array(params.get(), "dark_reference", short_dark, 1) ==
+              N4M_OK);
+        n4m_estimator_t* bad = nullptr;
+        CHECK(n4m_estimator_create(ctx, id, params.get(), &bad) == N4M_OK);
+        EstimatorPtr bad_est(bad, n4m_estimator_destroy);
+        auto V = view(X.data(), 2, 3);
+        n4m_fit_inputs_v1_t fit{};
+        fit.struct_size = sizeof(fit);
+        fit.X = &V;
+        CHECK(n4m_estimator_fit(ctx, bad_est.get(), &fit) != N4M_OK);
+    }
+
+    // R = 1 / (1 + F + sqrt(F (F + 2))) inverts F = (1 - R)^2 / (2 R).
+    current_ = "from_kubelka_munk/analytic";
+    {
+        const char* id = "preprocessing.signal_conversion.from_kubelka_munk";
+        auto params = method_params(ctx, id);
+        const std::vector<double> r{1e-6, 0.01, 0.2, 0.5, 0.9, 0.999999, 1.0};
+        std::vector<double> F;
+        for (double v : r) F.push_back((1.0 - v) * (1.0 - v) / (2.0 * v));
+        F.push_back(-1e-3);
+        F.push_back(std::numeric_limits<double>::infinity());
+        F.push_back(1e12);
+        const int64_t n = static_cast<int64_t>(F.size());
+        auto est = fit_with(ctx, id, params.get(), F, 1, n);
+        auto out = transform_with(ctx, est.get(), F, 1, n);
+        for (size_t i = 0; i < r.size(); ++i) {
+            CHECK(std::abs(out[i] - r[i]) <= 2e-15 * r[i] + 1e-16);
+        }
+        CHECK(out[r.size() - 1] == 1.0);
+        CHECK(std::isnan(out[r.size()]));
+        CHECK(out[r.size() + 1] == 0.0);
+        // Large F: R = 1 / (2 F) - 1 / (2 F^2) + O(F^-3), no cancellation.
+        CHECK(std::abs(out[r.size() + 2] / (0.5e-12 - 0.5e-24) - 1.0) < 1e-12);
+        CHECK(n4m_params_set_bool(params.get(), "is_percent", 1) == N4M_OK);
+        auto pct = fit_with(ctx, id, params.get(), F, 1, n);
+        auto out_pct = transform_with(ctx, pct.get(), F, 1, n);
+        CHECK(out_pct[3] == 100.0 * out[3]);
+    }
+
+    current_ = "axis_unit_conversion/analytic";
+    {
+        const char* id = "preprocessing.resampling.axis_unit_conversion";
+        auto params = method_params(ctx, id);  // nm -> cm-1
+        std::vector<double> axis{1000.0, 1250.0, 2500.0};
+        std::vector<double> X{1.0, 2.0, 3.0, 10.0, 20.0, 30.0};
+        auto est = fit_with(ctx, id, params.get(), X, 2, 3, &axis);
+        auto out = transform_with(ctx, est.get(), X, 2, 3);
+        CHECK((out == std::vector<double>{3.0, 2.0, 1.0, 30.0, 20.0, 10.0}));
+        const n4m_method_result_t* result = nullptr;
+        CHECK(n4m_estimator_fit_result(est.get(), &result) == N4M_OK);
+        const double* converted = nullptr;
+        int64_t rows = 0, cols = 0;
+        CHECK(n4m_method_result_get_double_matrix(result, "axis", &converted, &rows, &cols) ==
+              N4M_OK);
+        CHECK((rows == 1 && cols == 3));
+        CHECK((std::vector<double>(converted, converted + 3) ==
+               std::vector<double>{4000.0, 8000.0, 10000.0}));
+        const int64_t* order = nullptr;
+        int64_t n_order = 0;
+        CHECK(n4m_method_result_get_int64_vector(result, "source_columns", &order, &n_order) ==
+              N4M_OK);
+        CHECK((std::vector<int64_t>(order, order + n_order) == std::vector<int64_t>{2, 1, 0}));
+        // Densities per nm become densities per cm-1: |d lambda / d nu| = lambda^2 / 1e7.
+        CHECK(n4m_params_set_bool(params.get(), "spectral_density", 1) == N4M_OK);
+        auto density = fit_with(ctx, id, params.get(), X, 2, 3, &axis);
+        auto d = transform_with(ctx, density.get(), X, 2, 3);
+        CHECK(d[0] == 3.0 * 0.625);
+        CHECK(d[1] == 2.0 * 0.15625);
+        CHECK(d[2] == 1.0 * 0.1);
+        // The state is the source axis; the import rebuilds the same plan.
+        const auto bytes = export_bytes(ctx, density.get());
+        n4m_estimator_t* back = nullptr;
+        CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+        EstimatorPtr replay(back, n4m_estimator_destroy);
+        CHECK(transform_with(ctx, replay.get(), X, 2, 3) == d);
+        // um -> nm, and cm-1 -> um.
+        auto um = method_params(ctx, id);
+        CHECK(n4m_params_set_enum(um.get(), "source_unit", "um") == N4M_OK);
+        CHECK(n4m_params_set_enum(um.get(), "target_unit", "nm") == N4M_OK);
+        std::vector<double> um_axis{2.5, 1.0, 1.25};
+        auto um_est = fit_with(ctx, id, um.get(), X, 2, 3, &um_axis);
+        CHECK(n4m_estimator_fit_result(um_est.get(), &result) == N4M_OK);
+        CHECK(n4m_method_result_get_double_matrix(result, "axis", &converted, &rows, &cols) ==
+              N4M_OK);
+        CHECK((std::vector<double>(converted, converted + 3) ==
+               std::vector<double>{1000.0, 1250.0, 2500.0}));
+        CHECK((transform_with(ctx, um_est.get(), X, 2, 3) ==
+               std::vector<double>{2.0, 3.0, 1.0, 20.0, 30.0, 10.0}));
+        CHECK(n4m_params_set_enum(um.get(), "source_unit", "cm-1") == N4M_OK);
+        CHECK(n4m_params_set_enum(um.get(), "target_unit", "um") == N4M_OK);
+        std::vector<double> nu{4000.0, 10000.0};
+        std::vector<double> two{1.0, 2.0};
+        auto nu_est = fit_with(ctx, id, um.get(), two, 1, 2, &nu);
+        CHECK(n4m_estimator_fit_result(nu_est.get(), &result) == N4M_OK);
+        CHECK(n4m_method_result_get_double_matrix(result, "axis", &converted, &rows, &cols) ==
+              N4M_OK);
+        CHECK((std::vector<double>(converted, converted + 2) == std::vector<double>{1.0, 2.5}));
+        // Non-positive, non-finite, duplicate or mismatched axes are refused.
+        for (const auto& bad : {std::vector<double>{0.0, 1.0, 2.0},
+                                std::vector<double>{-1.0, 1.0, 2.0},
+                                std::vector<double>{1.0, std::nan(""), 2.0},
+                                std::vector<double>{1.0, 1.0, 2.0},
+                                std::vector<double>{1.0, 2.0}}) {
+            n4m_estimator_t* raw = nullptr;
+            CHECK(n4m_estimator_create(ctx, id, params.get(), &raw) == N4M_OK);
+            EstimatorPtr refused(raw, n4m_estimator_destroy);
+            auto V = view(X.data(), 2, 3);
+            n4m_fit_inputs_v1_t fit{};
+            fit.struct_size = sizeof(fit);
+            fit.X = &V;
+            fit.axis = bad.data();
+            fit.n_axis = static_cast<int64_t>(bad.size());
+            CHECK(n4m_estimator_fit(ctx, refused.get(), &fit) != N4M_OK);
+        }
+    }
+}
+
+void test_splice_correction(n4m_context_t* ctx) {
+    current_ = "splice_correction/analytic";
+    const char* id = "preprocessing.signal_conversion.splice_correction";
+    // Three detectors over bands 1..9: [1, 2, 3], [4, 5, 6], [7, 8, 9].
+    std::vector<double> axis{1, 2, 3, 4, 5, 6, 7, 8, 9};
+    const double splices[] = {4.0, 7.0};
+    std::vector<double> X{1, 1, 1, 2, 2, 2, 8, 8, 8};
+    auto params = method_params(ctx, id);
+    CHECK(n4m_params_set_double_array(params.get(), "splices", splices, 2) == N4M_OK);
+    // Multiplicative, middle reference: x2 on the left, x1/4 on the right.
+    auto est = fit_with(ctx, id, params.get(), X, 1, 9, &axis);
+    CHECK((transform_with(ctx, est.get(), X, 1, 9) ==
+           std::vector<double>{2, 2, 2, 2, 2, 2, 2, 2, 2}));
+    // Additive, first segment as reference, chained: +1 then -6.
+    CHECK(n4m_params_set_enum(params.get(), "method", "additive") == N4M_OK);
+    CHECK(n4m_params_set_int(params.get(), "reference_segment", 0) == N4M_OK);
+    auto add = fit_with(ctx, id, params.get(), X, 1, 9, &axis);
+    CHECK((transform_with(ctx, add.get(), X, 1, 9) ==
+           std::vector<double>{1, 1, 1, 1, 1, 1, 1, 1, 1}));
+    // Window: the mean of the bands within 1.5 of the splice on each side.
+    std::vector<double> ramp{1, 2, 3, 10, 20, 30, 40, 50, 60};
+    CHECK(n4m_params_set_double(params.get(), "window", 1.5) == N4M_OK);
+    auto win = fit_with(ctx, id, params.get(), ramp, 1, 9, &axis);
+    auto w = transform_with(ctx, win.get(), ramp, 1, 9);
+    // Splice 4: bands 3 | 4, 5 -> shift 3 - 15 = -12. Splice 7: corrected band
+    // 6 (18) | 7, 8 -> shift 18 - 45 = -27.
+    CHECK((w == std::vector<double>{1, 2, 3, -2, 8, 18, 13, 23, 33}));
+    // Taper: full correction at the splice, none at the far end.
+    CHECK(n4m_params_set_double(params.get(), "window", 0.0) == N4M_OK);
+    CHECK(n4m_params_set_bool(params.get(), "taper", 1) == N4M_OK);
+    CHECK(n4m_params_set_enum(params.get(), "method", "multiplicative") == N4M_OK);
+    CHECK(n4m_params_set_int(params.get(), "reference_segment", 1) == N4M_OK);
+    auto taper = fit_with(ctx, id, params.get(), X, 1, 9, &axis);
+    auto tp = transform_with(ctx, taper.get(), X, 1, 9);
+    CHECK((tp == std::vector<double>{1, 1.5, 2, 2, 2, 2, 2, 5, 8}));
+    // A zero level on the moved side has no factor: NaN for that segment.
+    std::vector<double> zero{1, 1, 0, 2, 2, 2, 8, 8, 8};
+    auto z = transform_with(ctx, taper.get(), zero, 1, 9);
+    CHECK((std::isnan(z[0]) && std::isnan(z[2]) && z[3] == 2.0 && z[8] == 8.0));
+    // The state is the axis; the import rebuilds the same correction.
+    const auto bytes = export_bytes(ctx, taper.get());
+    n4m_estimator_t* back = nullptr;
+    CHECK(n4m_estimator_import_from_buffer(ctx, bytes.data(), bytes.size(), &back) == N4M_OK);
+    EstimatorPtr replay(back, n4m_estimator_destroy);
+    CHECK(transform_with(ctx, replay.get(), X, 1, 9) == tp);
+    // Empty segments, unordered axes and a missing reference segment are refused.
+    const double outside[] = {4.0, 10.0};
+    CHECK(n4m_params_set_double_array(params.get(), "splices", outside, 2) == N4M_OK);
+    fit_with(ctx, id, params.get(), X, 1, 9, &axis, N4M_ERR_INVALID_ARGUMENT);
+    CHECK(n4m_params_set_double_array(params.get(), "splices", splices, 2) == N4M_OK);
+    std::vector<double> unordered{1, 2, 3, 4, 5, 5, 7, 8, 9};
+    fit_with(ctx, id, params.get(), X, 1, 9, &unordered, N4M_ERR_INVALID_ARGUMENT);
+    CHECK(n4m_params_set_int(params.get(), "reference_segment", 3) == N4M_OK);
+    fit_with(ctx, id, params.get(), X, 1, 9, &axis, N4M_ERR_INVALID_ARGUMENT);
+}
+
 void test_row_l2_normalize(n4m_context_t* ctx) {
     current_ = "row_l2_normalize/scientific_contract";
     using Estimator = std::unique_ptr<n4m_estimator_t, decltype(&n4m_estimator_destroy)>;
@@ -1841,6 +2098,8 @@ int main() {
     run([&] { test_standard_scale_ddof(ctx); });
     run([&] {
         test_row_l2_normalize(ctx);
+        test_spectral_conversions(ctx);
+        test_splice_correction(ctx);
     });
     run([&] {
         test_snv_parameter_domain(ctx);

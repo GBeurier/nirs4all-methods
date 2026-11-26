@@ -50,7 +50,7 @@ The transform assumes correct input units and positive signals. Clipping hides i
 
 ### Implementation
 
-`n4m.transform.signal_conversion.ToAbsorbance` uses `n4m_transform_to_absorbance_*`; unit handling and guards are in `signal_conversion/to_absorbance.c`.
+`n4m.transform.signal_conversion.ToAbsorbance` uses `n4m_transform_to_absorbance_*`; unit handling and guards are in `signal_conversion/to_absorbance.c`. External-reference parity (project 1.5.2, parity/spectral_conversions): photobiology `T2A` within 3e-15 relative.
 
 The ABI-2 implementation is the `n4m_transform_to_absorbance_*` lifecycle in libn4m.
 

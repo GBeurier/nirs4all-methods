@@ -4709,6 +4709,36 @@ export class OSC extends NativeEstimator implements Transformer {
 }
 NativeMethod.register("preprocessing.orthogonalization.osc", OSC);
 
+/** Parameters of AxisUnitConversion; unset values take the native defaults. */
+export interface AxisUnitConversionParams {
+    /** Default "nm". */
+    source_unit?: "nm" | "um" | "cm-1";
+    /** Default "cm-1". */
+    target_unit?: "nm" | "um" | "cm-1";
+    /** Default false. */
+    spectral_density?: boolean;
+}
+
+/** Native `preprocessing.resampling.axis_unit_conversion` (transformer). Required fit inputs: axis. */
+export class AxisUnitConversion extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.resampling.axis_unit_conversion";
+    readonly paramTypes = {
+        source_unit: "enum",
+        target_unit: "enum",
+        spectral_density: "bool",
+    } as const;
+
+    constructor(params: AxisUnitConversionParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.resampling.axis_unit_conversion", AxisUnitConversion);
+
 /** Parameters of CropTransformer; unset values take the native defaults. */
 export interface CropTransformerParams {
     /** Required. */
@@ -5408,6 +5438,30 @@ export class FromAbsorbance extends NativeEstimator implements Transformer {
 }
 NativeMethod.register("preprocessing.signal_conversion.from_absorbance", FromAbsorbance);
 
+/** Parameters of FromKubelkaMunk; unset values take the native defaults. */
+export interface FromKubelkaMunkParams {
+    /** Default false. */
+    is_percent?: boolean;
+}
+
+/** Native `preprocessing.signal_conversion.from_kubelka_munk` (transformer). */
+export class FromKubelkaMunk extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.signal_conversion.from_kubelka_munk";
+    readonly paramTypes = {
+        is_percent: "bool",
+    } as const;
+
+    constructor(params: FromKubelkaMunkParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.signal_conversion.from_kubelka_munk", FromKubelkaMunk);
+
 /** Parameters of KubelkaMunk; unset values take the native defaults. */
 export interface KubelkaMunkParams {
     /** Default false. */
@@ -5455,6 +5509,72 @@ export class PercentToFraction extends NativeEstimator implements Transformer {
     }
 }
 NativeMethod.register("preprocessing.signal_conversion.percent_to_fraction", PercentToFraction);
+
+/** Parameters of ReflectanceFromReferences; unset values take the native defaults. */
+export interface ReflectanceFromReferencesParams {
+    /** Required. */
+    white_reference?: number[];
+    /** Default []. */
+    dark_reference?: number[];
+    /** Default false. */
+    as_percent?: boolean;
+}
+
+/** Native `preprocessing.signal_conversion.reflectance_from_references` (transformer). */
+export class ReflectanceFromReferences extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.signal_conversion.reflectance_from_references";
+    readonly paramTypes = {
+        white_reference: "double_array",
+        dark_reference: "double_array",
+        as_percent: "bool",
+    } as const;
+
+    constructor(params: ReflectanceFromReferencesParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.signal_conversion.reflectance_from_references", ReflectanceFromReferences);
+
+/** Parameters of SpliceCorrection; unset values take the native defaults. */
+export interface SpliceCorrectionParams {
+    /** Required. */
+    splices?: number[];
+    /** Default 1. */
+    reference_segment?: number;
+    /** Default "multiplicative". */
+    method?: "multiplicative" | "additive";
+    /** Default 0. */
+    window?: number;
+    /** Default false. */
+    taper?: boolean;
+}
+
+/** Native `preprocessing.signal_conversion.splice_correction` (transformer). Required fit inputs: axis. */
+export class SpliceCorrection extends NativeEstimator implements Transformer {
+    readonly methodId = "preprocessing.signal_conversion.splice_correction";
+    readonly paramTypes = {
+        splices: "double_array",
+        reference_segment: "int",
+        method: "enum",
+        window: "double",
+        taper: "bool",
+    } as const;
+
+    constructor(params: SpliceCorrectionParams = {}) {
+        super();
+        this.params = { ...params };
+    }
+
+    transform(X: Matrix): Matrix {
+        return this.transformMatrix(X);
+    }
+}
+NativeMethod.register("preprocessing.signal_conversion.splice_correction", SpliceCorrection);
 
 /** Parameters of ToAbsorbance; unset values take the native defaults. */
 export interface ToAbsorbanceParams {

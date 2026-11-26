@@ -517,6 +517,29 @@ SEXP r_n4m_estimator_contains_training_rows(SEXP ptr) {
     return Rf_ScalarLogical(out != 0);
 }
 
+/* Named entries of the last fit's diagnostics (n4m_estimator_fit_result), or
+ * NULL when the method keeps none, including after import. */
+SEXP r_n4m_estimator_fit_result(SEXP ptr) {
+    const n4m_method_result_t* res = NULL;
+    const n4m_status_t st = n4m_estimator_fit_result(r_est_get(ptr), &res);
+    if (st == N4M_ERR_UNSUPPORTED) return R_NilValue;
+    if (st != N4M_OK) r_est_fail("n4m_estimator_fit_result", st, NULL, NULL, NULL);
+    int32_t count = 0;
+    n4m_method_result_entry_count(res, &count);
+    SEXP out = PROTECT(Rf_allocVector(VECSXP, count));
+    SEXP names = PROTECT(Rf_allocVector(STRSXP, count));
+    for (int32_t i = 0; i < count; ++i) {
+        const char* name = NULL;
+        int32_t kind = 0;
+        n4m_method_result_entry(res, i, &name, &kind);
+        SET_STRING_ELT(names, i, Rf_mkChar(name));
+        SET_VECTOR_ELT(out, i, r_est_entry(res, name, kind));
+    }
+    Rf_setAttrib(out, R_NamesSymbol, names);
+    UNPROTECT(2);
+    return out;
+}
+
 SEXP r_n4m_estimator_import(SEXP bytes) {
     if (TYPEOF(bytes) != RAWSXP) Rf_error("N4ME state must be a raw vector");
     n4m_context_t* ctx = r_est_context();

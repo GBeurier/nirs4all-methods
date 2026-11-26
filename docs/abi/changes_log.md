@@ -1,5 +1,17 @@
 # ABI — Changes Log
 
+## 2026-11-26 — ABI unchanged: spectral conversion transformer roles
+
+Project 1.5.2 introduces `preprocessing.signal_conversion.reflectance_from_references`,
+`preprocessing.signal_conversion.from_kubelka_munk`,
+`preprocessing.signal_conversion.splice_correction` and
+`preprocessing.resampling.axis_unit_conversion` through the existing generic
+estimator roles. The first two keep width-only WTD1 state; the axis-fitted ones
+store their source axis in a new AXS1 block of the existing N4ME envelope.
+`AxisUnitConversion` publishes the converted axis through the existing
+`n4m_estimator_fit_result`. No public symbol, signature, layout or existing
+state-format change; ABI remains 2.24.0.
+
 ## 2026-11-18 — ABI 2.24.0: model-intrinsic importances, affine pipelines, gradient explainer
 
 Additive (unreleased; project version unchanged at 1.3.18). Existing signatures,

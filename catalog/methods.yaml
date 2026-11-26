@@ -4599,6 +4599,64 @@ methods:
         - name: scale
           type: bool
           default: true
+  - method_id: "preprocessing.resampling.axis_unit_conversion"
+    family: "preprocessing.resampling"
+    category: "preprocessing"
+    subcategory: "resampling"
+    since_abi: "2.24.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/preprocessing/resampling/axis_unit_conversion.cpp"
+      - "cpp/src/core/estimator/axis_adapters.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "preprocessing.resampling.axis_unit_conversion"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "AxisUnitConversion"
+        legacy_aliases: []
+      r:
+        function: "n4m_axis_unit_conversion"
+        legacy_aliases: []
+    publications: []
+    notes: "Spectral axis unit conversion between vacuum wavelengths (nm, um) and wavenumbers (cm-1) through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged. Fit takes the source axis; transform permutes columns so the converted axis is strictly ascending, published as the fit result entry axis (with source_columns). Values are unchanged unless spectral_density, which multiplies by the Jacobian |d source / d target| for densities per axis unit. No air-to-vacuum correction. Axis values must be finite, positive and distinct; same units only sort the axis."
+    namespace: "transform.resampling"
+    leaf: "axis_unit_conversion"
+    fq_name: "n4m.transform.resampling.axis_unit_conversion"
+    c_surface: "none"
+    legacy_ids:
+      - "preprocessing.resampling.axis_unit_conversion"
+    estimator:
+      kind: estimator
+      adapter: tr_axis_unit_conversion
+      roles: [transformer]
+      state: source_axis
+      inputs:
+        y: optional
+        axis: required
+      params:
+        - name: source_unit
+          type: enum
+          choices: [nm, um, cm-1]
+          default: nm
+        - name: target_unit
+          type: enum
+          choices: [nm, um, cm-1]
+          default: cm-1
+        - name: spectral_density
+          type: bool
+          default: false
   - method_id: "preprocessing.resampling.crop"
     family: "preprocessing.resampling"
     category: "preprocessing"
@@ -5715,6 +5773,55 @@ methods:
         - name: is_percent
           type: bool
           default: false
+  - method_id: "preprocessing.signal_conversion.from_kubelka_munk"
+    family: "preprocessing.signal_conversion"
+    category: "preprocessing"
+    subcategory: "signal_conversion"
+    since_abi: "2.24.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp"
+      - "cpp/src/core/estimator/transform_adapters.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "preprocessing.signal_conversion.from_kubelka_munk"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "FromKubelkaMunk"
+        legacy_aliases: []
+      r:
+        function: "n4m_from_kubelka_munk"
+        legacy_aliases: []
+    publications: []
+    notes: "Inverse Kubelka-Munk function through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged: R = 1 / (1 + F + sqrt(F (F + 2))), the root in (0, 1] of F = (1 - R)^2 / (2 R), written without cancellation. is_percent scales the output by 100. F < 0 gives NaN; NaN propagates. Width-only WTD1 state."
+    namespace: "transform.signal_conversion"
+    leaf: "from_kubelka_munk"
+    fq_name: "n4m.transform.signal_conversion.from_kubelka_munk"
+    c_surface: "none"
+    legacy_ids:
+      - "preprocessing.signal_conversion.from_kubelka_munk"
+    estimator:
+      kind: estimator
+      adapter: tr_from_kubelka_munk
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: is_percent
+          type: bool
+          default: false
   - method_id: "preprocessing.signal_conversion.kubelka_munk"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"
@@ -5817,6 +5924,124 @@ methods:
       state: width
       inputs:
         y: optional
+  - method_id: "preprocessing.signal_conversion.reflectance_from_references"
+    family: "preprocessing.signal_conversion"
+    category: "preprocessing"
+    subcategory: "signal_conversion"
+    since_abi: "2.24.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp"
+      - "cpp/src/core/estimator/transform_adapters.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "preprocessing.signal_conversion.reflectance_from_references"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "ReflectanceFromReferences"
+        legacy_aliases: []
+      r:
+        function: "n4m_reflectance_from_references"
+        legacy_aliases: []
+    publications: []
+    notes: "Reflectance or transmittance from raw references through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged: R = scale (X - D) / (W - D) per column, with W the white (or reference radiance) spectrum and D the optional dark spectrum, both parameters of the input width. as_percent sets scale = 100. Columns whose W - D is not finite and positive give NaN. Width-only WTD1 state; N4ME replays the references."
+    namespace: "transform.signal_conversion"
+    leaf: "reflectance_from_references"
+    fq_name: "n4m.transform.signal_conversion.reflectance_from_references"
+    c_surface: "none"
+    legacy_ids:
+      - "preprocessing.signal_conversion.reflectance_from_references"
+    estimator:
+      kind: estimator
+      adapter: tr_reflectance_from_references
+      roles: [transformer]
+      state: width
+      inputs:
+        y: optional
+      params:
+        - name: white_reference
+          type: double_array
+        - name: dark_reference
+          type: double_array
+          default: []
+        - name: as_percent
+          type: bool
+          default: false
+  - method_id: "preprocessing.signal_conversion.splice_correction"
+    family: "preprocessing.signal_conversion"
+    category: "preprocessing"
+    subcategory: "signal_conversion"
+    since_abi: "2.24.0"
+    abi_symbols: []
+    tu:
+      - "cpp/src/core/preprocessing/signal_conversion/splice_correction.cpp"
+      - "cpp/src/core/estimator/axis_adapters.cpp"
+    headers:
+      - "cpp/include/n4m/estimator.h"
+    carry_along_tu: []
+    parity:
+      fixtures: []
+      tolerance_row: "tbd"
+      divergence_id: null
+      references: []
+    bench:
+      bench_id: "preprocessing.signal_conversion.splice_correction"
+      registry_entry: null
+    feature_flags: []
+    vendored_licenses: []
+    bindings:
+      python:
+        module: "n4m.roles"
+        class: "SpliceCorrection"
+        legacy_aliases: []
+      r:
+        function: "n4m_splice_correction"
+        legacy_aliases: []
+    publications: []
+    notes: "Detector splice (jump) correction of multi-detector spectra (ASD, Spectral Evolution, SVC) through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged. splices are the first wavelengths of each following detector; segments are corrected outward from reference_segment (0-based), each matched to its corrected neighbour by the ratio (multiplicative) or difference (additive) of the mean levels of the bands within window axis units of the splice on each side (window 0: the two adjacent bands). taper spreads the correction linearly from full at the splice to none at the far end of the segment. Additive with window 0 is the specdal jump_correct convention; multiplicative with taper is spectrolab match_sensors. A segment whose factor is not finite, and those beyond it, are NaN. The fitted state is the source axis."
+    namespace: "transform.signal_conversion"
+    leaf: "splice_correction"
+    fq_name: "n4m.transform.signal_conversion.splice_correction"
+    c_surface: "none"
+    legacy_ids:
+      - "preprocessing.signal_conversion.splice_correction"
+    estimator:
+      kind: estimator
+      adapter: tr_splice_correction
+      roles: [transformer]
+      state: source_axis
+      inputs:
+        y: optional
+        axis: required
+      params:
+        - name: splices
+          type: double_array
+        - name: reference_segment
+          type: int
+          default: 1
+          min: 0
+        - name: method
+          type: enum
+          choices: [multiplicative, additive]
+          default: multiplicative
+        - name: window
+          type: double
+          default: 0.0
+          min: 0.0
+        - name: taper
+          type: bool
+          default: false
   - method_id: "preprocessing.signal_conversion.to_absorbance"
     family: "preprocessing.signal_conversion"
     category: "preprocessing"

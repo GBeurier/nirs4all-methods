@@ -1452,6 +1452,16 @@ const ParamSpec kParams_preprocessing_orthogonalization_osc[] = {
     {"n_components", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_orthogonalization_osc_n_components, nullptr, 1, 1.0, kNaN, nullptr, 0, false, false},
     {"scale", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_orthogonalization_osc_scale, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_preprocessing_resampling_axis_unit_conversion_source_unit[] = {0};
+const char* const kChoices_preprocessing_resampling_axis_unit_conversion_source_unit[] = {"nm", "um", "cm-1"};
+const std::int64_t kDefault_preprocessing_resampling_axis_unit_conversion_target_unit[] = {2};
+const char* const kChoices_preprocessing_resampling_axis_unit_conversion_target_unit[] = {"nm", "um", "cm-1"};
+const std::int64_t kDefault_preprocessing_resampling_axis_unit_conversion_spectral_density[] = {0};
+const ParamSpec kParams_preprocessing_resampling_axis_unit_conversion[] = {
+    {"source_unit", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_resampling_axis_unit_conversion_source_unit, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_resampling_axis_unit_conversion_source_unit, 3, false, false},
+    {"target_unit", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_resampling_axis_unit_conversion_target_unit, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_resampling_axis_unit_conversion_target_unit, 3, false, false},
+    {"spectral_density", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_resampling_axis_unit_conversion_spectral_density, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+};
 const ParamSpec kParams_preprocessing_resampling_crop[] = {
     {"start", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, 0.0, kNaN, nullptr, 0, false, false},
     {"end", N4M_METHOD_PARAM_INT, false, nullptr, nullptr, 0, -1.0, kNaN, nullptr, 0, false, false},
@@ -1592,11 +1602,34 @@ const std::int64_t kDefault_preprocessing_signal_conversion_from_absorbance_is_p
 const ParamSpec kParams_preprocessing_signal_conversion_from_absorbance[] = {
     {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_from_absorbance_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
+const std::int64_t kDefault_preprocessing_signal_conversion_from_kubelka_munk_is_percent[] = {0};
+const ParamSpec kParams_preprocessing_signal_conversion_from_kubelka_munk[] = {
+    {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_from_kubelka_munk_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+};
 const std::int64_t kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent[] = {0};
 const double kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon[] = {1e-10};
 const ParamSpec kParams_preprocessing_signal_conversion_kubelka_munk[] = {
     {"is_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_kubelka_munk_is_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
     {"epsilon", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_kubelka_munk_epsilon, 1, 0.0, kNaN, nullptr, 0, false, false},
+};
+const double kDefault_preprocessing_signal_conversion_reflectance_from_references_dark_reference[] = {0};
+const std::int64_t kDefault_preprocessing_signal_conversion_reflectance_from_references_as_percent[] = {0};
+const ParamSpec kParams_preprocessing_signal_conversion_reflectance_from_references[] = {
+    {"white_reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"dark_reference", N4M_METHOD_PARAM_DOUBLE_ARRAY, true, nullptr, kDefault_preprocessing_signal_conversion_reflectance_from_references_dark_reference, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"as_percent", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_reflectance_from_references_as_percent, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
+};
+const std::int64_t kDefault_preprocessing_signal_conversion_splice_correction_reference_segment[] = {1};
+const std::int64_t kDefault_preprocessing_signal_conversion_splice_correction_method[] = {0};
+const char* const kChoices_preprocessing_signal_conversion_splice_correction_method[] = {"multiplicative", "additive"};
+const double kDefault_preprocessing_signal_conversion_splice_correction_window[] = {0.0};
+const std::int64_t kDefault_preprocessing_signal_conversion_splice_correction_taper[] = {0};
+const ParamSpec kParams_preprocessing_signal_conversion_splice_correction[] = {
+    {"splices", N4M_METHOD_PARAM_DOUBLE_ARRAY, false, nullptr, nullptr, 0, kNaN, kNaN, nullptr, 0, false, false},
+    {"reference_segment", N4M_METHOD_PARAM_INT, true, kDefault_preprocessing_signal_conversion_splice_correction_reference_segment, nullptr, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"method", N4M_METHOD_PARAM_ENUM, true, kDefault_preprocessing_signal_conversion_splice_correction_method, nullptr, 1, kNaN, kNaN, kChoices_preprocessing_signal_conversion_splice_correction_method, 2, false, false},
+    {"window", N4M_METHOD_PARAM_DOUBLE, true, nullptr, kDefault_preprocessing_signal_conversion_splice_correction_window, 1, 0.0, kNaN, nullptr, 0, false, false},
+    {"taper", N4M_METHOD_PARAM_BOOL, true, kDefault_preprocessing_signal_conversion_splice_correction_taper, nullptr, 1, kNaN, kNaN, nullptr, 0, false, false},
 };
 const std::int64_t kDefault_preprocessing_signal_conversion_to_absorbance_is_percent[] = {0};
 const double kDefault_preprocessing_signal_conversion_to_absorbance_epsilon[] = {1e-10};
@@ -2270,6 +2303,7 @@ const MethodSpec kMethods[] = {
     {"preprocessing.feature_selection.flexible_svd", "n4m.decomposition.flexible_svd", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_feature_selection_flexible_svd, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "components", &make_tr_flexible_svd, nullptr},
     {"preprocessing.orthogonalization.epo", "n4m.domain_adaptation.orthogonalization.epo", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_orthogonalization_epo, 1, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "epo", &make_tr_epo, nullptr},
     {"preprocessing.orthogonalization.osc", "n4m.transform.orthogonalization.osc", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_orthogonalization_osc, 2, {N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "orthogonal_components", &make_tr_osc, nullptr},
+    {"preprocessing.resampling.axis_unit_conversion", "n4m.transform.resampling.axis_unit_conversion", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_axis_unit_conversion, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "source_axis", &make_tr_axis_unit_conversion, nullptr},
     {"preprocessing.resampling.crop", "n4m.transform.resampling.crop", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_crop, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_crop, nullptr},
     {"preprocessing.resampling.kbins_discretizer", "n4m.transform.resampling.kbins_discretizer", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_kbins_discretizer, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "bin_edges", &make_tr_kbins_discretizer, nullptr},
     {"preprocessing.resampling.range_discretizer", "n4m.transform.resampling.range_discretizer", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_resampling_range_discretizer, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_range_discretizer, nullptr},
@@ -2296,8 +2330,11 @@ const MethodSpec kMethods[] = {
     {"preprocessing.scatter.weighted_snv", "n4m.transform.scatter.weighted_snv", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_scatter_weighted_snv, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_weighted_snv, nullptr},
     {"preprocessing.signal_conversion.fraction_to_percent", "n4m.transform.signal_conversion.fraction_to_percent", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_fraction_to_percent, nullptr},
     {"preprocessing.signal_conversion.from_absorbance", "n4m.transform.signal_conversion.from_absorbance", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_from_absorbance, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_from_absorbance, nullptr},
+    {"preprocessing.signal_conversion.from_kubelka_munk", "n4m.transform.signal_conversion.from_kubelka_munk", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_from_kubelka_munk, 1, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_from_kubelka_munk, nullptr},
     {"preprocessing.signal_conversion.kubelka_munk", "n4m.transform.signal_conversion.kubelka_munk", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_kubelka_munk, 2, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_kubelka_munk, nullptr},
     {"preprocessing.signal_conversion.percent_to_fraction", "n4m.transform.signal_conversion.percent_to_fraction", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, nullptr, 0, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_percent_to_fraction, nullptr},
+    {"preprocessing.signal_conversion.reflectance_from_references", "n4m.transform.signal_conversion.reflectance_from_references", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_reflectance_from_references, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_reflectance_from_references, nullptr},
+    {"preprocessing.signal_conversion.splice_correction", "n4m.transform.signal_conversion.splice_correction", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_splice_correction, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_REQUIRED, N4M_INPUT_NONE, N4M_INPUT_NONE}, "source_axis", &make_tr_splice_correction, nullptr},
     {"preprocessing.signal_conversion.to_absorbance", "n4m.transform.signal_conversion.to_absorbance", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_signal_conversion_to_absorbance, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_to_absorbance, nullptr},
     {"preprocessing.smoothing.gaussian", "n4m.transform.smoothing.gaussian", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_smoothing_gaussian, 5, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_gaussian, nullptr},
     {"preprocessing.specialized.fck_static", "n4m.transform.specialized.fck_static", N4M_METHOD_ESTIMATOR, N4M_ROLE_TRANSFORMER, kParams_preprocessing_specialized_fck_static, 3, {N4M_INPUT_OPTIONAL, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE, N4M_INPUT_NONE}, "width", &make_tr_fck_static, nullptr},

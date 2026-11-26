@@ -293,7 +293,7 @@ jobs:
 
       - name: Install R test dependencies
         run: |
-          Rscript -e 'install.packages("jsonlite", repos = "https://cloud.r-project.org")'
+          Rscript -e 'install.packages(c("jsonlite", "testthat"), repos = "https://cloud.r-project.org")'
 
       - name: R CMD INSTALL (standalone, prebuilt-link) + parity
         env:
@@ -305,6 +305,7 @@ jobs:
           R CMD INSTALL --preclean --no-multiarch --no-staged-install bindings/r/n4m
           Rscript bindings/r/test_parity.R
           Rscript bindings/r/test_optimizer.R
+          N4M_REPO_ROOT="$GITHUB_WORKSPACE" Rscript -e 'testthat::test_file("bindings/r/n4m/tests/testthat/test-spectral-conversions.R", stop_on_failure = TRUE, package = "n4m", load_package = "installed")'
 
       - name: R/Python optimizer checkpoint continuation
         env:

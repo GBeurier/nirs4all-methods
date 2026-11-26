@@ -48,7 +48,7 @@ The formula cannot distinguish reflectance from transmittance and assumes base-1
 
 ### Implementation
 
-`n4m.transform.signal_conversion.FromAbsorbance` wraps `n4m_transform_from_absorbance_*`; the power transform is in `signal_conversion/from_absorbance.c`.
+`n4m.transform.signal_conversion.FromAbsorbance` wraps `n4m_transform_from_absorbance_*`; the power transform is in `signal_conversion/from_absorbance.c`. External-reference parity (project 1.5.2, parity/spectral_conversions): photobiology `A2T` within 2e-15 relative.
 
 The ABI-2 implementation is the `n4m_transform_from_absorbance_*` lifecycle in libn4m.
 

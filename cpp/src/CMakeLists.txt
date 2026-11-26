@@ -72,6 +72,10 @@ add_library(n4m_core OBJECT
     core/estimator/transform_adapters.cpp
     core/estimator/block_rms_adapter.cpp
     core/preprocessing/scaling/row_l2_normalize.cpp
+    core/preprocessing/signal_conversion/reference_conversions.cpp
+    core/preprocessing/signal_conversion/splice_correction.cpp
+    core/preprocessing/resampling/axis_unit_conversion.cpp
+    core/estimator/axis_adapters.cpp
     core/neural/multibranch_network.cpp
     core/estimator/neural_adapters.cpp
     core/estimator/state_io.cpp

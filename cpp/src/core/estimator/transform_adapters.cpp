@@ -18,6 +18,7 @@
 #include "core/estimator/spec.hpp"
 #include "core/estimator/state_io.hpp"
 #include "core/preprocessing/scaling/row_l2_normalize.hpp"
+#include "core/preprocessing/signal_conversion/reference_conversions.hpp"
 
 namespace n4m::estimator {
 
@@ -478,6 +479,55 @@ std::unique_ptr<Adapter> make_tr_to_absorbance(const MethodSpec&) {
                                                        p.get_bool("clip_negative") ? 1 : 0);
          },
          n4m_transform_to_absorbance_transform, n4m_transform_to_absorbance_destroy, {}}), kAligned);
+}
+
+// Raw spectrum to reflectance: the white and dark references are parameters,
+// so a fitted state is the input width alone and N4ME replays the references.
+std::unique_ptr<Adapter> make_tr_reflectance_from_references(const MethodSpec&) {
+    struct References {
+        std::vector<double> white, dark;
+        double scale;
+    };
+    return with_traits(stateless<References>(
+        {[](References** h, const Params& p) {
+             auto refs = std::make_unique<References>(
+                 References{p.get_doubles("white_reference"), p.get_doubles("dark_reference"),
+                            p.get_bool("as_percent") ? 100.0 : 1.0});
+             if (refs->white.empty() ||
+                 (!refs->dark.empty() && refs->dark.size() != refs->white.size())) {
+                 return N4M_ERR_INVALID_ARGUMENT;
+             }
+             *h = refs.release();
+             return N4M_OK;
+         },
+         [](const References* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
+             return n4m::core::reflectance_from_references(
+                 X, h->white.data(), h->dark.empty() ? nullptr : h->dark.data(), h->scale, out);
+         },
+         [](References* h) { delete h; },
+         [](const References* h, std::int64_t width, std::int64_t* cols) {
+             *cols = width;
+             return static_cast<std::size_t>(width) == h->white.size() ? N4M_OK
+                                                                        : N4M_ERR_SHAPE_MISMATCH;
+         },
+         true}), kAffineAligned);
+}
+
+std::unique_ptr<Adapter> make_tr_from_kubelka_munk(const MethodSpec&) {
+    struct Scale {
+        double factor;
+    };
+    return with_traits(stateless<Scale>(
+        {[](Scale** h, const Params& p) {
+             *h = new Scale{p.get_bool("is_percent") ? 100.0 : 1.0};
+             return N4M_OK;
+         },
+         [](const Scale* h, n4m_matrix_view_t X, n4m_matrix_view_t out) {
+             return n4m::core::from_kubelka_munk(X, h->factor, out);
+         },
+         [](Scale* h) { delete h; },
+         {},
+         true}), kAligned);
 }
 
 // ---- wavelets ---------------------------------------------------------------

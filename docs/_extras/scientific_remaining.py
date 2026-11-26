@@ -606,7 +606,9 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "if the input is already a percent or absorbance value.",
         "`n4m.transform.signal_conversion.FractionToPercent` uses "
         "`n4m_transform_fraction_to_percent_*`; the element-wise kernel is in "
-        "`signal_conversion/fraction_to_percent.c`.",
+        "`signal_conversion/fraction_to_percent.c`. "
+        "External-reference parity (project 1.5.2, parity/spectral_conversions): "
+        "astropy.units percent conversion, identical.",
         _REPO
         + "cpp/src/core/preprocessing/signal_conversion/fraction_to_percent.c",
     ),
@@ -623,7 +625,9 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "absorbance. Large negative or positive values can overflow or underflow.",
         "`n4m.transform.signal_conversion.FromAbsorbance` wraps "
         "`n4m_transform_from_absorbance_*`; the power transform is in "
-        "`signal_conversion/from_absorbance.c`.",
+        "`signal_conversion/from_absorbance.c`. "
+        "External-reference parity (project 1.5.2, parity/spectral_conversions): "
+        "photobiology `A2T` within 2e-15 relative.",
         "https://doi.org/10.1002/andp.18521620505; "
         + _REPO
         + "cpp/src/core/preprocessing/signal_conversion/from_absorbance.c",
@@ -754,10 +758,106 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "physical interpretation.",
         "`n4m.transform.signal_conversion.KubelkaMunk` wraps "
         "`n4m_transform_kubelka_munk_*`; the guarded formula is in "
-        "`signal_conversion/kubelka_munk.c`.",
+        "`signal_conversion/kubelka_munk.c`. "
+        "External-reference parity (project 1.5.2, parity/spectral_conversions): "
+        "mdatools `prep.ref2km` within 4e-14 absolute. The SSE2 (x86-64) path "
+        "evaluates the equivalent 0.5/R - 1 + 0.5R, whose relative error grows as R "
+        "approaches 1 (about 3e-12 near F = 1e-4; absolute error stays below 1e-14), "
+        "while other targets such as WASM evaluate the literal form.",
         "https://doi.org/10.1002/col.5080010404; "
         + _REPO
         + "cpp/src/core/preprocessing/signal_conversion/kubelka_munk.c",
+    ),
+    "preprocessing_signal_conversion_from_kubelka_munk": _entry(
+        "Inverse Kubelka–Munk remission function",
+        "Kubelka & Munk (1931), *Ein Beitrag zur Optik der Farbanstriche*, Zeitschrift für "
+        "Technische Physik 12, 593–601; English translation: "
+        "https://doi.org/10.1002/col.5080010404.",
+        "The remission function $F=(1-R)^2/(2R)$ is inverted on $R\\in(0,1]$: $R$ is the "
+        "smaller root of $R^2-2(1+F)R+1=0$, evaluated as $R=1/(1+F+\\sqrt{F(F+2)})$, which "
+        "avoids the cancellation of $1+F-\\sqrt{F(F+2)}$ for large $F$. `is_percent` scales "
+        "the output by 100.",
+        "Returning Kubelka–Munk spectra to diffuse reflectance, for example before computing "
+        "apparent absorbance log(1/R) for software that expects it.",
+        "Only the infinite-layer two-flux model is inverted; its physical assumptions are "
+        "those of the forward transform. Negative $F$ has no reflectance and gives NaN, NaN "
+        "propagates and $F=+\\infty$ gives $R=0$. A forward transform that clamped $R$ to "
+        "$[\\epsilon,1-\\epsilon]$ is not undone.",
+        "The native `preprocessing.signal_conversion.from_kubelka_munk` transformer is exposed "
+        "as FromKubelkaMunk through the generated Python and JS roles and as "
+        "n4m_from_kubelka_munk in R, with width-only WTD1 state and no dedicated C symbols "
+        "(project 1.5.2, ABI 2.24.0 unchanged). External-reference parity: a bracketing "
+        "`stats::uniroot` solve over `mdatools::prep.ref2km` agrees within 4e-16 relative "
+        "(parity/spectral_conversions, replayed by "
+        "bindings/python/tests/test_spectral_conversions.py).",
+        "https://doi.org/10.1002/col.5080010404; "
+        + _REPO
+        + "cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp; "
+        + _REPO
+        + "parity/spectral_conversions/generate.py",
+    ),
+    "preprocessing_signal_conversion_reflectance_from_references": _entry(
+        "Reflectance or transmittance from sample, white and dark spectra",
+        "Milton, Schaepman, Anderson, Kneubühler & Fox (2009), *Progress in field "
+        "spectroscopy*, Remote Sensing of Environment 113, S92–S109, "
+        "https://doi.org/10.1016/j.rse.2007.08.001.",
+        "Per band, $R=s\\,(X-D)/(W-D)$ with $X$ the sample signal, $W$ the white (or "
+        "reference-panel radiance) spectrum, $D$ the optional dark spectrum and $s=100$ when "
+        "`as_percent`. The same ratio gives transmittance against a blank reference. White "
+        "and dark are parameters of the input width.",
+        "Computing reflectance or transmittance from raw spectrometer counts when the file "
+        "stores the sample, white and dark spectra (AvaSoft, OceanView, ASD, Spectral "
+        "Evolution, SVC), for example before log(1/R) or Kubelka–Munk.",
+        "The counts must share integration time, averaging and gain, or be normalized "
+        "(radiance, normalized DN); the method does not rescale them. Bands whose $W-D$ is "
+        "not a finite positive number give NaN; bands with a reference at noise level give "
+        "meaningless ratios. No panel calibration, nonlinearity, stray-light or detector "
+        "splice correction is applied (see SpliceCorrection).",
+        "The native `preprocessing.signal_conversion.reflectance_from_references` transformer "
+        "is exposed as ReflectanceFromReferences in Python and JS and as "
+        "n4m_reflectance_from_references in R (project 1.5.2, ABI 2.24.0 unchanged). "
+        "External-reference parity: identical to `prospectr::readASD` and "
+        "`asdreader::get_spectra` reflectance on three real ASD files; vendor comparison "
+        "(parity/results/spectral_conversions_vendor.json): identical to AvaSoft 6/7 "
+        "binary files and OceanView output, within the 2-decimal rounding of SVC files; "
+        "AvaSoft 8 text exports differ by up to 0.6 % (undocumented vendor processing).",
+        "https://doi.org/10.1016/j.rse.2007.08.001; "
+        + _REPO
+        + "cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp; "
+        + _REPO
+        + "parity/spectral_conversions/vendor_check.py",
+    ),
+    "preprocessing_signal_conversion_splice_correction": _entry(
+        "Detector splice (jump) correction",
+        "Hueni & Bialek (2017), *Cause, effect, and correction of field spectroradiometer "
+        "interchannel radiometric steps*, IEEE Journal of Selected Topics in Applied Earth "
+        "Observations and Remote Sensing 10(4), 1542–1551, "
+        "https://doi.org/10.1109/JSTARS.2016.2625043.",
+        "The axis is cut into detector segments at `splices` (the first band of each "
+        "following detector). Segments are corrected outward from `reference_segment`: the "
+        "mean level of the bands within `window` axis units of the splice on the corrected "
+        "neighbour's side is matched by the segment's own mean level, by their ratio "
+        "(multiplicative) or difference (additive); `window` 0 uses the two adjacent bands. "
+        "With `taper`, the correction decreases linearly with wavelength from full at the "
+        "splice to none at the far end of the segment.",
+        "Removing interchannel steps of multi-detector field spectroradiometers (ASD, "
+        "Spectral Evolution, SVC) after reflectance is computed from raw spectra.",
+        "An empirical level match: it does not model the temperature-dependent detector "
+        "response that causes the steps, and it trusts the reference detector. Vendor "
+        "software may blend overlapping detectors differently (Spectral Evolution DARWin "
+        "output differs by up to a few percent reflectance near the splices). A segment "
+        "whose factor is not finite, and the segments beyond it, are NaN.",
+        "The native `preprocessing.signal_conversion.splice_correction` transformer is "
+        "exposed as SpliceCorrection in Python and JS and as n4m_splice_correction in R; "
+        "its state is the source axis (project 1.5.2, ABI 2.24.0 unchanged). "
+        "External-reference parity: identical to specdal `jump_correct` (additive, every "
+        "reference segment) and within 4e-16 relative of spectrolab `match_sensors` "
+        "(multiplicative, tapered).",
+        "https://doi.org/10.1109/JSTARS.2016.2625043; "
+        + _REPO
+        + "cpp/src/core/preprocessing/signal_conversion/splice_correction.cpp; "
+        + _REPO
+        + "parity/spectral_conversions/generate.py",
     ),
     "pp_local_centering": _entry(
         "Source-to-target local centering",
@@ -930,7 +1030,9 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "data silently creates an invalid scale.",
         "`n4m.transform.signal_conversion.PercentToFraction` calls "
         "`n4m_transform_percent_to_fraction_*`; the kernel is "
-        "`signal_conversion/percent_to_fraction.c`.",
+        "`signal_conversion/percent_to_fraction.c`. "
+        "External-reference parity (project 1.5.2, parity/spectral_conversions): "
+        "astropy.units percent conversion within 2e-16 relative.",
         _REPO
         + "cpp/src/core/preprocessing/signal_conversion/percent_to_fraction.c",
     ),
@@ -1029,6 +1131,37 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         + _REPO
         + "cpp/src/core/preprocessing/resampling/resample_transformer.c",
     ),
+    "preprocessing_resampling_axis_unit_conversion": _entry(
+        "Spectral axis conversion between wavelength and wavenumber",
+        "IUPAC (2007), *Quantities, Units and Symbols in Physical Chemistry* (Green Book), "
+        "3rd ed., section 2.7: wavenumber $\\tilde\\nu=1/\\lambda$ in vacuum; "
+        "spectral densities transform with $|d\\lambda/d\\tilde\\nu|$; "
+        "https://doi.org/10.1039/9781847557889.",
+        "Axis values are converted between nm, µm and cm⁻¹ with the exact constants "
+        "$\\tilde\\nu[\\mathrm{cm^{-1}}]=10^7/\\lambda[\\mathrm{nm}]=10^4/\\lambda[\\mu m]$ "
+        "and $\\lambda[\\mathrm{nm}]=1000\\,\\lambda[\\mu m]$; columns are permuted so "
+        "the converted axis is strictly ascending. Values are unchanged unless "
+        "`spectral_density`, which multiplies a density per source unit by the Jacobian "
+        "$|dx_{source}/dx_{target}|$ (for nm to cm⁻¹, $\\lambda^2/10^7$).",
+        "Opening FT-NIR spectra recorded in cm⁻¹ in software that expects nm (or the "
+        "reverse) before resampling to the target grid.",
+        "Wavelengths are taken as vacuum wavelengths: no air-to-vacuum correction is applied "
+        "(about 0.03 %, 0.7 nm at 2500 nm). Absorbance, reflectance, transmittance and "
+        "counts are per point and must not use `spectral_density`; radiance and irradiance "
+        "per unit wavelength must. The converted grid is no longer evenly spaced. Axis "
+        "values must be finite, positive and distinct.",
+        "The native `preprocessing.resampling.axis_unit_conversion` transformer is exposed "
+        "as AxisUnitConversion in Python and JS and as n4m_axis_unit_conversion in R; its "
+        "state is the source axis and the converted axis is the fit result entry `axis` "
+        "(project 1.5.2, ABI 2.24.0 unchanged). External-reference parity: axis values within "
+        "3e-16 relative of astropy `spectral()` and densities within 7e-16 of astropy "
+        "`spectral_density()` for all six unit pairs.",
+        "https://doi.org/10.1039/9781847557889; "
+        + _REPO
+        + "cpp/src/core/preprocessing/resampling/axis_unit_conversion.cpp; "
+        + _REPO
+        + "parity/spectral_conversions/generate.py",
+    ),
     "pp_resampler": _entry(
         "Wavelength-grid resampler",
         "No single canonical paper: the supported linear, nearest, and not-a-knot cubic "
@@ -1044,7 +1177,10 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "is poorly constrained; cubic interpolation can overshoot and resampling introduces "
         "correlated errors.",
         "`n4m.transform.resampling.Resampler` wraps `n4m_transform_resampler_*`; cached "
-        "brackets and all three interpolation paths are in `resampling/resampler.c`.",
+        "brackets and all three interpolation paths are in `resampling/resampler.c`. "
+        "External-reference parity (project 1.5.2, parity/spectral_conversions): "
+        "scipy `interp1d` (linear, nearest) identical and `CubicSpline` (not-a-knot) "
+        "within 3e-15 relative.",
         "https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.CubicSpline.html; "
         + _REPO
         + "cpp/src/core/preprocessing/resampling/resampler.c",
@@ -1260,7 +1396,9 @@ SCIENTIFIC_CONTENT: dict[str, dict[str, str]] = {
         "a guaranteed Beer–Lambert quantity.",
         "`n4m.transform.signal_conversion.ToAbsorbance` uses "
         "`n4m_transform_to_absorbance_*`; unit handling and guards are in "
-        "`signal_conversion/to_absorbance.c`.",
+        "`signal_conversion/to_absorbance.c`. "
+        "External-reference parity (project 1.5.2, parity/spectral_conversions): "
+        "photobiology `T2A` within 3e-15 relative.",
         "https://doi.org/10.1002/andp.18521620505; "
         + _REPO
         + "cpp/src/core/preprocessing/signal_conversion/to_absorbance.c",

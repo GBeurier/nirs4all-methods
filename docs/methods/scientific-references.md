@@ -2,7 +2,7 @@
 
 This generated index covers the scientific records rendered in the method pages. It complements the [lossless historical bibliography](../bibliography.md): the records below retain their source text and DOI/URL provenance, but no new BibTeX is emitted without a separately reviewed structured source.
 
-- Curated records: **257**
+- Curated records: **261**
 - Required fields: bibliographic source, principle, uses, limits, implementation, and provenance.
 - Links are checked for offline DOI/URL syntax by this generator; they are not network-fetched.
 
@@ -12,7 +12,7 @@ This generated index covers the scientific records rendered in the method pages.
 - `docs/_extras/scientific_aom.py` — SHA-256 `43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93`
 - `docs/_extras/scientific_augmentation_filter_split.py` — SHA-256 `477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77`
 - `docs/_extras/scientific_legacy.py` — SHA-256 `3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547`
-- `docs/_extras/scientific_remaining.py` — SHA-256 `ce647c0111848c9a002770f79a56d3e22df5a33d7ca80151c511b47f94eaafa1`
+- `docs/_extras/scientific_remaining.py` — SHA-256 `d25adcfded56a56e61a3cc3f57833ca41ebd9af7319f9c6c8ebb72d8a5c9d5a4`
 
 ## References by documentation page
 
@@ -1270,6 +1270,12 @@ No single canonical paper specifies this combined n4m lifecycle. The exact local
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/spectral_encoding.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/docs/methods/spectral_encoding.md
 
+### [`preprocessing_resampling_axis_unit_conversion`](preprocessing_resampling_axis_unit_conversion.md) — Spectral axis conversion between wavelength and wavenumber
+
+IUPAC (2007), *Quantities, Units and Symbols in Physical Chemistry* (Green Book), 3rd ed., section 2.7: wavenumber $\tilde\nu=1/\lambda$ in vacuum; spectral densities transform with $|d\lambda/d\tilde\nu|$; https://doi.org/10.1039/9781847557889.
+
+**Provenance:** https://doi.org/10.1039/9781847557889; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/axis_unit_conversion.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/generate.py
+
 ### [`preprocessing_scaling_block_rms`](preprocessing_scaling_block_rms.md) — Train-fitted block RMS scaling
 
 No single canonical paper is asserted for this elementary block scaling rule. The exact normalization, finite-input boundary and retained-scalar state are specified by the native source and catalog declaration linked below; no external-reference parity is claimed.
@@ -1287,6 +1293,24 @@ No single canonical paper is asserted for this elementary Euclidean normalizatio
 Population standardization uses the arithmetic mean and population variance. The public StandardScaler reference documents the same ddof=0 convention: https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html.
 
 **Provenance:** https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/estimator/fitted_core.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.standard_scale.yaml
+
+### [`preprocessing_signal_conversion_from_kubelka_munk`](preprocessing_signal_conversion_from_kubelka_munk.md) — Inverse Kubelka–Munk remission function
+
+Kubelka & Munk (1931), *Ein Beitrag zur Optik der Farbanstriche*, Zeitschrift für Technische Physik 12, 593–601; English translation: https://doi.org/10.1002/col.5080010404.
+
+**Provenance:** https://doi.org/10.1002/col.5080010404; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/generate.py
+
+### [`preprocessing_signal_conversion_reflectance_from_references`](preprocessing_signal_conversion_reflectance_from_references.md) — Reflectance or transmittance from sample, white and dark spectra
+
+Milton, Schaepman, Anderson, Kneubühler & Fox (2009), *Progress in field spectroscopy*, Remote Sensing of Environment 113, S92–S109, https://doi.org/10.1016/j.rse.2007.08.001.
+
+**Provenance:** https://doi.org/10.1016/j.rse.2007.08.001; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/vendor_check.py
+
+### [`preprocessing_signal_conversion_splice_correction`](preprocessing_signal_conversion_splice_correction.md) — Detector splice (jump) correction
+
+Hueni & Bialek (2017), *Cause, effect, and correction of field spectroradiometer interchannel radiometric steps*, IEEE Journal of Selected Topics in Applied Earth Observations and Remote Sensing 10(4), 1542–1551, https://doi.org/10.1109/JSTARS.2016.2625043.
+
+**Provenance:** https://doi.org/10.1109/JSTARS.2016.2625043; https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/splice_correction.cpp; https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/generate.py
 
 ### [`pso_select`](pso_select.md) — PSO-PLS — Particle Swarm Optimisation
 

@@ -140,6 +140,7 @@
   "preprocessing.feature_selection.flexible_svd" = c("transformer"),
   "preprocessing.orthogonalization.epo" = c("transformer"),
   "preprocessing.orthogonalization.osc" = c("transformer"),
+  "preprocessing.resampling.axis_unit_conversion" = c("transformer"),
   "preprocessing.resampling.crop" = c("transformer"),
   "preprocessing.resampling.kbins_discretizer" = c("transformer"),
   "preprocessing.resampling.range_discretizer" = c("transformer"),
@@ -166,8 +167,11 @@
   "preprocessing.scatter.weighted_snv" = c("transformer"),
   "preprocessing.signal_conversion.fraction_to_percent" = c("transformer"),
   "preprocessing.signal_conversion.from_absorbance" = c("transformer"),
+  "preprocessing.signal_conversion.from_kubelka_munk" = c("transformer"),
   "preprocessing.signal_conversion.kubelka_munk" = c("transformer"),
   "preprocessing.signal_conversion.percent_to_fraction" = c("transformer"),
+  "preprocessing.signal_conversion.reflectance_from_references" = c("transformer"),
+  "preprocessing.signal_conversion.splice_correction" = c("transformer"),
   "preprocessing.signal_conversion.to_absorbance" = c("transformer"),
   "preprocessing.smoothing.gaussian" = c("transformer"),
   "preprocessing.specialized.fck_static" = c("transformer"),
@@ -364,6 +368,7 @@
   "preprocessing.feature_selection.flexible_svd" = "n4m_flexible_svd",
   "preprocessing.orthogonalization.epo" = "n4m_epo",
   "preprocessing.orthogonalization.osc" = "n4m_osc",
+  "preprocessing.resampling.axis_unit_conversion" = "n4m_axis_unit_conversion",
   "preprocessing.resampling.crop" = "n4m_crop",
   "preprocessing.resampling.kbins_discretizer" = "n4m_kbins_discretizer",
   "preprocessing.resampling.range_discretizer" = "n4m_range_discretizer",
@@ -390,8 +395,11 @@
   "preprocessing.scatter.weighted_snv" = "n4m_weighted_snv",
   "preprocessing.signal_conversion.fraction_to_percent" = "n4m_fraction_to_percent",
   "preprocessing.signal_conversion.from_absorbance" = "n4m_from_absorbance",
+  "preprocessing.signal_conversion.from_kubelka_munk" = "n4m_from_kubelka_munk",
   "preprocessing.signal_conversion.kubelka_munk" = "n4m_kubelka_munk",
   "preprocessing.signal_conversion.percent_to_fraction" = "n4m_percent_to_fraction",
+  "preprocessing.signal_conversion.reflectance_from_references" = "n4m_reflectance_from_references",
+  "preprocessing.signal_conversion.splice_correction" = "n4m_splice_correction",
   "preprocessing.signal_conversion.to_absorbance" = "n4m_to_absorbance",
   "preprocessing.smoothing.gaussian" = "n4m_gaussian",
   "preprocessing.specialized.fck_static" = "n4m_fck_static",
@@ -1274,6 +1282,12 @@ n4m_osc <- function(n_components = 1L, scale = TRUE) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_axis_unit_conversion <- function(source_unit = "nm", target_unit = "cm-1", spectral_density = FALSE) {
+  .n4m_estimator("preprocessing.resampling.axis_unit_conversion", c("transformer"), list(source_unit = source_unit, target_unit = target_unit, spectral_density = spectral_density))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_crop <- function(start = NULL, end = NULL) {
   .n4m_estimator("preprocessing.resampling.crop", c("transformer"), list(start = start, end = end))
 }
@@ -1430,6 +1444,12 @@ n4m_from_absorbance <- function(is_percent = FALSE) {
 
 #' @rdname n4m_estimator_role_constructors
 #' @export
+n4m_from_kubelka_munk <- function(is_percent = FALSE) {
+  .n4m_estimator("preprocessing.signal_conversion.from_kubelka_munk", c("transformer"), list(is_percent = is_percent))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
 n4m_kubelka_munk <- function(is_percent = FALSE, epsilon = 1e-10) {
   .n4m_estimator("preprocessing.signal_conversion.kubelka_munk", c("transformer"), list(is_percent = is_percent, epsilon = epsilon))
 }
@@ -1438,6 +1458,18 @@ n4m_kubelka_munk <- function(is_percent = FALSE, epsilon = 1e-10) {
 #' @export
 n4m_percent_to_fraction <- function() {
   .n4m_estimator("preprocessing.signal_conversion.percent_to_fraction", c("transformer"), list())
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_reflectance_from_references <- function(white_reference = NULL, dark_reference = c(), as_percent = FALSE) {
+  .n4m_estimator("preprocessing.signal_conversion.reflectance_from_references", c("transformer"), list(white_reference = white_reference, dark_reference = dark_reference, as_percent = as_percent))
+}
+
+#' @rdname n4m_estimator_role_constructors
+#' @export
+n4m_splice_correction <- function(splices = NULL, reference_segment = 1L, method = "multiplicative", window = 0.0, taper = FALSE) {
+  .n4m_estimator("preprocessing.signal_conversion.splice_correction", c("transformer"), list(splices = splices, reference_segment = reference_segment, method = method, window = window, taper = taper))
 }
 
 #' @rdname n4m_estimator_role_constructors

@@ -1,0 +1,62 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.resampling.axis_unit_conversion"
+family: "preprocessing.resampling"
+category: "preprocessing"
+subcategory: "resampling"
+since_abi: "2.24.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/preprocessing/resampling/axis_unit_conversion.cpp"
+  - "cpp/src/core/estimator/axis_adapters.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.resampling.axis_unit_conversion"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "AxisUnitConversion"
+    legacy_aliases: []
+  r:
+    function: "n4m_axis_unit_conversion"
+    legacy_aliases: []
+publications: []
+notes: "Spectral axis unit conversion between vacuum wavelengths (nm, um) and wavenumbers (cm-1) through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged. Fit takes the source axis; transform permutes columns so the converted axis is strictly ascending, published as the fit result entry axis (with source_columns). Values are unchanged unless spectral_density, which multiplies by the Jacobian |d source / d target| for densities per axis unit. No air-to-vacuum correction. Axis values must be finite, positive and distinct; same units only sort the axis."
+c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "tr_axis_unit_conversion"
+  roles: "[transformer]"
+  state: "source_axis"
+  inputs:
+    y: "optional"
+    axis: "required"
+  params:
+    - name: "source_unit"
+      type: "enum"
+      choices: "[nm, um, cm-1]"
+      default: "nm"
+    - name: "target_unit"
+      type: "enum"
+      choices: "[nm, um, cm-1]"
+      default: "cm-1"
+    - name: "spectral_density"
+      type: "bool"
+      default: false
+fq_name: "n4m.transform.resampling.axis_unit_conversion"
+leaf: "axis_unit_conversion"
+legacy_ids:
+  - "preprocessing.resampling.axis_unit_conversion"
+namespace: "transform.resampling"

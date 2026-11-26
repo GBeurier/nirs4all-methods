@@ -77,6 +77,43 @@ and the BlockRMS section of `bindings/js/test/run_multimodal_teaching.mjs`).
 No registry entry, truth-source lockfile, numerical fixture or frozen
 historical bibliography is added or rewritten for these methods.
 
+## Spectral conversions (project 1.5.2)
+
+`parity/spectral_conversions/generate.py` runs every signal and axis conversion
+used to prepare spectra for other software against an independent external
+reference and freezes the reference outputs in
+`parity/fixtures/spectral_conversions_external_v1.json`, replayed without the
+references by `bindings/python/tests/test_spectral_conversions.py`.
+
+| Method | External reference | Agreement |
+|---|---|---|
+| `to_absorbance` (fraction, percent) | photobiology `T2A` (R) | 3e-15 relative |
+| `from_absorbance` (fraction, percent) | photobiology `A2T` (R) | 2e-15 relative |
+| `kubelka_munk` (fraction, percent) | mdatools `prep.ref2km` (R) | 7e-15 absolute (see the SSE2 note) |
+| `from_kubelka_munk` | `stats::uniroot` over `prep.ref2km` (R) | 4e-16 relative |
+| `percent_to_fraction`, `fraction_to_percent` | astropy.units | 2e-16 relative |
+| `reflectance_from_references` | prospectr `readASD`, asdreader `get_spectra` on three MIT-licensed ASD files | identical |
+| `splice_correction` | specdal `jump_correct` (additive); spectrolab `match_sensors` (multiplicative, tapered) | identical; 4e-16 relative |
+| `resampler` (linear, nearest, cubic) | scipy `interp1d`, `CubicSpline` not-a-knot | identical; 3e-15 relative |
+| `axis_unit_conversion` (six unit pairs, values and spectral densities) | astropy `spectral()`, `spectral_density()` | 3e-16 axis, 7e-16 density |
+
+`KubelkaMunk`'s SSE2 path (x86-64) evaluates the equivalent `0.5/R - 1 + 0.5R`:
+its relative error near R = 1 reaches a few 1e-12 while the absolute error stays
+below 1e-14; other targets evaluate `(1 - R)^2 / (2R)`.
+
+`parity/spectral_conversions/vendor_check.py` compares
+`reflectance_from_references` with the reflectance or transmittance written by
+vendor software in the public sample files of nirs4all-formats (not copied
+here): identical to AvaSoft 6/7 binary files (.TRM) and OceanView, within the
+two-decimal rounding of SVC and of the AvaSoft 6/7 long text export. The
+AvaSoft 8 text export (`avasoft8.txt`) differs by up to 0.6 % relative where
+the reference has signal, beyond its printed precision: AvaSoft 8 applies
+processing the file does not describe. Spectral Evolution DARWin applies its own detector
+splice/overlap processing, which `splice_correction` approaches (median within
+2.3e-4 reflectance) but does not reproduce. References needed to regenerate:
+R photobiology 0.14.3, mdatools 0.15.0, prospectr 0.2.8, asdreader 0.1.3,
+spectrolab 0.0.19; Python astropy, scipy, pandas, specdal 0.2.1.
+
 ## Explainability (ABI 2.23)
 
 `diagnostics.explain.{model_agnostic,linear_shap,tree_shap}` take the nirs4all

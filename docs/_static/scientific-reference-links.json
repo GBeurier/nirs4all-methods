@@ -3585,6 +3585,27 @@
     {
       "links": [
         {
+          "kind": "doi",
+          "value": "10.1039/9781847557889"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1039/9781847557889"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/resampling/axis_unit_conversion.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/generate.py"
+        }
+      ],
+      "page": "preprocessing_resampling_axis_unit_conversion"
+    },
+    {
+      "links": [
+        {
           "kind": "url",
           "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/catalog/methods/preprocessing.scaling.block_rms.yaml"
         },
@@ -3632,6 +3653,69 @@
         }
       ],
       "page": "preprocessing_scaling_standard_scale"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1002/col.5080010404"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1002/col.5080010404"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/generate.py"
+        }
+      ],
+      "page": "preprocessing_signal_conversion_from_kubelka_munk"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1016/j.rse.2007.08.001"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1016/j.rse.2007.08.001"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/vendor_check.py"
+        }
+      ],
+      "page": "preprocessing_signal_conversion_reflectance_from_references"
+    },
+    {
+      "links": [
+        {
+          "kind": "doi",
+          "value": "10.1109/JSTARS.2016.2625043"
+        },
+        {
+          "kind": "url",
+          "value": "https://doi.org/10.1109/JSTARS.2016.2625043"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/cpp/src/core/preprocessing/signal_conversion/splice_correction.cpp"
+        },
+        {
+          "kind": "url",
+          "value": "https://github.com/GBeurier/nirs4all-methods/blob/main/parity/spectral_conversions/generate.py"
+        }
+      ],
+      "page": "preprocessing_signal_conversion_splice_correction"
     },
     {
       "links": [
@@ -4385,6 +4469,6 @@
     "docs/_extras/scientific_aom.py": "43aa30df6c782d2b4a407c09e734e8d1d5a53dbfc21fddae55b916dc16800f93",
     "docs/_extras/scientific_augmentation_filter_split.py": "477f2b1015411b97e3cb31eff82718f9db5249ce55e7d2faa5360ec312919e77",
     "docs/_extras/scientific_legacy.py": "3af69f7019d1e2a246ddcfd3fb80511534eb848835ada276e96f037af726a547",
-    "docs/_extras/scientific_remaining.py": "ce647c0111848c9a002770f79a56d3e22df5a33d7ca80151c511b47f94eaafa1"
+    "docs/_extras/scientific_remaining.py": "d25adcfded56a56e61a3cc3f57833ca41ebd9af7319f9c6c8ebb72d8a5c9d5a4"
   }
 }

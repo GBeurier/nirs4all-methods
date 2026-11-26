@@ -1,0 +1,58 @@
+# Auto-generated from catalog/methods.yaml during the Phase B transition.
+# Edit catalog/methods.yaml, then rerun split_legacy_methods.py.
+catalog_version: 1
+method_id: "preprocessing.signal_conversion.reflectance_from_references"
+family: "preprocessing.signal_conversion"
+category: "preprocessing"
+subcategory: "signal_conversion"
+since_abi: "2.24.0"
+abi_symbols: []
+tu:
+  - "cpp/src/core/preprocessing/signal_conversion/reference_conversions.cpp"
+  - "cpp/src/core/estimator/transform_adapters.cpp"
+headers:
+  - "cpp/include/n4m/estimator.h"
+carry_along_tu: []
+parity:
+  fixtures: []
+  tolerance_row: "tbd"
+  divergence_id: null
+  references: []
+  tolerances: []
+bench:
+  bench_id: "preprocessing.signal_conversion.reflectance_from_references"
+  registry_entry: null
+feature_flags: []
+vendored_licenses: []
+bindings:
+  python:
+    module: "n4m.roles"
+    class: "ReflectanceFromReferences"
+    legacy_aliases: []
+  r:
+    function: "n4m_reflectance_from_references"
+    legacy_aliases: []
+publications: []
+notes: "Reflectance or transmittance from raw references through the shared n4m_estimator_* role API, available since project 1.5.2 with ABI 2.24.0 unchanged: R = scale (X - D) / (W - D) per column, with W the white (or reference radiance) spectrum and D the optional dark spectrum, both parameters of the input width. as_percent sets scale = 100. Columns whose W - D is not finite and positive give NaN. Width-only WTD1 state; N4ME replays the references."
+c_surface: "none"
+estimator:
+  kind: "estimator"
+  adapter: "tr_reflectance_from_references"
+  roles: "[transformer]"
+  state: "width"
+  inputs:
+    y: "optional"
+  params:
+    - name: "white_reference"
+      type: "double_array"
+    - name: "dark_reference"
+      type: "double_array"
+      default: []
+    - name: "as_percent"
+      type: "bool"
+      default: false
+fq_name: "n4m.transform.signal_conversion.reflectance_from_references"
+leaf: "reflectance_from_references"
+legacy_ids:
+  - "preprocessing.signal_conversion.reflectance_from_references"
+namespace: "transform.signal_conversion"
